@@ -934,6 +934,20 @@ INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 
 ('REPORTS_CHART_TOP_EMPLOYEES',          'الموظفون الأكثر تكرّرًا في البلاغات',              'reports');
 
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
+('CLUSTER_REPORTS_MODULE',  'الدخول لموديول بلاغات إدارة التجمع',   'cluster_reports'),
+('CLUSTER_REPORT_CREATE',   'تقديم بلاغ إدارة التجمع',              'cluster_reports'),
+('CLUSTER_REPORT_VIEW',     'عرض بلاغات إدارة التجمع',              'cluster_reports'),
+('CLUSTER_REPORT_DETAILS',  'عرض تفاصيل بلاغ إدارة التجمع',         'cluster_reports'),
+('CLUSTER_REPORT_REPLY',    'الرد على بلاغ إدارة التجمع',           'cluster_reports'),
+('CLUSTER_REPORT_STATUS',   'تغيير حالة بلاغ إدارة التجمع',         'cluster_reports');
+
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
+('ARCHIVE_VIEW',   'عرض الأرشيف',       'archive'),
+('ARCHIVE_UPLOAD', 'إضافة مرفقات للأرشيف', 'archive');
+
 CREATE TABLE IF NOT EXISTS improvement_projects (
   ProjectID BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   HospitalID INT UNSIGNED NOT NULL,
@@ -1101,3 +1115,81 @@ VALUES
 (2, 'SUBMIT_COMPLAINT', 'HOSPITAL'),
 (2, 'TRACK_COMPLAINT', 'HOSPITAL'),
 (2, 'VIEW_COMPLAINTS', 'HOSPITAL');
+-- =========================================================
+-- تننت: جداول بلاغات إدارة التجمع داخل قاعدة المستشفى
+-- =========================================================
+-- نفّذي هذا السكربت في كل قاعدة مستشفى (مثل: hosp_kbh, hosp_aaaa, ...)
+
+CREATE TABLE IF NOT EXISTS cluster_reports (
+  ReportID           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  GlobalID           CHAR(36)        NOT NULL,            -- UUID
+  Title              VARCHAR(200)    NOT NULL,
+  Description        TEXT            NOT NULL,
+  LocationName       VARCHAR(200)    DEFAULT NULL,
+  LocationType       ENUM('HOSPITAL','CLINIC','DEPARTMENT','OTHER') DEFAULT 'OTHER',
+  DepartmentID       INT UNSIGNED    DEFAULT NULL,
+  PriorityCode       ENUM('LOW','MEDIUM','HIGH','CRITICAL') DEFAULT 'MEDIUM',
+  StatusCode         ENUM('OPEN','IN_PROGRESS','RESOLVED','CLOSED','CANCELLED') DEFAULT 'OPEN',
+  ReporterUserID     INT UNSIGNED    NOT NULL,
+  AssignedToUserID   INT UNSIGNED    DEFAULT NULL,
+  CreatedAt          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  IsDeleted          TINYINT(1)      NOT NULL DEFAULT 0,
+  DeletedAt          DATETIME        DEFAULT NULL,
+  DeleteReason       VARCHAR(255)    DEFAULT NULL,
+
+  INDEX idx_cluster_reports_department (DepartmentID),
+  INDEX idx_cluster_reports_status (StatusCode),
+  INDEX idx_cluster_reports_priority (PriorityCode),
+  UNIQUE KEY uq_cluster_reports_guid (GlobalID)
+);
+
+CREATE TABLE IF NOT EXISTS cluster_report_attachments (
+  AttachmentID     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ReportID         BIGINT UNSIGNED NOT NULL,
+  FileName         VARCHAR(255)    NOT NULL,
+  FilePath         VARCHAR(400)    NOT NULL,
+  MimeType         VARCHAR(150)    DEFAULT NULL,
+  FileSize         BIGINT          DEFAULT NULL,
+  UploadedByUserID INT UNSIGNED    NOT NULL,
+  UploadedAt       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_cluster_attach_report (ReportID),
+  CONSTRAINT fk_cluster_attach_report
+    FOREIGN KEY (ReportID) REFERENCES cluster_reports(ReportID)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cluster_report_responses (
+  ResponseID       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ReportID         BIGINT UNSIGNED NOT NULL,
+  ResponderUserID INT UNSIGNED    NOT NULL,
+  Message          TEXT            NOT NULL,
+  CreatedAt        TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_cluster_resp_report (ReportID),
+  INDEX idx_cluster_resp_user (ResponderUserID),
+  INDEX idx_cluster_resp_date (CreatedAt),
+  CONSTRAINT fk_cluster_resp_report
+    FOREIGN KEY (ReportID) REFERENCES cluster_reports(ReportID)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS file_archive (
+  FileID           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  HospitalID       INT UNSIGNED NOT NULL,
+  Category         VARCHAR(50)  DEFAULT NULL,
+  SourceModule     VARCHAR(50)  DEFAULT NULL,
+  OriginalName     VARCHAR(255) NOT NULL,
+  StoredName       VARCHAR(255) NOT NULL,
+  MimeType         VARCHAR(150) DEFAULT NULL,
+  FileSizeBytes    BIGINT UNSIGNED DEFAULT 0,
+  StoragePath      VARCHAR(400) NOT NULL,
+  Notes            VARCHAR(255) DEFAULT NULL,
+  UploadedByUserID INT UNSIGNED NOT NULL,
+  UploadedAt       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  Sha256Hash       CHAR(64)     DEFAULT NULL,
+  INDEX ix_filearchive_hosp (HospitalID),
+  INDEX ix_filearchive_source (SourceModule),
+  INDEX ix_filearchive_time (UploadedAt)
+);

@@ -580,7 +580,16 @@ router.get('/me-permissions', async (req, res) => {
           importsPage: true,
           importDepartments: true,
           importMystery: true,
-          import937: true
+          import937: true,
+          // صلاحيات بلاغات إدارة التجمع - مدير التجمع له الكل
+          clusterSubmit: true,
+          clusterView: true,
+          clusterDetails: true,
+          clusterReply: true,
+          clusterStatus: true,
+          // صلاحيات الأرشيف - مدير التجمع له الكل
+          archiveView: true,
+          archiveUpload: true
         };
         
         console.log('🔍 Debug - Central admin permissions set:', permissions);
@@ -669,7 +678,16 @@ router.get('/me-permissions', async (req, res) => {
           importsPage: hasPermission('IMPORTS_PAGE'),
           importDepartments: hasPermission('IMPORTS_DEPARTMENTS'),
           importMystery: hasPermission('IMPORTS_MYSTERY'),
-          import937: hasPermission('IMPORTS_937')
+          import937: hasPermission('IMPORTS_937'),
+          // صلاحيات بلاغات إدارة التجمع
+          clusterSubmit: hasPermission('CLUSTER_REPORT_CREATE'),
+          clusterView: hasPermission('CLUSTER_REPORT_VIEW'),
+          clusterDetails: hasPermission('CLUSTER_REPORT_DETAILS'),
+          clusterReply: hasPermission('CLUSTER_REPORT_REPLY'),
+          clusterStatus: hasPermission('CLUSTER_REPORT_STATUS'),
+          // صلاحيات الأرشيف
+          archiveView: hasPermission('ARCHIVE_VIEW'),
+          archiveUpload: hasPermission('ARCHIVE_UPLOAD')
         };
       }
     }
@@ -742,6 +760,15 @@ router.get('/me-permissions', async (req, res) => {
         importMystery: permissions.importMystery || false,
         import937: permissions.import937 || false
       },
+      // صلاحيات بلاغات إدارة التجمع
+      clusterSubmit: permissions.clusterSubmit || false,
+      clusterView: permissions.clusterView || false,
+      clusterDetails: permissions.clusterDetails || false,
+      clusterReply: permissions.clusterReply || false,
+      clusterStatus: permissions.clusterStatus || false,
+      // صلاحيات الأرشيف
+      archiveView: permissions.archiveView || false,
+      archiveUpload: permissions.archiveUpload || false,
       user: userInfo
     });
   } catch (err) {

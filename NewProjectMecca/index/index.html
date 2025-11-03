@@ -206,7 +206,7 @@
         <!-- Service 8 - أرشيف المرفقات -->
         <div id="cardArchive" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
              tabindex="0" role="button" aria-label="أرشيف المرفقات"
-             onclick="window.location.href='archive.html'">
+             onclick="window.location.href='archive.html'" style="display:none">
           <div class="service-icon w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mb-4 mx-auto">
             <!-- أيقونة الأرشيف (صندوق) -->
             <svg class="w-8 h-8 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
@@ -220,7 +220,41 @@
             <span id="service8-action" class="text-sky-600 text-sm font-medium">افتح الأرشيف ↗</span>
           </div>
         </div>
+
+        <!-- Service 9 - إنشاء بلاغ إدارة التجمع -->
+        <div id="cardClusterCreate" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
+             tabindex="0" role="button" aria-label="إنشاء بلاغ إدارة التجمع"
+             onclick="openClusterCreate()" style="display:none">
+          <div class="service-icon w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-width="2" d="M12 2l7 7-7 7-7-7 7-7zm0 14v6m-3-3h6"/>
+            </svg>
+          </div>
+          <h3 id="service9-title" class="text-xl font-bold text-gray-900 mb-2 text-center">بلاغ إدارة التجمع (جديد)</h3>
+          <p id="service9-desc" class="text-gray-600 text-center">سجّل ملاحظة ميدانية مع مرفقات</p>
+          <div class="text-center mt-3">
+            <span id="service9-action" class="text-blue-600 text-sm font-medium">ابدأ ↗</span>
+          </div>
+        </div>
+
+        <!-- Service 10 - عرض بلاغات إدارة التجمع -->
+        <div id="cardClusterList" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
+             tabindex="0" role="button" aria-label="عرض بلاغات إدارة التجمع"
+             onclick="openClusterList()" style="display:none">
+          <div class="service-icon w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="14" rx="2" ry="2" stroke-width="2"></rect>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 20h8M12 16v4"/>
+            </svg>
+          </div>
+          <h3 id="service10-title" class="text-xl font-bold text-gray-900 mb-2 text-center">بلاغات إدارة التجمع</h3>
+          <p id="service10-desc" class="text-gray-600 text-center">عرض وفلترة البلاغات</p>
+          <div class="text-center mt-3">
+            <span id="service10-action" class="text-blue-600 text-sm font-medium">افتح الصفحة ↗</span>
+          </div>
+        </div>
       </div>
+      
     </div>
   </section>
 
@@ -289,15 +323,21 @@
     <div class="container mx-auto px-4">
       <div class="grid md:grid-cols-3 gap-8 text-center">
         <div>
-          <div class="counter text-4xl font-bold mb-2" data-target="15000">0</div>
+          <div class="counter text-4xl font-bold mb-2"
+               data-target="15000"
+               data-stat="complaints-processed">0</div>
           <p id="stat1-desc" class="text-blue-200 font-light">+15 ألف بلاغ مُعالج</p>
         </div>
         <div>
-          <div class="counter text-4xl font-bold mb-2" data-target="5000">0</div>
+          <div class="counter text-4xl font-bold mb-2"
+               data-target="5000"
+               data-stat="active-beneficiaries">0</div>
           <p id="stat2-desc" class="text-blue-200 font-light">+5 آلاف مستفيد نشط</p>
         </div>
         <div>
-          <div class="counter text-4xl font-bold mb-2" data-target="100">0</div>
+          <div class="counter text-4xl font-bold mb-2"
+               data-target="100"
+               data-stat="hospital-coverage">0</div>
           <p id="stat3-desc" class="text-blue-200 font-light">100% تغطية للمستشفيات</p>
         </div>
       </div>
@@ -429,6 +469,12 @@
         'service8-title': 'أرشيف المرفقات',
         'service8-desc': 'رفع وحفظ الملفات في الأرشيف',
         'service8-action': 'افتح الأرشيف ↗',
+        'service9-title': 'بلاغ إدارة التجمع (جديد)',
+        'service9-desc': 'سجّل ملاحظة ميدانية مع مرفقات',
+        'service9-action': 'ابدأ ↗',
+        'service10-title': 'بلاغات إدارة التجمع',
+        'service10-desc': 'عرض وفلترة البلاغات',
+        'service10-action': 'افتح الصفحة ↗',
         
         // المميزات
         'why-choose-title': 'لماذا تختار نظام البلاغات؟',
@@ -505,6 +551,12 @@
         'service8-title': 'File Archive',
         'service8-desc': 'Upload and store files in archive',
         'service8-action': 'Open Archive ↗',
+        'service9-title': 'Cluster Management Complaint (New)',
+        'service9-desc': 'Record a field observation with attachments',
+        'service9-action': 'Start ↗',
+        'service10-title': 'Cluster Management Complaints',
+        'service10-desc': 'View and filter complaints',
+        'service10-action': 'Open page ↗',
         
         // المميزات
         'why-choose-title': 'Why Choose Our Complaint System?',
@@ -616,6 +668,8 @@
     const cardImports = $('#cardImports');
     const cardMystery = $('#cardMystery');
     const cardArchive = $('#cardArchive');
+    const cardClusterCreate = $('#cardClusterCreate');
+    const cardClusterList = $('#cardClusterList');
     
     // Debug: التحقق من وجود العناصر
     console.log('🔍 Debug - DOM elements found:', {
@@ -643,10 +697,24 @@
         const isClusterAdmin = (user.RoleID === 1) || (user.scope === 'central') || (user.HospitalID == null);
 
         if (isClusterAdmin) {
-          // أظهر كل شيء
-          [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardArchive]
+          // أظهر كل شيء (ما عدا الأرشيف - يعتمد على الصلاحيات)
+          [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardClusterCreate, cardClusterList]
             .forEach(el => el && (el.style.display = ''));
           if (cardAdmin) cardAdmin.classList.remove('hidden');
+          
+          // 🔒 الأرشيف يعتمد على الصلاحيات حتى لمدير التجمع
+          const adminArchivePerms = JSON.parse(localStorage.getItem('permissions') || '{}');
+          // محاولة جلبها من payload إذا لم تكن موجودة
+          if (!adminArchivePerms.archiveView && payload.archiveView !== undefined) {
+            adminArchivePerms.archiveView = payload.archiveView || false;
+            adminArchivePerms.archiveUpload = payload.archiveUpload || false;
+            localStorage.setItem('permissions', JSON.stringify({ ...JSON.parse(localStorage.getItem('permissions') || '{}'), ...adminArchivePerms }));
+          }
+          if (adminArchivePerms.archiveView === true) {
+            if (cardArchive) cardArchive.style.display = '';
+          } else {
+            if (cardArchive) cardArchive.style.display = 'none';
+          }
           return;
         }
 
@@ -693,8 +761,62 @@
         const canSeeImpr = imp.view || imp.create || adminPanel;
         if (cardImprovements) cardImprovements.style.display = canSeeImpr ? '' : 'none';
 
-        // الأرشيف: يظهر لجميع المستخدمين المسجلين (يمكن تعديله لاحقاً حسب الصلاحيات)
-        if (cardArchive) cardArchive.style.display = token ? '' : 'none';
+        // 🔒 التحكم في ظهور أيقونة الأرشيف حسب الصلاحيات
+        // إخفاء الأيقونة افتراضيًا
+        if (cardArchive) cardArchive.style.display = 'none';
+        
+        // قراءة صلاحيات المستخدم من التخزين المحلي
+        let archivePerms = JSON.parse(localStorage.getItem('permissions') || '{}');
+        
+        // إذا لم تكن الصلاحيات موجودة في localStorage، جرّب جلبها من payload
+        if (!archivePerms.archiveView && payload.archiveView !== undefined) {
+          archivePerms = {
+            ...archivePerms,
+            archiveView: payload.archiveView || false,
+            archiveUpload: payload.archiveUpload || false
+          };
+          localStorage.setItem('permissions', JSON.stringify({ ...JSON.parse(localStorage.getItem('permissions') || '{}'), ...archivePerms }));
+        }
+        
+        // ✅ إظهار الأيقونة فقط إذا عنده صلاحية عرض الأرشيف (بدون استثناءات)
+        if (archivePerms.archiveView === true) {
+          if (cardArchive) cardArchive.style.display = '';
+        }
+
+        // 🔒 التحكم في ظهور أيقونات بلاغات إدارة التجمع حسب الصلاحيات
+        // تحميل صلاحيات المستخدم من التخزين المحلي (اللي جاي من /api/auth/me-permissions أو /api/permissions/me)
+        let perms = JSON.parse(localStorage.getItem('permissions') || '{}');
+        
+        // إذا لم تكن الصلاحيات موجودة في localStorage، جرّب جلبها من payload
+        if (!perms.clusterView && !perms.clusterSubmit) {
+          // جرّب استخدام الصلاحيات من payload مباشرة (من /api/auth/me-permissions)
+          if (payload.clusterView !== undefined || payload.clusterSubmit !== undefined) {
+            perms = {
+              ...perms, // الاحتفاظ بالصلاحيات الأخرى
+              clusterView: payload.clusterView || false,
+              clusterSubmit: payload.clusterSubmit || false,
+              clusterDetails: payload.clusterDetails || false,
+              clusterReply: payload.clusterReply || false,
+              clusterStatus: payload.clusterStatus || false
+            };
+            // حفظ الصلاحيات المحدثة في localStorage
+            localStorage.setItem('permissions', JSON.stringify(perms));
+          }
+        }
+        
+        // 🔒 إخفاؤها مبدئيًا - الأيقونات تختفي تماماً إذا لم تكن هناك صلاحية
+        if (cardClusterList) cardClusterList.style.display = 'none';
+        if (cardClusterCreate) cardClusterCreate.style.display = 'none';
+        
+        // ✅ إظهار "عرض بلاغات إدارة التجمع" فقط إذا عنده صلاحية العرض
+        if (perms.clusterView === true) {
+          if (cardClusterList) cardClusterList.style.display = '';
+        }
+        
+        // ✅ إظهار "إنشاء بلاغ إدارة التجمع" فقط إذا عنده صلاحية التقديم
+        if (perms.clusterSubmit === true) {
+          if (cardClusterCreate) cardClusterCreate.style.display = '';
+        }
 
         // لوحة الإدارة
         if (cardAdmin) {
@@ -709,18 +831,55 @@
           const userData = JSON.parse(localStorage.getItem('userData') || '{}');
           const isClusterAdmin = (userData.RoleID === 1) || (userData.scope === 'central') || (userData.HospitalID == null);
           if (isClusterAdmin) {
-            [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardArchive]
+            // مدير التجمع: أظهر كل شيء (ما عدا الأرشيف - يعتمد على الصلاحيات)
+            [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardClusterCreate, cardClusterList]
               .forEach(el => el && (el.style.display = ''));
             if (cardAdmin) cardAdmin.classList.remove('hidden');
-          } else if (token && cardArchive) {
-            // للمستخدمين العاديين المسجلين، أظهر الأرشيف
-            cardArchive.style.display = '';
+            
+            // 🔒 الأرشيف يعتمد على الصلاحيات حتى لمدير التجمع
+            const adminArchivePerms = JSON.parse(localStorage.getItem('permissions') || '{}');
+            if (adminArchivePerms.archiveView === true) {
+              if (cardArchive) cardArchive.style.display = '';
+            } else {
+              if (cardArchive) cardArchive.style.display = 'none';
+            }
+          } else {
+            // 🔒 التحكم في أيقونات بلاغات إدارة التجمع من localStorage
+            const fallbackPerms = JSON.parse(localStorage.getItem('permissions') || '{}');
+            // 🔒 إخفاؤها مبدئيًا - الأيقونات تختفي تماماً إذا لم تكن هناك صلاحية
+            if (cardClusterList) cardClusterList.style.display = 'none';
+            if (cardClusterCreate) cardClusterCreate.style.display = 'none';
+            if (cardArchive) cardArchive.style.display = 'none';
+            
+            // ✅ إظهار "عرض بلاغات إدارة التجمع" فقط إذا عنده صلاحية العرض
+            if (fallbackPerms.clusterView === true) {
+              if (cardClusterList) cardClusterList.style.display = '';
+            }
+            
+            // ✅ إظهار "إنشاء بلاغ إدارة التجمع" فقط إذا عنده صلاحية التقديم
+            if (fallbackPerms.clusterSubmit === true) {
+              if (cardClusterCreate) cardClusterCreate.style.display = '';
+            }
+            
+            // ✅ إظهار أيقونة الأرشيف فقط إذا عنده صلاحية العرض
+            if (fallbackPerms.archiveView === true) {
+              if (cardArchive) cardArchive.style.display = '';
+            }
           }
         } catch {}
       }
     }
 
     document.addEventListener('DOMContentLoaded', initHomeTiles);
+
+    // دوال فتح صفحات بلاغات إدارة التجمع
+    function openClusterCreate() {
+      window.location.href = '../public/complaints/cluster/cluster-report-create.html';
+    }
+
+    function openClusterList() {
+      window.location.href = '../public/complaints/cluster/cluster-reports-list.html';
+    }
   </script>
 </body>
 </html>

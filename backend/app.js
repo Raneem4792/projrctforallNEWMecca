@@ -18,8 +18,8 @@ if (missingVars.length > 0) {
   console.error('\nأضف هذه المتغيرات إلى ملف .env:');
   console.error('CENTRAL_DB_HOST=127.0.0.1');
   console.error('CENTRAL_DB_USER=root');
-  console.error('CENTRAL_DB_PASS=Raneem11');
-  console.error('CENTRAL_DB_NAME=hospitals_mecca4\n');
+  console.error('CENTRAL_DB_PASS=SamarAmer12345@');
+  console.error('CENTRAL_DB_NAME=hospitals_mecca3\n');
   // لا نوقف التطبيق، فقط تحذير
 }
 
@@ -61,8 +61,10 @@ import mysteryComplaintsRoutes from './routes/mystery-complaints.routes.js';
 import mysteryDashboardRoutes from './routes/mystery-dashboard.routes.js';
 import centralRoutes from './routes/central.routes.js';
 import publicComplaintsRoutes from './routes/public-complaints.js';
+import publicStatsRoutes from './routes/publicStats.js';
 import archiveRoutes from './routes/archiveRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import clusterReportsRoutes from './routes/clusterReports.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -92,7 +94,7 @@ const corsOptions = {
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001'
   ],
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Hospital-Id','X-Requested-With'],
   credentials: true
 };
@@ -214,7 +216,8 @@ app.get('/admin/*', (req, res, next) => {
 // ⚠️ ترتيب الـ routes مهم جداً: الـ specific routes يجب أن تأتي قبل الـ dynamic routes
 
 // 0. Public routes (بدون توثيق) - لها الأولوية القصوى
-app.use('/api/public', publicComplaintsRoutes);
+app.use('/api/public', publicStatsRoutes); // إحصائيات الصفحة الرئيسية
+app.use('/api/public', publicComplaintsRoutes); // بلاغات عامة
 
 // 1. Routes ثابتة ومحددة (Specific routes) - لها الأولوية
 app.use('/api/health', healthRoutes);
@@ -242,6 +245,7 @@ app.use('/api/complaints', complaintsRouter); // Single-tenant (fallback)
 app.use('/api/projects', projectsRoutes);
 app.use('/api/improvements', improvementsRoutes); // مشاريع التحسين
 app.use('/api/archive', archiveRoutes); // ركن الأرشيف ✅
+app.use('/api/cluster-reports', clusterReportsRoutes); // بلاغات إدارة التجمع ✅
 
 // Debug: تأكيد تسجيل archive routes
 console.log('✅ Archive routes mounted at /api/archive');

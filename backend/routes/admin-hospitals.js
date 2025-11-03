@@ -132,7 +132,7 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
   // إعدادات الاتصال بقاعدة البيانات
   const dbHost = process.env.DB_HOST || '127.0.0.1';
   const dbUser = process.env.DB_USER || 'root';
-  const dbPass = process.env.DB_PASS || 'Raneem11';
+  const dbPass = process.env.DB_PASS || 'SamarAmer12345@';
 
   // 2) فحص عدم تكرار الكود/القاعدة في المركزي
   const [dup] = await central.query(

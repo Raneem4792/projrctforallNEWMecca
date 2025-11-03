@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>تفاصيل بلاغ إدارة التجمع</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../submit/submit-complaint.css">
+
+  <style>
+    /* نبض خفيف للأولوية المتوسطة (أصفر) */
+    @keyframes pulse-yellow {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+      70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .prio-pulse { position: relative; }
+    .prio-pulse .dot {
+      display:inline-block;width:8px;height:8px;border-radius:9999px;
+    }
+    .prio-pulse--med .dot { background:#F59E0B; animation: pulse-yellow 1.6s infinite; }
+  </style>
+</head>
+<body class="bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <img src="../../assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../../dashboard/dashboard.html" id="nav-dashboard" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../../../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-16">
+    <!-- عنوان الصفحة -->
+    <section class="text-center mb-6">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-4">تفاصيل بلاغ إدارة التجمع</h1>
+      <a href="cluster-reports-list.html" class="inline-block bg-gray-100 text-gray-700 px-4 py-1.5 rounded-full text-sm hover:bg-gray-200 transition">
+        ⟵ رجوع للقائمة
+      </a>
+    </section>
+
+    <!-- هيدر مختصر للتعريف -->
+    <section id="headCard" class="bg-white rounded-2xl p-5 shadow-xl border border-gray-100 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-xs text-gray-500">رقم البلاغ</div>
+          <div id="reportGlobalId" class="text-xl font-extrabold text-[#002B5B]">-</div>
+        </div>
+        <div class="flex gap-2 items-center">
+          <span id="statusBadge" class="px-3 py-1 rounded-full text-sm font-semibold"></span>
+          <span id="priorityBadge" class="px-3 py-1 rounded-full text-sm font-semibold"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- شريط الإجراءات -->
+    <section id="actionsBar" class="bg-white rounded-2xl p-4 shadow-xl border border-gray-100 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="text-sm text-gray-600">إجراءات على البلاغ</div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btnChangeStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm hover:bg-amber-600 transition">تغيير الحالة</button>
+          <button id="btnAddReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition">إضافة رد</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- تفاصيل البلاغ -->
+    <section class="grid lg:grid-cols-2 gap-4 mb-4">
+      <!-- بيانات البلاغ -->
+      <div class="card">
+        <div class="section-title">
+          <span class="icon">📝</span><h2>بيانات البلاغ</h2>
+        </div>
+        <div class="grid gap-3 text-[15px] text-gray-700">
+          <div>
+            <span class="font-semibold text-gray-800">العنوان:</span>
+            <div id="reportTitle" class="mt-1 text-gray-900 font-medium">-</div>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">الوصف:</span>
+            <div id="reportDescription" class="mt-1 text-gray-900 bg-gray-50 rounded-lg p-3 min-h-[80px]">-</div>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">المستشفى:</span>
+            <span id="hospitalName">-</span>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">تاريخ الإنشاء:</span>
+            <span id="createdAt">-</span>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">آخر تحديث:</span>
+            <span id="updatedAt">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- معلومات الموقع والأولوية -->
+      <div class="card">
+        <div class="section-title">
+          <span class="icon">📍</span><h2>معلومات الموقع والأولوية</h2>
+        </div>
+        <div class="grid gap-3 text-[15px] text-gray-700">
+          <div>
+            <span class="font-semibold text-gray-800">نوع الموقع:</span>
+            <span id="locationType">-</span>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">اسم الموقع:</span>
+            <span id="locationName">-</span>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">القسم:</span>
+            <span id="departmentName">-</span>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-800">الأولوية:</span>
+            <span id="priorityText">-</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- المرفقات -->
+    <section class="card mb-4">
+      <div class="section-title">
+        <span class="icon">📎</span><h2>المرفقات</h2>
+      </div>
+      <div id="attachmentsList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        <div class="text-center text-gray-500 py-8">جاري التحميل...</div>
+      </div>
+    </section>
+
+    <!-- الردود -->
+    <section class="card mb-4">
+      <div class="section-title">
+        <span class="icon">💬</span><h2>الردود</h2>
+      </div>
+      <div id="repliesList" class="space-y-4 mt-4">
+        <div class="text-center text-gray-500 py-8">جاري تحميل الردود...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="cluster-reports-list.html" class="text-gray-300 hover:text-white hover:underline transition-colors">بلاغات الإدارة</a></li>
+            <li><a href="cluster-report-create.html" class="text-gray-300 hover:text-white hover:underline transition-colors">إنشاء بلاغ</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal إضافة رد -->
+  <div id="replyModal" class="fixed inset-0 z-50 hidden place-items-center">
+    <div class="bg-white w-[90%] max-w-2xl rounded-2xl shadow-2xl border border-gray-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-[#002B5B]">إضافة رد على البلاغ</h3>
+        <button id="closeReplyModal" class="text-gray-500 hover:text-gray-700">✕</button>
+      </div>
+      <div class="grid gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">نص الرد <span class="text-red-500">*</span></label>
+          <textarea id="replyText" rows="4" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200" placeholder="أدخل نص الرد..." required></textarea>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">مرفقات (اختياري)</label>
+          <input id="replyFiles" type="file" multiple class="w-full text-sm">
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="cancelReply" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
+        <button id="saveReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm">حفظ الرد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal تغيير الحالة -->
+  <div id="statusModal" class="fixed inset-0 z-50 hidden place-items-center">
+    <div class="bg-white w-[90%] max-w-md rounded-2xl shadow-2xl border border-gray-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-[#002B5B]">تغيير حالة البلاغ</h3>
+        <button id="closeStatusModal" class="text-gray-500 hover:text-gray-700">✕</button>
+      </div>
+      <div class="grid gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">الحالة الجديدة</label>
+          <select id="newStatus" class="w-full h-10 rounded-xl border border-gray-200 px-2 focus:ring-2 focus:ring-blue-200">
+            <option value="OPEN">مفتوحة</option>
+            <option value="IN_PROGRESS">قيد المعالجة</option>
+            <option value="RESOLVED">تم الحل</option>
+            <option value="CLOSED">مغلقة</option>
+            <option value="CANCELLED">ملغية</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">ملاحظة (اختياري)</label>
+          <textarea id="statusNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="cancelStatus" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
+        <button id="applyStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm">تطبيق</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+    
+    function qs(k) {
+      return new URLSearchParams(location.search).get(k);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const d = new Date(dateStr);
+      if (isNaN(d)) return dateStr;
+      return d.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // دوال عرض الحالات والأولويات
+    function getStatusBadge(status) {
+      const statusMap = {
+        'OPEN': { text: 'مفتوح', class: 'bg-blue-100 text-blue-700' },
+        'IN_PROGRESS': { text: 'قيد المعالجة', class: 'bg-yellow-100 text-yellow-700' },
+        'RESOLVED': { text: 'تم الحل', class: 'bg-green-100 text-green-700' },
+        'CLOSED': { text: 'مغلق', class: 'bg-gray-100 text-gray-700' },
+        'CANCELLED': { text: 'ملغي', class: 'bg-red-100 text-red-700' }
+      };
+      const s = statusMap[status] || { text: status, class: 'bg-gray-100 text-gray-700' };
+      return `<span class="px-3 py-1 rounded-full text-sm font-semibold ${s.class}">${s.text}</span>`;
+    }
+
+    function getPriorityBadge(priority) {
+      const priorityMap = {
+        'LOW': { text: 'منخفضة', class: 'bg-gray-100 text-gray-700' },
+        'MEDIUM': { text: 'متوسطة', class: 'bg-yellow-100 text-yellow-700' },
+        'HIGH': { text: 'مرتفعة', class: 'bg-orange-100 text-orange-700' },
+        'CRITICAL': { text: 'حرجة', class: 'bg-red-100 text-red-700' }
+      };
+      const p = priorityMap[priority] || { text: priority, class: 'bg-gray-100 text-gray-700' };
+      return `<span class="px-3 py-1 rounded-full text-sm font-semibold ${p.class}">${p.text}</span>`;
+    }
+
+    function getLocationTypeText(type) {
+      const typeMap = {
+        'HOSPITAL': 'مستشفى',
+        'CLINIC': 'عيادة',
+        'DEPARTMENT': 'قسم',
+        'OTHER': 'أخرى'
+      };
+      return typeMap[type] || type || '—';
+    }
+
+    // جلب تفاصيل البلاغ
+    async function loadReportDetails() {
+      const reportId = qs('id');
+      const hospitalId = qs('hospitalId');
+
+      if (!reportId || !hospitalId) {
+        alert('خطأ: يجب تحديد معرف البلاغ والمستشفى في الرابط.');
+        return;
+      }
+
+      try {
+        const url = `${API_BASE}/api/cluster-reports/${reportId}?hospitalId=${hospitalId}`;
+        const res = await fetch(url, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || error.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const report = data.report || data;
+
+        // تعبئة البيانات
+        document.getElementById('reportGlobalId').textContent = report.GlobalID || reportId;
+        document.getElementById('statusBadge').innerHTML = getStatusBadge(report.StatusCode || 'OPEN');
+        document.getElementById('priorityBadge').innerHTML = getPriorityBadge(report.PriorityCode || 'MEDIUM');
+        
+        document.getElementById('reportTitle').textContent = report.Title || '—';
+        document.getElementById('reportDescription').textContent = report.Description || 'لا يوجد وصف';
+        document.getElementById('locationType').textContent = getLocationTypeText(report.LocationType);
+        document.getElementById('locationName').textContent = report.LocationName || '—';
+        
+        // جلب اسم القسم إذا كان موجوداً (async)
+        if (report.DepartmentID) {
+          document.getElementById('departmentName').textContent = `قسم #${report.DepartmentID}`;
+          // جلب اسم القسم من API
+          fetch(`${API_BASE}/api/departments/${report.DepartmentID}?hospitalId=${hospitalId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+            .then(deptRes => deptRes.ok ? deptRes.json() : null)
+            .then(deptData => {
+              if (deptData) {
+                const dept = deptData.department || deptData;
+                document.getElementById('departmentName').textContent = dept.NameAr || dept.NameEn || `قسم #${report.DepartmentID}`;
+              }
+            })
+            .catch(() => {}); // تجاهل الأخطاء
+        } else {
+          document.getElementById('departmentName').textContent = '—';
+        }
+        
+        document.getElementById('priorityText').textContent = getPriorityBadge(report.PriorityCode || 'MEDIUM').replace(/<[^>]*>/g, '').trim();
+        
+        document.getElementById('createdAt').textContent = formatDate(report.CreatedAt);
+        document.getElementById('updatedAt').textContent = formatDate(report.UpdatedAt);
+
+        // جلب اسم المستشفى
+        document.getElementById('hospitalName').textContent = `مستشفى #${hospitalId}`;
+        fetch(`${API_BASE}/api/hospitals`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+          .then(hospRes => hospRes.ok ? hospRes.json() : null)
+          .then(hospData => {
+            if (hospData) {
+              const hospitals = hospData?.items || hospData?.data || hospData || [];
+              const hospital = hospitals.find(h => h.HospitalID == hospitalId);
+              if (hospital) {
+                document.getElementById('hospitalName').textContent = hospital.NameAr || hospital.NameEn || `مستشفى #${hospitalId}`;
+              }
+            }
+          })
+          .catch(() => {}); // تجاهل الأخطاء
+
+        // جلب المرفقات
+        const attachments = data.attachments || [];
+        renderAttachments(attachments);
+
+        // جلب الردود
+        loadReplies(reportId, hospitalId);
+
+        // حفظ البيانات للاستخدام في التعديل
+        window.currentReport = report;
+        window.currentReportId = reportId;
+        window.currentHospitalId = hospitalId;
+
+      } catch (error) {
+        console.error('خطأ في جلب تفاصيل البلاغ:', error);
+        alert(`خطأ: ${error.message}`);
+      }
+    }
+
+    // عرض المرفقات
+    function renderAttachments(attachments) {
+      const container = document.getElementById('attachmentsList');
+      
+      if (!attachments || attachments.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد مرفقات</div>';
+        return;
+      }
+
+      container.innerHTML = attachments.map(att => {
+        const fileName = att.FileName || att.filename || 'ملف';
+        const filePath = att.FilePath || att.filePath || '';
+        const fileSize = att.FileSize ? `${(att.FileSize / 1024).toFixed(1)} KB` : '';
+        // بناء رابط الملف الصحيح
+        // الملفات تُحفظ في uploads/cluster-reports/{hospitalId}/filename
+        let fileUrl = '';
+        const hospitalId = window.currentHospitalId || '';
+        
+        if (filePath.startsWith('http')) {
+          fileUrl = filePath;
+        } else if (filePath.startsWith('/')) {
+          // إذا بدأ بـ /، استخدمه مباشرة مع API_BASE
+          fileUrl = `${API_BASE}${filePath}`;
+        } else if (filePath.includes('cluster-reports')) {
+          // إذا كان المسار يحتوي على cluster-reports
+          const cleanPath = filePath.replace(/^uploads\/|^\/uploads\/|^\/api\/uploads\//, '');
+          fileUrl = `${API_BASE}/api/uploads/${cleanPath}`;
+        } else {
+          // بناء المسار: uploads/cluster-reports/{hospitalId}/filename
+          fileUrl = `${API_BASE}/api/uploads/cluster-reports/${hospitalId}/${filePath}`;
+        }
+        
+        return `
+          <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-900 truncate" title="${fileName}">📎 ${fileName}</span>
+              ${fileSize ? `<span class="text-xs text-gray-500">${fileSize}</span>` : ''}
+            </div>
+            <a href="${fileUrl}" target="_blank" download="${fileName}" class="inline-block mt-2 text-blue-600 text-sm hover:underline">عرض/تحميل ↗</a>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // جلب وعرض الردود
+    async function loadReplies(reportId, hospitalId) {
+      const container = document.getElementById('repliesList');
+      
+      if (!reportId || !hospitalId) {
+        container.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد ردود</div>';
+        return;
+      }
+
+      try {
+        const url = `${API_BASE}/api/cluster-reports/${reportId}/responses?hospitalId=${hospitalId}`;
+        const res = await fetch(url, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) {
+          if (res.status === 404) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد ردود حالياً</div>';
+            return;
+          }
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || error.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const responses = data.responses || [];
+
+        if (responses.length === 0) {
+          container.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد ردود حالياً</div>';
+          return;
+        }
+
+        // عرض الردود
+        container.innerHTML = responses.map(response => {
+          const responderName = response.ResponderName || `مستخدم #${response.ResponderUserID}`;
+          const message = response.Message || 'لا يوجد نص للرد';
+          const createdAt = formatDate(response.CreatedAt);
+          
+          return `
+            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-semibold text-[#002B5B]">${responderName}</span>
+                <span class="text-xs text-gray-500">${createdAt}</span>
+              </div>
+              <p class="text-gray-700 whitespace-pre-wrap">${message}</p>
+            </div>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('خطأ في جلب الردود:', error);
+        container.innerHTML = `<div class="text-center text-red-500 py-8">خطأ في تحميل الردود: ${error.message}</div>`;
+      }
+    }
+
+    // تغيير الحالة
+    document.getElementById('btnChangeStatus')?.addEventListener('click', () => {
+      document.getElementById('statusModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeStatusModal')?.addEventListener('click', () => {
+      document.getElementById('statusModal').classList.add('hidden');
+    });
+
+    document.getElementById('cancelStatus')?.addEventListener('click', () => {
+      document.getElementById('statusModal').classList.add('hidden');
+    });
+
+    document.getElementById('applyStatus')?.addEventListener('click', async () => {
+      const newStatus = document.getElementById('newStatus').value;
+      const note = document.getElementById('statusNote').value;
+      const reportId = window.currentReportId;
+      const hospitalId = window.currentHospitalId;
+
+      if (!reportId || !hospitalId) {
+        alert('خطأ: بيانات البلاغ غير متوفرة');
+        return;
+      }
+
+      try {
+        const url = `${API_BASE}/api/cluster-reports/${reportId}/status?hospitalId=${hospitalId}`;
+        const res = await fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || error.message || `HTTP ${res.status}`);
+        }
+
+        alert('✅ تم تغيير الحالة بنجاح');
+        document.getElementById('statusModal').classList.add('hidden');
+        loadReportDetails(); // إعادة تحميل البيانات
+      } catch (error) {
+        console.error('خطأ في تغيير الحالة:', error);
+        alert(`خطأ: ${error.message}`);
+      }
+    });
+
+    // إضافة رد
+    document.getElementById('btnAddReply')?.addEventListener('click', () => {
+      document.getElementById('replyModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeReplyModal')?.addEventListener('click', () => {
+      document.getElementById('replyModal').classList.add('hidden');
+      document.getElementById('replyText').value = '';
+      document.getElementById('replyFiles').value = '';
+    });
+
+    document.getElementById('cancelReply')?.addEventListener('click', () => {
+      document.getElementById('replyModal').classList.add('hidden');
+      document.getElementById('replyText').value = '';
+      document.getElementById('replyFiles').value = '';
+    });
+
+    document.getElementById('saveReply')?.addEventListener('click', async () => {
+      const replyText = document.getElementById('replyText').value.trim();
+      const reportId = window.currentReportId;
+      const hospitalId = window.currentHospitalId;
+
+      if (!replyText) {
+        alert('يرجى إدخال نص الرد');
+        return;
+      }
+
+      if (!reportId || !hospitalId) {
+        alert('خطأ: بيانات البلاغ غير متوفرة');
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('replyText', replyText);
+
+        const files = document.getElementById('replyFiles').files;
+        for (let i = 0; i < files.length; i++) {
+          formData.append('attachments', files[i]);
+        }
+
+        const url = `${API_BASE}/api/cluster-reports/${reportId}/responses?hospitalId=${hospitalId}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || error.message || `HTTP ${res.status}`);
+        }
+
+        alert('✅ تم إضافة الرد بنجاح');
+        document.getElementById('replyModal').classList.add('hidden');
+        document.getElementById('replyText').value = '';
+        document.getElementById('replyFiles').value = '';
+        
+        // إعادة تحميل الردود فقط
+        const reportId = window.currentReportId;
+        const hospitalId = window.currentHospitalId;
+        if (reportId && hospitalId) {
+          loadReplies(reportId, hospitalId);
+        } else {
+          loadReportDetails(); // إعادة تحميل جميع البيانات
+        }
+      } catch (error) {
+        console.error('خطأ في إضافة الرد:', error);
+        alert(`خطأ: ${error.message}`);
+      }
+    });
+
+    // تحميل البيانات عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', async () => {
+      // جلب الصلاحيات إذا لم تكن موجودة
+      let perms = JSON.parse(localStorage.getItem('permissions') || '{}');
+      if (!perms.clusterDetails) {
+        try {
+          const API_BASE = window.API_BASE || 'http://localhost:3001';
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          
+          const params = new URLSearchParams();
+          if (userData?.HospitalID) params.set('hospitalId', userData.HospitalID);
+          
+          const permsRes = await fetch(`${API_BASE}/api/permissions/me${params.toString() ? '?' + params.toString() : ''}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+            credentials: 'include'
+          });
+          
+          if (permsRes.ok) {
+            const permsData = await permsRes.json();
+            if (permsData.ok && permsData.data) {
+              perms = permsData.data;
+              localStorage.setItem('permissions', JSON.stringify(perms));
+            }
+          }
+        } catch (error) {
+          console.error('❌ خطأ في جلب الصلاحيات:', error);
+        }
+      }
+      
+      // فحص الصلاحية
+      if (!perms.clusterDetails) {
+        alert('ليس لديك صلاحية لعرض تفاصيل البلاغ');
+        location.href = 'cluster-reports-list.html';
+        return;
+      }
+      
+      // التحكم بالأزرار
+      if (!perms.clusterReply) {
+        document.getElementById('btnAddReply')?.classList.add('hidden');
+      }
+      if (!perms.clusterStatus) {
+        document.getElementById('btnChangeStatus')?.classList.add('hidden');
+      }
+      
+      loadReportDetails();
+    });
+
+  </script>
+
+  <!-- نظام حماية الصفحات -->
+  <script src="../../assets/js/auth-check.js"></script>
+</body>
+</html>
+

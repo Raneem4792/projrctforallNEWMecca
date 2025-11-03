@@ -19,7 +19,7 @@ async function checkClusterAdmin() {
     
     if (users.length === 0) {
       console.log('❌ لا يوجد مستخدمين مع RoleID = 1');
-      console.log('💡 قم بتشغيل: mysql -u root -p hospitals_mecca4 < backend/sql/setup_cluster_admin.sql');
+      console.log('💡 قم بتشغيل: mysql -u root -p hospitals_mecca3 < backend/sql/setup_cluster_admin.sql');
       return;
     }
 
@@ -67,7 +67,7 @@ async function checkClusterAdmin() {
       }
     } else {
       console.log('❌ لم يتم العثور على cluster.admin');
-      console.log('💡 قم بتشغيل: mysql -u root -p hospitals_mecca4 < backend/sql/setup_cluster_admin.sql');
+      console.log('💡 قم بتشغيل: mysql -u root -p hospitals_mecca3 < backend/sql/setup_cluster_admin.sql');
     }
 
     // 3) فحص المستخدم الحالي (UserID = 4)

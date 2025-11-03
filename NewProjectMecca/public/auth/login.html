@@ -251,6 +251,36 @@
           localStorage.setItem('hospitalId', data.user.hospitalId);
         }
         
+        // جلب وحفظ الصلاحيات بعد تسجيل الدخول
+        try {
+          const API_BASE = window.API_BASE || 'http://localhost:3001';
+          const permsUrl = `${API_BASE}/api/permissions/me`;
+          const params = new URLSearchParams();
+          if (data.user?.HospitalID) {
+            params.set('hospitalId', data.user.HospitalID);
+          }
+          
+          const permsRes = await fetch(`${permsUrl}${params.toString() ? '?' + params.toString() : ''}`, {
+            headers: {
+              'Authorization': `Bearer ${data.token}`,
+              'Accept': 'application/json'
+            },
+            credentials: 'include'
+          });
+          
+          if (permsRes.ok) {
+            const permsData = await permsRes.json();
+            if (permsData.ok && permsData.data) {
+              localStorage.setItem('permissions', JSON.stringify(permsData.data));
+              console.log('✅ تم حفظ الصلاحيات بنجاح');
+            }
+          } else {
+            console.warn('⚠️ فشل جلب الصلاحيات:', permsRes.status);
+          }
+        } catch (permsError) {
+          console.error('❌ خطأ في جلب الصلاحيات:', permsError);
+        }
+        
         console.log('✅ تم حفظ بيانات تسجيل الدخول بنجاح');
         console.log('📦 Token:', data.token ? 'موجود ✅' : 'غير موجود ❌');
         console.log('📦 HospitalID:', data.user?.HospitalID || data.user?.hospitalId || 'غير محدد');

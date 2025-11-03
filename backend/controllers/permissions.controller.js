@@ -149,7 +149,16 @@ export async function getUserPermissions(req, res) {
         reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
         reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
         reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
-        reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES')
+        reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+        // ===== صلاحيات بلاغات إدارة التجمع =====
+        clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
+        clusterView:    has('CLUSTER_REPORT_VIEW'),
+        clusterDetails: has('CLUSTER_REPORT_DETAILS'),
+        clusterReply:   has('CLUSTER_REPORT_REPLY'),
+        clusterStatus:  has('CLUSTER_REPORT_STATUS'),
+        // ===== صلاحيات الأرشيف =====
+        archiveView:   has('ARCHIVE_VIEW'),
+        archiveUpload: has('ARCHIVE_UPLOAD')
       }
     });
   } catch (e) {
@@ -174,8 +183,19 @@ export async function saveUserPermissions(req, res) {
       dashChartMystery, dashChartClasses, dashChartTopClinics, dashChartDailyTrend, dashUrgentList,
       // Reports permissions
       reportsPage, reportsCardTotals, reportsCardOpen, reportsCardClosed, reportsCardUrgent, reportsCardSLA, reportsCardHospitals,
-        reportsChartByHospitalType, reportsChartStatusDistribution, reportsChartTrend6m, reportsChartUrgentPercent, reportsChartByDepartment, reportsChartTopEmployees
+        reportsChartByHospitalType, reportsChartStatusDistribution, reportsChartTrend6m, reportsChartUrgentPercent, reportsChartByDepartment, reportsChartTopEmployees,
+      // صلاحيات بلاغات إدارة التجمع
+      clusterSubmit, clusterView, clusterDetails, clusterReply, clusterStatus,
+      // صلاحيات الأرشيف
+      archiveView, archiveUpload
     } = req.body;
+    
+    console.log('📥 Received archive permissions:', {
+      archiveView,
+      archiveUpload,
+      hospitalId: hid,
+      targetUserId
+    });
 
     const tenant = await getTenantPoolByHospitalId(hid);
     const conn = await tenant.getConnection();
@@ -268,6 +288,22 @@ export async function saveUserPermissions(req, res) {
     reportsChartUrgentPercent      ? await upsert('REPORTS_CHART_URGENT_PERCENT')       : await drop('REPORTS_CHART_URGENT_PERCENT');
         reportsChartByDepartment       ? await upsert('REPORTS_CHART_BY_DEPARTMENT')        : await drop('REPORTS_CHART_BY_DEPARTMENT');
         reportsChartTopEmployees       ? await upsert('REPORTS_CHART_TOP_EMPLOYEES')         : await drop('REPORTS_CHART_TOP_EMPLOYEES');
+    
+    // صلاحيات بلاغات إدارة التجمع
+    clusterSubmit  ? await upsert('CLUSTER_REPORT_CREATE')   : await drop('CLUSTER_REPORT_CREATE');
+    clusterView    ? await upsert('CLUSTER_REPORT_VIEW')     : await drop('CLUSTER_REPORT_VIEW');
+    clusterDetails ? await upsert('CLUSTER_REPORT_DETAILS')  : await drop('CLUSTER_REPORT_DETAILS');
+    clusterReply   ? await upsert('CLUSTER_REPORT_REPLY')    : await drop('CLUSTER_REPORT_REPLY');
+    clusterStatus  ? await upsert('CLUSTER_REPORT_STATUS')   : await drop('CLUSTER_REPORT_STATUS');
+    
+    // صلاحيات الأرشيف
+    console.log('💾 Saving archive permissions:', {
+      archiveView: archiveView ? 'ARCHIVE_VIEW' : 'DROP',
+      archiveUpload: archiveUpload ? 'ARCHIVE_UPLOAD' : 'DROP'
+    });
+    archiveView   ? await upsert('ARCHIVE_VIEW')   : await drop('ARCHIVE_VIEW');
+    archiveUpload ? await upsert('ARCHIVE_UPLOAD') : await drop('ARCHIVE_UPLOAD');
+    console.log('✅ Archive permissions saved successfully');
 
     // نطاق السجل
     if (historyScope) {
@@ -280,6 +316,11 @@ export async function saveUserPermissions(req, res) {
     conn.release();
     res.json({ ok:true });
   } catch (e) {
+    if (conn) {
+      await conn.rollback();
+      conn.release();
+    }
+    console.error('❌ Error saving permissions:', e);
     res.status(400).json({ ok:false, error: e.message });
   }
 }
@@ -363,7 +404,16 @@ export async function getMyPermissions(req, res) {
             reportsChartTrend6m: true,
             reportsChartUrgentPercent: true,
             reportsChartByDepartment: true,
-            reportsChartTopEmployees: true
+            reportsChartTopEmployees: true,
+            // ===== صلاحيات بلاغات إدارة التجمع =====
+            clusterSubmit:  true,
+            clusterView:    true,
+            clusterDetails: true,
+            clusterReply:   true,
+            clusterStatus:  true,
+            // ===== صلاحيات الأرشيف =====
+            archiveView:   true,
+            archiveUpload: true
           }
         });
         return;
@@ -445,7 +495,16 @@ export async function getMyPermissions(req, res) {
           reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
           reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
           reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
-          reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES')
+          reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+          // ===== صلاحيات بلاغات إدارة التجمع =====
+          clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
+          clusterView:    has('CLUSTER_REPORT_VIEW'),
+          clusterDetails: has('CLUSTER_REPORT_DETAILS'),
+          clusterReply:   has('CLUSTER_REPORT_REPLY'),
+          clusterStatus:  has('CLUSTER_REPORT_STATUS'),
+          // ===== صلاحيات الأرشيف =====
+          archiveView:   has('ARCHIVE_VIEW'),
+          archiveUpload: has('ARCHIVE_UPLOAD')
         }
       });
     } else {
@@ -534,7 +593,13 @@ export async function getMyPermissions(req, res) {
           reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
           reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
           reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
-          reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES')
+          reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+          // ===== صلاحيات بلاغات إدارة التجمع =====
+          clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
+          clusterView:    has('CLUSTER_REPORT_VIEW'),
+          clusterDetails: has('CLUSTER_REPORT_DETAILS'),
+          clusterReply:   has('CLUSTER_REPORT_REPLY'),
+          clusterStatus:  has('CLUSTER_REPORT_STATUS')
         }
       });
     }

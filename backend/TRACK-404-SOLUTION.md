@@ -47,8 +47,8 @@ node diagnose-data-sync.js
 
 ### الخطوة 2: تحسين القاعدة المركزية
 ```bash
-# تشغيل على القاعدة المركزية hospitals_mecca4
-mysql -u root -p hospitals_mecca4 < optimize-central-db.sql
+# تشغيل على القاعدة المركزية hospitals_mecca3
+mysql -u root -p hospitals_mecca3 < optimize-central-db.sql
 ```
 
 ### الخطوة 3: اختبار الحل

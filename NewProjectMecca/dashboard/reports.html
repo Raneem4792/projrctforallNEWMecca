@@ -286,6 +286,157 @@
           </div>
       </div>
     </section>
+
+    <!-- منطقة تقارير PDF / Excel -->
+    <section id="export-reports" class="mt-10 mb-10">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-4" style="color:#002B5B;">
+          تقارير جاهزة (PDF / Excel)
+        </h2>
+        <div class="bg-white rounded-2xl p-5 shadow-xl border border-gray-100 space-y-4">
+          <!-- تقرير ملخّص التجمع -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+            <div>
+              <div class="font-semibold">تقرير ملخّص التجمع</div>
+              <div class="text-sm text-gray-500">
+                ملخص لكل مستشفى: إجمالي البلاغات، المفتوحة، المغلقة، الحرجة، نسبة الإغلاق والـ SLA.
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-600">الشهر:</label>
+              <input type="month" id="summaryMonth"
+                     class="border rounded-lg px-3 py-1 text-sm" />
+              <button type="button"
+                      onclick="exportReport('summary','excel')"
+                      class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg">
+                Excel
+              </button>
+              <button type="button"
+                      onclick="exportReport('summary','pdf')"
+                      class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg">
+                PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- تقرير البلاغات التفصيلية -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+            <div>
+              <div class="font-semibold">تقرير البلاغات التفصيلية</div>
+              <div class="text-sm text-gray-500">
+                جميع البلاغات سطر بسطر مع فلاتر التاريخ والمستشفى.
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="text-sm text-gray-600">من:</label>
+              <input type="date" id="detailFrom"
+                     class="border rounded-lg px-2 py-1 text-sm" />
+              <label class="text-sm text-gray-600">إلى:</label>
+              <input type="date" id="detailTo"
+                     class="border rounded-lg px-2 py-1 text-sm" />
+              <select id="detailHospital"
+                      class="border rounded-lg px-2 py-1 text-sm min-w-[160px]">
+                <!-- يُعبّأ من JS -->
+              </select>
+              <button type="button"
+                      onclick="exportReport('details','excel')"
+                      class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg">
+                Excel
+              </button>
+              <button type="button"
+                      onclick="exportReport('details','pdf')"
+                      class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg">
+                PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- تقرير أداء الأقسام -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+            <div>
+              <div class="font-semibold">تقرير أداء الأقسام</div>
+              <div class="text-sm text-gray-500">
+                عدد البلاغات، المغلقة، الحرجة ومتوسط زمن الإغلاق لكل قسم.
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="deptReportHospital"
+                      class="border rounded-lg px-2 py-1 text-sm min-w-[160px]">
+                <!-- يُعبّأ من JS -->
+              </select>
+              <button type="button"
+                      onclick="exportReport('departments','excel')"
+                      class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg">
+                Excel
+              </button>
+              <button type="button"
+                      onclick="exportReport('departments','pdf')"
+                      class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg">
+                PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- تقرير أداء الموظفين -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+            <div>
+              <div class="font-semibold">تقرير أداء الموظفين</div>
+              <div class="text-sm text-gray-500">
+                الموظفون الأكثر تكراراً في البلاغات مع عدد البلاغات لكل موظف.
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="empReportHospital"
+                      class="border rounded-lg px-2 py-1 text-sm min-w-[160px]">
+                <!-- يُعبّأ من JS -->
+              </select>
+              <button type="button"
+                      onclick="exportReport('employees','excel')"
+                      class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg">
+                Excel
+              </button>
+              <button type="button"
+                      onclick="exportReport('employees','pdf')"
+                      class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg">
+                PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- تقرير البلاغات الحرجة فقط -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <div class="font-semibold">تقرير البلاغات الحرجة فقط</div>
+              <div class="text-sm text-gray-500">
+                جميع البلاغات ذات الأولوية الحرجة خلال فترة محددة.
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="text-sm text-gray-600">من:</label>
+              <input type="date" id="criticalFrom"
+                     class="border rounded-lg px-2 py-1 text-sm" />
+              <label class="text-sm text-gray-600">إلى:</label>
+              <input type="date" id="criticalTo"
+                     class="border rounded-lg px-2 py-1 text-sm" />
+              <select id="criticalHospital"
+                      class="border rounded-lg px-2 py-1 text-sm min-w-[160px]">
+                <!-- يُعبّأ من JS -->
+              </select>
+              <button type="button"
+                      onclick="exportReport('critical','excel')"
+                      class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg">
+                Excel
+              </button>
+              <button type="button"
+                      onclick="exportReport('critical','pdf')"
+                      class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg">
+                PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Footer - التذييل -->

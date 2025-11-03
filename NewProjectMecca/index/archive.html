@@ -421,6 +421,13 @@
       btnUpload.addEventListener('click', async () => {
         if (!resultBox) return;
         
+        // 🔒 فحص صلاحية الرفع قبل الإرسال
+        const uploadPerms = JSON.parse(localStorage.getItem('permissions') || '{}');
+        if (!uploadPerms.archiveUpload) {
+          alert('ليس لديك صلاحية لإضافة مرفقات للأرشيف');
+          return;
+        }
+        
         resultBox.textContent = '';
         btnUpload.disabled = true;
 
@@ -794,6 +801,56 @@
 
     // تهيئة عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', async () => {
+      // 🔒 فحص صلاحيات الأرشيف
+      let perms = JSON.parse(localStorage.getItem('permissions') || '{}');
+      
+      // إذا لم تكن الصلاحيات موجودة، جرّب جلبها من API
+      if (!perms.archiveView) {
+        try {
+          const API_BASE = window.API_BASE || 'http://localhost:3001';
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          
+          const params = new URLSearchParams();
+          if (userData?.HospitalID) params.set('hospitalId', userData.HospitalID);
+          
+          const permsRes = await fetch(`${API_BASE}/api/permissions/me${params.toString() ? '?' + params.toString() : ''}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+            credentials: 'include'
+          });
+          
+          if (permsRes.ok) {
+            const permsData = await permsRes.json();
+            if (permsData.ok && permsData.data) {
+              perms = permsData.data;
+              localStorage.setItem('permissions', JSON.stringify(perms));
+            }
+          }
+        } catch (error) {
+          console.error('❌ خطأ في جلب الصلاحيات:', error);
+        }
+      }
+      
+      // 🔒 لو ما عنده صلاحية عرض، رجّعيه للصفحة الرئيسية
+      if (!perms.archiveView) {
+        alert('ليس لديك صلاحية لعرض الأرشيف');
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      // 🔒 إخفاء زر الرفع إن ما عنده صلاحية
+      if (!perms.archiveUpload) {
+        const btnArchiveUpload = document.getElementById('btnArchiveUpload');
+        const archiveDrop = document.getElementById('archiveDrop');
+        const archiveFiles = document.getElementById('archiveFiles');
+        const archiveNotes = document.getElementById('archiveNotes');
+        
+        if (btnArchiveUpload) btnArchiveUpload.classList.add('hidden');
+        if (archiveDrop) archiveDrop.classList.add('hidden');
+        if (archiveFiles) archiveFiles.style.display = 'none';
+        if (archiveNotes) archiveNotes.parentElement?.classList.add('hidden');
+      }
+      
       // اختبار الاتصال بالـ API أولاً
       try {
         const testRes = await fetch(`${API_BASE}/api/archive/test`);

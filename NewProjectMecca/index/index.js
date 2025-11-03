@@ -56,6 +56,67 @@ function initializeMobileMenu() {
 }
 
 // ========================================
+// جلب إحصائيات الصفحة الرئيسية من الـ API
+// Fetch Landing Page Statistics from API
+// ========================================
+
+/**
+ * جلب إحصائيات الصفحة الرئيسية من الـ API
+ */
+async function fetchLandingStats() {
+  // تحديد عنوان الـ API
+  const apiBase = window.API_BASE || (
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : ''
+  );
+
+  try {
+    const res = await fetch(`${apiBase}/api/public/landing-stats`, {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      throw new Error('HTTP ' + res.status);
+    }
+
+    const data = await res.json();
+    console.log('[LandingStats] Loaded:', data);
+
+    // 1) عدد البلاغات المعالَجة
+    const stat1 = document.querySelector('.counter[data-stat="complaints-processed"]');
+    if (stat1 && data.totalComplaintsProcessed != null) {
+      const value = Number(data.totalComplaintsProcessed) || 0;
+      stat1.setAttribute('data-target', value);
+      stat1.textContent = '0';
+    }
+
+    // 2) عدد المستفيدين النشطين
+    const stat2 = document.querySelector('.counter[data-stat="active-beneficiaries"]');
+    if (stat2 && data.activeBeneficiaries != null) {
+      const value = Number(data.activeBeneficiaries) || 0;
+      stat2.setAttribute('data-target', value);
+      stat2.textContent = '0';
+    }
+
+    // 3) نسبة تغطية المستشفيات
+    const stat3 = document.querySelector('.counter[data-stat="hospital-coverage"]');
+    if (stat3 && data.hospitalCoveragePercent != null) {
+      const value = Number(data.hospitalCoveragePercent) || 0;
+      stat3.setAttribute('data-target', value);
+      stat3.textContent = '0';
+    }
+  } catch (err) {
+    console.error('[LandingStats] فشل جلب الإحصائيات:', err);
+    // في حالة الخطأ نترك القيم الافتراضية الموجودة في الـ HTML
+  } finally {
+    // بعد ما نحدد القيم (أو نفشل)، نشغّل مراقب العدادات
+    initializeCounterObserver();
+  }
+}
+
+// ========================================
 // وظائف العدادات المتحركة
 // Animated Counters Functions
 // ========================================
@@ -493,8 +554,8 @@ function initializeApp() {
   initializeNavigation();
   initializeMobileMenu();
   
-  // تهيئة العدادات
-  initializeCounterObserver();
+  // 🔢 أولاً: جلب الإحصائيات من الـ API ثم تشغيل العدادات
+  fetchLandingStats();
   
   // تهيئة الحركات
   initializeAnimationObserver();

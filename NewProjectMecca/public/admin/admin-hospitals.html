@@ -9,20 +9,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
-  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
     <div class="container mx-auto px-4">
       <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
         <div class="flex items-center">
-          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+          <img src="../assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
         </div>
+        
+        <!-- Navigation - قائمة التنقل -->
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
-          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
-          <a href="admin-hub.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">مركز الإدارة</a>
-          <a href="../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
-          <a href="../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
-          <a href="../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <a href="../../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" id="nav-dashboard" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
         </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
