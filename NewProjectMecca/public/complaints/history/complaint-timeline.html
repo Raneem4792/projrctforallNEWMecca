@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>سير البلاغ</title>
+
+  <!-- Tailwind + خط -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- نعيد استخدام نفس ستايل صفحة البلاغ -->
+  <link rel="stylesheet" href="../submit/submit-complaint.css">
+</head>
+<body class="bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <!-- Header -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../../assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../submit/submit-complaint.html" class="text-white hover:text-blue-200 transition-colors">تقديم بلاغ</a>
+          <a href="../track/track-complaint.html" class="text-white hover:text-blue-200 transition-colors">متابعة بلاغ</a>
+          <a href="../../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+        </nav>
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-16">
+    <!-- رأس الصفحة -->
+    <div class="flex items-center gap-4 mb-6">
+      <a href="../track/track-complaint.html" class="text-[#002B5B] hover:text-blue-600 transition-colors">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B]">سير البلاغ</h1>
+        <p class="text-gray-600 mt-1" id="ticket-display">جاري التحميل...</p>
+      </div>
+    </div>
+
+    <!-- محتوى Timeline -->
+    <div id="timeline-wrap" class="card">
+      <div class="flex items-center justify-center py-12">
+        <div class="text-center">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#002B5B] mb-4"></div>
+          <p class="text-gray-600">جاري تحميل سير البلاغ...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        <span>© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:3001/api';
+    const ticket = new URLSearchParams(location.search).get('ticket');
+    const listEl = document.getElementById('timeline-wrap');
+    const ticketDisplay = document.getElementById('ticket-display');
+
+    if (ticket) {
+      ticketDisplay.textContent = `رقم البلاغ: ${ticket}`;
+    }
+
+    async function load() {
+      if (!ticket) {
+        throw new Error('لم يتم توفير رقم البلاغ');
+      }
+
+      // استخدام المسار العام الجديد (بدون توثيق)
+      const response = await fetch(`${API_BASE_URL}/public/complaints/timeline?ticket=${encodeURIComponent(ticket)}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (!data.ok) {
+        throw new Error(data.error || 'حدث خطأ في تحميل البيانات');
+      }
+      
+      // تحويل بيانات البلاغ إلى timeline
+      const timelineItems = convertPublicDataToTimeline(data);
+      
+      render(timelineItems);
+    }
+
+    function render(items) {
+      if (!items.length) {
+        listEl.innerHTML = `
+          <div class="text-center py-8 text-gray-600">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <p>لا توجد أحداث مسجلة لهذا البلاغ</p>
+          </div>
+        `;
+        return;
+      }
+
+      const timelineHTML = items.map(item => {
+        const icon = getIconForKind(item.kind);
+        const color = getColorForKind(item.kind);
+        
+        return `
+          <div class="relative pr-8 pb-8 border-r-4" style="border-color: ${color}">
+            <div class="absolute -right-3 top-0 w-6 h-6 rounded-full flex items-center justify-center" style="background-color: ${color}">
+              ${icon}
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <h3 class="font-bold text-lg text-[#002B5B]">${escapeHTML(item.title || 'حدث')}</h3>
+                <span class="text-xs text-gray-500 whitespace-nowrap">${formatDate(item.at)}</span>
+              </div>
+              ${item.detail ? `<p class="text-gray-700 mb-2">${escapeHTML(item.detail)}</p>` : ''}
+              ${item.meta ? `<p class="text-sm text-gray-500 italic">${escapeHTML(item.meta)}</p>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      listEl.innerHTML = `<div class="space-y-0">${timelineHTML}</div>`;
+    }
+
+    function getIconForKind(kind) {
+      const icons = {
+        'created': '<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"/></svg>',
+        'status_change': '<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>',
+        'reply': '<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/><path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/></svg>',
+        'transfer': '<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"/></svg>'
+      };
+      return icons[kind] || icons['status_change'];
+    }
+
+    function getColorForKind(kind) {
+      const colors = {
+        'created': '#10B981',
+        'status_change': '#F59E0B',
+        'reply': '#3B82F6',
+        'transfer': '#8B5CF6'
+      };
+      return colors[kind] || '#6B7280';
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function escapeHTML(str = '') {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // تحويل بيانات المسار العام إلى timeline
+    function convertPublicDataToTimeline(data) {
+      if (!data || !data.timeline) return [];
+      
+      return data.timeline.map(item => {
+        let kind, title, detail, meta;
+        
+        switch (item.type) {
+          case 'created':
+            kind = 'created';
+            title = 'تم إنشاء البلاغ';
+            detail = `تم إنشاء البلاغ برقم ${data.ticket}`;
+            meta = `المستشفى: ${data.hospitalName} - الأولوية: ${translatePriority(data.priority)}`;
+            break;
+            
+          case 'status':
+            kind = 'status_change';
+            title = 'تغيير حالة البلاغ';
+            detail = `تم تغيير الحالة من ${translateStatus(item.old)} إلى ${translateStatus(item.new)}`;
+            meta = item.note || 'تغيير حالة البلاغ';
+            break;
+            
+          case 'reply':
+            kind = 'reply';
+            title = 'رد على البلاغ';
+            detail = item.msg || 'رد على البلاغ';
+            meta = 'رد من فريق العمل';
+            break;
+            
+          default:
+            kind = 'status_change';
+            title = 'حدث';
+            detail = item.note || 'حدث في البلاغ';
+            meta = '';
+        }
+        
+        return {
+          kind,
+          title,
+          detail,
+          meta,
+          at: item.at
+        };
+      });
+    }
+
+    // دالة ترجمة الحالة
+    function translateStatus(status) {
+      const statusMap = {
+        'open': 'مفتوح',
+        'in_progress': 'قيد المعالجة',
+        'waiting': 'بانتظار رد القسم',
+        'on_hold': 'معلّق',
+        'escalated': 'مُصعّد',
+        'resolved': 'محلول',
+        'closed': 'مغلق',
+        'cancelled': 'ملغي'
+      };
+      return statusMap[status?.toLowerCase()] || status || 'غير محددة';
+    }
+
+    // دالة ترجمة الأولوية
+    function translatePriority(priority) {
+      const priorityMap = {
+        'low': 'منخفضة',
+        'medium': 'متوسطة',
+        'urgent': 'عاجلة/حرجة'
+      };
+      return priorityMap[priority?.toLowerCase()] || priority || 'غير محددة';
+    }
+
+    // تحميل البيانات عند تحميل الصفحة
+    load().catch(error => {
+      console.error('خطأ في تحميل Timeline:', error);
+      listEl.innerHTML = `
+        <div class="p-6 bg-red-50 border border-red-200 rounded-lg text-center">
+          <svg class="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <h3 class="text-lg font-semibold text-red-900 mb-2">تعذّر تحميل سير البلاغ</h3>
+          <p class="text-red-700">${error.message}</p>
+          <p class="text-sm text-red-600 mt-2">الرجاء التأكد من تشغيل الخادم والمحاولة مرة أخرى</p>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>
+

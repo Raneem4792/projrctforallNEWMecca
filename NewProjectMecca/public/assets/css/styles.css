@@ -1,0 +1,123 @@
+:root{
+  --primary-800:#004A9F;   /* الأزرق الرئيسي */
+  --primary-500:#2FA9E0;   /* السماوي الفاتح */
+  --secondary-green:#0FA47A; /* الأخضر الثانوي */
+  --neutral-bg:#F6FAFE;    /* خلفية فاتحة ناعمة */
+  --neutral-line:#E6EEF7;  /* خطوط وبوردارات */
+  --text-dark:#0F172A;
+  --text-muted:#64748B;
+  --alert-red:#EF4444;
+  --alert-orange:#F59E0B;
+  --alert-yellow:#EAB308;
+}
+
+/* Global */
+body {
+  box-sizing: border-box;
+  font-family: 'Tajawal', sans-serif;
+}
+
+/* Backgrounds */
+.hero-gradient {
+  background: linear-gradient(135deg, var(--neutral-bg) 0%, #FFFFFF 100%);
+}
+
+.mesh-gradient {
+  background: radial-gradient(circle at 80% 80%, rgba(0, 74, 159, 0.1) 0%, transparent 50%);
+}
+
+.stats-gradient {
+  background: linear-gradient(135deg, var(--primary-800) 0%, var(--primary-500) 100%);
+}
+
+/* Cards */
+.card-hover {
+  transition: all 0.3s ease;
+  min-height: 44px; /* touch target */
+  min-width: 44px;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 74, 159, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-hover { 
+    transition: none; 
+  }
+  .card-hover:hover { 
+    transform: none; 
+  }
+}
+
+/* Navbar */
+.navbar-scroll { 
+  transition: all 0.3s ease; 
+}
+
+/* Counters */
+.counter {
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Service icons */
+.service-icon { 
+  transition: all 0.3s ease; 
+}
+
+.card-hover:hover .service-icon {
+  background-color: var(--primary-800);
+  color: #fff;
+}
+
+/* Focus styles (A11Y) */
+.card-hover:focus,
+.card-hover:focus-visible,
+a:focus,
+a:focus-visible {
+  outline: 2px solid var(--primary-800);
+  outline-offset: 2px;
+}
+
+/* ===== تحسين مظهر حقول الإدخال في نموذج التسجيل ===== */
+input, select, textarea {
+  background-color: #F7F9FC;
+  border: 1px solid #D1D5DB;  /* رمادي واضح */
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: #0B1F3A;
+  transition: all 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9CA3AF;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #0B5ED7;  /* أزرق من نفس الهوية */
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.15);
+}

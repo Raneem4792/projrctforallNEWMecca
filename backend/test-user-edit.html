@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>اختبار تعديل المستخدم</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">اختبار تعديل المستخدم</h1>
+    
+    <div class="bg-white rounded-lg p-6 shadow mb-6">
+      <h2 class="text-lg font-semibold mb-4">اختبار API المستخدمين</h2>
+      <div class="space-y-4">
+        <button onclick="testGetUsers()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          اختبار جلب جميع المستخدمين
+        </button>
+        <button onclick="testGetUser()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+          اختبار جلب مستخدم واحد (ID: 1)
+        </button>
+        <button onclick="testGetHospitals()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+          اختبار جلب المستشفيات المفعّلة
+        </button>
+      </div>
+      <div id="testResult" class="mt-4 p-4 bg-gray-100 rounded"></div>
+    </div>
+
+    <div class="bg-white rounded-lg p-6 shadow">
+      <h2 class="text-lg font-semibold mb-4">روابط الاختبار المباشر</h2>
+      <div class="space-y-2">
+        <a href="/api/users" target="_blank" class="block text-blue-600 hover:underline">
+          GET /api/users
+        </a>
+        <a href="/api/users/1" target="_blank" class="block text-blue-600 hover:underline">
+          GET /api/users/1
+        </a>
+        <a href="/api/hospitals?active=1" target="_blank" class="block text-blue-600 hover:underline">
+          GET /api/hospitals?active=1
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (location.port === '3001') ? '' : 'http://localhost:3001';
+    const result = document.getElementById('testResult');
+
+    async function testGetUsers() {
+      try {
+        const res = await fetch(`${API_BASE}/api/users`);
+        const data = await res.json();
+        result.innerHTML = `<h3 class="font-bold text-green-600">✅ نجح جلب المستخدمين</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (error) {
+        result.innerHTML = `<h3 class="font-bold text-red-600">❌ فشل جلب المستخدمين</h3><p>${error.message}</p>`;
+      }
+    }
+
+    async function testGetUser() {
+      try {
+        const res = await fetch(`${API_BASE}/api/users/1`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        result.innerHTML = `<h3 class="font-bold text-green-600">✅ نجح جلب المستخدم</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (error) {
+        result.innerHTML = `<h3 class="font-bold text-red-600">❌ فشل جلب المستخدم</h3><p>${error.message}</p>`;
+      }
+    }
+
+    async function testGetHospitals() {
+      try {
+        const res = await fetch(`${API_BASE}/api/hospitals?active=1`);
+        const data = await res.json();
+        result.innerHTML = `<h3 class="font-bold text-green-600">✅ نجح جلب المستشفيات</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (error) {
+        result.innerHTML = `<h3 class="font-bold text-red-600">❌ فشل جلب المستشفيات</h3><p>${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

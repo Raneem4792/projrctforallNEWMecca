@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>إضافة مستشفى جديد</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <!-- هيدر -->
+  <header class="fixed w-full top-0 z-50" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="admin-hub.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">مركز الإدارة</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
+    <form id="hospitalForm" class="space-y-6">
+
+      <!-- 1) بيانات المستشفى -->
+      <section class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 grid place-items-center">🏥</span>
+          <h2 class="text-xl font-extrabold text-[#002B5B]">بيانات المستشفى</h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">الاسم (عربي)</label>
+            <input id="hNameAr" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">الاسم (English)</label>
+            <input id="hNameEn" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">الكود المختصر (مثال: KAH)</label>
+            <input id="hCode" required class="uppercase w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200" maxlength="10"/>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">المدينة</label>
+              <input id="hCity" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">المنطقة</label>
+              <input id="hRegion" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">العنوان</label>
+            <input id="hAddress" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">هاتف</label>
+              <input id="hPhone" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">البريد الإلكتروني</label>
+              <input id="hEmail" type="email" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">النطاق/الدومين</label>
+            <input id="hDomain" placeholder="example.com" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">شعار المستشفى (اختياري)</label>
+            <input id="hLogo" type="file" accept="image/*" class="w-full h-11 rounded-xl border border-gray-200 px-3 py-2"/>
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center gap-3">
+          <input id="hActive" type="checkbox" class="w-4 h-4 rounded border-gray-300" checked/>
+          <label for="hActive" class="text-sm text-gray-700">تفعيل المستشفى عند الإنشاء</label>
+        </div>
+      </section>
+
+      <!-- 2) الأقسام -->
+      <section class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-9 h-9 rounded-full bg-amber-50 text-amber-600 grid place-items-center">🏷️</span>
+            <h2 class="text-xl font-extrabold text-[#002B5B]">الأقسام</h2>
+          </div>
+          <button id="btnAddDept" type="button" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm">+ إضافة قسم</button>
+        </div>
+
+        <div class="grid gap-3" id="deptsWrap">
+          <!-- صف ديناميكي للأقسام -->
+          <!-- يتم توليده من JS -->
+        </div>
+
+        <p class="text-xs text-gray-500 mt-2">يمكنك إضافة أكثر من قسم، كل قسم يحتوي: الاسم، الكود، البريد الافتراضي، اسم رئيس القسم (اختياري).</p>
+      </section>
+
+      <!-- 3) مدير النظام في المستشفى -->
+      <section class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center">👤</span>
+          <h2 class="text-xl font-extrabold text-[#002B5B]">مدير النظام في المستشفى</h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">الاسم الكامل</label>
+            <input id="adminName" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">البريد الإلكتروني</label>
+            <input id="adminEmail" type="email" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">رقم الجوال</label>
+            <input id="adminMobile" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200" placeholder="05XXXXXXXX"/>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">اسم المستخدم</label>
+              <input id="adminUsername" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">كلمة المرور</label>
+              <input id="adminPassword" type="password" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-2">سيتم إنشاء حساب مدير نظام للمستشفى الجديد ويمكنك تغيير صلاحياته لاحقًا.</p>
+      </section>
+
+      <!-- أزرار -->
+      <div class="flex items-center justify-end gap-3">
+        <a href="admin-hospitals.html" class="h-11 px-5 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</a>
+        <button id="saveHospital" type="submit" class="h-11 px-5 rounded-xl bg-[#0FA47A] text-white text-sm">حفظ المستشفى</button>
+      </div>
+    </form>
+  </main>
+
+  <!-- فوتر -->
+  <footer class="bg-[#0A1123] text-white py-8 text-center text-sm flex flex-col items-center justify-center gap-2">
+    <img src="../assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-14 w-auto">
+    <p>© 2025 تجمع مكة المكرمة الصحي</p>
+  </footer>
+
+  <script src="hospital-new.js"></script>
+</body>
+</html>
+

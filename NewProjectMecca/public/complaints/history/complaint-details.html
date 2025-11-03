@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>تفاصيل البلاغ</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../submit/submit-complaint.css">
+
+  <style>
+    /* نبض خفيف للأولوية المتوسطة (أصفر) */
+    @keyframes pulse-yellow {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+      70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .prio-pulse { position: relative; }
+    .prio-pulse .dot {
+      display:inline-block;width:8px;height:8px;border-radius:9999px;
+    }
+    .prio-pulse--med .dot { background:#F59E0B; animation: pulse-yellow 1.6s infinite; }
+  </style>
+</head>
+<body class="bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="complaints-history.html" class="text-white hover:text-blue-200 transition-colors">سجل البلاغات</a>
+          <a href="../../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-16 pb-10">
+    <!-- عنوان الصفحة -->
+    <section class="text-center pt-6">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-6">تفاصيل البلاغ</h1>
+      <a href="complaints-history.html" class="inline-block bg-gray-100 text-gray-700 px-4 py-1.5 rounded-full text-sm hover:bg-gray-200 transition">
+        ⟵ رجوع للسجل
+      </a>
+    </section>
+
+    <!-- هيدر مختصر للتعريف -->
+    <section id="headCard" class="bg-white rounded-2xl p-5 shadow-xl border border-gray-100 mt-8 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-xs text-gray-500">رقم البلاغ</div>
+          <div id="dTicket" class="text-xl font-extrabold text-[#002B5B]">-</div>
+        </div>
+        <div class="flex gap-2 items-center">
+          <span id="dStatusBadge" data-complaint-status></span>
+          <span id="dPriorityBadge"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- شريط الإجراءات -->
+    <section id="actionsBar" class="bg-white rounded-2xl p-4 shadow-xl border border-gray-100 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="text-sm text-gray-600">إجراءات على البلاغ</div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btnReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition">إضافة رد</button>
+          <button id="btnChangeStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm hover:bg-amber-600 transition">تغيير الحالة</button>
+          <button id="btnTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">تحويل</button>
+          <button id="btnDeleteComplaint" class="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700 transition">🗑️ حذف البلاغ</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- تفاصيل أساسية -->
+    <section class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card">
+        <div class="section-title"><span class="icon">👤</span><h2>بيانات المراجع</h2></div>
+        <div class="grid sm:grid-cols-2 gap-3 text-[15px] text-gray-700">
+          <div><span class="font-semibold text-gray-800">الاسم:</span> <span id="dName">-</span></div>
+          <div><span class="font-semibold text-gray-800">الجوال:</span> <span id="dMobile">-</span></div>
+          <div><span class="font-semibold text-gray-800">رقم الملف:</span> <span id="dFile">-</span></div>
+          <div><span class="font-semibold text-gray-800">المستشفى:</span> <span id="uiHospitalName">-</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span class="icon">🗂️</span><h2>معلومات البلاغ</h2></div>
+        <div class="grid sm:grid-cols-2 gap-3 text-[15px] text-gray-700">
+          <div><span class="font-semibold text-gray-800">التصنيف:</span> <span id="dType">-</span></div>
+          <div><span class="font-semibold text-gray-800">القسم:</span> <span id="uiDepartmentName">-</span></div>
+          <div><span class="font-semibold text-gray-800">القسم الفرعي:</span> <span id="uiSubDepartmentName">-</span></div>
+          <div><span class="font-semibold text-gray-800">تاريخ الإنشاء:</span> <span id="dCreated">-</span></div>
+          <div><span class="font-semibold text-gray-800">آخر تحديث:</span> <span id="dUpdated">-</span></div>
+        </div>
+        
+        <!-- وصف البلاغ -->
+        <div class="mt-4 pt-4 border-t border-gray-200">
+          <div class="text-[15px] text-gray-700">
+            <span class="font-semibold text-gray-800 block mb-2">وصف البلاغ:</span>
+            <div id="dDescription" class="bg-gray-50 rounded-lg p-3 text-gray-800 leading-relaxed min-h-[80px]">
+              -
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- بيانات الموظف المُبلّغ عليه -->
+    <section id="targetSection" class="card mt-4" style="display:none;">
+      <div class="section-title">
+        <span class="icon">👥</span>
+        <h2>بيانات الموظف المُبلّغ عليه</h2>
+      </div>
+      
+      <div class="grid sm:grid-cols-2 gap-3 text-[15px] text-gray-700">
+        <div><span class="font-semibold text-gray-800">اسم الموظف:</span> <span id="targetEmployeeName">—</span></div>
+        <div><span class="font-semibold text-gray-800">رقم الموظف:</span> <span id="targetEmployeeID">—</span></div>
+        <div><span class="font-semibold text-gray-800">اسم القسم:</span> <span id="targetDepartmentName">—</span></div>
+        <div><span class="font-semibold text-gray-800">رقم القسم:</span> <span id="targetDepartmentID">—</span></div>
+      </div>
+    </section>
+
+    <!-- خط زمني مبسّط + مرفقات (واجهات فقط) -->
+    <section class="grid md:grid-cols-3 gap-4">
+      <div class="md:col-span-2 card">
+        <div class="section-title"><span class="icon">🕓</span><h2>تتبع الحالة</h2></div>
+        <div class="mb-3 text-sm text-gray-600">
+          <small>تم إنشاء البلاغ بواسطة: <strong id="uiCreatedByName">—</strong></small>
+          <br>
+          <small>الموظف المُسند إليه: <strong id="uiAssignedToName">—</strong></small>
+        </div>
+        <ul id="dTimeline" class="space-y-3 text-gray-700 text-[15px]">
+          <!-- يُملأ من JS -->
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span class="icon">📎</span><h2>المرفقات</h2></div>
+        <div id="dAttachments" class="text-gray-600 text-sm">لا توجد مرفقات.</div>
+      </div>
+    </section>
+
+    <!-- قائمة الردود -->
+    <section class="card mt-4">
+      <div class="section-title">
+        <span class="icon">💬</span>
+        <h2>الردود على البلاغ</h2>
+      </div>
+      
+      <div id="repliesList" class="space-y-4 mt-4">
+        <!-- سيتم ملؤها ديناميكياً من JavaScript -->
+        <div class="text-center text-gray-500 py-8">
+          <div class="text-lg mb-2">💬</div>
+          <div>لا توجد ردود بعد</div>
+          <div class="text-sm mt-1">كن أول من يرد على هذا البلاغ</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <!-- Overlay مشترك -->
+  <div id="modalOverlay" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+
+  <!-- إضافة رد -->
+  <div id="replyModal" class="fixed inset-0 z-50 hidden place-items-center">
+    <div class="bg-white w-[90%] max-w-2xl rounded-2xl shadow-2xl border border-gray-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-[#002B5B]">إضافة رد على البلاغ</h3>
+        <button data-close-modal class="text-gray-500 hover:text-gray-700">✕</button>
+      </div>
+      <div class="grid gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">نوع الرد</label>
+          <select id="replyType" class="w-full h-10 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200">
+            <option value="">اختر نوع الرد</option>
+            <option value="update">تحديث الحالة</option>
+            <option value="followup">متابعة</option>
+            <option value="resolution">حل المشكلة</option>
+            <option value="information">معلومات إضافية</option>
+            <option value="request">طلب توضيح</option>
+            <option value="escalation">تصعيد</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">نص الرد</label>
+          <textarea id="replyText" rows="4" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">مرفقات (اختياري)</label>
+          <input id="replyFiles" type="file" multiple class="w-full text-sm">
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
+        <button id="saveReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm">حفظ الرد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ❌ تم إلغاء المودال القديم (واجهة فقط) - استُبدل بـ #changeStatusModal المتصل بـ API -->
+  <!--
+  <div id="statusModal" class="fixed inset-0 z-50 hidden place-items-center">
+    <div class="bg-white w-[90%] max-w-md rounded-2xl shadow-2xl border border-gray-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-[#002B5B]">تغيير حالة البلاغ</h3>
+        <button data-close-modal class="text-gray-500 hover:text-gray-700">✕</button>
+      </div>
+      <div class="grid gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">الحالة الجديدة</label>
+          <select id="newStatus" class="w-full h-10 rounded-xl border border-gray-200 px-2 focus:ring-2 focus:ring-blue-200">
+            <option value="OPEN">مفتوحة</option>
+            <option value="IN_PROGRESS">قيد المعالجة</option>
+            <option value="CLOSED">مغلقة</option>
+            <option value="CRITICAL">حرجة</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">ملاحظة (اختياري)</label>
+          <textarea id="statusNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
+        <button id="applyStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm">تطبيق</button>
+      </div>
+    </div>
+  </div>
+  -->
+
+  <!-- تحويل بين المستشفيات والأقسام -->
+  <div id="transferModal" class="fixed inset-0 z-50 hidden place-items-center">
+    <div class="bg-white w-[90%] max-w-2xl rounded-2xl shadow-2xl border border-gray-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-[#002B5B]">تحويل البلاغ</h3>
+        <button data-close-modal class="text-gray-500 hover:text-gray-700">✕</button>
+      </div>
+
+      <!-- تبويبات التحويل -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button id="tabDeptBtn"
+                class="tab-btn h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm"
+                data-tab="dept" aria-selected="true">تحويل بين الأقسام</button>
+        <button id="tabEmpBtn"
+                class="tab-btn h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm"
+                data-tab="emp" aria-selected="false">تحويل بين الموظفين</button>
+        <button id="tabHospBtn"
+                class="tab-btn h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm"
+                data-tab="hosp" aria-selected="false">تحويل بين المستشفيات</button>
+      </div>
+
+      <!-- لوحة: تحويل بين المستشفيات -->
+      <div id="pane-hosp" class="grid md:grid-cols-2 gap-3 hidden">
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">المستشفى</label>
+          <select id="transferHospital" class="w-full h-10 rounded-xl border border-gray-200 px-2 focus:ring-2 focus:ring-blue-200"></select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">ملاحظة التحويل (اختياري)</label>
+          <textarea id="transferNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+      </div>
+
+      <!-- لوحة: تحويل بين الأقسام -->
+      <div id="pane-dept" class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">القسم الحالي</label>
+          <div id="transferDepartmentCurrent" class="w-full h-10 rounded-xl border border-gray-200 px-3 py-2 bg-gray-50 text-gray-700 flex items-center">
+            جاري التحميل...
+          </div>
+          <!-- عنصر مخفي لتخزين القسم الحالي -->
+          <select id="deptFrom" class="hidden"></select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">القسم الهدف</label>
+          <select id="deptTo" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">ملاحظة (اختياري)</label>
+          <textarea id="deptNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+      </div>
+
+      <!-- لوحة: تحويل بين الموظفين -->
+      <div id="pane-emp" class="grid md:grid-cols-2 gap-3 hidden">
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">القسم</label>
+          <select id="empDept" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">الموظف الحالي</label>
+          <select id="empFrom" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">الموظف الهدف</label>
+          <select id="empTo" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">ملاحظة (اختياري)</label>
+          <textarea id="empNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-2">
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
+        <button id="confirmTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm">تحويل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔄 مودال تغيير حالة البلاغ -->
+  <div id="changeStatusModal" class="modal hidden fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-[#002B5B]">تغيير حالة البلاغ</h3>
+        <button data-close-modal class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="space-y-4">
+        <div>
+          <label for="statusSelect" class="block text-sm font-medium text-gray-700 mb-2">الحالة الجديدة</label>
+          <select id="statusSelect" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-transparent">
+            <option value="">جاري التحميل...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="statusNote" class="block text-sm font-medium text-gray-700 mb-2">ملاحظة (اختياري)</label>
+          <textarea id="statusNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-transparent" placeholder="أضف ملاحظة حول سبب تغيير الحالة..."></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-6 flex justify-end gap-2">
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
+        <button id="applyStatusBtn" class="h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">تطبيق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🗑️ مودال تأكيد حذف البلاغ -->
+  <div id="deleteModal" class="modal hidden fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-rose-600">⚠️ تأكيد حذف البلاغ</h3>
+        <button id="cancelDelete" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="space-y-4">
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p class="text-sm text-gray-700">هل أنت متأكد من حذف هذا البلاغ؟</p>
+          <p class="text-sm text-gray-600 mt-2">سينتقل البلاغ إلى سلة المحذوفات ويمكن استرجاعه لاحقاً.</p>
+        </div>
+
+        <div>
+          <label for="deleteReason" class="block text-sm font-medium text-gray-700 mb-2">سبب الحذف (اختياري)</label>
+          <input id="deleteReason" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-rose-200 focus:border-transparent" placeholder="مثال: تكرار / بلاغ بالخطأ / خارج الصلاحية">
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-6 flex justify-end gap-2">
+        <button id="cancelDeleteBtn" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
+        <button id="confirmDelete" class="h-10 px-5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700">حذف البلاغ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نظام حماية الصفحات - يجب تحميله أولاً -->
+  <script src="../../assets/js/auth-check.js"></script>
+  
+  <script src="complaint-details.js"></script>
+</body>
+</html>
+

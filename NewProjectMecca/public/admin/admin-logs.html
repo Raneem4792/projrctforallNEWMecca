@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>السجلات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200">لوحة التحكم</a>
+          <a href="admin-hub.html" class="text-white hover:text-blue-200 font-bold underline">مركز الإدارة</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
+    <section class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-2">السجلات</h1>
+      <p class="text-gray-600">سجل النشاط وتتبّع الأحداث</p>
+    </section>
+
+    <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="text-sm text-gray-600">عرض أحدث الأنشطة</div>
+      <div class="flex gap-2">
+        <a href="admin-hospital.html" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">رجوع</a>
+        <button class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700">تحديث</button>
+      </div>
+    </div>
+
+    <!-- شريط اختيار المستشفى -->
+    <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6">
+      <div class="flex items-center justify-end gap-3">
+        <label for="hospitalSelect" class="text-sm text-gray-600 whitespace-nowrap">اختر المستشفى:</label>
+        <select id="hospitalSelect"
+                class="h-10 min-w-[240px] rounded-xl border border-gray-200 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100">
+          <option value="">— اختر المستشفى —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- جدول سجلات (واجهة) -->
+    <div class="bg-white rounded-2xl p-0 shadow-xl border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="p-3 text-right">الوقت</th>
+              <th class="p-3 text-right">المستخدم</th>
+              <th class="p-3 text-right">العملية</th>
+              <th class="p-3 text-right">تفاصيل</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody" class="divide-y">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  // ======== إعداد أساس API (محلي 3001) ========
+  const API_BASE = (location.port === '3001') ? '' : 'http://localhost:3001';
+
+  // عناصر الواجهة
+  const bodyEl = document.getElementById('logsBody');
+  const hospitalSelect = document.getElementById('hospitalSelect');
+  const refreshBtn = document.querySelector('button.bg-indigo-600');
+
+  // تخزين آخر اختيار
+  const STORAGE_KEY = 'currentHospital';
+  const saveSel = (obj) => localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+  const getSel  = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; } };
+
+  // هيدر المصادقة (لو عندك توكن JWT)
+  function authHeaders(){
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+                 : { 'Content-Type': 'application/json' };
+  }
+
+  // 1) تحميل المستشفيات الفعّالة من القاعدة
+  async function loadHospitals(){
+    try{
+      const res = await fetch(`${API_BASE}/api/hospitals?active=1`, { headers: authHeaders() });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const items = await res.json();
+
+      hospitalSelect.innerHTML = '<option value="">— اختر المستشفى —</option>' +
+        items.map(h => `<option value="${h.HospitalID}">${h.NameAr}</option>`).join('');
+
+      // استرجاع آخر اختيار إن وجد
+      const saved = getSel();
+      if (saved && items.some(h => String(h.HospitalID) === String(saved.id))) {
+        hospitalSelect.value = saved.id;
+        await loadLogs(); // اعرض السجلات فورًا
+      } else {
+        bodyEl.innerHTML = emptyRow('اختر مستشفى لعرض السجلات.');
+      }
+    }catch(err){
+      console.error('loadHospitals', err);
+      hospitalSelect.innerHTML = '<option value="">تعذر تحميل المستشفيات</option>';
+      bodyEl.innerHTML = emptyRow('تعذر تحميل المستشفيات.');
+    }
+  }
+
+  // 2) تحميل السجلات حسب المستشفى المختار
+  async function loadLogs(){
+    const hid = hospitalSelect.value;
+    if (!hid){
+      bodyEl.innerHTML = emptyRow('اختر مستشفى لعرض السجلات.');
+      return;
+    }
+    try{
+      const params = new URLSearchParams({ hospitalId: hid, limit: 200 });
+      const res = await fetch(`${API_BASE}/api/logs?` + params.toString(), { headers: authHeaders() });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      renderLogs(rows);
+    }catch(err){
+      console.error('loadLogs', err);
+      bodyEl.innerHTML = emptyRow('تعذر تحميل السجلات.');
+    }
+  }
+
+  // 3) رسم صفوف السجلات
+  function renderLogs(rows = []){
+    if (!rows.length){
+      bodyEl.innerHTML = emptyRow('لا توجد سجلات لهذا المستشفى.');
+      return;
+    }
+    bodyEl.innerHTML = rows.map(r => `
+      <tr class="hover:bg-gray-50">
+        <td class="p-3">${fmtDate(r.CreatedAt)}</td>
+        <td class="p-3">${escapeHTML(r.ActorName || '—')}</td>
+        <td class="p-3">${escapeHTML(r.ActionAr || r.ActionCode || '—')}</td>
+        <td class="p-3 text-gray-600">${escapeHTML(r.Details || '')}</td>
+      </tr>
+    `).join('');
+  }
+
+  // 4) أدوات مساعدة
+  function emptyRow(msg){
+    return `<tr><td class="p-6 text-center text-gray-400" colspan="4">${escapeHTML(msg)}</td></tr>`;
+  }
+  function escapeHTML(s){
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+  function fmtDate(d){
+    // يقبل Date أو نص توقيت من MySQL
+    const dt = new Date(d);
+    if (isNaN(dt)) return escapeHTML(d || '');
+    const pad = n => String(n).padStart(2,'0');
+    return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+
+  // 5) أحداث
+  document.addEventListener('DOMContentLoaded', loadHospitals);
+
+  hospitalSelect.addEventListener('change', async () => {
+    const id = hospitalSelect.value;
+    const name = hospitalSelect.options[hospitalSelect.selectedIndex]?.textContent?.trim() || '';
+    if (!id){
+      bodyEl.innerHTML = emptyRow('اختر مستشفى لعرض السجلات.');
+      return;
+    }
+    saveSel({ id, name });
+    await loadLogs();
+  });
+
+  if (refreshBtn){
+    refreshBtn.addEventListener('click', async () => {
+      await loadLogs();
+    });
+  }
+
+  // 6) تأثير تغيير لون الهيدر عند التمرير (كما هو)
+  window.addEventListener("scroll", function () {
+    const navbar = document.getElementById("navbar");
+    if (window.scrollY > 50) {
+      navbar.style.backgroundColor = "#ffffff";
+      navbar.classList.add("shadow-md");
+      navbar.querySelectorAll("a").forEach(link => {
+        link.classList.remove("text-white", "hover:text-blue-200");
+        link.classList.add("text-[#002B5B]", "hover:text-blue-700");
+      });
+    } else {
+      navbar.style.backgroundColor = "#002B5B";
+      navbar.classList.remove("shadow-md");
+      navbar.querySelectorAll("a").forEach(link => {
+        link.classList.add("text-white", "hover:text-blue-200");
+        link.classList.remove("text-[#002B5B]", "hover:text-blue-700");
+      });
+    }
+  });
+</script>
+</body>
+</html>
+

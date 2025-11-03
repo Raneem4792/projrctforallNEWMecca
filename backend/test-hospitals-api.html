@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار API المستشفيات</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #002B5B;
+            border-bottom: 3px solid #002B5B;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            background: #002B5B;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #004080;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 اختبار API المستشفيات</h1>
+        
+        <div class="test-section">
+            <h3>1️⃣ اختبار الاتصال بالخادم</h3>
+            <button onclick="testServerConnection()">اختبار الاتصال</button>
+            <div id="serverResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2️⃣ جلب قائمة المستشفيات (بدون تسجيل دخول)</h3>
+            <button onclick="testHospitalsAPI()">جلب المستشفيات</button>
+            <div id="hospitalsResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3️⃣ جلب المستشفيات النشطة فقط</h3>
+            <button onclick="testActiveHospitals()">جلب المستشفيات النشطة</button>
+            <div id="activeResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4️⃣ البيانات في قاعدة البيانات</h3>
+            <p>افتح MySQL وشغّل هذا الاستعلام:</p>
+            <pre>USE hospitals_mecca4;
+SELECT HospitalID, NameAr, NameEn, IsActive 
+FROM hospitals 
+ORDER BY SortOrder;</pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function testServerConnection() {
+            const result = document.getElementById('serverResult');
+            result.innerHTML = '<p>⏳ جاري الاختبار...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/health', {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <p class="status success">✅ الخادم يعمل بنجاح!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <p class="status error">❌ الخادم يعمل لكن أرجع خطأ: ${response.status}</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <p class="status error">❌ فشل الاتصال بالخادم</p>
+                    <p>الخطأ: ${error.message}</p>
+                    <p><strong>تأكد من:</strong></p>
+                    <ul>
+                        <li>تشغيل الخادم: <code>npm start</code> في مجلد backend</li>
+                        <li>الخادم يعمل على المنفذ 3001</li>
+                    </ul>
+                `;
+            }
+        }
+
+        async function testHospitalsAPI() {
+            const result = document.getElementById('hospitalsResult');
+            result.innerHTML = '<p>⏳ جاري جلب البيانات...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/hospitals`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                console.log('📡 استجابة الخادم:', response.status, response.statusText);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📦 البيانات المستلمة:', data);
+                    
+                    const hospitals = data.data || data;
+                    
+                    if (Array.isArray(hospitals) && hospitals.length > 0) {
+                        result.innerHTML = `
+                            <p class="status success">✅ تم جلب ${hospitals.length} مستشفى</p>
+                            <pre>${JSON.stringify(hospitals, null, 2)}</pre>
+                        `;
+                    } else {
+                        result.innerHTML = `
+                            <p class="status error">⚠️ لا توجد بيانات في جدول المستشفيات</p>
+                            <p>البيانات المستلمة:</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                            <p><strong>الحل:</strong> أضف مستشفيات في قاعدة البيانات</p>
+                        `;
+                    }
+                } else {
+                    const errorText = await response.text();
+                    result.innerHTML = `
+                        <p class="status error">❌ خطأ: ${response.status} ${response.statusText}</p>
+                        <pre>${errorText}</pre>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <p class="status error">❌ فشل جلب المستشفيات</p>
+                    <p>الخطأ: ${error.message}</p>
+                `;
+            }
+        }
+
+        async function testActiveHospitals() {
+            const result = document.getElementById('activeResult');
+            result.innerHTML = '<p>⏳ جاري جلب البيانات...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/hospitals?active=1`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const hospitals = data.data || data;
+                    
+                    if (Array.isArray(hospitals) && hospitals.length > 0) {
+                        const list = hospitals.map(h => 
+                            `<li><strong>${h.NameAr}</strong> (${h.Code}) - ID: ${h.HospitalID}</li>`
+                        ).join('');
+                        
+                        result.innerHTML = `
+                            <p class="status success">✅ تم جلب ${hospitals.length} مستشفى نشط</p>
+                            <ul style="text-align: right; direction: rtl;">${list}</ul>
+                            <details>
+                                <summary>عرض JSON</summary>
+                                <pre>${JSON.stringify(hospitals, null, 2)}</pre>
+                            </details>
+                        `;
+                    } else {
+                        result.innerHTML = `
+                            <p class="status error">⚠️ لا توجد مستشفيات نشطة</p>
+                            <p><strong>الحل:</strong> تأكد من أن IsActive = 1 في جدول hospitals</p>
+                        `;
+                    }
+                } else {
+                    result.innerHTML = `
+                        <p class="status error">❌ خطأ: ${response.status}</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <p class="status error">❌ الخطأ: ${error.message}</p>
+                `;
+            }
+        }
+
+        // اختبار تلقائي عند تحميل الصفحة
+        window.onload = () => {
+            console.log('🚀 بدء الاختبارات التلقائية...');
+            testServerConnection();
+        };
+    </script>
+</body>
+</html>
+

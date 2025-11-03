@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>إدارة المستخدمين</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .act-btn{
+      @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
+             shadow-sm transition hover:shadow ring-1 ring-inset;
+    }
+    .act-btn i{ @apply w-4 h-4; }
+    .act-edit  { @apply bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100; }
+    .act-delete{ @apply bg-rose-50 text-rose-700 ring-rose-200 hover:bg-rose-100; }
+    .act-child { @apply bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100; }
+    /* تكديس تلقائي في الشاشات الصغيرة */
+    @media (max-width: 640px){
+      .act-btn span{ display:none }  /* نخفي النص ونترك الأيقونة */
+      .act-btn{ @apply p-2 rounded-lg }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <!-- Header (مطابق لهيدر admin-hub) -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="admin-hub.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">مركز الإدارة</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
+    <section class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-2">إدارة المستخدمين</h1>
+      <p class="text-gray-600">إضافة / تعديل / تفعيل المستخدمين</p>
+    </section>
+
+    <!-- أعلى الجدول (يظهر فقط لمدير التجمّع) -->
+    <div id="clusterBar" class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6 hidden">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <label for="hospitalSelect" class="text-sm text-gray-600 whitespace-nowrap">اختر المستشفى:</label>
+          <select id="hospitalSelect"
+                  class="h-10 min-w-[220px] rounded-xl border border-gray-200 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100">
+            <option value="">— اختر المستشفى —</option>
+          </select>
+        </div>
+        <div class="text-sm text-gray-500">
+          <span id="hospitalHeader" class="hidden">مستخدمي المستشفى المحدد</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-left flex gap-3">
+        <button id="btnOpenAddUser"
+                class="bg-[#002B5B] hover:bg-[#013b7a] text-white font-semibold px-6 py-2 rounded-xl shadow-md transition"
+                style="display: none;">
+          + إضافة مستخدم جديد
+        </button>
+      </div>
+
+      <!-- بحث بسيط -->
+      <div class="w-full max-w-sm">
+        <input id="searchInput" type="text" placeholder="ابحث عن مستخدم..."
+               class="w-full rounded-xl border-gray-300 focus:border-[#002B5B] focus:ring-[#002B5B]">
+      </div>
+    </div>
+
+    <!-- جدول المستخدمين -->
+    <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">#</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">الاسم الكامل</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">اسم المستخدم</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">البريد الإلكتروني</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">الدور</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">الحالة</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700 w-56">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="usersTbody">
+            <tr>
+              <td colspan="7" class="p-6 text-center text-gray-500">جاري التحميل...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal: تعديل مستخدم -->
+  <div id="userEditModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40" onclick="closeUserEdit()"></div>
+
+    <div class="absolute inset-x-0 top-16 mx-auto w-[min(760px,92vw)] rounded-2xl bg-white shadow-xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="text-lg font-bold text-[#002B5B]">تعديل بيانات المستخدم</h3>
+        <button class="text-gray-500 hover:text-gray-700" onclick="closeUserEdit()">✕</button>
+      </div>
+
+      <form id="userEditForm" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4" onsubmit="saveUserEdit(event)">
+        <input type="hidden" id="ue_UserID">
+        <input type="hidden" id="ue_PasswordHash"><!-- نمرّر نفس الهاش بدون تغييره -->
+
+        <div>
+          <label class="block text-sm mb-1">الاسم الكامل</label>
+          <input id="ue_FullName" class="w-full rounded-xl border px-3 py-2" required>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">اسم المستخدم</label>
+          <input id="ue_Username" class="w-full rounded-xl border px-3 py-2" required>
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">البريد الإلكتروني</label>
+          <input id="ue_Email" type="email" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">الجوال</label>
+          <input id="ue_Mobile" class="w-full rounded-xl border px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">الهوية الوطنية</label>
+          <input id="ue_NationalID" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">الدور</label>
+          <select id="ue_RoleID" class="w-full rounded-xl border px-3 py-2">
+            <option value="1">سوبر أدمن</option>
+            <option value="2">موظف</option>
+            <option value="3">مدير قسم</option>
+            <option value="4">مدير</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">المستشفى</label>
+          <select id="ue_HospitalID" class="w-full rounded-xl border px-3 py-2" required></select>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">القسم</label>
+          <select id="ue_DepartmentID" class="w-full rounded-xl border px-3 py-2">
+            <option value="">— بدون قسم —</option>
+          </select>
+        </div>
+
+        <div class="col-span-2 flex items-center gap-3 pt-1">
+          <input id="ue_IsActive" type="checkbox" class="h-4 w-4">
+          <label for="ue_IsActive" class="text-sm">مفعّل</label>
+        </div>
+
+        <div class="col-span-2 flex justify-end gap-3 pt-2">
+          <button type="button" class="px-4 py-2 rounded-xl border" onclick="closeUserEdit()">إلغاء</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-[#0ea5e9] text-white hover:bg-[#0284c7]">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: إضافة مستخدم (مُحدّث مع حقل كلمة السر) -->
+  <div id="userAddModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40" onclick="closeUserAdd()"></div>
+    <div class="absolute inset-x-0 top-16 mx-auto w-[min(760px,92vw)] rounded-2xl bg-white shadow-xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="text-lg font-bold text-[#002B5B]">إضافة مستخدم جديد</h3>
+        <button class="text-gray-500 hover:text-gray-700" onclick="closeUserAdd()">✕</button>
+      </div>
+
+      <form id="userAddForm" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4" onsubmit="saveUserAdd(event)">
+        <div>
+          <label class="block text-sm mb-1">الاسم الكامل</label>
+          <input id="ua_FullName" class="w-full rounded-xl border px-3 py-2" required>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">اسم المستخدم</label>
+          <input id="ua_Username" class="w-full rounded-xl border px-3 py-2" required>
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">البريد الإلكتروني</label>
+          <input id="ua_Email" type="email" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">الجوال</label>
+          <input id="ua_Mobile" class="w-full rounded-xl border px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">الهوية الوطنية</label>
+          <input id="ua_NationalID" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">الدور</label>
+          <select id="ua_RoleID" class="w-full rounded-xl border px-3 py-2">
+            <option value="1">سوبر أدمن</option>
+            <option value="2" selected>موظف</option>
+            <option value="3">مدير قسم</option>
+            <option value="4">مدير</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">المستشفى</label>
+          <select id="ua_HospitalID" class="w-full rounded-xl border px-3 py-2" required></select>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">القسم</label>
+          <select id="ua_DepartmentID" class="w-full rounded-xl border px-3 py-2">
+            <option value="">— بدون قسم —</option>
+          </select>
+        </div>
+
+        <!-- هنا حق كلمة السر -->
+        <div>
+          <label class="block text-sm mb-1">كلمة السر</label>
+          <input id="ua_Password" type="password" minlength="6" class="w-full rounded-xl border px-3 py-2" placeholder="ادخل كلمة السر (6 أحرف على الأقل)">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">تأكيد كلمة السر</label>
+          <input id="ua_PasswordConfirm" type="password" class="w-full rounded-xl border px-3 py-2" placeholder="أعد كتابة كلمة السر">
+        </div>
+
+        <div class="col-span-2 flex items-center gap-3 pt-1">
+          <input id="ua_IsActive" type="checkbox" class="h-4 w-4" checked>
+          <label for="ua_IsActive" class="text-sm">مفعّل</label>
+        </div>
+
+        <div class="col-span-2 flex justify-end gap-3 pt-2">
+          <button type="button" class="px-4 py-2 rounded-xl border" onclick="closeUserAdd()">إلغاء</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-[#0ea5e9] text-white hover:bg-[#0284c7]">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="uetoast" class="fixed bottom-6 left-1/2 -translate-x-1/2 hidden px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm shadow-lg z-[60]">
+    تم حفظ التعديلات
+  </div>
+
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const hospitalSelect = document.getElementById("hospitalSelect");
+  const usersList      = document.getElementById("usersList");
+  const searchInput    = document.getElementById("searchInput");
+
+  // تحديد عنوان API حسب المنفذ
+  const API_BASE = (location.port === '3001') ? '' : 'http://localhost:3001';
+
+  // لو عندك توكن
+  function authHeaders(){
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}`, 'Content-Type':'application/json' }
+                 : { 'Content-Type':'application/json' };
+  }
+
+  // فحص صلاحية إضافة مستخدم وإظهار/إخفاء الزر
+  async function checkCreateUserPermission() {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me-permissions`, {
+        headers: authHeaders(),
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        console.warn('فشل التحقق من الصلاحيات');
+        return;
+      }
+      
+      const data = await res.json();
+      const canCreate = data?.canCreateUser === true;
+      
+      const btn = document.getElementById('btnOpenAddUser');
+      if (btn && canCreate) {
+        btn.style.display = 'inline-flex';
+      }
+      
+      console.log('✅ صلاحية إضافة مستخدم:', canCreate);
+    } catch (err) {
+      console.error('❌ خطأ في فحص الصلاحيات:', err);
+    }
+  }
+
+  // استدعاء فحص الصلاحية عند التحميل
+  checkCreateUserPermission();
+
+  // فحص صلاحية تعديل مستخدم وإظهار/إخفاء أزرار التعديل
+  async function checkEditUserPermission() {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me-permissions`, {
+        headers: authHeaders(),
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        console.warn('فشل التحقق من صلاحيات التعديل');
+        return;
+      }
+      
+      const data = await res.json();
+      const canEdit = data?.canEditHospitalUser === true;
+      
+      // إخفاء/إظهار جميع أزرار التعديل
+      document.querySelectorAll('[data-action="edit"]').forEach(btn => {
+        if (canEdit) {
+          btn.style.display = '';
+          btn.classList.remove('hidden');
+          btn.disabled = false;
+        } else {
+          btn.style.display = 'none';
+          btn.classList.add('hidden');
+        }
+      });
+      
+      console.log('✅ صلاحية تعديل مستخدم:', canEdit);
+    } catch (err) {
+      console.error('❌ خطأ في فحص صلاحيات التعديل:', err);
+    }
+  }
+
+  // استدعاء فحص صلاحية التعديل عند التحميل وبعد كل تحديث للجدول
+  checkEditUserPermission();
+
+  // فحص صلاحية حذف مستخدم وإظهار/إخفاء أزرار الحذف
+  async function checkDeleteUserPermission() {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me-permissions`, {
+        headers: authHeaders(),
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        console.warn('فشل التحقق من صلاحيات الحذف');
+        return;
+      }
+      
+      const data = await res.json();
+      const canDelete = data?.canDeleteHospitalUser === true;
+      
+      // إخفاء/إظهار جميع أزرار الحذف
+      document.querySelectorAll('[data-action="del"]').forEach(btn => {
+        if (canDelete) {
+          btn.style.display = '';
+          btn.classList.remove('hidden');
+          btn.disabled = false;
+        } else {
+          btn.style.display = 'none';
+          btn.classList.add('hidden');
+        }
+      });
+      
+      console.log('✅ صلاحية حذف مستخدم:', canDelete);
+    } catch (err) {
+      console.error('❌ خطأ في فحص صلاحيات الحذف:', err);
+    }
+  }
+
+  // استدعاء فحص صلاحية الحذف عند التحميل وبعد كل تحديث للجدول
+  checkDeleteUserPermission();
+
+  // 1) تحميل المستشفيات (المفعّلة فقط)
+  async function loadHospitals(){
+    try{
+      console.log('🔄 Loading hospitals...');
+      const res = await fetch(`${API_BASE}/api/hospitals?active=1`, { headers: authHeaders() });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const items = await res.json();
+      
+      console.log('🏥 Hospitals loaded:', items);
+
+      hospitalSelect.innerHTML = '<option value="">— اختر المستشفى —</option>' +
+        items.map(h => `<option value="${h.HospitalID}">${h.NameAr}</option>`).join('');
+      return items;
+    }catch(err){
+      console.error('❌ loadHospitals error:', err);
+      hospitalSelect.innerHTML = '<option value="">تعذر تحميل المستشفيات</option>';
+      return [];
+    }
+  }
+
+  // 2) تحميل المستخدمين حسب المستشفى والبحث
+  async function loadUsers(){
+    try{
+      const hid = getActiveHospitalId();
+      if (!hid) {
+        console.log('⏸️ No hospital selected, skipping load');
+        const tbody = document.getElementById('usersTbody');
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">اختر مستشفى أولاً لعرض المستخدمين</td></tr>`;
+        }
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set('hospitalId', hid);
+      const q = (searchInput.value || '').trim();
+      if (q) params.set('search', q);
+
+      const res = await fetch(`${API_BASE}/api/users?${params.toString()}`, { headers: authHeaders() });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      
+      const { user } = getAuth();
+      const userMode = getUserMode(user);
+      const clusterMode = userMode === 'cluster' || userMode === 'central';
+      
+      renderUsers(data.items || [], clusterMode);
+      
+      // تحديث صلاحيات التعديل والحذف بعد رندر الجدول
+      checkEditUserPermission();
+      checkDeleteUserPermission();
+
+    }catch(err){
+      console.error('loadUsers', err);
+      const tbody = document.getElementById('usersTbody');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-600">تعذر تحميل المستخدمين: ${err.message}</td></tr>`;
+      }
+    }
+  }
+
+  // 3) عرض المستخدمين في الجدول
+  function renderUsers(rows, clusterMode = false){
+    const tbody = document.getElementById('usersTbody');
+    if (!tbody) return;
+    
+    if (!rows || rows.length === 0){
+      tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">لا توجد مستخدمين</td></tr>`;
+      return;
+    }
+    
+    if (!clusterMode) {
+      tbody.innerHTML = rows.map((u, i) => rowHtml(u, i + 1)).join('');
+    } else {
+      tbody.innerHTML = rows.map((u, i) => rowHtmlCluster(u, i + 1)).join('');
+    }
+    
+    // تهيئة أيقونات Lucide بعد تحديث الجدول
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  }
+
+  function rowHtml(u, idx){
+    return `
+    <tr class="border-b" data-id="${u.UserID}">
+      <td class="p-3 text-center">${idx}</td>
+      <td class="p-3">
+        <div class="font-bold">${u.FullName || '—'}</div>
+        ${u.Mobile ? `<div class="text-xs text-gray-500">📱 ${u.Mobile}</div>` : ''}
+        ${u.NationalID ? `<div class="text-xs text-gray-500">🆔 ${u.NationalID}</div>` : ''}
+      </td>
+      <td class="p-3">
+        <div class="font-mono text-sm">@${u.Username || '—'}</div>
+      </td>
+      <td class="p-3">
+        ${u.Email ? `<div class="text-sm">${u.Email}</div>` : '—'}
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700">
+          ${roleName(u.RoleID)}
+        </span>
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-1 rounded ${u.IsActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+          ${u.IsActive ? 'مفعل' : 'موقف'}
+        </span>
+      </td>
+      <td class="p-3 w-56">
+        <div class="flex items-center gap-2 rtl:space-x-reverse">
+          <button class="act-btn act-edit" data-action="edit" data-id="${u.UserID}" title="تعديل المستخدم">
+            <i data-lucide="pencil"></i><span>تعديل</span>
+          </button>
+          <button class="act-btn act-delete" data-action="del" data-id="${u.UserID}" title="حذف المستخدم">
+            <i data-lucide="trash-2"></i><span>حذف</span>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  function rowHtmlCluster(u, idx){
+    const name = u.FullName || '—';
+    const hosp = u.HospitalNameAr || `#${u.HospitalID}`;
+    return `
+    <tr class="border-b" data-id="${u.UserID}">
+      <td class="p-3 text-center">${idx}</td>
+      <td class="p-3">
+        <div class="font-bold">${name}</div>
+        <div class="text-xs opacity-70">المستشفى: ${hosp}</div>
+        ${u.Mobile ? `<div class="text-xs text-gray-500">📱 ${u.Mobile}</div>` : ''}
+      </td>
+      <td class="p-3">
+        <div class="font-mono text-sm">@${u.Username || '—'}</div>
+      </td>
+      <td class="p-3">
+        ${u.Email ? `<div class="text-sm">${u.Email}</div>` : '—'}
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700">
+          ${roleName(u.RoleID)}
+        </span>
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-1 rounded ${u.IsActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+          ${u.IsActive ? 'مفعل' : 'موقف'}
+        </span>
+      </td>
+      <td class="p-3 w-56">
+        <div class="flex items-center gap-2 rtl:space-x-reverse">
+          <button class="act-btn act-edit" data-action="edit" data-id="${u.UserID}" title="تعديل المستخدم">
+            <i data-lucide="pencil"></i><span>تعديل</span>
+          </button>
+          <button class="act-btn act-delete" data-action="del" data-id="${u.UserID}" title="حذف المستخدم">
+            <i data-lucide="trash-2"></i><span>حذف</span>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  // اسم الدور (اختياري — غيّريه حسب نظامك)
+  function roleName(roleId){
+    if (roleId == 1) return 'سوبر أدمن';
+    if (roleId == 3) return 'مدير قسم';
+    if (roleId == 4) return 'مدير';
+    return 'موظف';
+  }
+
+  // 4) Event delegation للأزرار
+  function setupTableEventListeners() {
+    const tbody = document.getElementById('usersTbody');
+    if (!tbody) {
+      console.error('❌ usersTbody not found');
+      return;
+    }
+
+    tbody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+
+      const id = Number(btn.dataset.id);
+      const action = btn.dataset.action;
+
+      console.log(`🔘 Button clicked: ${action} for user ${id}`);
+
+      if (action === 'edit') {
+        await openUserEdit(id);
+      }
+
+      if (action === 'del') {
+        if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
+        try {
+          const hid = getActiveHospitalId();
+          if (!hid) return alert('اختَر مستشفى أولاً.');
+          const url = `${API_BASE}/api/users/${id}?hospitalId=${hid}`;
+          await fetch(url, { method: 'DELETE', headers: authHeaders() });
+          alert('تم حذف المستخدم بنجاح');
+          await loadUsers();
+        } catch (err) {
+          alert('تعذر حذف المستخدم: ' + err.message);
+          console.error(err);
+        }
+      }
+    });
+
+    console.log('✅ Table event listeners setup complete');
+  }
+
+  // دالة حذف للتوافق مع الكود القديم
+  window.deleteUser = async function(id){
+    if(!confirm('حذف المستخدم؟')) return;
+    
+    const hid = getActiveHospitalId();
+    if (!hid) return alert('اختَر مستشفى أولاً.');
+    
+    const res = await fetch(`${API_BASE}/api/users/${id}?hospitalId=${hid}`, { 
+      method:'DELETE', 
+      headers: authHeaders() 
+    });
+    if(!res.ok){ alert('تعذر الحذف'); return; }
+    loadUsers();
+  };
+
+
+  // أحداث
+  hospitalSelect.addEventListener('change', () => {
+    localStorage.setItem('adminUsers.hid', hospitalSelect.value || '');
+    loadUsers();
+  });
+  searchInput.addEventListener('input', () => {
+    clearTimeout(window.__t); window.__t = setTimeout(loadUsers, 300);
+  });
+
+  // تشغيل أولي
+  (async function init(){
+    console.log('🚀 Initializing admin-users page...');
+    
+    const items = await loadHospitals();
+    const { user } = getAuth();
+    const userMode = getUserMode(user);
+    const clusterMode = userMode === 'cluster' || userMode === 'central';
+    const bar = document.getElementById('clusterBar');
+    const hospitalHeader = document.getElementById('hospitalHeader');
+    
+    console.log('👤 User info:', { 
+      user, 
+      userMode, 
+      clusterMode, 
+      itemsCount: items.length 
+    });
+    
+    // Fallback: إذا لم يتم تحديد نوع المستخدم بشكل صحيح، استخدم وضع مدير التجمع
+    const finalClusterMode = clusterMode || (!user?.RoleID && !user?.roleId && !user?.role_id);
+    
+    if (finalClusterMode) {
+      console.log('🔧 Setting up cluster manager mode...');
+      if (bar) bar.classList.remove('hidden');
+      if (hospitalHeader) hospitalHeader.classList.remove('hidden');
+      
+      // مدير تجمع: اختَر أول مستشفى تلقائيًا لو ما فيه اختيار
+      if (!hospitalSelect.value && items.length) {
+        // جرب استرجاع آخر اختيار محفوظ
+        const saved = localStorage.getItem('adminUsers.hid');
+        if (saved && items.find(h => String(h.HospitalID) === saved)) {
+          hospitalSelect.value = saved;
+          console.log('💾 Restored saved hospital:', saved);
+        } else {
+          // أو اختر أول مستشفى
+          hospitalSelect.value = String(items[0].HospitalID);
+          console.log('🎯 Auto-selected first hospital:', items[0].HospitalID);
+        }
+      }
+    } else {
+      console.log('🏥 Setting up hospital employee mode...');
+      // موظف مستشفى: أخفِ الاختيار وحمّل مباشرة
+      if (bar) bar.classList.add('hidden');
+      if (hospitalHeader) hospitalHeader.classList.add('hidden');
+    }
+    
+    // إعداد معالجات الجدول
+    setupTableEventListeners();
+    
+    // تحميل المستخدمين بعد تعيين المستشفى
+    await loadUsers();
+    
+    console.log('✅ Initialization complete');
+  })();
+
+  // تأثير الهيدر كما هو (لم يتغير)
+  window.addEventListener("scroll", function () {
+    const navbar = document.getElementById("navbar");
+    if (window.scrollY > 50) {
+      navbar.style.backgroundColor = "#ffffff";
+      navbar.classList.add("shadow-md");
+      navbar.querySelectorAll("a").forEach(link => {
+        link.classList.remove("text-white", "hover:text-blue-200");
+        link.classList.add("text-[#002B5B]", "hover:text-blue-700");
+      });
+    } else {
+      navbar.style.backgroundColor = "#002B5B";
+      navbar.classList.remove("shadow-md");
+      navbar.querySelectorAll("a").forEach(link => {
+        link.classList.add("text-white", "hover:text-blue-200");
+        link.classList.remove("text-[#002B5B]", "hover:text-blue-700");
+      });
+    }
+  });
+});
+
+// ======================= سكربت التحكم بمودال تعديل المستخدم =======================
+// لو الصفحة على 5500 والـ API على 3001 نضبط الأساس
+const API_BASE = (location.port === '3001') ? '' : 'http://localhost:3001';
+
+// دالة لجلب المستخدم من التخزين
+function getAuth() {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) {
+      console.log('❌ No token found');
+      return { user: null, token: null };
+    }
+    
+    console.log('🔑 Token found:', token.substring(0, 50) + '...');
+    
+    const user = JSON.parse(atob(token.split('.')[1]));
+    console.log('👤 Decoded user:', user);
+    
+    return { user, token };
+  } catch (e) {
+    console.error('❌ Error decoding token:', e);
+    return { user: null, token: null };
+  }
+}
+
+// دالة لتحديد المستشفى النشط
+function getActiveHospitalId() {
+  const { user } = getAuth();
+  
+  // دعم أسماء حقول مختلفة
+  const role = Number(user?.RoleID || user?.roleId || user?.role_id);
+  const hospitalId = Number(user?.HospitalID || user?.hospitalId || user?.hospital_id);
+  const isCluster = role === 1 || role === 4; // مدير تجمع أو مركزي
+
+  console.log('🔍 getActiveHospitalId:', { 
+    user,
+    role, 
+    isCluster, 
+    userHospitalID: hospitalId,
+    rawRole: user?.RoleID,
+    rawHospital: user?.HospitalID
+  });
+
+  if (isCluster) {
+    const sel = document.getElementById('hospitalSelect');
+    const val = Number(sel?.value);
+    console.log('🔍 Cluster manager:', { 
+      selExists: !!sel, 
+      rawValue: sel?.value, 
+      numericValue: val 
+    });
+    return Number.isFinite(val) && val > 0 ? val : 0;
+  }
+  
+  console.log('✅ Hospital employee hospital ID:', hospitalId);
+  return hospitalId;
+}
+
+// دالة لجلب headers المصادقة
+function authHeaders() {
+  const { token } = getAuth();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// دوال المساعدة
+function isClusterManager(user) {
+  const role = Number(user?.RoleID || user?.roleId || user?.role_id);
+  return [1, 4].includes(role);
+}
+
+function getUserMode(user) {
+  const role = Number(user?.RoleID || user?.roleId || user?.role_id);
+  console.log('🔍 getUserMode:', { role, user });
+  if (role === 1) return 'central';
+  if (role === 4) return 'cluster';
+  return 'hospital';
+}
+
+const userEditModal = document.getElementById('userEditModal');
+const ueToast = document.getElementById('uetoast');
+
+// مراجع الحقول
+const ue_UserID      = document.getElementById('ue_UserID');
+const ue_PasswordHash= document.getElementById('ue_PasswordHash');
+const ue_FullName    = document.getElementById('ue_FullName');
+const ue_Username    = document.getElementById('ue_Username');
+const ue_Email       = document.getElementById('ue_Email');
+const ue_Mobile      = document.getElementById('ue_Mobile');
+const ue_NationalID  = document.getElementById('ue_NationalID');
+const ue_RoleID      = document.getElementById('ue_RoleID');
+const ue_HospitalID  = document.getElementById('ue_HospitalID');
+const ue_DepartmentID= document.getElementById('ue_DepartmentID');
+const ue_IsActive    = document.getElementById('ue_IsActive');
+
+function showUeToast(msg='تم حفظ التعديلات'){
+  ueToast.textContent = msg;
+  ueToast.classList.remove('hidden');
+  setTimeout(()=> ueToast.classList.add('hidden'), 1600);
+}
+
+function closeUserEdit(){ userEditModal.classList.add('hidden'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !userEditModal.classList.contains('hidden')) closeUserEdit();
+});
+
+// تعبئة قوائم المستشفيات
+async function fillHospitalsSelect(){
+  const res = await fetch(`${API_BASE}/api/hospitals?active=1`);
+  const items = await res.json();
+  ue_HospitalID.innerHTML = items.map(h => `<option value="${h.HospitalID}">${h.NameAr}</option>`).join('');
+}
+
+// تعبئة الأقسام حسب المستشفى (لو عندك راوتر الأقسام)
+async function fillDepartmentsSelect(hospitalId, selectedDeptId=null){
+  ue_DepartmentID.innerHTML = `<option value="">— بدون قسم —</option>`;
+  if (!hospitalId) return;
+  try{
+    console.log('🔄 Loading departments for hospital:', hospitalId);
+    const res = await fetch(`${API_BASE}/api/departments?hospitalId=${hospitalId}`, {
+      headers: authHeaders()
+    });
+    if(!res.ok) {
+      console.error('❌ Failed to load departments:', res.status, res.statusText);
+      return;
+    }
+    const deps = await res.json();
+    console.log('🏢 Departments loaded:', deps);
+    ue_DepartmentID.innerHTML += deps.items?.map(d => `<option value="${d.DepartmentID}">${d.NameAr}</option>`).join('') || '';
+    if (selectedDeptId) ue_DepartmentID.value = selectedDeptId;
+  }catch(err){
+    console.error('❌ Error loading departments:', err);
+  }
+}
+
+// افتح المودال وجلب بيانات المستخدم
+window.openUserEdit = async function(userId){
+  const hid = getActiveHospitalId();
+  if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
+
+  // افتح المودال مباشرة عشان تحسي أنه استجاب
+  userEditModal.classList.remove('hidden');
+
+  try{
+    // 1) حمّل المستخدم
+    const uRes = await fetch(`${API_BASE}/api/users/${userId}?hospitalId=${hid}`, { headers: authHeaders() });
+    if(!uRes.ok) throw new Error('HTTP '+uRes.status);
+    const data = await uRes.json();
+    const u = data.data;
+
+    // 2) عبئ المستشفيات أولاً
+    await fillHospitalsSelect().catch(()=>{ ue_HospitalID.innerHTML = ''; });
+
+    // 3) عبّي الحقول
+    ue_UserID.value       = u.UserID;
+    ue_PasswordHash.value = u.PasswordHash || '';
+    ue_FullName.value     = u.FullName || '';
+    ue_Username.value     = u.Username || '';
+    ue_Email.value        = u.Email || '';
+    ue_Mobile.value       = u.Mobile || '';
+    ue_NationalID.value   = u.NationalID || '';
+    ue_RoleID.value       = u.RoleID || 2;
+    ue_HospitalID.value   = u.HospitalID || '';
+    ue_IsActive.checked   = !!u.IsActive;
+
+    // 4) الأقسام (لو عندك راوترها)
+    await fillDepartmentsSelect(u.HospitalID, u.DepartmentID || null).catch(()=>{ /* ignore */ });
+
+    setTimeout(()=> ue_FullName.focus(), 50);
+
+  }catch(err){
+    console.error('openUserEdit error', err);
+    closeUserEdit();
+    alert('تعذر تحميل بيانات المستخدم');
+  }
+};
+
+// عند تغيير المستشفى داخل المودال => عبّي الأقسام
+ue_HospitalID.addEventListener('change', ()=>{
+  fillDepartmentsSelect(ue_HospitalID.value, null);
+});
+
+// حفظ التعديلات
+window.saveUserEdit = async function(e){
+  e.preventDefault();
+
+  const hid = getActiveHospitalId();
+  if (!hid) return alert('اختَر مستشفى أولاً.');
+
+  const payload = {
+    RoleID:       Number(ue_RoleID.value || 2),
+    HospitalID:   hid,
+    DepartmentID: ue_DepartmentID.value ? Number(ue_DepartmentID.value) : null,
+    FullName:     ue_FullName.value.trim(),
+    Username:     ue_Username.value.trim(),
+    Email:        ue_Email.value.trim(),
+    Mobile:       ue_Mobile.value.trim(),
+    NationalID:   ue_NationalID.value.trim(),
+    PasswordHash: ue_PasswordHash.value || null, // لا نغيّرها؛ نعيد نفس القيمة
+    IsActive:     ue_IsActive.checked ? 1 : 0
+  };
+
+  if (!payload.FullName) return alert('الاسم الكامل مطلوب');
+  if (!payload.Username) return alert('اسم المستخدم مطلوب');
+  
+  // تحقق من صحة البريد الإلكتروني إذا تم إدخاله
+  if (payload.Email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.Email)) {
+    return alert('❌ البريد الإلكتروني غير صحيح');
+  }
+
+  try{
+    const res = await fetch(`${API_BASE}/api/users/${ue_UserID.value}?hospitalId=${hid}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await res.json();
+    
+    if(!res.ok){
+      console.error('saveUserEdit failed', res.status, data);
+      
+      // معالجة أخطاء محددة
+      if (res.status === 409) {
+        if (data.message === 'username exists') {
+          const details = data.details || 'اسم المستخدم موجود مسبقاً';
+          alert(`❌ اسم المستخدم موجود مسبقاً.\n\n${details}\n\nيرجى اختيار اسم مستخدم آخر.`);
+        } else if (data.message === 'email exists') {
+          const details = data.details || 'البريد الإلكتروني موجود مسبقاً';
+          alert(`❌ البريد الإلكتروني موجود مسبقاً.\n\n${details}\n\nيرجى استخدام بريد إلكتروني آخر.`);
+        } else {
+          alert('❌ البيانات موجودة مسبقاً: ' + (data.message || 'خطأ غير محدد'));
+        }
+      } else if (res.status === 400) {
+        alert('❌ بيانات ناقصة: ' + (data.message || 'يرجى ملء جميع الحقول المطلوبة'));
+      } else if (res.status === 403) {
+        alert('❌ غير مصرح لك بتعديل هذا المستخدم');
+      } else if (res.status === 404) {
+        alert('❌ المستخدم غير موجود');
+      } else {
+        alert('❌ خطأ في الخادم: ' + (data.message || 'HTTP ' + res.status));
+      }
+      return;
+    }
+
+    closeUserEdit();
+    showUeToast('تم تحديث المستخدم بنجاح');
+    // أعيدي تحميل القائمة الرئيسية (تأكدي أن لديك دالة loadUsers)
+    if (typeof loadUsers === 'function') await loadUsers();
+
+  }catch(err){
+    console.error('saveUserEdit error', err);
+    alert('❌ تعذر حفظ التعديلات: ' + err.message);
+  }
+};
+
+// ======================= سكربت التحكم بمودال إضافة المستخدم (مُحدّث مع كلمة السر) =======================
+// مراجع الحقول (تأكد أنها ليست مكررة في مكان آخر)
+const userAddModal = document.getElementById('userAddModal');
+
+const ua_FullName     = document.getElementById('ua_FullName');
+const ua_Username     = document.getElementById('ua_Username');
+const ua_Email        = document.getElementById('ua_Email');
+const ua_Mobile       = document.getElementById('ua_Mobile');
+const ua_NationalID   = document.getElementById('ua_NationalID');
+const ua_RoleID       = document.getElementById('ua_RoleID');
+const ua_HospitalID   = document.getElementById('ua_HospitalID');
+const ua_DepartmentID = document.getElementById('ua_DepartmentID');
+const ua_IsActive     = document.getElementById('ua_IsActive');
+const ua_Password     = document.getElementById('ua_Password');
+const ua_PasswordConfirm = document.getElementById('ua_PasswordConfirm');
+
+// ملء قوائم المستشفيات
+async function fillAddSelects(){
+  try{
+    const res = await fetch(`${API_BASE}/api/hospitals?active=1`);
+    if(!res.ok) return;
+    const items = await res.json();
+    ua_HospitalID.innerHTML = '<option value="">— اختر المستشفى —</option>' + items.map(h => `<option value="${h.HospitalID}">${h.NameAr}</option>`).join('');
+  }catch(e){ console.warn('fillAddSelects', e); }
+}
+
+async function fillAddDepartments(hid){
+  ua_DepartmentID.innerHTML = `<option value="">— بدون قسم —</option>`;
+  if(!hid) return;
+  try{
+    console.log('🔄 Loading departments for hospital (add mode):', hid);
+    const res = await fetch(`${API_BASE}/api/departments?hospitalId=${hid}`, {
+      headers: authHeaders()
+    });
+    if(!res.ok) {
+      console.error('❌ Failed to load departments (add mode):', res.status, res.statusText);
+      return;
+    }
+    const deps = await res.json();
+    console.log('🏢 Departments loaded (add mode):', deps);
+    ua_DepartmentID.innerHTML += deps.items?.map(d => `<option value="${d.DepartmentID}">${d.NameAr}</option>`).join('') || '';
+  }catch(e){ 
+    console.error('❌ Error loading departments (add mode):', e); 
+  }
+}
+
+// فتح/إغلاق المودال
+function openUserAdd(){
+  const hid = getActiveHospitalId();
+  if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
+  
+  userAddModal.classList.remove('hidden');
+  fillAddSelects();
+}
+function closeUserAdd(){
+  userAddModal.classList.add('hidden');
+  // تنظيف الحقول (اختياري)
+  ua_FullName.value = ua_Username.value = ua_Email.value = ua_Mobile.value = ua_NationalID.value = '';
+  ua_Password.value = ua_PasswordConfirm.value = '';
+  ua_RoleID.value = '2';
+  ua_HospitalID.value = '';
+  ua_DepartmentID.innerHTML = `<option value="">— بدون قسم —</option>`;
+  ua_IsActive.checked = true;
+}
+
+// عندما يتغير المستشفى نعبي الأقسام
+ua_HospitalID.addEventListener('change', ()=> fillAddDepartments(ua_HospitalID.value));
+
+// تم إزالة دالة hashPasswordSHA256 - السيرفر سيتولى تشفير كلمة السر بـ bcrypt
+
+// حفظ مستخدم جديد
+async function saveUserAdd(e){
+  e.preventDefault();
+
+  const hid = getActiveHospitalId();
+  if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
+
+  // تحقق الحقول الأساسية
+  const fullName = ua_FullName.value.trim();
+  const username = ua_Username.value.trim();
+
+  if(!fullName || !username) return alert('تأكد من إدخال الاسم واسم المستخدم.');
+  
+  // تحقق من صحة البريد الإلكتروني إذا تم إدخاله
+  const email = ua_Email.value.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return alert('❌ البريد الإلكتروني غير صحيح');
+  }
+
+  // كلمة السر (اختياريًا مع التأكد)
+  const pwd = ua_Password.value;
+  const pwdConfirm = ua_PasswordConfirm.value;
+  if (pwd || pwdConfirm){
+    if (pwd.length < 6) return alert('كلمة السر يجب أن تكون 6 أحرف على الأقل.');
+    if (pwd !== pwdConfirm) return alert('كلمة السر وتأكيدها غير متطابقين.');
+  }
+
+  const payload = {
+    RoleID: Number(ua_RoleID.value || 2),
+    HospitalID: hid,
+    DepartmentID: ua_DepartmentID.value ? Number(ua_DepartmentID.value) : null,
+    FullName: fullName,
+    Username: username,
+    Email: ua_Email.value.trim(),
+    Mobile: ua_Mobile.value.trim(),
+    NationalID: ua_NationalID.value.trim(),
+    Password: pwd || undefined,
+    IsActive: ua_IsActive.checked ? 1 : 0
+  };
+
+  try{
+    const res = await fetch(`${API_BASE}/api/users?hospitalId=${hid}`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await res.json();
+    
+    if(!res.ok){
+      console.error('saveUserAdd failed', res.status, data);
+      
+      // معالجة أخطاء محددة
+      if (res.status === 409) {
+        if (data.message === 'username exists') {
+          const details = data.details || 'اسم المستخدم موجود مسبقاً';
+          alert(`❌ اسم المستخدم موجود مسبقاً.\n\n${details}\n\nيرجى اختيار اسم مستخدم آخر.`);
+        } else if (data.message === 'email exists') {
+          const details = data.details || 'البريد الإلكتروني موجود مسبقاً';
+          alert(`❌ البريد الإلكتروني موجود مسبقاً.\n\n${details}\n\nيرجى استخدام بريد إلكتروني آخر.`);
+        } else {
+          alert('❌ البيانات موجودة مسبقاً: ' + (data.message || 'خطأ غير محدد'));
+        }
+      } else if (res.status === 400) {
+        alert('❌ بيانات ناقصة: ' + (data.message || 'يرجى ملء جميع الحقول المطلوبة'));
+      } else if (res.status === 403) {
+        alert('❌ غير مصرح لك بإضافة مستخدمين في هذا المستشفى');
+      } else {
+        alert('❌ خطأ في الخادم: ' + (data.message || 'HTTP ' + res.status));
+      }
+      return;
+    }
+    
+    // نجح الإضافة
+    closeUserAdd();
+    alert('✅ تم إضافة المستخدم بنجاح\n\n' + (data.centralSync || ''));
+    if (typeof loadUsers === 'function') loadUsers();
+    
+  }catch(err){
+    console.error('saveUserAdd error', err);
+    alert('❌ تعذر إضافة المستخدم: ' + err.message);
+  }
+}
+
+// ربط زر الإضافة العلوي
+const addBtn = document.getElementById('btnOpenAddUser');
+if(addBtn){
+  addBtn.addEventListener('click', e=>{
+    e.preventDefault();
+    openUserAdd();
+  });
+}
+
+</script>
+</body>
+</html>
+

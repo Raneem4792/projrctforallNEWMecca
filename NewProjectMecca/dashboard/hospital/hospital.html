@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لوحة مستشفى - نظام البلاغات</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- نعيد استخدام نفس تنسيق الداشبورد -->
+  <link rel="stylesheet" href="../dashboard.css">
+  <!-- تخصيص اختياري -->
+  <link rel="stylesheet" href="./hospital.css">
+</head>
+<body class="bg-gray-50" style="font-family:'Tajawal',sans-serif">
+
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <a href="#" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </a>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-16">
+    <!-- عنوان + شارات المستويات -->
+    <div class="mb-8">
+      <h1 id="hName" class="text-3xl md:text-4xl font-extrabold mt-4" style="color:#002B5B;">اسم المستشفى</h1>
+      <p id="hDesc" class="text-gray-600 mt-1">النوع - عدد الأسرة</p>
+      <div class="mt-4 flex items-center gap-2">
+        <span class="pill pill-red">🔴 <span id="cRed">0</span></span>
+        <span class="pill pill-orange">🟠 <span id="cOrange">0</span></span>
+        <span class="pill pill-yellow">🟡 <span id="cYellow">0</span></span>
+      </div>
+    </div>
+
+    <!-- Critical Banner - تحت اسم المستشفى مباشرة -->
+    <section id="criticalBanner" class="alert-critical hidden my-8">
+      <div class="alert-dot"></div>
+      <div class="alert-text">لديك <b id="criticalCount">0</b> بلاغات حمراء تتطلب متابعة فورية.</div>
+      <a id="criticalViewAll" href="#" class="alert-link">عرض المزيد</a>
+    </section>
+
+    <!-- === Filters Bar (Hospital scope) === -->
+    <section id="filtersBar" class="mb-6 flex flex-wrap gap-3 items-center">
+      <select id="fPriority" class="border rounded-lg px-3 py-2 bg-white">
+        <option value="">الأولوية: الكل</option>
+        <option value="red">حرجة</option>
+        <option value="orange">متوسطة</option>
+        <option value="yellow">منخفضة</option>
+      </select>
+      <button id="applyFiltersBtn" class="px-4 py-2 rounded-lg text-white" style="background:#004A9F">تطبيق</button>
+    </section>
+
+    <!-- KPIs -->
+    <section class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-10">
+      <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+        <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiTotal">0</div>
+        <div class="text-gray-600 font-medium mt-1">إجمالي البلاغات</div>
+      </div>
+      <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+        <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiOpen">0</div>
+        <div class="text-gray-600 font-medium mt-1">مفتوحة</div>
+      </div>
+      <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+        <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiClosed">0</div>
+        <div class="text-gray-600 font-medium mt-1">مغلقة</div>
+      </div>
+      <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+        <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiRate">0%</div>
+        <div class="text-gray-600 font-medium mt-1">معدل الحل</div>
+      </div>
+      <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+        <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiSLA">0%</div>
+        <div class="text-gray-600 font-medium mt-1">SLA (≤ 3 أيام)</div>
+      </div>
+      <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
+        <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiRepeated30d">0</div>
+        <div class="text-gray-600 font-medium mt-1">تكرارات 30 يوم</div>
+      </div>
+    </section>
+
+    <!-- مخطط + أحدث البلاغات -->
+    <section class="grid lg:grid-cols-2 gap-10">
+      <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+        <h3 class="text-2xl font-bold mb-4" style="color:#002B5B;">اتجاه البلاغات الشهرية</h3>
+        <div style="height:340px"><canvas id="hospitalChart"></canvas></div>
+      </div>
+
+      <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-2xl font-bold" style="color:#002B5B;">البلاغات الحديثة</h3>
+          <a id="recentViewAll" href="#" class="text-blue-700 hover:underline text-sm">عرض المزيد</a>
+        </div>
+        <div id="recent" class="space-y-4"></div>
+      </div>
+    </section>
+
+
+    <!-- Overdue Block -->
+    <section id="overdueBlock" class="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hidden">
+      <h3 class="text-2xl font-bold mb-6" style="color:#002B5B;">بلاغات متأخرة (> 3 أيام)</h3>
+      <ul id="overdueList" class="space-y-3"></ul>
+      <div class="mt-4">
+        <a id="overdueViewAll" href="#" class="text-blue-700 hover:underline">عرض الكل</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <script src="./hospital.js"></script>
+</body>
+</html>

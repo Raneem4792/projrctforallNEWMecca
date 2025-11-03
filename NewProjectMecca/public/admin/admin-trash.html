@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>المحذوفات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200">لوحة التحكم</a>
+          <a href="admin-hub.html" class="text-white hover:text-blue-200 font-bold underline">مركز الإدارة</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
+    <section class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-2">المحذوفات</h1>
+      <p class="text-gray-600">سلة المحذوفات مع خيار الاسترجاع</p>
+    </section>
+
+    <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="text-sm text-gray-600">إدارة العناصر المحذوفة</div>
+
+      <div class="flex items-center gap-3">
+        <!-- 👇 سيتم إخفاء/إظهار القائمة المنسدلة حسب الصلاحية -->
+        <div id="hospitalSelectContainer" class="flex items-center gap-3">
+          <label for="hospitalSelect" class="text-sm text-gray-600 whitespace-nowrap">اختر المستشفى:</label>
+          <select id="hospitalSelect"
+                  class="h-10 min-w-[240px] rounded-xl border border-gray-200 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100">
+            <option value="">— اختر المستشفى —</option>
+          </select>
+        </div>
+
+        <a href="admin-hospital.html" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 inline-flex items-center justify-center">رجوع</a>
+        <button id="emptyTrashBtn" class="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700">تفريغ السلة</button>
+      </div>
+    </div>
+
+    <div id="trashList" class="grid md:grid-cols-2 gap-4"></div>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  const API_BASE = 'http://localhost:3001/api';
+  const trashList = document.getElementById('trashList');
+  const hospitalSelect = document.getElementById('hospitalSelect');
+  const emptyTrashBtn = document.getElementById('emptyTrashBtn');
+
+  // حفظ آخر اختيار
+  const STORAGE_KEY = 'currentHospital';
+  const saveSel = (obj) => localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+  const getSel  = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; } };
+
+  // الحصول على التوكن
+  function getToken() {
+    return localStorage.getItem('token');
+  }
+
+  // ترجمة أنواع العناصر
+  const entityTypeLabels = {
+    'COMPLAINT': 'بلاغ',
+    'DEPARTMENT': 'قسم',
+    'USER': 'مستخدم',
+    'HOSPITAL': 'مستشفى',
+    'ATTACHMENT': 'مرفق',
+    'REPLY': 'رد',
+    'OTHER': 'آخر'
+  };
+
+  // تنسيق التاريخ
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // جلب المستشفيات والتهيئة الأولية
+  async function loadHospitals() {
+    try {
+      const token = getToken();
+      
+      // 👇 تحميل البيانات مباشرة (السيرفر سيتحكم بالصلاحيات)
+      await loadTrash();
+      
+      // جلب المستشفيات للقائمة المنسدلة (للمدراء فقط)
+      const response = await fetch(`${API_BASE}/hospitals`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const hospitals = Array.isArray(data) ? data : (data.data || []);
+      
+      if (hospitals.length === 0) {
+        return;
+      }
+
+      // إضافة المستشفيات للقائمة المنسدلة
+      hospitals.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.HospitalID;
+        opt.textContent = h.NameAr || h.NameEn || `مستشفى #${h.HospitalID}`;
+        hospitalSelect.appendChild(opt);
+      });
+
+      // استرجاع آخر اختيار للمدراء
+      const saved = getSel();
+      if (saved && saved.id) {
+        hospitalSelect.value = saved.id;
+      }
+      
+    } catch (error) {
+      console.error('خطأ في التهيئة:', error);
+      showNotification('حدث خطأ في التهيئة: ' + error.message, 'error');
+    }
+  }
+
+  // جلب سلة المحذوفات
+  async function loadTrash(hospitalId = null) {
+    try {
+      const token = getToken();
+      
+      // 👇 نبني الـ URL بناءً على وجود hospitalId
+      let url = `${API_BASE}/trash?entityType=COMPLAINT`;
+      if (hospitalId) {
+        url += `&hospitalId=${hospitalId}`;
+      }
+      
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      // التحقق من نجاح الطلب
+      if (!response.ok) {
+        if (response.status === 403) {
+          showNotification('غير مصرّح بالوصول إلى هذه البيانات', 'error');
+          renderEmpty('غير مصرّح بالوصول.');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // ✅ التحقق من صلاحية اختيار المستشفى
+      const canChooseHospital = data.canChooseHospital || false;
+      const hospitalSelectContainer = document.getElementById('hospitalSelectContainer');
+      
+      if (canChooseHospital) {
+        // مدير التجمّع: إظهار القائمة المنسدلة
+        hospitalSelectContainer.style.display = 'flex';
+      } else {
+        // موظف: إخفاء القائمة المنسدلة
+        hospitalSelectContainer.style.display = 'none';
+      }
+      
+      const items = data.items || data.data || [];
+
+      if (items.length > 0) {
+        renderTrash(items);
+      } else {
+        renderEmpty('لا توجد عناصر محذوفة.');
+      }
+    } catch (error) {
+      console.error('خطأ في جلب المحذوفات:', error);
+      showNotification('حدث خطأ في الاتصال بالخادم: ' + error.message, 'error');
+      renderEmpty('حدث خطأ في تحميل البيانات.');
+    }
+  }
+
+  // رسم البطاقات
+  function renderTrash(items = []) {
+    if (!items || items.length === 0) {
+      return renderEmpty('لا توجد عناصر محذوفة.');
+    }
+
+    trashList.innerHTML = items.map(item => {
+      // استخراج البيانات من EntitySnapshot
+      const snap = safeParseJSON(item.EntitySnapshot) || {};
+      const entityType = item.EntityType || 'COMPLAINT';
+      const typeLabel = entityTypeLabels[entityType] || entityType;
+      const typeColor = getTypeColor(entityType);
+      const ticket = snap.TicketNumber || `#${item.EntityID}`;
+      const deletedAt = formatDate(item.DeletedAt);
+      
+      return `
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow" data-trash-id="${item.TrashID}">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="inline-block px-2 py-0.5 rounded text-xs font-medium ${typeColor}">
+                ${typeLabel}
+              </span>
+            </div>
+            <div class="font-bold text-[#002B5B] text-lg">${escapeHTML(item.EntityTitle || ticket)}</div>
+            
+            ${snap.DepartmentID ? `<div class="text-sm text-gray-600 mt-1">القسم: ${escapeHTML(snap.DepartmentName || snap.DepartmentID)}</div>` : ''}
+            ${snap.PriorityCode ? `<div class="text-sm text-gray-600">الأولوية: ${escapeHTML(snap.PriorityCode)}</div>` : ''}
+            ${snap.SubmissionType ? `<div class="text-sm text-gray-600">طريقة التقديم: ${escapeHTML(snap.SubmissionType)}</div>` : ''}
+            ${item.DeleteReason ? `<div class="text-sm text-amber-600 mt-2">💡 السبب: ${escapeHTML(item.DeleteReason)}</div>` : ''}
+          </div>
+          <div class="text-xs text-gray-500 text-left">
+            <div class="font-semibold text-gray-700">حُذف في:</div>
+            <div>${deletedAt}</div>
+            ${item.DeletedByUserName ? `<div class="mt-2 text-gray-600">بواسطة:</div><div>${escapeHTML(item.DeletedByUserName)}</div>` : ''}
+          </div>
+        </div>
+        <div class="flex gap-2 justify-end mt-4 pt-3 border-t border-gray-100">
+          <button onclick="restoreItem(${item.TrashID})" 
+                  class="text-sm px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors font-medium">
+            ↩️ استرجاع
+          </button>
+          <button onclick="purgeItem(${item.TrashID}, '${escapeHTML((item.EntityTitle || ticket).replace(/'/g, "\\'"))}')" 
+                  class="text-sm px-4 py-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors font-medium">
+            🗑️ حذف نهائي
+          </button>
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
+
+  // دالة مساعدة لتحليل JSON بشكل آمن
+  function safeParseJSON(str) {
+    if (!str) return null;
+    if (typeof str === 'object') return str;
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      console.warn('فشل تحليل JSON:', e);
+      return null;
+    }
+  }
+
+  // لون حسب النوع
+  function getTypeColor(type) {
+    const colors = {
+      'COMPLAINT': 'bg-blue-100 text-blue-700',
+      'DEPARTMENT': 'bg-purple-100 text-purple-700',
+      'USER': 'bg-green-100 text-green-700',
+      'HOSPITAL': 'bg-red-100 text-red-700',
+      'ATTACHMENT': 'bg-yellow-100 text-yellow-700',
+      'REPLY': 'bg-indigo-100 text-indigo-700'
+    };
+    return colors[type] || 'bg-gray-100 text-gray-700';
+  }
+
+  // رسالة فارغة
+  function renderEmpty(msg) {
+    trashList.innerHTML = `
+      <div class="col-span-full text-center text-gray-400 p-10">${escapeHTML(msg)}</div>
+    `;
+  }
+
+  // حماية HTML
+  function escapeHTML(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  // استرجاع عنصر
+  async function restoreItem(trashId) {
+    if (!confirm('هل أنت متأكد من استرجاع هذا العنصر؟')) return;
+
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/trash/${trashId}/restore`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('تم الاسترجاع بنجاح', 'success');
+        // إعادة تحميل السلة
+        const hospitalId = hospitalSelect.value;
+        if (hospitalId) loadTrash(hospitalId);
+      } else {
+        showNotification(data.message || 'فشل الاسترجاع', 'error');
+      }
+    } catch (error) {
+      console.error('خطأ في الاسترجاع:', error);
+      showNotification('حدث خطأ في الاتصال بالخادم', 'error');
+    }
+  }
+
+  // حذف نهائي
+  async function purgeItem(trashId, title) {
+    if (!confirm(`هل أنت متأكد من الحذف النهائي لـ "${title}"؟\n\nلا يمكن التراجع عن هذا الإجراء!`)) return;
+
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/trash/${trashId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('تم الحذف النهائي بنجاح', 'success');
+        // إعادة تحميل السلة
+        const hospitalId = hospitalSelect.value;
+        if (hospitalId) loadTrash(hospitalId);
+      } else {
+        showNotification(data.message || 'فشل الحذف النهائي', 'error');
+      }
+    } catch (error) {
+      console.error('خطأ في الحذف النهائي:', error);
+      showNotification('حدث خطأ في الاتصال بالخادم', 'error');
+    }
+  }
+
+  // تفريغ السلة بالكامل
+  async function emptyTrash() {
+    try {
+      const token = getToken();
+      
+      // 👇 جلب معلومات المستخدم لتحديد hospitalId
+      const userResponse = await fetch(`${API_BASE}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const userData = await userResponse.json();
+      const user = userData.user || userData;
+      
+      // تحديد hospitalId حسب الصلاحية
+      let hospitalId;
+      const isClusterMgr = Number(user?.RoleID) === 1;
+      
+      if (isClusterMgr) {
+        // مدير التجمّع: يجب اختيار مستشفى
+        hospitalId = hospitalSelect.value;
+        if (!hospitalId) {
+          showNotification('اختر مستشفى أولاً', 'warning');
+          return;
+        }
+      } else {
+        // موظف: استخدم مستشفاه
+        hospitalId = user?.HospitalID;
+        if (!hospitalId) {
+          showNotification('لا يمكن تحديد المستشفى', 'error');
+          return;
+        }
+      }
+
+      const hospitalName = isClusterMgr && hospitalSelect.value 
+        ? hospitalSelect.options[hospitalSelect.selectedIndex].textContent
+        : 'هذا المستشفى';
+        
+      if (!confirm(`هل أنت متأكد من تفريغ سلة "${hospitalName}" بالكامل؟\n\nسيتم حذف جميع العناصر نهائياً ولا يمكن التراجع!`)) return;
+
+      const response = await fetch(`${API_BASE}/trash/empty`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hospitalId })
+      });
+      const data = await response.json();
+
+      if (data.ok || data.success) {
+        showNotification(`تم تفريغ السلة بنجاح (${data.deletedCount || 0} عنصر)`, 'success');
+        loadTrash(isClusterMgr ? hospitalId : null);
+      } else {
+        showNotification(data.message || 'فشل تفريغ السلة', 'error');
+      }
+    } catch (error) {
+      console.error('خطأ في تفريغ السلة:', error);
+      showNotification('حدث خطأ في الاتصال بالخادم', 'error');
+    }
+  }
+
+  // إشعارات
+  function showNotification(message, type = 'info') {
+    const colors = {
+      success: 'bg-green-500',
+      error: 'bg-red-500',
+      warning: 'bg-yellow-500',
+      info: 'bg-blue-500'
+    };
+
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 left-1/2 transform -translate-x-1/2 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+
+  // تغيير المستشفى
+  hospitalSelect?.addEventListener('change', () => {
+    const id = hospitalSelect.value;
+    if (!id) {
+      renderEmpty('اختر مستشفى لعرض العناصر المحذوفة.');
+      return;
+    }
+    const name = hospitalSelect.options[hospitalSelect.selectedIndex].textContent.trim();
+    saveSel({ id, name });
+    loadTrash(id);
+  });
+
+  // تفريغ السلة
+  emptyTrashBtn?.addEventListener('click', emptyTrash);
+
+  // التهيئة عند تحميل الصفحة
+  document.addEventListener('DOMContentLoaded', loadHospitals);
+
+  // تأثير تغيير لون الهيدر عند التمرير
+  window.addEventListener("scroll", function () {
+    const navbar = document.getElementById("navbar");
+    if (window.scrollY > 50) {
+      navbar.style.backgroundColor = "#ffffff";
+      navbar.classList.add("shadow-md");
+      navbar.querySelectorAll("a").forEach(link => {
+        link.classList.remove("text-white", "hover:text-blue-200");
+        link.classList.add("text-[#002B5B]", "hover:text-blue-700");
+      });
+    } else {
+      navbar.style.backgroundColor = "#002B5B";
+      navbar.classList.remove("shadow-md");
+      navbar.querySelectorAll("a").forEach(link => {
+        link.classList.add("text-white", "hover:text-blue-200");
+        link.classList.remove("text-[#002B5B]", "hover:text-blue-700");
+      });
+    }
+  });
+</script>
+</body>
+</html>
+

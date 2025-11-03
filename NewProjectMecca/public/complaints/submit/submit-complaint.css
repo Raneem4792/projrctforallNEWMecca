@@ -1,0 +1,130 @@
+:root{
+  --primary:#002B5B;
+  --secondary:#004A9F;
+  --ring:#e5e7eb;
+}
+
+.card{
+  background:#fff;border:1px solid #eef2f7;border-radius:18px;
+  padding:22px;box-shadow:0 10px 25px rgba(0,0,0,.04);
+}
+.section-title{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.section-title .icon{
+  width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
+  background:#E8F1FB;border-radius:10px;color:#1E40AF;font-size:18px
+}
+.section-title h2{font-weight:800;font-size:20px;color:var(--primary)}
+
+.field label{display:block;font-size:.95rem;color:#0f2b59;margin-bottom:6px;font-weight:600}
+.field input,.field select,.field textarea{
+  width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+  padding:12px 14px;outline:0;transition:border .2s,box-shadow .2s
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:#cfe0fb;box-shadow:0 0 0 3px rgba(0,74,159,.12)
+}
+.field textarea{resize:vertical}
+
+/* Dropzone */
+.dropzone{
+  border:2px dashed #d8e1ef;border-radius:16px;padding:26px;background:#fafbff;
+  transition:.2s;cursor:pointer
+}
+.dropzone.dragover{background:#f1f6ff;border-color:#a9c6ff}
+.dz-inner{display:flex;align-items:center;justify-content:center;gap:14px}
+.dz-icon{font-size:26px;color:#1E40AF}
+.dz-text{color:#0f2b59;font-weight:700}
+.dz-hint{font-weight:500;color:#6b7280;font-size:.85rem;margin-top:4px}
+.files-list{margin-top:14px;display:grid;gap:10px}
+.file-pill{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border:1px solid #eef2f7;border-radius:12px;background:#fff;font-size:.9rem
+}
+.file-pill .meta{color:#475569}
+.file-pill button{padding:6px 10px;border-radius:10px;border:1px solid #ef4444;color:#b91c1c;background:#fee2e2}
+.file-pill button:hover{background:#fecaca}
+
+.btn-primary{
+  background:linear-gradient(90deg,#004A9F,#0FA47A);color:#fff;border-radius:999px;
+  padding:12px 24px;font-weight:800
+}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-secondary{
+  background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;
+  padding:12px 24px;font-weight:700;color:#111827
+}
+.btn-secondary:hover{background:#eee}
+
+/* Hospital Dropdown Styles */
+#hospitalDropdown {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+}
+
+#hospitalDropdown .dropdown-item {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+#hospitalDropdown .dropdown-item:hover {
+  background-color: #f8fafc;
+  transform: translateX(-2px);
+}
+
+#hospitalDropdown .dropdown-item.selected {
+  background-color: #dbeafe;
+  border-left: 3px solid #3b82f6;
+}
+
+#hospitalDropdown .dropdown-item:first-child {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+#hospitalDropdown .dropdown-item:last-child {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-bottom: none;
+}
+
+#hospitalDropdown mark {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Search icon animation */
+#hospitalName:focus + .absolute svg {
+  color: #3b82f6;
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Loading state */
+.hospital-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #6b7280;
+}
+
+.hospital-loading::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

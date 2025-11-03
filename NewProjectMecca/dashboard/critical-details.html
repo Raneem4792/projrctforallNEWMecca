@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>تفاصيل البلاغ الحرج - تجمع مكة المكرمة الصحي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../public/assets/css/styles.css" />
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="bg-gray-50">
+
+  <!-- هيدر موحّد -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <a href="dashboard.html" class="flex items-center gap-3">
+          <img src="../public/assets/img/logo3.png" class="h-12 w-auto" alt="شعار تجمع مكة المكرمة الصحي">
+        </a>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="hospitals.html" class="text-white hover:text-blue-200 transition-colors">المستشفيات</a>
+          <a href="reports.html" class="text-white hover:text-blue-200 transition-colors">التقارير والإحصائيات</a>
+          <a href="critical.html" class="text-white hover:text-blue-200 transition-colors">البلاغات الحرجة</a>
+          <a href="../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+        </nav>
+        <button class="md:hidden text-white" aria-label="menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-20">
+    <!-- رأس الصفحة -->
+    <section class="bg-white border-b">
+      <div class="container mx-auto px-4 py-6 flex items-center justify-between">
+        <div>
+          <h1 id="pageTitle" class="text-2xl font-bold" style="color:#002B5B">تفاصيل البلاغ</h1>
+          <p id="pageSubtitle" class="text-gray-500 mt-1"></p>
+        </div>
+        <div class="flex gap-3">
+          <a id="backBtn" href="critical.html" class="px-5 py-2 rounded-full border hover:bg-gray-50">رجوع</a>
+          <button id="printBtn" class="px-5 py-2 rounded-full text-white" style="background:linear-gradient(135deg,#004A9F,#0FA47A)">طباعة</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- بطاقة التفاصيل -->
+    <section class="container mx-auto px-4 my-8">
+      <div class="bg-white rounded-2xl shadow-xl border p-6">
+        <!-- أعلى البطاقة: معرف + أولوية + حالة -->
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+          <span id="rptId" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 text-red-700 border border-red-200 font-bold">RPT-—</span>
+          <span id="priorityChip" class="priority-chip">حرج</span>
+          <span id="statusChip" class="pill pill-blue">الحالة</span>
+        </div>
+
+        <!-- عمودان للمعلومات -->
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div>
+              <div class="text-gray-400 text-sm">المستشفى</div>
+              <div id="hospital" class="font-semibold text-slate-800"></div>
+            </div>
+            <div>
+              <div class="text-gray-400 text-sm">القسم / النوع</div>
+              <div id="dept" class="font-semibold text-slate-800"></div>
+            </div>
+            <div>
+              <div class="text-gray-400 text-sm">تاريخ ووقت البلاغ</div>
+              <div id="createdAt" class="font-semibold text-slate-800"></div>
+            </div>
+            <div>
+              <div class="text-gray-400 text-sm">صاحب البلاغ / المريض</div>
+              <div id="reporter" class="font-semibold text-slate-800"></div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="text-gray-400 text-sm">المكلّف بالمعالجة</div>
+              <div id="assignee" class="font-semibold text-slate-800"></div>
+            </div>
+            <div>
+              <div class="text-gray-400 text-sm">وسيلة الاتصال</div>
+              <div id="contact" class="font-semibold text-slate-800"></div>
+            </div>
+            <div>
+              <div class="text-gray-400 text-sm">آخر تحديث</div>
+              <div id="updatedAt" class="font-semibold text-slate-800"></div>
+            </div>
+            <div>
+              <div class="text-gray-400 text-sm">مصدر البلاغ</div>
+              <div id="source" class="font-semibold text-slate-800"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- الوصف -->
+        <div class="mt-8">
+          <div class="text-gray-400 text-sm mb-2">وصف البلاغ</div>
+          <p id="description" class="leading-7 text-slate-700 bg-gray-50 rounded-xl p-4"></p>
+        </div>
+
+        <!-- المرفقات -->
+        <div class="mt-8">
+          <div class="text-gray-400 text-sm mb-2">المرفقات</div>
+          <div id="attachments" class="flex flex-wrap gap-3"></div>
+        </div>
+
+        <!-- التسلسل الزمني -->
+        <div class="mt-10">
+          <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center ml-3">🕓</div>
+            <h2 class="text-xl font-bold" style="color:#002B5B">التسلسل الزمني</h2>
+          </div>
+          <ol id="timeline" class="relative border-s border-gray-200 pl-6 space-y-6">
+            <!-- عناصر الحركات تضاف هنا -->
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <script src="critical-details.js"></script>
+</body>
+</html>

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>بلاغات الزائر السري - نظام البلاغات</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- نعيد استخدام نفس التنسيق -->
+  <link rel="stylesheet" href="../submit/submit-complaint.css">
+
+  <style>
+    /* نبض خفيف للأولوية المتوسطة (أصفر) */
+    @keyframes pulse-yellow {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+      70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .prio-pulse { position: relative; }
+    .prio-pulse .dot {
+      display:inline-block;width:8px;height:8px;border-radius:9999px;
+    }
+    .prio-pulse--med .dot { background:#F59E0B; animation: pulse-yellow 1.6s infinite; }
+  </style>
+</head>
+<body class="bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <!-- Header (مطابق لصفحاتك) -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../../assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../../dashboard/dashboard.html" id="nav-dashboard" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../submit/submit-complaint.html" id="nav-submit" class="text-white hover:text-blue-200 transition-colors">تقديم بلاغ</a>
+          <a href="mystery-complaints.html" id="nav-mystery" class="text-white hover:text-blue-200 transition-colors font-bold underline">بلاغات الزائر السري</a>
+          <a href="../../../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">🌐 English</button>
+        </nav>
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-16 pb-10">
+    <section class="text-center mb-4">
+      <div class="mx-auto w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-2">
+        <!-- أيقونة عين للزائر السري -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </div>
+      <h1 id="page-title" class="text-2xl md:text-3xl font-extrabold text-[#002B5B] text-center">بلاغات الزائر السري</h1>
+      <p id="page-subtitle" class="text-gray-600 mt-1 text-sm md:text-base text-center">عرض ومتابعة بلاغات الزائر السري الواردة من ملفات الإكسل</p>
+    </section>
+
+    <!-- زر الطي (للموبايل) -->
+    <button id="toggleFilters" class="md:hidden text-xs text-gray-600 mb-2 underline"><span id="toggle-filters-text">إظهار/إخفاء التصفية</span></button>
+
+    <!-- شريط مدير التجمع (يظهر فقط لمدير التجمع) -->
+    <div id="clusterBar" class="hidden mb-4 flex gap-2 items-center bg-blue-50 rounded-xl p-3 border border-blue-200">
+      <label class="text-sm font-semibold text-blue-800">المستشفى:</label>
+      <select id="hospitalSelect" class="border rounded px-3 py-2 bg-white">
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <!-- شريط البحث والفلاتر -->
+    <section id="filtersCard" class="bg-white rounded-2xl p-3 md:p-4 shadow-xl border border-gray-100 mb-3 hidden md:block">
+      <!-- صف علوي فيه العنوان + الأزرار -->
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base md:text-lg font-bold text-[#002B5B] flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-50 text-blue-600">
+            <!-- أيقونة بحث -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </span>
+          <span id="filter-title">البحث والتصفية</span>
+        </h3>
+
+        <div class="flex gap-2">
+          <button id="btnSearch" class="h-9 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition" type="button">بحث</button>
+          <button id="btnReset" class="h-9 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" type="button">تفريغ الحقول</button>
+        </div>
+      </div>
+
+      <!-- الحقول -->
+      <div class="grid xl:grid-cols-6 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 gap-2">
+        <div>
+          <label id="search-text-label" class="block text-[11px] text-gray-500 mb-1">بحث بالكلمات</label>
+          <input id="q" type="text" placeholder="مثال: مجال، سؤال، ملاحظة" 
+                 data-placeholder-ar="مثال: مجال، سؤال، ملاحظة" data-placeholder-en="Example: domain, question, comment"
+                 class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div>
+          <label id="department-label" class="block text-[11px] text-gray-500 mb-1">القسم/الموقع</label>
+          <input id="qDepartment" type="text" placeholder="مثال: الطوارئ" 
+                 data-placeholder-ar="مثال: الطوارئ" data-placeholder-en="Example: Emergency"
+                 class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div>
+          <label id="domain-label" class="block text-[11px] text-gray-500 mb-1">المجال</label>
+          <input id="qDomain" type="text" placeholder="مثال: الخدمة" 
+                 data-placeholder-ar="مثال: الخدمة" data-placeholder-en="Example: Service"
+                 class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div class="flex gap-3 items-end">
+          <div class="flex-1">
+            <label id="status-label" class="block text-[11px] text-gray-500 mb-1">الحالة</label>
+            <select id="fStatus" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+              <option value="ALL" id="status-all">الكل</option>
+              <option value="OPEN" id="status-open">مفتوحة</option>
+              <option value="IN_PROGRESS" id="status-in-progress">قيد المعالجة</option>
+              <option value="CLOSED" id="status-closed">مغلقة</option>
+            </select>
+          </div>
+          
+          <div class="flex-1">
+            <label id="priority-label" class="block text-[11px] text-gray-500 mb-1">الأولوية</label>
+            <select id="fPriority" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+              <option value="ALL" id="priority-all">الكل</option>
+              <option value="LOW" id="priority-low">منخفضة</option>
+              <option value="MEDIUM" id="priority-medium">متوسطة</option>
+              <option value="HIGH" id="priority-high">عالية</option>
+              <option value="CRITICAL" id="priority-critical">حرجة</option>
+            </select>
+          </div>
+        </div>
+        <!-- فلتر المستشفى مخفي للموظفين - السيرفر يحدده من التوكن -->
+        <div class="hidden">
+          <label id="hospital-label" class="block text-[11px] text-gray-500 mb-1">المستشفى</label>
+          <select id="fHospital" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+            <option value="ALL" id="hospital-all">الكل</option>
+            <option value="11" id="hospital-1">مستشفى الملك عبدالعزيز</option>
+            <option value="12" id="hospital-2">مستشفى حراء العام</option>
+            <option value="13" id="hospital-3">مستشفى النور التخصصي</option>
+            <option value="14" id="hospital-4">مستشفى الولادة والأطفال</option>
+            <option value="15" id="hospital-5">مستشفى العزيزية</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- التواريخ -->
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
+        <div>
+          <label id="from-date-label" class="block text-[11px] text-gray-500 mb-1">من تاريخ</label>
+          <input id="fFrom" type="date" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div>
+          <label id="to-date-label" class="block text-[11px] text-gray-500 mb-1">إلى تاريخ</label>
+          <input id="fTo" type="date" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
+        </div>
+      </div>
+    </section>
+
+    <!-- عدّاد مختصر -->
+    <section class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+      <div class="card !py-4 text-center"><div id="total-results-label" class="text-sm text-gray-500">إجمالي النتائج</div><div id="kpiTotal" class="text-2xl font-extrabold text-[#002B5B]">0</div></div>
+      <div class="card !py-4 text-center"><div id="open-label" class="text-sm text-gray-500">مفتوحة</div><div id="kpiOpen" class="text-2xl font-extrabold text-blue-600">0</div></div>
+      <div class="card !py-4 text-center"><div id="closed-label" class="text-sm text-gray-500">مغلقة</div><div id="kpiClosed" class="text-2xl font-extrabold text-emerald-600">0</div></div>
+      <div class="card !py-4 text-center"><div id="critical-label" class="text-sm text-gray-500">حرجة</div><div id="kpiCritical" class="text-2xl font-extrabold text-red-600">0</div></div>
+    </section>
+
+    <!-- النتائج (كروت) -->
+    <section class="card">
+      <div class="section-title">
+        <span class="icon">📋</span><h2 id="results-title">النتائج</h2>
+      </div>
+      <div id="results" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+      <div id="noResults" class="hidden text-center py-10 text-gray-600">
+        <span id="no-results-text">لا توجد نتائج مطابقة لمدخلات البحث.</span>
+      </div>
+
+      <!-- ترقيم صفحات بسيط -->
+      <div id="pager" class="mt-6 flex items-center justify-center gap-2">
+        <button id="pPrev" class="btn-secondary" type="button">السابق</button>
+        <div id="pInfo" class="text-sm text-gray-600">صفحة 1/1</div>
+        <button id="pNext" class="btn-secondary" type="button">التالي</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div id="footer-org-name" class="font-bold">تجمع مكة الصحي</div>
+              <div id="footer-system-name" class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p id="footer-description" class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 id="footer-links-title" class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../../index/index.html" id="footer-link-home" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../submit/submit-complaint.html" id="footer-link-submit" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../track/track-complaint.html" id="footer-link-track" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../../index/help.html" id="footer-link-faq" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 id="footer-contact-title" class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span id="footer-support-number">رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span id="footer-support-email">support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span id="footer-working-hours">ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        <span id="footer-copyright">© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+
+    const $ = (s,c=document)=>c.querySelector(s);
+    const resultsEl = $('#results');
+    const noResultsEl = $('#noResults');
+    const kpiTotalEl = $('#kpiTotal');
+    const kpiOpenEl = $('#kpiOpen');
+    const kpiClosedEl = $('#kpiClosed');
+    const kpiCriticalEl = $('#kpiCritical');
+
+    function badgeStatus(v){
+      const map = { OPEN:'gray', IN_PROGRESS:'green', CLOSED:'green' };
+      const cls = map[v]||'gray';
+      const txt = v==='OPEN'?'مفتوحة':v==='IN_PROGRESS'?'قيد المعالجة':v==='CLOSED'?'مغلقة':v;
+      return `<span class="chip ${cls}">${txt}</span>`;
+    }
+    function badgePriority(v){
+      const map = { LOW:'gray', MEDIUM:'gray', HIGH:'red', CRITICAL:'red' };
+      const cls = map[v]||'gray';
+      const txt = v==='LOW'?'منخفضة':v==='MEDIUM'?'متوسطة':v==='HIGH'?'عالية':v==='CRITICAL'?'حرجة':v||'';
+      return `<span class="chip ${cls}">${txt}</span>`;
+    }
+
+    function isClusterManager() {
+      try {
+        const u = JSON.parse(localStorage.getItem('userData') || '{}');
+        const u2 = JSON.parse(localStorage.getItem('user') || '{}');
+        return u.RoleID === 1 || u.IsClusterManager === true || 
+               u.roleId === 1 || u.isClusterManager === true ||
+               u2.RoleID === 1 || u2.roleId === 1 || u2.isClusterManager === true;
+      } catch { return false; }
+    }
+
+    function getHospitalIdFromClient() {
+      // نحاول كل الأسماء المحتملة
+      const ud = JSON.parse(localStorage.getItem('userData') || '{}');
+      return (
+        ud.HospitalID || ud.hospitalId || ud.hid ||
+        Number(localStorage.getItem('hospitalId')) || null
+      );
+    }
+
+    // ✅ دالة لقراءة المستشفى المختار من الفلتر (لمدير التجمع)
+    function getCurrentFilterHospitalId() {
+      const hospitalSelect = document.getElementById('hospitalSelect');
+      if (hospitalSelect && hospitalSelect.value) {
+        return Number(hospitalSelect.value) || null;
+      }
+      return null;
+    }
+
+    // فحص الصلاحيات قبل السماح بالدخول
+    async function guardMysteryList(){
+      try{
+        const cluster = isClusterManager();
+        const hid = getHospitalIdFromClient();
+        
+        // مدير التجمع لا يرسل hospitalId
+        const url = (!cluster && hid) 
+          ? `${API_BASE}/api/permissions/me?hospitalId=${hid}`
+          : `${API_BASE}/api/permissions/me`;
+        
+        const res = await fetch(url, { 
+          credentials:'include', 
+          headers:{'Authorization':`Bearer ${localStorage.getItem('token')||''}`} 
+        });
+        const p = res.ok ? (await res.json()).data || {} : {};
+        
+        // مدير التجمع يرى كل شيء بدون قيود
+        if (cluster) {
+          console.log('👑 مدير التجمع - السماح بالوصول');
+          return true;
+        }
+        
+        // لازم يمتلك الدخول للصفحة + العرض
+        if(!p.mysteryModule || !p.mysteryView){
+          console.warn('⚠️ لا يملك صلاحية العرض');
+          window.location.href='../../../index/index.html';
+          return false;
+        }
+        return true;
+      }catch(err){ 
+        console.error('❌ خطأ في guardMysteryList:', err);
+        window.location.href='../../../index/index.html';
+        return false; 
+      }
+    }
+
+    async function fetchList(){
+      try{
+        const params = new URLSearchParams();
+
+        // ... بقية الفلاتر كما هي ...
+        const q=$('#q')?.value?.trim(); if(q) params.set('q',q);
+        const dept=$('#qDepartment')?.value?.trim(); if(dept) params.set('department',dept);
+        const domain=$('#qDomain')?.value?.trim(); if(domain) params.set('domain',domain);
+        const from=$('#fFrom')?.value; if(from) params.set('from',from);
+        const to=$('#fTo')?.value; if(to) params.set('to',to);
+        const st=$('#fStatus')?.value; if(st && st!=='ALL') params.set('status',st);
+        const pr=$('#fPriority')?.value; if(pr && pr!=='ALL') params.set('priority',pr);
+
+        // ✅ لمدير التجمع: لا نرسل hospitalId (ليعرض جميع المستشفيات)
+        // ✅ للموظف العادي: نرسل hospitalId
+        if (!isClusterManager()) {
+          const hid = getHospitalIdFromClient();
+          if(hid) {
+            params.set('hospitalId', hid);
+            console.log('🏥 [mystery-complaints] Hospital ID:', hid);
+          } else {
+            console.warn('⚠️ [mystery-complaints] No Hospital ID found in localStorage');
+          }
+        } else {
+          console.log('👑 [mystery-complaints] Cluster Manager - showing all hospitals');
+        }
+
+        const url = `${API_BASE}/api/mystery-complaints?${params.toString()}`;
+        console.log('🌐 [mystery-complaints] Request URL:', url);
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token||''}`,
+            // ✅ وللاحتياط نزوده أيضًا كهيدر
+            'x-hospital-id': !isClusterManager() ? (getHospitalIdFromClient() ? String(getHospitalIdFromClient()) : '') : ''
+          }
+        });
+
+        if(!res.ok) {
+          const errorText = await res.text();
+          console.error('API Error:', res.status, errorText);
+          throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        const data = await res.json();
+        console.log('📊 [mystery-complaints] Response data:', data);
+        renderResults(Array.isArray(data)?data:(data.items||[]));
+      }catch(err){
+        console.error('Failed to load mystery complaints:', err);
+        noResultsEl.textContent = `حدث خطأ أثناء تحميل البيانات: ${err.message}`;
+        noResultsEl.classList.remove('hidden');
+      }
+    }
+
+    function arStatus(s){
+      if (s==='CLOSED') return 'منفذ';
+      if (s==='IN_PROGRESS') return 'قيد التنفيذ';
+      return 'مفتوح';
+    }
+
+    function renderResults(items){
+      if(!items || items.length===0){
+        noResultsEl.classList.remove('hidden');
+        resultsEl.innerHTML='';
+        updateKPIs(0, 0, 0, 0);
+        return;
+      }
+      
+      noResultsEl.classList.add('hidden');
+      
+      // حساب الإحصائيات
+      let open = 0, closed = 0, critical = 0;
+      items.forEach(item => {
+        if(item.Status === 'OPEN') open++;
+        else if(item.Status === 'CLOSED') closed++;
+        if(item.Priority === 'CRITICAL') critical++;
+      });
+      
+      updateKPIs(items.length, open, closed, critical);
+      
+      const frag = document.createDocumentFragment();
+      items.forEach((item, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'card p-4 hover:shadow-lg transition-shadow cursor-pointer';
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            ${badgeStatus(item.Status||'OPEN')}
+            ${badgePriority(item.Priority||'LOW')}
+          </div>
+          <div class="text-lg font-bold text-blue-600 mb-2">${item.TicketNumber || `MS-${item.MysteryID}`}</div>
+          <div class="space-y-1 text-sm text-gray-600">
+            ${isClusterManager() ? `<div><span class="font-medium">المستشفى:</span> ${item.HospitalName||'-'}</div>` : ''}
+            <div><span class="font-medium">رقم التذكرة:</span> ${item.TicketNumber||'-'}</div>
+            <div><span class="font-medium">الفترة:</span> ${item.PeriodFrom ? `${item.PeriodFrom.slice(0,10)} - ${item.PeriodTo.slice(0,10)}` : '-'}</div>
+            <div><span class="font-medium">موقع الملاحظة:</span> ${item.DomainAr||'-'}</div>
+            <div><span class="font-medium">الإدارة المسؤولة:</span> ${item.DepartmentName||'-'}</div>
+            <div><span class="font-medium">الملاحظة:</span> ${item.QuestionAr||'-'}</div>
+            <div><span class="font-medium">حالة التنفيذ:</span> ${arStatus(item.Status)}</div>
+            <div><span class="font-medium">آخر تحديث:</span> ${(item.UpdatedAt||item.CreatedAt||'').toString().slice(0,16)}</div>
+          </div>
+        `;
+        card.addEventListener('click',()=>{
+          if(item.MysteryID){
+            // ✅ نمرر hospitalId دائماً إذا كان متوفراً (من السجل أو من الفلتر)
+            let hospitalId = item.HospitalID || getHospitalIdFromClient() || getCurrentFilterHospitalId();
+            
+            // حفظ آخر hospitalId مختار للاستخدام كباك-أب
+            if (hospitalId) {
+              localStorage.setItem('mystery:lastHospitalId', String(hospitalId));
+            }
+            
+            // بناء الرابط مع hospitalId
+            if (hospitalId) {
+              window.location.href = `detail.html?id=${item.MysteryID}&hospitalId=${hospitalId}`;
+            } else {
+              window.location.href = `detail.html?id=${item.MysteryID}`;
+            }
+          }
+        });
+        frag.appendChild(card);
+      });
+      resultsEl.innerHTML='';
+      resultsEl.appendChild(frag);
+    }
+
+    function updateKPIs(total, open, closed, critical){
+      kpiTotalEl.textContent = total;
+      kpiOpenEl.textContent = open;
+      kpiClosedEl.textContent = closed;
+      kpiCriticalEl.textContent = critical;
+    }
+
+    document.addEventListener('DOMContentLoaded', async ()=>{
+      // فحص الصلاحيات قبل التحميل
+      if(await guardMysteryList()){
+        // تحميل أولي
+        fetchList();
+        // أزرار التصفية
+        document.getElementById('btnSearch').addEventListener('click', fetchList);
+        document.getElementById('btnReset').addEventListener('click', ()=>{
+          ['q','qDepartment','qDomain','fFrom','fTo','fStatus','fPriority'].forEach(id=>{
+            const el = document.getElementById(id);
+            if(el) el.value = '';
+          });
+          fetchList();
+        });
+      }
+    });
+  </script>
+
+  <script>
+    // زر الطي للموبايل
+    document.getElementById('toggleFilters')?.addEventListener('click', ()=>{
+      document.getElementById('filtersCard').classList.toggle('hidden');
+    });
+  </script>
+
+  <!-- Translation System - نظام الترجمة -->
+  <script>
+    // بيانات الترجمة
+    const translations = {
+      ar: {
+        // الهيدر
+        'nav-home': 'الرئيسية',
+        'nav-dashboard': 'لوحة التحكم',
+        'nav-submit': 'تقديم بلاغ',
+        'nav-mystery': 'بلاغات الزائر السري',
+        'nav-about': 'حول النظام',
+        'nav-help': 'المساعدة',
+        'nav-contact': 'اتصل بنا',
+        'language-button': '🌐 English',
+        
+        // العنوان الرئيسي
+        'page-title': 'بلاغات الزائر السري',
+        'page-subtitle': 'عرض ومتابعة بلاغات الزائر السري الواردة من ملفات الإكسل',
+        
+        // الفلاتر
+        'toggle-filters-text': 'إظهار/إخفاء التصفية',
+        'filter-title': 'البحث والتصفية',
+        'btnSearch': 'بحث',
+        'btnReset': 'تفريغ الحقول',
+        
+        // حقول البحث
+        'search-text-label': 'بحث بالكلمات',
+        'department-label': 'القسم/الموقع',
+        'domain-label': 'المجال',
+        'status-label': 'الحالة',
+        'priority-label': 'الأولوية',
+        'hospital-label': 'المستشفى',
+        'from-date-label': 'من تاريخ',
+        'to-date-label': 'إلى تاريخ',
+        
+        // خيارات الحالة
+        'status-all': 'الكل',
+        'status-open': 'مفتوحة',
+        'status-in-progress': 'قيد المعالجة',
+        'status-closed': 'مغلقة',
+        
+        // خيارات الأولوية
+        'priority-all': 'الكل',
+        'priority-low': 'منخفضة',
+        'priority-medium': 'متوسطة',
+        'priority-high': 'عالية',
+        'priority-critical': 'حرجة',
+        
+        // خيارات المستشفى
+        'hospital-all': 'الكل',
+        'hospital-1': 'مستشفى الملك عبدالعزيز',
+        'hospital-2': 'مستشفى حراء العام',
+        'hospital-3': 'مستشفى النور التخصصي',
+        'hospital-4': 'مستشفى الولادة والأطفال',
+        'hospital-5': 'مستشفى العزيزية',
+        
+        // الإحصائيات
+        'total-results-label': 'إجمالي النتائج',
+        'open-label': 'مفتوحة',
+        'closed-label': 'مغلقة',
+        'critical-label': 'حرجة',
+        
+        // النتائج
+        'results-title': 'النتائج',
+        'no-results-text': 'لا توجد نتائج مطابقة لمدخلات البحث.',
+        
+        // الفوتير
+        'footer-org-name': 'تجمع مكة الصحي',
+        'footer-system-name': 'نظام البلاغات',
+        'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+        'footer-links-title': 'روابط سريعة',
+        'footer-link-home': 'الرئيسية',
+        'footer-link-submit': 'تقديم بلاغ',
+        'footer-link-track': 'متابعة بلاغ',
+        'footer-link-faq': 'الأسئلة الشائعة',
+        'footer-contact-title': 'معلومات التواصل',
+        'footer-support-number': 'رقم الدعم: 0559735137',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'ساعات العمل: 24/7',
+        'footer-copyright': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة'
+      },
+      en: {
+        // الهيدر
+        'nav-home': 'Home',
+        'nav-dashboard': 'Dashboard',
+        'nav-submit': 'Submit Complaint',
+        'nav-mystery': 'Mystery Shopper Complaints',
+        'nav-about': 'About System',
+        'nav-help': 'Help',
+        'nav-contact': 'Contact Us',
+        'language-button': '🌐 العربية',
+        
+        // العنوان الرئيسي
+        'page-title': 'Mystery Shopper Complaints',
+        'page-subtitle': 'View and follow up Mystery Shopper complaints from Excel files',
+        
+        // الفلاتر
+        'toggle-filters-text': 'Show/Hide Filters',
+        'filter-title': 'Search and Filter',
+        'btnSearch': 'Search',
+        'btnReset': 'Clear Fields',
+        
+        // حقول البحث
+        'search-text-label': 'Search by Keywords',
+        'department-label': 'Department/Location',
+        'domain-label': 'Domain',
+        'status-label': 'Status',
+        'priority-label': 'Priority',
+        'hospital-label': 'Hospital',
+        'from-date-label': 'From Date',
+        'to-date-label': 'To Date',
+        
+        // خيارات الحالة
+        'status-all': 'All',
+        'status-open': 'Open',
+        'status-in-progress': 'In Progress',
+        'status-closed': 'Closed',
+        
+        // خيارات الأولوية
+        'priority-all': 'All',
+        'priority-low': 'Low',
+        'priority-medium': 'Medium',
+        'priority-high': 'High',
+        'priority-critical': 'Critical',
+        
+        // خيارات المستشفى
+        'hospital-all': 'All',
+        'hospital-1': 'King Abdulaziz Hospital',
+        'hospital-2': 'Hira General Hospital',
+        'hospital-3': 'Al-Noor Specialized Hospital',
+        'hospital-4': 'Maternity and Children Hospital',
+        'hospital-5': 'Al-Aziziyah Hospital',
+        
+        // الإحصائيات
+        'total-results-label': 'Total Results',
+        'open-label': 'Open',
+        'closed-label': 'Closed',
+        'critical-label': 'Critical',
+        
+        // النتائج
+        'results-title': 'Results',
+        'no-results-text': 'No results match your search criteria.',
+        
+        // الفوتير
+        'footer-org-name': 'Makkah Health Cluster',
+        'footer-system-name': 'Complaint System',
+        'footer-description': 'Official platform for filing and tracking complaints',
+        'footer-links-title': 'Quick Links',
+        'footer-link-home': 'Home',
+        'footer-link-submit': 'Submit Complaint',
+        'footer-link-track': 'Track Complaint',
+        'footer-link-faq': 'FAQ',
+        'footer-contact-title': 'Contact Information',
+        'footer-support-number': 'Support Number: 0559735137',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'Working Hours: 24/7',
+        'footer-copyright': '© 2025 Makkah Health Cluster – All Rights Reserved'
+      }
+    };
+
+    // الحالة الحالية للغة
+    let currentLanguage = 'ar';
+
+    // دالة تطبيق الترجمة
+    function applyTranslation(lang) {
+      const elements = translations[lang];
+      if (!elements) return;
+
+      // تطبيق الترجمة على جميع العناصر
+      Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = elements[id];
+        }
+      });
+
+      // تطبيق ترجمة الـ placeholders
+      const inputs = document.querySelectorAll('input[data-placeholder-ar], textarea[data-placeholder-ar]');
+      inputs.forEach(input => {
+        if (lang === 'en') {
+          input.placeholder = input.getAttribute('data-placeholder-en');
+        } else {
+          input.placeholder = input.getAttribute('data-placeholder-ar');
+        }
+      });
+
+      // تغيير اتجاه النص
+      if (lang === 'en') {
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', 'en');
+        // تغيير محاذاة النصوص (مع الحفاظ على العنوان في الوسط)
+        document.querySelectorAll('main, section').forEach(el => {
+          if (!el.querySelector('#page-title')) { // لا نغير محاذاة القسم الذي يحتوي على العنوان
+            el.classList.remove('text-right');
+            el.classList.add('text-left');
+          }
+        });
+      } else {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+        // استعادة محاذاة النصوص للعربية (مع الحفاظ على العنوان في الوسط)
+        document.querySelectorAll('main, section').forEach(el => {
+          if (!el.querySelector('#page-title')) { // لا نغير محاذاة القسم الذي يحتوي على العنوان
+            el.classList.remove('text-left');
+            el.classList.add('text-right');
+          }
+        });
+      }
+
+      currentLanguage = lang;
+    }
+
+    // تهيئة النظام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+      // تطبيق اللغة المحفوظة أو الافتراضية
+      const savedLanguage = localStorage.getItem('selectedLanguage') || 'ar';
+      applyTranslation(savedLanguage);
+      
+      // ربط زر اللغة
+      const languageToggle = document.getElementById('languageToggle');
+      if (languageToggle) {
+        languageToggle.addEventListener('click', function() {
+          const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+          applyTranslation(newLang);
+          localStorage.setItem('selectedLanguage', newLang);
+        });
+      }
+    });
+  </script>
+
+  <!-- نظام حماية الصفحات -->
+  <script src="../../assets/js/auth-check.js"></script>
+</body>
+</html>

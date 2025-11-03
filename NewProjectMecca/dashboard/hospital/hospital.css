@@ -1,0 +1,173 @@
+/* تخصيص صغير لزيادة تماسك الهوية */
+:root {
+  --primary-blue: #002B5B;
+}
+
+h1, h2, h3 { 
+  color: var(--primary-blue); 
+}
+
+/* تحسينات إضافية للداشبورد المستقل */
+.hospital-header {
+  background: linear-gradient(135deg, #002B5B 0%, #004A9F 100%);
+}
+
+.kpi-card {
+  transition: all 0.3s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* تحسينات للشارات */
+.priority-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.priority-badges .pill {
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+/* تحسينات للقوائم */
+.recent-reports {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.recent-reports::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recent-reports::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.recent-reports::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.recent-reports::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* تحسينات للاستجابة */
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .priority-badges {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  
+  .priority-badges .pill {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-container {
+    height: 250px !important;
+  }
+}
+
+/* تأثيرات إضافية */
+.back-button {
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* تحسينات للعنوان */
+.hospital-title {
+  background: linear-gradient(135deg, #002B5B, #004A9F);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* تحسينات للبطاقات */
+.chart-card, .reports-card {
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover, .reports-card:hover {
+  border-color: #cfe0fb;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* === Badges & Chips (للقائمة الحديثة) === */
+.priority-chip {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:16px; font-weight:600; font-size:12px;
+}
+.priority-red { background:#fee2e2; color:#b91c1c; }
+.priority-orange { background:#ffedd5; color:#c2410c; }
+.priority-yellow { background:#fef9c3; color:#a16207; }
+
+.badge {
+  display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:600;
+  background:#eef2ff; color:#3730a3; border:1px solid #e5e7eb;
+}
+.badge-outline { background:#fff; color:#334155; border:1px dashed #cbd5e1; }
+
+/* عناصر القائمة الحديثة */
+.report-item { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border:1px solid #e5e7eb; border-radius:12px; }
+.report-left .id { font-weight:800; color:#0f172a; }
+.report-left .type { color:#64748b; font-size:14px; }
+.report-right { display:flex; align-items:center; gap:10px; color:#64748b; }
+
+/* ===== تنبيه البلاغات الحرجة ===== */
+.alert-critical {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #ffeaea, #fff);
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-weight: 600;
+  margin: 20px 0;
+}
+
+.alert-critical .alert-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.alert-critical .alert-link {
+  margin-right: auto;
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+.alert-critical .alert-link:hover {
+  text-decoration: underline;
+}
+
+/* شريط الفلاتر */
+#filtersBar select, #filtersBar button { height:40px; }

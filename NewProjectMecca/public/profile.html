@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ملفي الشخصي - تجمع مكة المكرمة الصحي</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/assets/css/styles.css" />
+  <style>
+    body { font-family: 'Tajawal', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <a href="/index/index.html">
+            <img src="/public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+          </a>
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="/index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="/dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="/dashboard/hospitals.html" class="text-white hover:text-blue-200 transition-colors">المستشفيات</a>
+          <a href="/dashboard/reports.html" class="text-white hover:text-blue-200 transition-colors">التقارير والإحصائيات</a>
+          <a href="/public/complaints/submit/submit-complaint.html" class="text-white hover:text-blue-200 transition-colors">تقديم بلاغ</a>
+          <a href="/public/complaints/track/track-complaint.html" class="text-white hover:text-blue-200 transition-colors">متابعة بلاغ</a>
+          <a href="/public/profile.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">ملفي الشخصي</a>
+          <a href="/index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="/index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="/index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="logoutBtn" class="text-white hover:text-red-300 transition-colors">تسجيل الخروج</button>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-20 max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8 text-center" style="color: #002B5B;">ملفي الشخصي</h1>
+
+    <!-- بطاقة المعلومات -->
+    <section class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+      <h2 class="text-xl font-semibold mb-6 text-gray-800">بيانات الحساب</h2>
+      <form id="profileForm" class="grid md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">الاسم الكامل</label>
+          <input id="fullName" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">اسم المستخدم</label>
+          <input id="username" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-100" disabled />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">البريد الإلكتروني</label>
+          <input id="email" type="email" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">الجوال</label>
+          <input id="mobile" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+
+        <!-- للعرض فقط -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">المستشفى</label>
+          <input id="hospitalName" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-100" disabled />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">القسم</label>
+          <input id="departmentName" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-100" disabled />
+        </div>
+
+        <div class="md:col-span-2 mt-6 flex gap-4 items-center">
+          <button type="submit" class="px-6 py-3 rounded-xl text-white font-medium hover:opacity-90 transition-opacity" style="background: linear-gradient(135deg, #002B5B, #004A9F);">
+            حفظ التغييرات
+          </button>
+          <span id="saveMsg" class="text-sm font-medium"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- تغيير كلمة المرور -->
+    <section class="bg-white rounded-2xl shadow-lg p-8">
+      <h2 class="text-xl font-semibold mb-6 text-gray-800">تغيير كلمة المرور</h2>
+      <form id="passwordForm" class="grid md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">كلمة المرور الحالية</label>
+          <input id="oldPassword" type="password" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">كلمة المرور الجديدة</label>
+          <input id="newPassword" type="password" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">تأكيد كلمة المرور الجديدة</label>
+          <input id="newPassword2" type="password" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div class="md:col-span-3 mt-4 flex gap-4 items-center">
+          <button type="submit" class="px-6 py-3 rounded-xl bg-gray-800 text-white font-medium hover:bg-gray-900 transition-colors">
+            تحديث كلمة المرور
+          </button>
+          <span id="pwdMsg" class="text-sm font-medium"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE_URL = '';
+
+    // حارس الصفحة - التحقق من تسجيل الدخول
+    async function requireAuth() {
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        if (!token) {
+          location.href = '/public/auth/login.html';
+          return null;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, { 
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          localStorage.clear();
+          location.href = '/public/auth/login.html';
+          return null;
+        }
+        
+        const me = await res.json();
+        if (!me?.authenticated && !me?.UserID) {
+          localStorage.clear();
+          location.href = '/public/auth/login.html';
+          return null;
+        }
+        
+        return me;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.clear();
+        location.href = '/NewProjectMecca/public/auth/login.html';
+        return null;
+      }
+    }
+
+    // دالة عرض الرسائل
+    function setMsg(el, text, ok = true) {
+      el.textContent = text;
+      el.className = ok ? 'text-green-700' : 'text-red-700';
+      setTimeout(() => { el.textContent = ''; }, 5000);
+    }
+
+    // جلب بيانات الملف الشخصي
+    async function loadProfile() {
+      try {
+        const me = await requireAuth();
+        if (!me) return;
+
+        // محاولة جلب البيانات من /api/users/me أولاً
+        let userData = me;
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/users/me`, { 
+            credentials: 'include',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            userData = data.data || data;
+          }
+        } catch (error) {
+          console.log('Using fallback data from /api/auth/me');
+        }
+
+        // تعبئة الحقول
+        document.getElementById('fullName').value = userData.FullName || userData.fullName || '';
+        document.getElementById('username').value = userData.Username || userData.username || '';
+        document.getElementById('email').value = userData.Email || userData.email || '';
+        document.getElementById('mobile').value = userData.Mobile || userData.mobile || '';
+        document.getElementById('hospitalName').value = userData.HospitalName || userData.hospitalName || (userData.HospitalID ? `#${userData.HospitalID}` : '');
+        // عرض اسم القسم بدون إظهار رقم القسم
+        const departmentName =
+          userData.DepartmentName ||
+          userData.DepartmentNameAr ||
+          userData.DepartmentNameEn ||
+          userData.departmentName ||
+          userData.departmentNameAr ||
+          userData.departmentNameEn ||
+          'غير محدد';
+        document.getElementById('departmentName').value = departmentName;
+        
+        // Fallback ذكي: إذا لم نجد اسم القسم، نجربه من API آخر
+        if (!departmentName || departmentName === 'غير محدد') {
+          const uid = userData.UserID || userData.userId || userData.id;
+          if (uid) {
+            try {
+              const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+              if (token) {
+                const r = await fetch(`${API_BASE_URL}/api/users/${uid}/details`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (r.ok) {
+                  const j = await r.json();
+                  const n = j?.user?.DepartmentName || j?.user?.DepartmentNameAr || j?.user?.DepartmentNameEn;
+                  if (n) {
+                    document.getElementById('departmentName').value = n;
+                    console.log('✅ تم جلب اسم القسم من API احتياطي:', n);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('⚠️ فشل في جلب اسم القسم من API احتياطي:', error.message);
+            }
+          }
+        }
+        
+        console.log('✅ تم تحميل بيانات الملف الشخصي');
+        console.log('📋 بيانات القسم المستلمة:', {
+          DepartmentID: userData.DepartmentID,
+          DepartmentName: userData.DepartmentName,
+          DepartmentNameAr: userData.DepartmentNameAr,
+          DepartmentNameEn: userData.DepartmentNameEn,
+          departmentName: userData.departmentName,
+          departmentNameAr: userData.departmentNameAr,
+          departmentNameEn: userData.departmentNameEn
+        });
+      } catch (error) {
+        console.error('خطأ في جلب بيانات الملف الشخصي:', error);
+        setMsg(document.getElementById('saveMsg'), 'خطأ في تحميل البيانات', false);
+      }
+    }
+
+    // تحديث بيانات الملف الشخصي
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('saveMsg');
+      
+      try {
+        const payload = {
+          FullName: document.getElementById('fullName').value.trim(),
+          Email: document.getElementById('email').value.trim(),
+          Mobile: document.getElementById('mobile').value.trim(),
+        };
+
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/api/users/me`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'فشل في تحديث البيانات');
+        }
+
+        setMsg(msg, 'تم حفظ التغييرات بنجاح ✅', true);
+      } catch (error) {
+        console.error('خطأ في تحديث البيانات:', error);
+        setMsg(msg, 'تعذّر الحفظ: ' + error.message, false);
+      }
+    });
+
+    // تغيير كلمة المرور
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const oldPassword = document.getElementById('oldPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const newPassword2 = document.getElementById('newPassword2').value;
+      const msg = document.getElementById('pwdMsg');
+
+      if (newPassword.length < 8) {
+        return setMsg(msg, 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل', false);
+      }
+      if (newPassword !== newPassword2) {
+        return setMsg(msg, 'تأكيد كلمة المرور غير مطابق', false);
+      }
+
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/api/users/me/password`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'فشل في تحديث كلمة المرور');
+        }
+
+        setMsg(msg, 'تم تحديث كلمة المرور بنجاح ✅', true);
+        document.getElementById('oldPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('newPassword2').value = '';
+      } catch (error) {
+        console.error('خطأ في تحديث كلمة المرور:', error);
+        setMsg(msg, 'تعذّر التحديث: ' + error.message, false);
+      }
+    });
+
+    // تسجيل الخروج
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.clear();
+      location.href = '/NewProjectMecca/public/auth/login.html';
+    });
+
+    // تحميل البيانات عند فتح الصفحة
+    loadProfile();
+  </script>
+</body>
+</html>

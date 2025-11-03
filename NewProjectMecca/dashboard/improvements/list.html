@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>المشاريع التحسينية</title>
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme:{ extend:{ colors:{ primary:'#002B5B' } } } }
+  </script>
+
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+
+  <!-- هوية مشروعك -->
+  <link rel="stylesheet" href="../hospital/hospital.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" id="nav-dashboard" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../../public/profile.html" id="nav-profile" class="text-white hover:text-blue-200 transition-colors hidden">ملفي الشخصي</a>
+          <a href="../../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="pt-20 max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
+
+    <!-- العنوان + زر إضافة -->
+    <div class="flex items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-primary">المشاريع التحسينية</h1>
+        <p class="text-gray-500 mt-1">استعرض، صفِّ، وعدِّل مشاريع التحسين لكل مستشفى.</p>
+      </div>
+      <button id="btnAdd"
+              class="rounded-full bg-blue-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-blue-700 shadow-sm">
+        + مشروع تحسيني
+      </button>
+    </div>
+
+    <!-- فلاتر -->
+    <div class="bg-white border border-gray-100 rounded-2xl shadow p-4 md:p-5 mb-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">الحالة</label>
+          <select id="fltStatus" class="w-full border rounded-xl p-2.5 bg-white">
+            <option value="">الكل</option>
+            <option value="PROPOSED">مقترح</option>
+            <option value="APPROVED">معتمد</option>
+            <option value="IN_PROGRESS">قيد التنفيذ</option>
+            <option value="COMPLETED">مكتمل</option>
+            <option value="CANCELLED">ملغي</option>
+            <option value="DRAFT">مسودة</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">القسم</label>
+          <select id="fltDept" class="w-full border rounded-xl p-2.5 bg-white">
+            <option value="">الكل</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">بحث</label>
+          <div class="flex gap-2">
+            <input id="fltQ" class="w-full border rounded-xl p-2.5" placeholder="عنوان / وصف المشكلة / الهدف">
+            <button id="btnApply" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-[#00366f]">تطبيق</button>
+            <button id="btnReset" class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50">إعادة</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm">مشاريع قيد التنفيذ</div>
+        <div id="kpiInProgress" class="text-3xl font-bold mt-1">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm">مشاريع مكتملة (آخر 90 يوم)</div>
+        <div id="kpiCompleted" class="text-3xl font-bold mt-1">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm">مقترحة/قيد الاعتماد</div>
+        <div id="kpiProposed" class="text-3xl font-bold mt-1">0</div>
+      </div>
+    </div>
+
+    <!-- الجدول -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-4 py-3 text-right">العنوان</th>
+              <th class="px-4 py-3 text-right">القسم</th>
+              <th class="px-4 py-3 text-right">الأولوية</th>
+              <th class="px-4 py-3 text-right">الحالة</th>
+              <th class="px-4 py-3 text-right">البدء</th>
+              <th class="px-4 py-3 text-right">الانتهاء المتوقع</th>
+              <th class="px-4 py-3 text-right">آخر تحديث</th>
+              <th class="px-4 py-3 text-right">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <!-- لا توجد بيانات -->
+      <div id="emptyState" class="hidden py-16 text-center text-gray-500">
+        لا توجد مشاريع مطابقة للبحث الحالي.
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast بسيط -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+    <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <script>
+    const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
+    const token    = localStorage.getItem('token') || '';
+
+    // ✅ دالة للتحقق من مدير التجمع
+    function isClusterManager() {
+      try {
+        const u = JSON.parse(localStorage.getItem('userData') || '{}');
+        return u.RoleID === 1 || u.IsClusterManager === true;
+      } catch { return false; }
+    }
+
+    // ✅ دالة موحّدة لإيجاد hospitalId (حتى لمدير التجمع)
+    function effectiveHospitalId() {
+      const u = JSON.parse(localStorage.getItem('userData') || '{}');
+      const q = new URLSearchParams(location.search);
+      const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
+      const fromLS1 = Number(localStorage.getItem('selectedHospitalId') || 0); // من صفحة الفلتر/القائمة
+      const fromLS2 = Number(localStorage.getItem('hospitalId') || 0);
+      const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
+      return fromUrl || fromLS1 || fromLS2 || fromUser || null;
+    }
+
+    let hospitalId = effectiveHospitalId();
+    console.log('🏥 [improvements/list] effectiveHospitalId =', hospitalId, '| Cluster Manager:', isClusterManager());
+
+    const $  = (s,c=document)=>c.querySelector(s);
+    const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
+
+    const rowsEl = $('#rows');
+    const emptyEl = $('#emptyState');
+    const btnAdd = $('#btnAdd');
+    const fltStatus = $('#fltStatus');
+    const fltDept = $('#fltDept');
+    const fltQ = $('#fltQ');
+
+    const toast = (msg, type='info')=>{
+      const el = $('#toast'), box = $('#toastInner');
+      const cls = {
+        success:'bg-green-600 text-white',
+        error:'bg-red-600 text-white',
+        info:'bg-gray-800 text-white',
+        warn:'bg-amber-500 text-white'
+      }[type] || 'bg-gray-800 text-white';
+      box.className = 'rounded-xl shadow-lg px-4 py-3 text-sm ' + cls;
+      box.textContent = msg; el.classList.remove('hidden');
+      setTimeout(()=>el.classList.add('hidden'), 2500);
+    };
+
+    // ✅ تحديث authHeaders لإضافة x-hospital-id دائماً إذا توفر
+    const authHeaders = () => {
+      const h = token ? { 'Authorization': 'Bearer ' + token } : {};
+      const hid = effectiveHospitalId();
+      if (hid) h['x-hospital-id'] = String(hid);   // ✅ حتى لمدير التجمع
+      return h;
+    };
+
+    // تحميل الأقسام للفلاتر
+    async function loadDepartments(){
+      try{
+        // ✅ بناء URL للأقسام مع hospitalId دائماً إذا توفر
+        const params = new URLSearchParams();
+        const hid = effectiveHospitalId();
+        if (hid) params.set('hospitalId', hid);  // ✅ أضفناه للجميع
+        
+        const url = `${API_BASE}/api/lookups/departments${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('🏢 [loadDepartments] Request URL:', url);
+        
+        const res = await fetch(url, { headers: authHeaders() });
+        console.log('📊 [loadDepartments] Response status:', res.status);
+        
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        
+        const response = await res.json();
+        const list = response.data || response; // دعم كلا التنسيقين
+        console.log('📋 [loadDepartments] Departments count:', list?.length || 0);
+        
+        fltDept.innerHTML = '<option value="">الكل</option>';
+        (list||[]).forEach(d=>{
+          const o=document.createElement('option');
+          o.value=d.DepartmentID; 
+          o.textContent=d.NameAr || d.DepartmentName; // استخدام NameAr أو DepartmentName
+          fltDept.appendChild(o);
+        });
+      }catch(e){ 
+        console.error('❌ [loadDepartments] Error:', e);
+        toast('تعذّر تحميل الأقسام', 'error'); 
+      }
+    }
+
+    // تحميل KPIs سريعة
+    async function loadKPIs(){
+      try {
+        // ✅ بناء الـ URL مع hospitalId دائماً إذا توفر
+        const hid = effectiveHospitalId();
+        const buildUrl = (status) => {
+          const p = new URLSearchParams();
+          p.set('status', status);
+          if (hid) p.set('hospitalId', hid); // ✅ أضفناه للجميع
+          return `${API_BASE}/api/improvements?${p.toString()}`;
+        };
+
+        const [inProgRes, compRes, propRes] = await Promise.all([
+          fetch(buildUrl('IN_PROGRESS'), { headers: authHeaders() }),
+          fetch(buildUrl('COMPLETED'), { headers: authHeaders() }),
+          fetch(buildUrl('PROPOSED'), { headers: authHeaders() })
+        ]);
+
+        console.log('📊 [loadKPIs] IN_PROGRESS status:', inProgRes.status);
+        console.log('📊 [loadKPIs] COMPLETED status:', compRes.status);
+        console.log('📊 [loadKPIs] PROPOSED status:', propRes.status);
+
+        const inProg = inProgRes.ok ? await inProgRes.json() : [];
+        const comp   = compRes.ok   ? await compRes.json()   : [];
+        const prop   = propRes.ok   ? await propRes.json()   : [];
+        
+        // completed آخر 90 يوم
+        const ninety = new Date(); ninety.setDate(ninety.getDate()-90);
+        const comp90 = comp.filter(x=> x.StartDate ? new Date(x.StartDate) >= ninety : true);
+        $('#kpiInProgress').textContent = inProg.length || 0;
+        $('#kpiCompleted').textContent  = comp90.length || 0;
+        $('#kpiProposed').textContent   = prop.length || 0;
+      } catch(err) {
+        console.error('❌ [loadKPIs] Error:', err);
+      }
+    }
+
+    // تحميل قائمة المشاريع
+    async function loadProjects(){
+      rowsEl.innerHTML = '';
+      emptyEl.classList.add('hidden');
+
+      const qs = new URLSearchParams();
+      
+      // ✅ إضافة hospitalId دائماً إذا توفر (حتى لمدير التجمع)
+      const hid = effectiveHospitalId();
+      if (hid) qs.set('hospitalId', hid);   // ✅ أضفناه للجميع
+      
+      if (fltStatus.value) qs.set('status', fltStatus.value);
+      if (fltDept.value)   qs.set('dept', fltDept.value);
+      if (fltQ.value.trim()) qs.set('q', fltQ.value.trim());
+
+      const url = `${API_BASE}/api/improvements?${qs.toString()}`;
+      console.log('🌐 [loadProjects] Request URL:', url);
+
+      try{
+        const res = await fetch(url, { headers: authHeaders() });
+        console.log('📊 [loadProjects] Response status:', res.status);
+        
+        if(!res.ok){ 
+          const errorText = await res.text();
+          console.error('❌ [loadProjects] Error:', res.status, errorText);
+          throw new Error('HTTP '+res.status); 
+        }
+        
+        const list = await res.json();
+        console.log('📋 [loadProjects] Projects count:', list?.length || 0);
+        
+        if(!list || list.length===0){
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+        renderRows(list);
+      }catch(e){
+        console.error('❌ [loadProjects] Exception:', e);
+        emptyEl.classList.remove('hidden');
+        toast('تعذّر تحميل المشاريع', 'error');
+      }
+    }
+
+    function badgePriority(p){
+      const map = {
+        LOW : 'bg-gray-100 text-gray-700',
+        MEDIUM:'bg-blue-100 text-blue-700',
+        HIGH:'bg-amber-100 text-amber-700',
+        CRITICAL:'bg-red-100 text-red-700'
+      };
+      const textMap = {
+        LOW: 'منخفضة',
+        MEDIUM: 'متوسطة',
+        HIGH: 'عالية',
+        CRITICAL: 'حرجة'
+      };
+      return `<span class="px-2.5 py-1 rounded-full text-xs ${map[p]||'bg-gray-100 text-gray-700'}">${textMap[p] || p || '-'}</span>`;
+    }
+    function badgeStatus(s){
+      const map = {
+        DRAFT:'bg-gray-100 text-gray-700',
+        PROPOSED:'bg-sky-100 text-sky-700',
+        APPROVED:'bg-emerald-100 text-emerald-700',
+        IN_PROGRESS:'bg-indigo-100 text-indigo-700',
+        COMPLETED:'bg-green-100 text-green-700',
+        CANCELLED:'bg-rose-100 text-rose-700'
+      };
+      const textMap = {
+        DRAFT: 'مسودة',
+        PROPOSED: 'مقترح',
+        APPROVED: 'معتمد',
+        IN_PROGRESS: 'قيد التنفيذ',
+        COMPLETED: 'مكتمل',
+        CANCELLED: 'ملغي'
+      };
+      return `<span class="px-2.5 py-1 rounded-full text-xs ${map[s]||'bg-gray-100 text-gray-700'}">${textMap[s] || s || '-'}</span>`;
+    }
+    const fmt = (d)=> d ? new Date(d).toLocaleDateString('ar-SA') : '—';
+
+    // متغيرات الصلاحيات
+    let userPermissions = {};
+
+    function renderRows(list){
+      const frag = document.createDocumentFragment();
+      list.forEach(item=>{
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-b-0 hover:bg-gray-50';
+        
+        // بناء أزرار الإجراءات حسب الصلاحيات
+        let actionButtons = '';
+        if (userPermissions.improvementView) {
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}">عرض</button>`;
+        }
+        if (userPermissions.improvementEdit) {
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}">تعديل</button>`;
+        }
+        if (userPermissions.improvementReportView) {
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}">تقرير</button>`;
+        }
+        
+        tr.innerHTML = `
+          <td class="px-4 py-3 align-top">
+            <div class="font-semibold text-gray-900">${escapeHtml(item.Title)}</div>
+            <div class="text-xs text-gray-500">${item.AimStatement ? escapeHtml(item.AimStatement).slice(0,120)+'…' : ''}</div>
+          </td>
+          <td class="px-4 py-3 align-top">${escapeHtml(item.DepartmentName || item.DepartmentID || '—')}</td>
+          <td class="px-4 py-3 align-top">${badgePriority(item.Priority)}</td>
+          <td class="px-4 py-3 align-top">${badgeStatus(item.Status)}</td>
+          <td class="px-4 py-3 align-top">${fmt(item.StartDate)}</td>
+          <td class="px-4 py-3 align-top">${fmt(item.DueDate)}</td>
+          <td class="px-4 py-3 align-top">${fmt(item.UpdatedAt)}</td>
+          <td class="px-4 py-3 align-top">
+            <div class="flex gap-2">
+              ${actionButtons}
+            </div>
+          </td>
+        `;
+        frag.appendChild(tr);
+      });
+      rowsEl.appendChild(frag);
+    }
+
+    function escapeHtml(str=''){
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;');
+    }
+
+    // صلاحيات: إظهار زر الإضافة فقط للمصرّح لهم
+    async function applyPermissions(){
+      try{
+        // ✅ مدير التجمع: منحه كامل الصلاحيات مباشرة
+        if (isClusterManager()) {
+          console.log('👑 [applyPermissions] Cluster Manager - Full permissions granted');
+          userPermissions = {
+            improvementView: true,
+            improvementCreate: true,
+            improvementEdit: true,
+            improvementDelete: true,
+            improvementReportView: true
+          };
+          return;
+        }
+
+        // ✅ للموظفين: استدعاء API الصلاحيات
+        const params = new URLSearchParams();
+        const hid = effectiveHospitalId();
+        if (hid) params.set('hospitalId', hid);
+        
+        const url = `${API_BASE}/api/permissions/me${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('🔐 [applyPermissions] Request URL:', url);
+        
+        const res = await fetch(url, { headers: authHeaders(), credentials:'include' });
+        
+        if(!res.ok) {
+          console.warn('⚠️ [applyPermissions] API failed, status:', res.status);
+          // محاولة احتياطية: فحص localStorage
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          if (userData.RoleID === 1 || userData.IsClusterManager) {
+            console.log('✅ [applyPermissions] Cluster Manager from userData - Full permissions');
+            userPermissions = {
+              improvementView: true,
+              improvementCreate: true,
+              improvementEdit: true,
+              improvementDelete: true,
+              improvementReportView: true
+            };
+            return;
+          }
+          throw new Error('Permissions API failed');
+        }
+        
+        const json = await res.json();
+        const p = json?.data || {};
+        console.log('📋 [applyPermissions] Permissions:', p);
+        
+        // حفظ الصلاحيات في متغير عام
+        userPermissions = p;
+
+        // مدير التجمع (RoleID = 1) يرى كل شيء بدون قيود
+        const isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
+        
+        if (isCentralAdmin) {
+          console.log('✅ [applyPermissions] Central Admin detected - Full permissions');
+          userPermissions = {
+            improvementView: true,
+            improvementCreate: true,
+            improvementEdit: true,
+            improvementDelete: true,
+            improvementReportView: true
+          };
+          return;
+        }
+
+        // حراسة دخول الموديول/الصفحة: لو ما عنده صلاحية عرض التحسينات، رجعيه صفحة 403 أو الرئيسية
+        if (!p.improvementView && !p.improvementCreate) {
+          console.warn('❌ [applyPermissions] No view or create permission - Redirecting');
+          window.location.href = '../../index/index.html';
+          return;
+        }
+
+        // إظهار زر + إضافة فقط إذا عنده إنشاء
+        if (!p.improvementCreate) {
+          console.log('ℹ️ [applyPermissions] Hiding create button - No create permission');
+          document.getElementById('btnAdd')?.classList.add('hidden');
+        }
+      }catch(err){
+        console.error('❌ [applyPermissions] Error:', err);
+        // محاولة أخيرة: التحقق من localStorage
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData.RoleID === 1 || userData.IsClusterManager) {
+          console.log('✅ [applyPermissions] Cluster Manager (fallback) - Full permissions');
+          userPermissions = {
+            improvementView: true,
+            improvementCreate: true,
+            improvementEdit: true,
+            improvementDelete: true,
+            improvementReportView: true
+          };
+          return;
+        }
+        // لو فشل، خليه يشوف الصفحة بس بدون أزرار حساسة
+        document.getElementById('btnAdd')?.classList.add('hidden');
+      }
+    }
+
+    // أحداث الفلاتر
+    $('#btnApply').addEventListener('click', loadProjects);
+    $('#btnReset').addEventListener('click', ()=>{
+      fltStatus.value=''; fltDept.value=''; fltQ.value=''; loadProjects();
+    });
+
+    btnAdd.addEventListener('click', ()=>{
+      window.location.href = './new.html';
+    });
+
+    // ✅ مستمع دائم لأزرار الإجراءات (عرض، تعديل، تقرير)
+    rowsEl.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-act]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const act = btn.getAttribute('data-act');
+      if (act === 'view'){
+        window.location.href = `./view.html?id=${id}`;
+      } else if (act === 'edit'){
+        window.location.href = `./edit.html?id=${id}`;
+      } else if (act === 'report'){
+        window.location.href = `./report.html?id=${id}`;
+      }
+    });
+
+    // بدء
+    (async function init(){
+      await loadDepartments();
+      await applyPermissions();
+      await Promise.all([loadKPIs(), loadProjects()]);
+    })();
+  </script>
+
+  <!-- نظام الترجمة -->
+  <script>
+    // بيانات الترجمة
+    const translations = {
+      ar: {
+        'nav-home': 'الرئيسية',
+        'nav-dashboard': 'لوحة التحكم',
+        'nav-profile': 'ملفي الشخصي',
+        'nav-about': 'حول النظام',
+        'nav-help': 'المساعدة',
+        'nav-contact': 'اتصل بنا',
+        'language-button': '🌐 English'
+      },
+      en: {
+        'nav-home': 'Home',
+        'nav-dashboard': 'Dashboard',
+        'nav-profile': 'My Profile',
+        'nav-about': 'About System',
+        'nav-help': 'Help',
+        'nav-contact': 'Contact Us',
+        'language-button': '🌐 العربية'
+      }
+    };
+
+    // الحالة الحالية للغة
+    let currentLanguage = 'ar';
+
+    // دالة تطبيق الترجمة
+    function applyTranslation(lang) {
+      const elements = translations[lang];
+      if (!elements) return;
+
+      // تطبيق الترجمة على جميع العناصر
+      Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = elements[id];
+        }
+      });
+
+      // تغيير اتجاه النص
+      if (lang === 'en') {
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', 'en');
+      } else {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+      }
+
+      currentLanguage = lang;
+    }
+
+    // تهيئة النظام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+      // تطبيق اللغة المحفوظة أو الافتراضية
+      const savedLanguage = localStorage.getItem('selectedLanguage') || 'ar';
+      applyTranslation(savedLanguage);
+      
+      // ربط زر اللغة
+      const languageToggle = document.getElementById('languageToggle');
+      if (languageToggle) {
+        languageToggle.addEventListener('click', function() {
+          const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+          applyTranslation(newLang);
+          localStorage.setItem('selectedLanguage', newLang);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لوحة تحكم البلاغات - تجمع مكة المكرمة الصحي</title>
+
+  <!-- خط Tajawal للعربية -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js للرسوم البيانية -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- ملفات CSS و JS الخاصة بالداشبورد -->
+  <link rel="stylesheet" href="../public/assets/css/styles.css" />
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <img src="../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="hospitals.html" class="text-white hover:text-blue-200 transition-colors">المستشفيات</a>
+          <a href="reports.html" class="text-white hover:text-blue-200 transition-colors">التقارير والإحصائيات</a>
+          <a href="../public/profile.html" id="nav-profile" class="text-white hover:text-blue-200 transition-colors hidden">ملفي</a>
+          <a href="../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <a href="#" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </a>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-20">
+
+    <!-- ✅ أولاً: الإحصائيات الرئيسية -->
+    <section class="pt-4 pb-10 mesh-gradient">
+      <div class="container mx-auto px-4">
+        <div class="text-center mb-12">
+          <h2 class="text-3xl font-bold mb-4" style="color:#002B5B;">الإحصائيات الرئيسية</h2>
+          <div class="w-24 h-1 mx-auto mb-4" style="background:linear-gradient(90deg,#004A9F,#0FA47A)"></div>
+          <p class="text-xl text-gray-600">نظرة شاملة على أداء النظام</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3 justify-center mt-[-10px]">
+          <!-- إجمالي البلاغات -->
+          <div data-perm="DASH_CARD_TOTALS" class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">إجمالي البلاغات</div>
+              <div id="card-total" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </div>
+
+          <!-- البلاغات المفتوحة -->
+          <div data-perm="DASH_CARD_OPEN" class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
+            <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">بلاغات مفتوحة</div>
+              <div id="card-open" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </div>
+
+          <!-- البلاغات المغلقة -->
+          <div data-perm="DASH_CARD_CLOSED" class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
+            <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">بلاغات مغلقة</div>
+              <div id="card-closed" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </div>
+
+          <!-- البلاغات الحرجة -->
+          <a href="critical.html" data-perm="DASH_CARD_URGENT" class="block bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
+            <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">بلاغات حرجة</div>
+              <div id="card-critical" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </a>
+
+          <!-- معدل الإغلاق -->
+          <div data-perm="DASH_CARD_CLOSE_RATE" class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
+            <div class="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">معدل الإغلاق</div>
+              <div id="card-resolution" class="text-lg font-bold" style="color:#002B5B">0%</div>
+            </div>
+          </div>
+
+          <!-- عدد المستشفيات -->
+          <div data-perm="DASH_CARD_HOSPITAL_COUNT" class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
+            <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 7l9-4 9 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7zM9 21V9h6v12"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">عدد المستشفيات</div>
+              <div id="card-hospitals" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===========================
+         Health Facilities Charts
+         =========================== -->
+    <section id="health-facilities-charts" class="py-10">
+      <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-3xl font-bold" style="color:#002B5B">المرافق الصحية</h2>
+        </div>
+
+        <!-- المستشفيات فقط -->
+        <div class="grid grid-cols-1 gap-6">
+          <!-- المستشفيات -->
+          <div data-perm="DASH_CHART_TOP_CLINICS" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
+            <h3 class="font-bold mb-3 text-center" style="color:#002B5B">المستشفيات</h3>
+            <div style="height:400px"><canvas id="hospitals-chart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- الزائر السري - حسب الأقسام -->
+    <section id="mystery-section" data-perm="DASH_CHART_MYSTERY_BY_DEPT" class="py-10 hidden">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-xl" style="color:#002B5B">الزائر السري — حسب الأقسام</h3>
+
+            <!-- يظهر فقط لمدير التجمع -->
+            <div id="mystery-hospital-wrap" class="hidden">
+              <select id="mystery-hospital-select" class="border rounded-lg px-3 py-1.5 text-sm">
+                <option value="">اختر المستشفى…</option>
+              </select>
+            </div>
+
+            <div id="mystery-meta" class="text-xs text-gray-500"></div>
+          </div>
+          <div style="height:360px"><canvas id="mystery-depts"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===========================
+         Weekly 937 Board (مثل الصورة)
+         =========================== -->
+    <section id="weekly-937-board" class="py-10">
+      <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-3xl font-bold" style="color:#002B5B">لوحة البيانات خلال أسبوع</h2>
+          <div class="text-sm text-gray-500">
+            الفترة: 12-9 أكتوبر 2025
+          </div>
+        </div>
+
+        <!-- الشريط العلوي: إجمالي الشكاوى -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <!-- كرت مجموع الشكاوى -->
+          <div class="lg:col-span-3 bg-white rounded-xl p-6 shadow border border-gray-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-4xl font-extrabold" style="color:#002B5B" id="wk-total">0</div>
+                <div class="text-sm text-gray-500">مجموع الشكاوى</div>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                
+                <!-- زر مشروع تحسيني -->
+                <button id="btnAddImprovement"
+                        class="px-5 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-all">
+                  + مشروع تحسيني
+                </button>
+              </div>
+            </div>
+
+            <!-- التصنيفات (يسار) + أعلى العيادات (يمين) -->
+            <div class="grid md:grid-cols-2 gap-6 mt-6">
+              <!-- التصنيفات -->
+              <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
+                <h3 class="font-bold mb-3 text-lg" style="color:#002B5B">التصنيفات</h3>
+                <div style="height:320px"><canvas id="wk-funnel"></canvas></div>
+              </div>
+
+              <!-- أعلى العيادات -->
+              <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
+                <h3 class="font-bold mb-3 text-lg" style="color:#002B5B">أعلى العيادات حسب المستشفى</h3>
+
+                <div id="hospitals-depts-container" class="space-y-8"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- الأسفل: خط الاتجاه اليومي -->
+        <div data-perm="DASH_CHART_DAILY_TREND" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
+          <h3 class="font-bold mb-3" style="color:#002B5B">الشكوى اليومية</h3>
+          <div style="height:240px"><canvas id="wk-trend"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🔴 ثانياً: البلاغات الحرجة -->
+    <section id="critical-bar" data-perm="DASH_URGENT_LIST" class="py-6 bg-white border-y border-gray-100 hidden">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-red-100 text-red-700">🔴</span>
+            <div>
+              <h3 class="text-lg font-bold text-red-700">تنبيه: بلاغات حرجة</h3>
+              <p class="text-sm text-gray-600">
+                لديك <span id="red-total" class="font-bold text-red-700">0</span> بلاغات حمراء تحتاج متابعة فورية.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="filter-red" class="filter-btn px-4 py-2 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
+              عرض المستشفيات ذات البلاغات الحمراء
+            </button>
+
+            <a href="critical.html"
+               class="filter-btn px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 hover:bg-red-50">
+              عرض المزيد
+            </a>
+          </div>
+        </div>
+
+        <!-- قائمة مختصرة لأحدث البلاغات الحمراء -->
+        <div class="mt-5 grid md:grid-cols-2 lg:grid-cols-3 gap-4" id="red-list"></div>
+      </div>
+    </section>
+
+    <!-- Hospital Detail Section - قسم تفاصيل المستشفى -->
+    <section class="py-16 hospital-detail" id="hospital-detail">
+      <div class="container mx-auto px-4">
+        <div class="mb-12">
+          <button id="back-btn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all mb-6">
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            العودة للقائمة الرئيسية
+          </button>
+          <h2 class="text-4xl font-bold mb-4" style="color:#002B5B;" id="hospital-name">اسم المستشفى</h2>
+          <p class="text-xl text-gray-600" id="hospital-description"></p>
+        </div>
+
+        <!-- شريط مستويات البلاغات -->
+        <div class="mb-8 flex items-center gap-2">
+          <span class="pill pill-red">🔴 <span id="h-red">0</span></span>
+          <span class="pill pill-orange">🟠 <span id="h-orange">0</span></span>
+          <span class="pill pill-yellow">🟡 <span id="h-yellow">0</span></span>
+        </div>
+
+        <!-- إحصائيات المستشفى -->
+        <div class="grid md:grid-cols-4 gap-8 mb-12">
+          <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-2 mx-auto">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
+            </div>
+            <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-total">0</div>
+            <div class="text-gray-600 font-medium">إجمالي البلاغات</div>
+          </div>
+
+          <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center mb-2 mx-auto">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-open">0</div>
+            <div class="text-gray-600 font-medium">مفتوحة</div>
+          </div>
+
+          <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mb-2 mx-auto">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-closed">0</div>
+            <div class="text-gray-600 font-medium">مغلقة</div>
+          </div>
+
+          <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center mb-2 mx-auto">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            </div>
+            <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-rate">0%</div>
+            <div class="text-gray-600 font-medium">معدل الحل</div>
+          </div>
+        </div>
+
+        <!-- الرسوم والبلاغات الحديثة -->
+        <div class="grid lg:grid-cols-2 gap-12">
+          <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+            <div class="flex items-center mb-6">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center ml-4">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10"/></svg>
+              </div>
+              <h3 class="text-2xl font-bold" style="color:#002B5B;">اتجاه البلاغات الشهرية</h3>
+            </div>
+            <div style="height:350px"><canvas id="hospitalChart"></canvas></div>
+          </div>
+
+          <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+            <div class="flex items-center mb-6">
+              <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center ml-4">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13"/></svg>
+              </div>
+              <h3 class="text-2xl font-bold" style="color:#002B5B;">البلاغات الحديثة</h3>
+            </div>
+            <div class="space-y-4" id="recent-reports"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0542282550</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript Files - ملفات الجافاسكريبت -->
+  <script src="../public/assets/js/app.js"></script>
+  <script src="dashboard.js"></script>
+  
+  <!-- سكربت زر مشروع تحسيني -->
+  <script>
+    document.getElementById('btnAddImprovement').addEventListener('click', () => {
+      // الانتقال لصفحة إضافة المشروع
+      window.location.href = 'improvements/new.html';
+    });
+  </script>
+</body>
+</html>

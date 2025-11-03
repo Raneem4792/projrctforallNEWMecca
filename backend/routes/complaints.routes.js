@@ -1,0 +1,442 @@
+// backend/routes/complaints.routes.js
+// راوتر البلاغات للنظام المتعدد (Multi-tenant)
+import express from 'express';
+import multer from 'multer';
+import jwt from 'jsonwebtoken';
+import { getCentralPool } from '../db/centralPool.js';
+import config from '../config/multi-tenant.js';
+import { requireAuth } from '../middleware/auth.js';
+import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
+import { attachHospitalPool } from '../middleware/hospitalPool.js';
+
+const router = express.Router();
+
+// ✅ إعداد multer لقراءة FormData والمرفقات
+const upload = multer({
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB لكل ملف
+  storage: multer.memoryStorage() // تخزين في الذاكرة (أو استخدم diskStorage)
+});
+
+
+/**
+ * POST /api/complaints
+ * إنشاء بلاغ جديد (يتطلب تسجيل دخول)
+ * HospitalID يؤخذ من التوكن، لا يُرسل من العميل
+ * ✅ يدعم FormData مع المرفقات
+ */
+router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.array('attachments', 10), async (req, res) => {
+  try {
+    const user = req.user;
+    const userId = Number(user.uid || user.userId);
+    
+    // ✅ تحديد HospitalID حسب نوع المستخدم
+    // 🟦 مدير التجمع: يختار المستشفى من الواجهة (req.body.HospitalID)
+    // 🟩 موظف مستشفى: المستشفى من التوكن (user.hosp)
+    const isCluster = user.scope === 'central' || 
+                      user.scope === 'cluster' || 
+                      user.roleScope === 'cluster';
+    
+    let hospitalId;
+    if (isCluster) {
+      // مدير تجمع: استخدم HospitalID من req.body
+      hospitalId = Number(req.body.HospitalID || 0);
+      console.log('🟦 وضع مدير التجمع: المستشفى من الواجهة =', hospitalId);
+    } else {
+      // موظف مستشفى: استخدم HospitalID من التوكن
+      hospitalId = Number(user.hosp || user.hospitalId || user.HospitalID);
+      console.log('🟩 وضع موظف المستشفى: المستشفى من التوكن =', hospitalId);
+    }
+    
+    if (!hospitalId || hospitalId === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Hospital ID مفقود - يرجى اختيار المستشفى' 
+      });
+    }
+
+    console.log('📥 البيانات المستلمة:', {
+      body: req.body,
+      files: req.files?.length || 0
+    });
+
+    // استخدام req.hospitalPool الذي تم إعداده بواسطة middleware
+    const pool = req.hospitalPool;
+    
+    // ✅ التحقق من القاعدة المُستخدمة
+    const [[dbInfo]] = await pool.query('SELECT DATABASE() AS dbName');
+    console.log(`🔹 الإدراج سيتم في قاعدة: ${dbInfo.dbName} (Hospital ID: ${hospitalId})`);
+
+    // ✅ دعم الاسمين (PascalCase و camelCase)
+    const DepartmentID     = Number(req.body.DepartmentID || req.body.departmentId || 0);
+    const PatientFullName  = (req.body.PatientFullName || req.body.patientName || '').trim();
+    const Description      = (req.body.Description || req.body.description || '').trim();
+    
+    const VisitDate        = req.body.VisitDate || req.body.visitDate || null;
+    const PatientIDNumber  = req.body.PatientIDNumber || req.body.patientIdNumber || null;
+    const PatientMobile    = req.body.PatientMobile || req.body.patientMobile || null;
+    const GenderCode       = req.body.GenderCode || req.body.genderCode || null;
+    const FileNumber       = req.body.FileNumber || req.body.fileNumber || null;
+    const ComplaintTypeID  = Number(req.body.ComplaintTypeID || req.body.complaintTypeId || 0) || null;
+    const SubTypeID        = Number(req.body.SubTypeID || req.body.subTypeId || 0) || null;
+    // 🔍 استنتاج الأولوية من الكلمات المفتاحية
+    const { detectPriorityByKeywords } = await import('../utils/priorityDetect.js');
+    const detection = await detectPriorityByKeywords(req.hospitalPool, Description);
+    const PriorityCode = (detection.priority || 'MEDIUM').toUpperCase();
+    
+    console.log('🎯 تحديد الأولوية التلقائي:', {
+      description: Description?.substring(0, 50) + '...',
+      detectedPriority: PriorityCode,
+      matchedKeywords: detection.matched?.map(m => m.keyword) || []
+    });
+    const SubmissionType   = req.body.SubmissionType || req.body.submissionType || '937';
+    
+    // ✅ تأكيد StatusCode بحروف كبيرة
+    const StatusCode       = 'OPEN';
+
+    console.log('📋 البيانات المُعالجة:', {
+      DepartmentID,
+      PatientFullName: PatientFullName?.substring(0, 20),
+      Description: Description?.substring(0, 30),
+      HospitalID: hospitalId
+    });
+
+    // التحقق من الحقول الإلزامية
+    if (!DepartmentID || !PatientFullName || !Description) {
+      return res.status(400).json({
+        success: false,
+        message: 'الحقول الإلزامية مفقودة',
+        missing: {
+          DepartmentID: !DepartmentID,
+          PatientFullName: !PatientFullName,
+          Description: !Description
+        },
+        received: { DepartmentID, PatientFullName, Description }
+      });
+    }
+
+    // 🔢 توليد رقم التذكرة باستخدام ticket_counters (atomic)
+    const year = new Date().getFullYear();
+    
+    // ✅ زيادة العداد بشكل ذري (atomic) باستخدام LAST_INSERT_ID
+    await pool.query(`
+      INSERT INTO ticket_counters (YearSmall, LastSeq)
+      VALUES (YEAR(CURDATE()), 0)
+      ON DUPLICATE KEY UPDATE LastSeq = LAST_INSERT_ID(LastSeq + 1)
+    `);
+
+    // ✅ جلب الرقم الذي زاد للتو (آمن من التزامن)
+    const [[{ seq }]] = await pool.query('SELECT LAST_INSERT_ID() AS seq');
+    
+    const ticketNumber = `C-${year}-${String(seq).padStart(6, '0')}`;
+
+    // إدخال البلاغ في قاعدة المستشفى
+    const [result] = await pool.query(`
+      INSERT INTO complaints (
+        TicketNumber,
+        HospitalID,
+        DepartmentID,
+        SubmissionType,
+        VisitDate,
+        PatientFullName,
+        PatientIDNumber,
+        PatientMobile,
+        GenderCode,
+        FileNumber,
+        ComplaintTypeID,
+        SubTypeID,
+        Description,
+        PriorityCode,
+        StatusCode,
+        CreatedByUserID
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+    `, [
+      ticketNumber,
+      hospitalId,
+      DepartmentID,
+      SubmissionType,
+      VisitDate,
+      PatientFullName,
+      PatientIDNumber,
+      PatientMobile,
+      GenderCode,
+      FileNumber,
+      ComplaintTypeID,
+      SubTypeID,
+      Description,
+      PriorityCode,
+      StatusCode,
+      userId
+    ]);
+
+    const complaintId = result.insertId;
+
+    // ✅ الـ trigger سيُدخل في outbox_events تلقائياً
+
+    console.log(`✅ تم إنشاء البلاغ #${complaintId} - ${ticketNumber} في قاعدة المستشفى #${hospitalId}`);
+
+    // ✅ حفظ نسخة في القاعدة المركزية (للتقارير التجميعية)
+    try {
+      const centralPool = await getCentralPool();
+      await centralPool.query(`
+        INSERT INTO complaints (
+          ComplaintID,
+          TicketNumber,
+          HospitalID,
+          DepartmentID,
+          SubmissionType,
+          VisitDate,
+          PatientFullName,
+          PatientIDNumber,
+          PatientMobile,
+          GenderCode,
+          FileNumber,
+          ComplaintTypeID,
+          SubTypeID,
+          Description,
+          PriorityCode,
+          StatusCode,
+          CreatedByUserID,
+          CreatedAt
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+          StatusCode = VALUES(StatusCode),
+          UpdatedAt = NOW()
+      `, [
+        complaintId,      // نفس الـ ID من قاعدة المستشفى
+        ticketNumber,
+        hospitalId,
+        DepartmentID,
+        SubmissionType,
+        VisitDate,
+        PatientFullName,
+        PatientIDNumber,
+        PatientMobile,
+        GenderCode,
+        FileNumber,
+        ComplaintTypeID,
+        SubTypeID,
+        Description,
+        PriorityCode,
+        StatusCode,
+        userId
+      ]);
+      console.log(`✅ تم حفظ نسخة من البلاغ في القاعدة المركزية`);
+    } catch (centralError) {
+      console.error('⚠️ تحذير: فشل حفظ البلاغ في القاعدة المركزية:', centralError.message);
+      // لا نوقف العملية - البلاغ موجود في قاعدة المستشفى
+    }
+
+    // ✅ حفظ المرفقات إذا كانت موجودة
+    if (req.files && req.files.length > 0) {
+      console.log(`📎 معالجة ${req.files.length} مرفق للبلاغ ${complaintId}`);
+      
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // إنشاء مجلد المرفقات
+      const baseDir = path.join(process.cwd(), 'uploads', `h${hospitalId}`, 'complaints', String(complaintId));
+      fs.mkdirSync(baseDir, { recursive: true });
+      
+      // حفظ كل مرفق
+      for (const file of req.files) {
+        try {
+          // إنشاء اسم آمن للملف
+          const timestamp = Date.now();
+          const safeName = `${timestamp}-${file.originalname.replace(/[^\w.\-أ-ي\s]/g, '_')}`;
+          const fullPath = path.join(baseDir, safeName);
+          
+          // حفظ الملف
+          fs.writeFileSync(fullPath, file.buffer);
+          
+          // إدراج سجل في جدول attachments
+          await pool.query(`
+            INSERT INTO attachments
+              (ComplaintID, FileName, FilePath, FileSize, UploadedByUserID, UploadDate, Description)
+            VALUES (?,?,?,?,?,NOW(),?)
+          `, [
+            complaintId,
+            file.originalname,
+            `/uploads/h${hospitalId}/complaints/${complaintId}/${safeName}`, // URL للوصول
+            file.size,
+            userId,
+            `مرفق للبلاغ ${ticketNumber}`
+          ]);
+          
+          console.log(`✅ تم حفظ المرفق: ${file.originalname} -> ${safeName}`);
+        } catch (fileError) {
+          console.error(`❌ خطأ في حفظ المرفق ${file.originalname}:`, fileError.message);
+          // لا نوقف العملية - البلاغ تم إنشاؤه بنجاح
+        }
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'تم إنشاء البلاغ بنجاح',
+      data: {
+        ComplaintID: complaintId,
+        TicketNumber: ticketNumber,
+        PriorityCode: PriorityCode,
+        StatusCode: 'OPEN',
+        HospitalID: hospitalId,
+        attachmentsCount: req.files ? req.files.length : 0
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ خطأ في إنشاء البلاغ:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء إنشاء البلاغ',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/complaints/:id/transfer/employee
+ * تحويل البلاغ بين الموظفين
+ */
+router.post('/:id/transfer/employee', requireAuth, resolveHospitalId, attachHospitalPool, async (req, res) => {
+  try {
+    const complaintId = Number(req.params.id);
+    const { fromUserId, toUserId, note } = req.body || {};
+    const actorUserId = Number(req.user?.uid || req.user?.UserID);
+
+    if (!complaintId || !toUserId) {
+      return res.status(400).json({ ok:false, message:'toUserId مطلوب' });
+    }
+
+    // استخدام req.hospitalPool الذي تم إعداده بواسطة middleware
+    const conn = await req.hospitalPool.getConnection();
+    try {
+      // البلاغ الحالي + الموظف الحالي
+      const [[c]] = await conn.query(
+        `SELECT ComplaintID, DepartmentID, AssignedToUserID, StatusCode
+         FROM complaints WHERE ComplaintID=?`, [complaintId]
+      );
+      if (!c) return res.status(404).json({ ok:false, message:'البلاغ غير موجود' });
+
+      if (Number(c.AssignedToUserID || 0) === Number(toUserId)) {
+        return res.status(400).json({ ok:false, message:'الموظف الهدف يطابق الموظف الحالي' });
+      }
+
+      // تحقّق من صحة الموظف الهدف وأنه ضمن نفس المستشفى
+      const [[uTo]] = await conn.query(
+        `SELECT UserID, DepartmentID, FullName FROM users
+         WHERE UserID=? AND COALESCE(IsActive,1)=1`, [toUserId]
+      );
+      if (!uTo) return res.status(400).json({ ok:false, message:'الموظف الهدف غير صالح' });
+
+      // تحقّق من fromUserId إن تم تمريره
+      if (fromUserId) {
+        if (Number(c.AssignedToUserID || 0) !== Number(fromUserId)) {
+          return res.status(409).json({ ok:false, message:'fromUserId لا يطابق الموظف الحالي' });
+        }
+      }
+
+      await conn.beginTransaction();
+
+      // 1) تحديث البلاغ (المُسند إليه الآن)
+      await conn.query(
+        `UPDATE complaints
+           SET AssignedToUserID=?, AssignedAt=CURRENT_TIMESTAMP, AssignedByUserID=?
+         WHERE ComplaintID=?`,
+        [toUserId, actorUserId || null, complaintId]
+      );
+
+      // 2) سجل تاريخ التحويل
+      await conn.query(
+        `INSERT INTO complaint_assignee_history
+           (ComplaintID, FromUserID, ToUserID, Note, ChangedByUserID)
+         VALUES (?,?,?,?,?)`,
+        [complaintId, c.AssignedToUserID || null, toUserId, (note||null), actorUserId || null]
+      );
+
+      // 3) نضيف ردًّا داخلياً للتوثيق
+      await conn.query(
+        `INSERT INTO complaint_responses
+          (ComplaintID, ResponderUserID, ReplyTypeID, TargetStatusCode, Message, IsInternal)
+         VALUES (?,?,?,?,?,?)`,
+        [
+          complaintId,
+          actorUserId || null,
+          1, // نوع ردّ داخلي/سيستمي
+          c.StatusCode || null,
+          `تحويل البلاغ بين الموظفين: من ${c.AssignedToUserID || '—'} إلى ${uTo.FullName || toUserId}` + 
+            (note?.trim()? ` — ملاحظة: ${note.trim()}` : ''),
+          1
+        ]
+      );
+
+      await conn.commit();
+      return res.json({ 
+        ok:true, 
+        complaintId, 
+        fromUserId: c.AssignedToUserID || null, 
+        toUserId,
+        toUserName: uTo.FullName || null
+      });
+    } catch (e) {
+      try { await conn.rollback(); } catch {}
+      console.error('transferComplaintEmployee error:', e);
+      return res.status(500).json({ ok:false, message:'خطأ عند تحويل البلاغ بين الموظفين' });
+    } finally {
+      conn.release();
+    }
+
+  } catch (error) {
+    console.error('❌ خطأ في تحويل البلاغ بين الموظفين:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء تحويل البلاغ',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/complaints/repeat-check
+ * التحقق من تكرار البلاغات في آخر X يوم لنفس القسم
+ * يُستخدم لإظهار زر "مشروع تحسيني" عند التكرار ≥ 3
+ */
+router.get('/repeat-check', requireAuth, resolveHospitalId, attachHospitalPool, async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const hospitalId = req.hospitalId;
+    const pool = req.hospitalPool;
+
+    // التحقق من تكرار البلاغات في آخر X يوم لنفس القسم + نفس التصنيف الفرعي
+    const [results] = await pool.query(`
+      SELECT 
+        DepartmentID,
+        ComplaintSubTypeID,
+        COUNT(*) as cnt
+      FROM complaints 
+      WHERE HospitalID = ? 
+        AND CreatedAt >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        AND IsDeleted = 0
+      GROUP BY DepartmentID, ComplaintSubTypeID
+      HAVING cnt >= 3
+    `, [hospitalId, days]);
+
+    const hasRepeatedComplaints = results.length > 0;
+
+    res.json({
+      ok: true,
+      hasRepeatedComplaints,
+      repeatedDepartments: results,
+      days: Number(days)
+    });
+  } catch (err) {
+    console.error('GET /api/complaints/repeat-check error:', err);
+    res.status(500).json({ error: 'Failed to check repeat complaints' });
+  }
+});
+
+export default router;
+

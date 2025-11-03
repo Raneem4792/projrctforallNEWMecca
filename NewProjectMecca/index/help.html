@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>المساعدة – نظام البلاغات</title>
+
+  <!-- خطوط وتيلويند -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- نفس ملفات الستايل للمشروع لضمان التطابق -->
+  <link rel="stylesheet" href="../public/assets/css/styles.css" />
+  <link rel="stylesheet" href="index.css" />
+</head>
+
+<body class="bg-white">
+  <!-- الهيدر -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="index.html" class="text-white hover:text-blue-200">الرئيسية</a>
+          <a href="../dashboard/dashboard.html" class="text-white hover:text-blue-200">لوحة التحكم</a>
+          <a href="about-system.html" class="text-white hover:text-blue-200">حول النظام</a>
+          <a href="help.html" class="text-white font-bold border-b-2 border-white">المساعدة</a>
+          <a href="contact.html" class="text-white hover:text-blue-200">اتصل بنا</a>
+          <a href="#" class="text-white hover:text-blue-200 flex items-center">🌐 English</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- البطل -->
+  <section class="hero-gradient pt-28 pb-16">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 animate-fade-in-up">المساعدة والدعم</h1>
+      <p class="text-gray-600 max-w-2xl mx-auto animate-fade-in-up">
+        هنا تجد كل ما تحتاجه لاستخدام نظام البلاغات بسهولة: خطوات سريعة، أسئلة شائعة، وحلول لأكثر المشاكل تكرارًا،
+        مع طرق التواصل بالدعم عند الحاجة.
+      </p>
+    </div>
+  </section>
+
+  <!-- إجراءات سريعة -->
+  <section class="py-10">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- تقديم بلاغ -->
+        <a href="../public/complaints/submit/submit-complaint.html"
+           class="card-hover bg-white rounded-xl p-6 shadow-lg border border-gray-100 text-center block">
+          <div class="w-14 h-14 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-1">تقديم بلاغ جديد</h3>
+          <p class="text-gray-600 text-sm">ابدأ بلاغك خلال ثوانٍ</p>
+        </a>
+
+        <!-- تتبّع بلاغ -->
+        <a href="../public/complaints/track/track-complaint.html"
+           class="card-hover bg-white rounded-xl p-6 shadow-lg border border-gray-100 text-center block">
+          <div class="w-14 h-14 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2M10 17a7 7 0 110-14 7 7 0 010 14z"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-1">تتبّع حالة البلاغ</h3>
+          <p class="text-gray-600 text-sm">اعرف آخر التحديثات</p>
+        </a>
+
+        <!-- دليل المستخدم (مكان ملف PDF مستقبلاً) -->
+        <a href="user-guide.html" class="card-hover bg-white rounded-xl p-6 shadow-lg border border-gray-100 text-center block">
+          <div class="w-14 h-14 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 2l6 6v12a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2h4zM14 2v6h6"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-1">دليل المستخدم</h3>
+          <p class="text-gray-600 text-sm">شرح مصوّر خطوة بخطوة</p>
+        </a>
+
+        <!-- تواصل الدعم -->
+        <a href="contact.html" class="card-hover bg-white rounded-xl p-6 shadow-lg border border-gray-100 text-center block">
+          <div class="w-14 h-14 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3l2 5-3 1a11 11 0 005 5l1-3 5 2v3a2 2 0 01-2 2h-1C9.7 21 3 14.3 3 6V5z"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-1">التواصل مع الدعم</h3>
+          <p class="text-gray-600 text-sm">24/7 لخدمتك</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- كيف تستخدم النظام -->
+  <section class="py-12" style="background-color:#F7FAFC;">
+    <div class="container mx-auto px-4">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">كيف تستخدم النظام؟</h2>
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="landing-card rounded-xl bg-white p-6 text-center">
+          <div class="step-number w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3">1</div>
+          <h3 class="font-semibold mb-1">تسجيل/تسجيل دخول</h3>
+          <p class="text-gray-600 text-sm">أنشئ حسابًا أو ادخل بحسابك.</p>
+        </div>
+        <div class="landing-card rounded-xl bg-white p-6 text-center">
+          <div class="step-number w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3">2</div>
+          <h3 class="font-semibold mb-1">تقديم البلاغ</h3>
+          <p class="text-gray-600 text-sm">اختر النوع، وضّح التفاصيل، وأرفق ما يلزم.</p>
+        </div>
+        <div class="landing-card rounded-xl bg-white p-6 text-center">
+          <div class="step-number w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3">3</div>
+          <h3 class="font-semibold mb-1">المعالجة والمتابعة</h3>
+          <p class="text-gray-600 text-sm">تُسند للجهة المختصة وتتابع التحديثات.</p>
+        </div>
+        <div class="landing-card rounded-xl bg-white p-6 text-center">
+          <div class="step-number w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3">4</div>
+          <h3 class="font-semibold mb-1">الإغلاق والتقييم</h3>
+          <p class="text-gray-600 text-sm">يصلك إشعار بالإغلاق ويمكنك تقييم التجربة.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- الأسئلة الشائعة -->
+  <section class="py-12">
+    <div class="container mx-auto px-4">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">الأسئلة الشائعة</h2>
+
+      <div class="max-w-3xl mx-auto space-y-3">
+        <!-- عنصر -->
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <button class="faq-btn w-full text-right p-4 bg-white hover:bg-gray-50 flex items-center justify-between">
+            <span class="font-semibold text-gray-900">ما الفرق بين بلاغ 937 وبلاغ حضوري؟</span>
+            <span class="text-gray-500">+</span>
+          </button>
+          <div class="faq-panel hidden p-4 pt-0 text-gray-600">
+            بلاغ 937 يتم استقباله عبر مركز 937 ويصل للنظام آليًا، أما البلاغ الحضوري فيُسجل مباشرة داخل المستشفى.
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <button class="faq-btn w-full text-right p-4 bg-white hover:bg-gray-50 flex items-center justify-between">
+            <span class="font-semibold text-gray-900">كيف أتابع حالة البلاغ بعد إرساله؟</span>
+            <span class="text-gray-500">+</span>
+          </button>
+          <div class="faq-panel hidden p-4 pt-0 text-gray-600">
+            من صفحة <a href="../public/complaints/track/track-complaint.html" class="text-blue-600 underline">تتبّع البلاغ</a> بإدخال رقم البلاغ أو عبر لوحة المستخدم.
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <button class="faq-btn w-full text-right p-4 bg-white hover:bg-gray-50 flex items-center justify-between">
+            <span class="font-semibold text-gray-900">هل بياناتي محمية؟</span>
+            <span class="text-gray-500">+</span>
+          </button>
+          <div class="faq-panel hidden p-4 pt-0 text-gray-600">
+            نعم. يعتمد النظام ضوابط الوصول وفق الصلاحيات وتشفير الاتصال وحوكمة البيانات.
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <button class="faq-btn w-full text-right p-4 bg-white hover:bg-gray-50 flex items-center justify-between">
+            <span class="font-semibold text-gray-900">لا أستطيع إرفاق ملف، ما الحل؟</span>
+            <span class="text-gray-500">+</span>
+          </button>
+          <div class="faq-panel hidden p-4 pt-0 text-gray-600">
+            تأكد من صيغة الملف وحجمه، وحدّث الصفحة وجرب مجددًا. إن استمرت المشكلة تواصل مع الدعم.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- حلول سريعة للأعطال -->
+  <section class="py-12" style="background-color:#F7FAFC;">
+    <div class="container mx-auto px-4">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">حلول سريعة</h2>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+          <h3 class="font-semibold text-gray-900 mb-2">لا تظهر الأقسام/الأنواع</h3>
+          <p class="text-gray-600 text-sm">حدّث الصفحة وتأكد من الاتصال بالإنترنت وصلاحيتك للدخول، ثم حاول لاحقًا.</p>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+          <h3 class="font-semibold text-gray-900 mb-2">خطأ "غير مصرح"</h3>
+          <p class="text-gray-600 text-sm">سجل الدخول مجددًا وتأكد من أن حسابك يملك الصلاحيات المطلوبة.</p>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+          <h3 class="font-semibold text-gray-900 mb-2">الروابط لا تعمل</h3>
+          <p class="text-gray-600 text-sm">تحقق من المسارات، واستخدم المتصفح المحدّث، وجرب وضع التصفح الخفي.</p>
+        </div>
+      </div>
+      <div class="text-center mt-6">
+        <a href="contact.html" class="inline-block cta-button text-white px-6 py-3 rounded-xl">لم تُحل المشكلة؟ تواصل مع الدعم</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- بانر النظام -->
+  <div class="bg-gray-600 text-white py-2 text-center text-sm">منصة رسمية للتجمع الصحي بمكة المكرمة</div>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <!-- سكربتات عامة للمشروع -->
+  <script src="index.js"></script>
+
+  <!-- سكربت بسيط لفتح/إغلاق الأكورديون -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.faq-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const panel = btn.nextElementSibling;
+          const sign = btn.querySelector('span:last-child');
+          const open = !panel.classList.contains('hidden');
+          document.querySelectorAll('.faq-panel').forEach(p => p.classList.add('hidden'));
+          document.querySelectorAll('.faq-btn span:last-child').forEach(s => s.textContent = '+');
+          if (open) {
+            panel.classList.add('hidden'); sign.textContent = '+';
+          } else {
+            panel.classList.remove('hidden'); sign.textContent = '–';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

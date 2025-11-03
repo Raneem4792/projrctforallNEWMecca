@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اختبار إصلاحات صفحة التتبع</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Tajawal', sans-serif; }
+    .test-section { @apply bg-white p-6 rounded-lg shadow-md mb-4; }
+    .pass { @apply text-green-600 font-bold; }
+    .fail { @apply text-red-600 font-bold; }
+    .badge { @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold; }
+  </style>
+</head>
+<body class="bg-gray-50 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-[#002B5B] mb-6">🧪 اختبار إصلاحات صفحة التتبع</h1>
+
+    <!-- اختبار 1: أزرار التصفية -->
+    <div class="test-section">
+      <h2 class="text-xl font-bold mb-4">1️⃣ اختبار قيم أزرار التصفية</h2>
+      <div id="test1-result" class="mb-3"></div>
+      <div class="flex flex-wrap gap-2">
+        <button class="badge bg-blue-100 text-blue-800" data-status="all">الكل (all)</button>
+        <button class="badge bg-blue-100 text-blue-800" data-status="open">مفتوحة (open)</button>
+        <button class="badge bg-blue-100 text-blue-800" data-status="in_progress">قيد المعالجة (in_progress)</button>
+        <button class="badge bg-blue-100 text-blue-800" data-status="on_hold">معلقة (on_hold) - جديد!</button>
+        <button class="badge bg-blue-100 text-blue-800" data-status="closed">مغلقة (closed)</button>
+      </div>
+    </div>
+
+    <!-- اختبار 2: شارات الحالة -->
+    <div class="test-section">
+      <h2 class="text-xl font-bold mb-4">2️⃣ اختبار شارات الحالة (عربي)</h2>
+      <div id="test2-result" class="mb-3"></div>
+      <div class="flex flex-wrap gap-2" id="status-badges"></div>
+    </div>
+
+    <!-- اختبار 3: شارات الأولوية -->
+    <div class="test-section">
+      <h2 class="text-xl font-bold mb-4">3️⃣ اختبار شارات الأولوية (عربي)</h2>
+      <div id="test3-result" class="mb-3"></div>
+      <div class="flex flex-wrap gap-2" id="priority-badges"></div>
+    </div>
+
+    <!-- اختبار 4: API Connection -->
+    <div class="test-section">
+      <h2 class="text-xl font-bold mb-4">4️⃣ اختبار الاتصال بـ API</h2>
+      <div id="test4-result" class="mb-3"></div>
+      <button onclick="testAPI()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        اختبار الآن
+      </button>
+      <div id="api-response" class="mt-4"></div>
+    </div>
+
+    <!-- اختبار 5: Timeline API -->
+    <div class="test-section">
+      <h2 class="text-xl font-bold mb-4">5️⃣ اختبار Timeline API</h2>
+      <div id="test5-result" class="mb-3"></div>
+      <input type="text" id="ticket-input" placeholder="أدخل رقم البلاغ" 
+             class="border border-gray-300 rounded px-3 py-2 w-64 ml-2">
+      <button onclick="testTimeline()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        اختبار Timeline
+      </button>
+      <div id="timeline-response" class="mt-4"></div>
+    </div>
+
+    <!-- ملخص الاختبارات -->
+    <div class="test-section bg-blue-50">
+      <h2 class="text-xl font-bold mb-4">📊 ملخص الاختبارات</h2>
+      <div id="summary"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3001/api';
+    let testResults = { passed: 0, failed: 0 };
+
+    // اختبار 1: التحقق من قيم أزرار التصفية
+    function test1() {
+      const buttons = document.querySelectorAll('[data-status]');
+      const expectedValues = ['all', 'open', 'in_progress', 'on_hold', 'closed'];
+      const actualValues = Array.from(buttons).map(btn => btn.dataset.status);
+      
+      const allMatch = expectedValues.every(val => actualValues.includes(val));
+      const result = document.getElementById('test1-result');
+      
+      if (allMatch && actualValues.length === expectedValues.length) {
+        result.innerHTML = '<span class="pass">✅ جميع قيم الأزرار صحيحة (lowercase)</span>';
+        testResults.passed++;
+      } else {
+        result.innerHTML = '<span class="fail">❌ بعض قيم الأزرار غير صحيحة</span>';
+        testResults.failed++;
+      }
+    }
+
+    // اختبار 2: شارات الحالة
+    function test2() {
+      const statuses = [
+        { code: 'open', label: 'مفتوحة' },
+        { code: 'in_progress', label: 'قيد المعالجة' },
+        { code: 'on_hold', label: 'معلقة' },
+        { code: 'closed', label: 'مغلقة' },
+        { code: 'critical', label: 'حرجة' }
+      ];
+      
+      const container = document.getElementById('status-badges');
+      const result = document.getElementById('test2-result');
+      let allArabic = true;
+      
+      statuses.forEach(status => {
+        const badge = badgeForStatus(status.code, '');
+        container.innerHTML += badge;
+        
+        // التحقق من وجود نص عربي
+        if (!badge.includes(status.label)) {
+          allArabic = false;
+        }
+      });
+      
+      if (allArabic) {
+        result.innerHTML = '<span class="pass">✅ جميع شارات الحالة تظهر بالعربية</span>';
+        testResults.passed++;
+      } else {
+        result.innerHTML = '<span class="fail">❌ بعض الشارات لا تظهر بالعربية</span>';
+        testResults.failed++;
+      }
+    }
+
+    // اختبار 3: شارات الأولوية
+    function test3() {
+      const priorities = [
+        { code: 'URGENT', label: 'عاجلة' },
+        { code: 'HIGH', label: 'عالية' },
+        { code: 'MEDIUM', label: 'متوسطة' },
+        { code: 'LOW', label: 'منخفضة' }
+      ];
+      
+      const container = document.getElementById('priority-badges');
+      const result = document.getElementById('test3-result');
+      let allArabic = true;
+      
+      priorities.forEach(priority => {
+        const badge = badgeForPriority(priority.code, '');
+        container.innerHTML += badge;
+        
+        // التحقق من وجود نص عربي
+        if (!badge.includes(priority.label)) {
+          allArabic = false;
+        }
+      });
+      
+      if (allArabic) {
+        result.innerHTML = '<span class="pass">✅ جميع شارات الأولوية تظهر بالعربية (MEDIUM أضيف!)</span>';
+        testResults.passed++;
+      } else {
+        result.innerHTML = '<span class="fail">❌ بعض الشارات لا تظهر بالعربية</span>';
+        testResults.failed++;
+      }
+    }
+
+    // اختبار 4: API Connection
+    async function testAPI() {
+      const result = document.getElementById('test4-result');
+      const response = document.getElementById('api-response');
+      
+      result.innerHTML = '<span class="text-gray-600">⏳ جاري الاختبار...</span>';
+      
+      try {
+        const res = await fetch(`${API_BASE}/complaints/track`);
+        const data = await res.json();
+        
+        if (data.ok && data.items) {
+          result.innerHTML = '<span class="pass">✅ API يعمل بشكل صحيح</span>';
+          
+          let html = `<div class="bg-green-50 border border-green-200 rounded p-4">`;
+          html += `<p class="font-bold mb-2">عدد البلاغات: ${data.count}</p>`;
+          
+          if (data.items.length > 0) {
+            const first = data.items[0];
+            html += `<p class="text-sm mb-1">مثال - أول بلاغ:</p>`;
+            html += `<ul class="text-sm list-disc pr-5">`;
+            html += `<li>رقم البلاغ: ${first.ticket}</li>`;
+            html += `<li>الحالة: ${first.status} ${first.statusLabelAr ? '→ ' + first.statusLabelAr : ''}</li>`;
+            html += `<li>الأولوية: ${first.priority} ${first.priorityLabelAr ? '→ ' + first.priorityLabelAr : ''}</li>`;
+            html += `</ul>`;
+            
+            if (first.statusLabelAr && first.priorityLabelAr) {
+              html += `<p class="text-green-600 font-bold mt-2">✅ التسميات العربية تعمل!</p>`;
+            } else {
+              html += `<p class="text-orange-600 font-bold mt-2">⚠️ التسميات العربية غير موجودة</p>`;
+            }
+          }
+          
+          html += `</div>`;
+          response.innerHTML = html;
+          testResults.passed++;
+        } else {
+          throw new Error('استجابة غير صحيحة من API');
+        }
+      } catch (error) {
+        result.innerHTML = '<span class="fail">❌ فشل الاتصال بـ API</span>';
+        response.innerHTML = `<div class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+          <p class="font-bold">خطأ: ${error.message}</p>
+          <p class="text-sm mt-2">تأكد من تشغيل الخادم على http://localhost:3001</p>
+        </div>`;
+        testResults.failed++;
+      }
+      
+      updateSummary();
+    }
+
+    // اختبار 5: Timeline API
+    async function testTimeline() {
+      const ticketInput = document.getElementById('ticket-input');
+      const ticket = ticketInput.value.trim();
+      const result = document.getElementById('test5-result');
+      const response = document.getElementById('timeline-response');
+      
+      if (!ticket) {
+        alert('الرجاء إدخال رقم البلاغ');
+        return;
+      }
+      
+      result.innerHTML = '<span class="text-gray-600">⏳ جاري الاختبار...</span>';
+      
+      try {
+        const res = await fetch(`${API_BASE}/complaints/${encodeURIComponent(ticket)}/timeline`);
+        const data = await res.json();
+        
+        if (data.ok && data.items) {
+          result.innerHTML = '<span class="pass">✅ Timeline API يعمل بشكل صحيح</span>';
+          
+          let html = `<div class="bg-green-50 border border-green-200 rounded p-4">`;
+          html += `<p class="font-bold mb-2">عدد الأحداث: ${data.items.length}</p>`;
+          
+          if (data.items.length > 0) {
+            html += `<div class="space-y-2 mt-3">`;
+            data.items.forEach((item, i) => {
+              const icon = getTimelineIcon(item.kind);
+              html += `<div class="border-r-2 border-blue-300 pr-3">`;
+              html += `<p class="font-bold">${icon} ${item.title || 'حدث'}</p>`;
+              html += `<p class="text-sm text-gray-600">${item.detail || ''}</p>`;
+              html += `<p class="text-xs text-gray-500">${formatDate(item.at)}</p>`;
+              html += `</div>`;
+            });
+            html += `</div>`;
+            
+            html += `<a href="../history/complaint-timeline.html?ticket=${encodeURIComponent(ticket)}" 
+                       target="_blank" 
+                       class="inline-block mt-3 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                       عرض Timeline كامل
+                    </a>`;
+          } else {
+            html += `<p class="text-gray-600 mt-2">لا توجد أحداث مسجلة لهذا البلاغ</p>`;
+          }
+          
+          html += `</div>`;
+          response.innerHTML = html;
+          testResults.passed++;
+        } else {
+          throw new Error(data.message || 'استجابة غير صحيحة');
+        }
+      } catch (error) {
+        result.innerHTML = '<span class="fail">❌ فشل الاتصال بـ Timeline API</span>';
+        response.innerHTML = `<div class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+          <p class="font-bold">خطأ: ${error.message}</p>
+          <p class="text-sm mt-2">تأكد من صحة رقم البلاغ</p>
+        </div>`;
+        testResults.failed++;
+      }
+      
+      updateSummary();
+    }
+
+    // دوال مساعدة من track-complaint.js
+    function badgeForStatus(code, labelAr='') {
+      const c = (code || '').toLowerCase();
+      const map = {
+        'open':        { text:'مفتوحة',      bg:'#F3F4F6', ring:'#e5e7eb', dot:'#2563EB' },
+        'in_progress': { text:'قيد المعالجة', bg:'#F3F4F6', ring:'#e5e7eb', dot:'#F59E0B' },
+        'on_hold':     { text:'معلقة',       bg:'#F3F4F6', ring:'#e5e7eb', dot:'#6B7280' },
+        'closed':      { text:'مغلقة',       bg:'#ECFDF5', ring:'#D1FAE5', dot:'#10B981' },
+        'critical':    { text:'حرجة',        bg:'#FEF2F2', ring:'#FECACA', dot:'#EF4444' }
+      }[c] || { text: labelAr || code, bg:'#F3F4F6', ring:'#e5e7eb', dot:'#6B7280' };
+
+      return `
+        <span style="background:${map.bg};border:1px solid ${map.ring};" class="badge">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:${map.dot}"></span>
+          ${labelAr || map.text}
+        </span>
+      `;
+    }
+
+    function badgeForPriority(code, labelAr='') {
+      const p = (code || '').toUpperCase();
+      const map = {
+        'URGENT': { text:'عاجلة',   bg:'#FEF2F2', ring:'#FECACA', dot:'#EF4444' },
+        'HIGH':   { text:'عالية',   bg:'#FFF7ED', ring:'#FFEDD5', dot:'#F97316' },
+        'MEDIUM': { text:'متوسطة',  bg:'#EFF6FF', ring:'#DBEAFE', dot:'#3B82F6' },
+        'LOW':    { text:'منخفضة',  bg:'#F3F4F6', ring:'#E5E7EB', dot:'#6B7280' }
+      }[p] || { text: labelAr || code, bg:'#F3F4F6', ring:'#E5E7EB', dot:'#6B7280' };
+
+      return `
+        <span style="background:${map.bg};border:1px solid ${map.ring};" class="badge">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:${map.dot}"></span>
+          ${labelAr || map.text}
+        </span>
+      `;
+    }
+
+    function getTimelineIcon(kind) {
+      const icons = {
+        'created': '🟢',
+        'status_change': '🟠',
+        'reply': '🔵',
+        'transfer': '🟣'
+      };
+      return icons[kind] || '⚪';
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleString('ar-SA', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      const total = testResults.passed + testResults.failed;
+      const percentage = total > 0 ? Math.round((testResults.passed / total) * 100) : 0;
+      
+      summary.innerHTML = `
+        <div class="flex items-center gap-4">
+          <div class="text-3xl font-bold ${percentage === 100 ? 'text-green-600' : 'text-orange-600'}">
+            ${percentage}%
+          </div>
+          <div>
+            <p class="pass">✅ نجح: ${testResults.passed}</p>
+            <p class="fail">❌ فشل: ${testResults.failed}</p>
+          </div>
+        </div>
+        ${percentage === 100 ? '<p class="text-green-600 font-bold mt-2">🎉 جميع الاختبارات نجحت!</p>' : ''}
+      `;
+    }
+
+    // تشغيل الاختبارات الأساسية عند التحميل
+    window.addEventListener('DOMContentLoaded', () => {
+      test1();
+      test2();
+      test3();
+      updateSummary();
+    });
+  </script>
+</body>
+</html>
+

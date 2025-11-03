@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>تعديل المشروع التحسيني</title>
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme:{ extend:{ colors:{ primary:'#002B5B' } } } }
+  </script>
+
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+
+  <!-- هوية مشروعك -->
+  <link rel="stylesheet" href="../hospital/hospital.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" id="nav-dashboard" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../../public/profile.html" id="nav-profile" class="text-white hover:text-blue-200 transition-colors hidden">ملفي الشخصي</a>
+          <a href="../../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="pt-20 max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-8">
+
+    <!-- شريط التنقل -->
+    <div class="flex items-center gap-4 mb-6">
+      <button onclick="history.back()" class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        العودة
+      </button>
+      <div class="h-6 w-px bg-gray-300"></div>
+      <h1 class="text-2xl font-bold text-gray-900">تعديل المشروع التحسيني</h1>
+    </div>
+
+    <!-- نموذج التعديل -->
+    <form id="editForm" class="space-y-6">
+      <!-- Loading -->
+      <div id="loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p class="mt-2 text-gray-500">جاري تحميل بيانات المشروع...</p>
+      </div>
+
+      <!-- Error -->
+      <div id="error" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <div class="text-red-600 mb-2">حدث خطأ في تحميل المشروع</div>
+        <button onclick="loadProject()" class="text-red-600 hover:text-red-800 underline">إعادة المحاولة</button>
+      </div>
+
+      <!-- Form Content -->
+      <div id="formContent" class="hidden space-y-6">
+        <!-- Basic Info -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">المعلومات الأساسية</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">عنوان المشروع *</label>
+              <input type="text" id="title" name="title" required
+                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">القسم *</label>
+              <select id="departmentId" name="departmentId" required
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="">اختر القسم</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">الحالة *</label>
+              <select id="status" name="status" required
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="DRAFT">مسودة</option>
+                <option value="PROPOSED">مقترح</option>
+                <option value="APPROVED">معتمد</option>
+                <option value="IN_PROGRESS">قيد التنفيذ</option>
+                <option value="COMPLETED">مكتمل</option>
+                <option value="CANCELLED">ملغي</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">الأولوية *</label>
+              <select id="priority" name="priority" required
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="LOW">منخفضة</option>
+                <option value="MEDIUM">متوسطة</option>
+                <option value="HIGH">عالية</option>
+                <option value="CRITICAL">حرجة</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">الجدول الزمني</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">تاريخ البداية</label>
+              <input type="date" id="startDate" name="startDate"
+                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">تاريخ الانتهاء المتوقع</label>
+              <input type="date" id="dueDate" name="dueDate"
+                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+          </div>
+        </div>
+
+        <!-- Project Details -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">تفاصيل المشروع</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">وصف المشكلة *</label>
+              <textarea id="problemStatement" name="problemStatement" rows="4" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="وصف المشكلة التي يحاول المشروع حلها..."></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">الهدف من المشروع *</label>
+              <textarea id="aimStatement" name="aimStatement" rows="4" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="الهدف المحدد من هذا المشروع..."></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">معايير النجاح</label>
+              <textarea id="successCriteria" name="successCriteria" rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="كيف سيتم قياس نجاح المشروع..."></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">فريق العمل</label>
+              <textarea id="teamMembers" name="teamMembers" rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="أعضاء فريق العمل..."></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">ملاحظات التقدم</label>
+              <textarea id="progressNotes" name="progressNotes" rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="ملاحظات حول تقدم المشروع..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-4">
+          <button type="button" onclick="history.back()"
+                  class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            إلغاء
+          </button>
+          <button type="submit" id="btnSave"
+                  class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-[#00366f] disabled:opacity-50">
+            حفظ التغييرات
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+    <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <script>
+    const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
+    const token = localStorage.getItem('token') || '';
+    const projectId = new URLSearchParams(window.location.search).get('id');
+
+    // ✅ دالة موحّدة لإيجاد hospitalId (حتى لمدير التجمع)
+    function effectiveHospitalId() {
+      const u = JSON.parse(localStorage.getItem('userData') || '{}');
+      const q = new URLSearchParams(location.search);
+      const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
+      const fromLS1 = Number(localStorage.getItem('selectedHospitalId') || 0);
+      const fromLS2 = Number(localStorage.getItem('hospitalId') || 0);
+      const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
+      return fromUrl || fromLS1 || fromLS2 || fromUser || null;
+    }
+
+    const $ = (s,c=document)=>c.querySelector(s);
+
+    const loadingEl = $('#loading');
+    const errorEl = $('#error');
+    const formContentEl = $('#formContent');
+    const formEl = $('#editForm');
+    const btnSave = $('#btnSave');
+
+    const toast = (msg, type='info')=>{
+      const el = $('#toast'), box = $('#toastInner');
+      const cls = {
+        success:'bg-green-600 text-white',
+        error:'bg-red-600 text-white',
+        info:'bg-gray-800 text-white',
+        warn:'bg-amber-500 text-white'
+      }[type] || 'bg-gray-800 text-white';
+      box.className = 'rounded-xl shadow-lg px-4 py-3 text-sm ' + cls;
+      box.textContent = msg; el.classList.remove('hidden');
+      setTimeout(()=>el.classList.add('hidden'), 2500);
+    };
+
+    // ✅ تحديث authHeaders لإضافة x-hospital-id دائماً إذا توفر
+    const authHeaders = () => {
+      const h = token ? { 'Authorization': 'Bearer ' + token } : {};
+      const hid = effectiveHospitalId();
+      if (hid) h['x-hospital-id'] = String(hid);
+      return h;
+    };
+
+    // فحص الصلاحيات قبل السماح بالتعديل
+    async function ensureCanEdit(){
+      const hid = effectiveHospitalId();
+      const url = `${API_BASE}/api/permissions/me${hid ? '?hospitalId=' + hid : ''}`;
+      const r = await fetch(url, { headers: authHeaders(), credentials:'include' });
+      const p = r.ok ? (await r.json()).data || {} : {};
+      
+      // مدير التجمع (RoleID = 1) يرى كل شيء بدون قيود
+      const isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
+      
+      if (isCentralAdmin) {
+        return; // مدير التجمع يمكنه الوصول
+      }
+      
+      if (!p || p.improvementCreate || p.adminPanel) return; // لو عنده إنشاء نعتبره غالباً مؤهل للتعديل (اختياري)
+      if (!p || !p.statusUpdate) { /* اختياري حسب سياساتك */ }
+      // الأهم:
+      if (!p.improvementEdit) {
+        toast('لا تملك صلاحية التعديل', 'error');
+        history.back();
+        throw new Error('NO_EDIT_PERMISSION');
+      }
+    }
+
+    // تحميل الأقسام
+    async function loadDepartments(){
+      try{
+        const hid = effectiveHospitalId();
+        const url = `${API_BASE}/api/departments${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        const list = data.items || data.data || data || [];
+        const select = $('#departmentId');
+        select.innerHTML = '<option value="">اختر القسم</option>';
+        list.forEach(d=>{
+          const o=document.createElement('option');
+          o.value=d.DepartmentID; o.textContent=d.NameAr || d.DepartmentName || d.Name;
+          select.appendChild(o);
+        });
+      }catch(e){ 
+        console.error('Load departments error:', e);
+        toast('تعذّر تحميل الأقسام', 'error'); 
+      }
+    }
+
+    async function loadProject(){
+      if (!projectId) {
+        showError('معرف المشروع غير صحيح');
+        return;
+      }
+
+      loadingEl.classList.remove('hidden');
+      errorEl.classList.add('hidden');
+      formContentEl.classList.add('hidden');
+
+      try {
+        const hid = effectiveHospitalId();
+        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+        
+        const project = await res.json();
+        populateForm(project);
+        
+        loadingEl.classList.add('hidden');
+        formContentEl.classList.remove('hidden');
+        
+      } catch (e) {
+        console.error('Error loading project:', e);
+        showError('فشل في تحميل بيانات المشروع');
+      }
+    }
+
+    function showError(message) {
+      loadingEl.classList.add('hidden');
+      errorEl.classList.remove('hidden');
+      formContentEl.classList.add('hidden');
+      toast(message, 'error');
+    }
+
+    function populateForm(project) {
+      $('#title').value = project.Title || '';
+      $('#departmentId').value = project.DepartmentID || '';
+      $('#status').value = project.Status || 'DRAFT';
+      $('#priority').value = project.Priority || 'MEDIUM';
+      $('#startDate').value = project.StartDate ? project.StartDate.split('T')[0] : '';
+      $('#dueDate').value = project.DueDate ? project.DueDate.split('T')[0] : '';
+      $('#problemStatement').value = project.ProblemStatement || '';
+      $('#aimStatement').value = project.AimStatement || '';
+      $('#successCriteria').value = project.SuccessCriteria || '';
+      $('#teamMembers').value = project.TeamMembers || '';
+      $('#progressNotes').value = project.ProgressNotes || '';
+    }
+
+    // Form submission
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      btnSave.disabled = true;
+      btnSave.textContent = 'جاري الحفظ...';
+
+      try {
+        const formData = new FormData(formEl);
+        const data = Object.fromEntries(formData.entries());
+
+        const hid = effectiveHospitalId();
+        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders()
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+
+        toast('تم حفظ التغييرات بنجاح', 'success');
+        setTimeout(() => {
+          window.location.href = `./view.html?id=${projectId}`;
+        }, 1500);
+
+      } catch (e) {
+        console.error('Error saving project:', e);
+        toast('فشل في حفظ التغييرات', 'error');
+      } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = 'حفظ التغييرات';
+      }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+      await ensureCanEdit();
+      await loadDepartments();
+      await loadProject();
+    });
+  </script>
+
+  <!-- نظام الترجمة -->
+  <script>
+    // بيانات الترجمة
+    const translations = {
+      ar: {
+        'nav-home': 'الرئيسية',
+        'nav-dashboard': 'لوحة التحكم',
+        'nav-profile': 'ملفي الشخصي',
+        'nav-about': 'حول النظام',
+        'nav-help': 'المساعدة',
+        'nav-contact': 'اتصل بنا',
+        'language-button': '🌐 English'
+      },
+      en: {
+        'nav-home': 'Home',
+        'nav-dashboard': 'Dashboard',
+        'nav-profile': 'My Profile',
+        'nav-about': 'About System',
+        'nav-help': 'Help',
+        'nav-contact': 'Contact Us',
+        'language-button': '🌐 العربية'
+      }
+    };
+
+    // الحالة الحالية للغة
+    let currentLanguage = 'ar';
+
+    // دالة تطبيق الترجمة
+    function applyTranslation(lang) {
+      const elements = translations[lang];
+      if (!elements) return;
+
+      // تطبيق الترجمة على جميع العناصر
+      Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = elements[id];
+        }
+      });
+
+      // تغيير اتجاه النص
+      if (lang === 'en') {
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', 'en');
+      } else {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+      }
+
+      currentLanguage = lang;
+    }
+
+    // تهيئة النظام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+      // تطبيق اللغة المحفوظة أو الافتراضية
+      const savedLanguage = localStorage.getItem('selectedLanguage') || 'ar';
+      applyTranslation(savedLanguage);
+      
+      // ربط زر اللغة
+      const languageToggle = document.getElementById('languageToggle');
+      if (languageToggle) {
+        languageToggle.addEventListener('click', function() {
+          const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+          applyTranslation(newLang);
+          localStorage.setItem('selectedLanguage', newLang);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

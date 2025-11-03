@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>مركز الإدارة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../complaints/submit/submit-complaint.css">
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="admin-hub.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">مركز الإدارة</a>
+          <a href="../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
+    <section class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-2">مركز الإدارة</h1>
+      <p class="text-gray-600">إدارة شاملة للنظام</p>
+    </section>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      <!-- إدارة المستشفيات (التجمع) -->
+      <a id="cardAdminClusters" href="admin-hospitals.html"
+         class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
+        <div class="w-16 h-16 mb-4 rounded-full bg-indigo-50 flex items-center justify-center">
+          <svg class="w-8 h-8 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="2" d="M3 21h18M4 21V7a2 2 0 0 1 2-2h4v16M14 21V5h4a2 2 0 0 1 2 2v14"/>
+            <path stroke-width="2" d="M7 10h3M7 14h3M15 9h3M15 13h3M15 17h3"/>
+          </svg>
+        </div>
+        <h3 class="text-xl font-extrabold text-[#002B5B]">إدارة المستشفيات</h3>
+        <p class="text-gray-600 mt-1">إضافة/إدارة المستشفيات في التجمع</p>
+      </a>
+
+      <!-- إدارة المستشفى -->
+      <a id="cardAdminHospital" href="admin-hospital.html"
+         class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
+        <div class="w-16 h-16 mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+          <svg class="w-8 h-8 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="2" d="M3 21h18M5 21V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15"/>
+            <path stroke-width="2" d="M9 8h6M9 12h6M9 16h6"/>
+          </svg>
+        </div>
+        <h3 class="text-xl font-extrabold text-[#002B5B]">إدارة المستشفى</h3>
+        <p class="text-gray-600 mt-1">مستخدمون، صلاحيات، السجلات، المحذوفات</p>
+      </a>
+
+      <!-- إدارة الأقسام -->
+      <a id="cardAdminDepts" href="admin-departments.html"
+         class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
+        <div class="w-16 h-16 mb-4 rounded-full bg-blue-50 flex items-center justify-center">
+          <svg class="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </div>
+        <h3 class="text-xl font-extrabold text-[#002B5B]">إدارة الأقسام</h3>
+        <p class="text-gray-600 mt-1">إضافة وتعديل وحذف الأقسام في المستشفيات</p>
+      </a>
+    </div>
+  </main>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // تأثير تغيير لون الهيدر عند التمرير
+    window.addEventListener("scroll", function () {
+      const navbar = document.getElementById("navbar");
+      if (window.scrollY > 50) {
+        navbar.style.backgroundColor = "#ffffff";
+        navbar.classList.add("shadow-md");
+        navbar.querySelectorAll("a").forEach(link => {
+          link.classList.remove("text-white", "hover:text-blue-200");
+          link.classList.add("text-[#002B5B]", "hover:text-blue-700");
+        });
+      } else {
+        navbar.style.backgroundColor = "#002B5B";
+        navbar.classList.remove("shadow-md");
+        navbar.querySelectorAll("a").forEach(link => {
+          link.classList.add("text-white", "hover:text-blue-200");
+          link.classList.remove("text-[#002B5B]", "hover:text-blue-700");
+        });
+      }
+    });
+
+    // جلب الصلاحيات وإظهار/إخفاء البطاقات
+    (async () => {
+      const API_BASE = window.API_BASE || 'http://localhost:3001';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.warn('⚠️ لا يوجد توكن - لن يتم عرض البطاقات');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me-permissions`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          credentials: 'include'
+        });
+
+        if (!res.ok) {
+          console.error('❌ فشل جلب الصلاحيات:', res.status);
+          return;
+        }
+
+        const p = await res.json();
+        console.log('✅ الصلاحيات:', p);
+
+        // دالة لإظهار/إخفاء البطاقة
+        const show = (id, shouldShow) => {
+          const el = document.getElementById(id);
+          if (!el) {
+            console.warn(`⚠️ العنصر ${id} غير موجود`);
+            return;
+          }
+          if (shouldShow) {
+            el.classList.remove('hidden');
+            el.style.display = '';
+            console.log(`✅ إظهار البطاقة: ${id}`);
+          } else {
+            el.classList.add('hidden');
+            el.style.display = 'none';
+            console.log(`🔒 إخفاء البطاقة: ${id}`);
+          }
+        };
+
+        // التحقق من كون المستخدم مدير التجمع
+        const isCentral = p?.user?.scope === 'central' || p?.user?.HospitalID == null;
+        console.log('🔍 هل مدير التجمع؟', isCentral);
+
+        // إظهار/إخفاء البطاقات حسب الصلاحيات
+        show('cardAdminDepts',    isCentral || p.adminDepartments === true);
+        show('cardAdminHospital', isCentral || p.adminHospital    === true);
+        show('cardAdminClusters', isCentral || p.adminClusters    === true);
+
+      } catch (err) {
+        console.error('❌ خطأ في جلب الصلاحيات:', err);
+      }
+    })();
+  </script>
+
+  <!-- نظام حماية الصفحات -->
+  <script src="../assets/js/auth-check.js"></script>
+</body>
+</html>
+

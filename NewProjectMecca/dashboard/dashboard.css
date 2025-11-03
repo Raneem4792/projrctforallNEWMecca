@@ -1,0 +1,785 @@
+/* ========================================
+   ملف CSS الخاص بلوحة تحكم البلاغات
+   Dashboard CSS File
+   ======================================== */
+
+/* ========================================
+   أنماط تفاصيل المستشفى
+   Hospital Detail Styles
+   ======================================== */
+
+/* إخفاء قسم تفاصيل المستشفى افتراضياً مع تأثير الظهور */
+.hospital-detail { 
+  display: none; 
+  animation: fadeIn .3s ease-in-out; 
+}
+
+/* تأثير الظهور التدريجي */
+@keyframes fadeIn { 
+  from { 
+    opacity: 0; 
+    transform: translateY(20px) 
+  } 
+  to { 
+    opacity: 1; 
+    transform: translateY(0) 
+  } 
+}
+
+/* ========================================
+   شارات الحالة
+   Status Badges
+   ======================================== */
+
+/* شارة الحالة الأساسية */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* شارة الحالة المفتوحة */
+.status-open {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+/* شارة الحالة المغلقة */
+.status-closed {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+/* شارة الحالة قيد المعالجة */
+.status-pending {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* ========================================
+   شارة البلاغات الحمراء
+   Red Alert Badge
+   ======================================== */
+
+/* شارة أعلى بطاقة المستشفى عند وجود بلاغات حمراء */
+.badge-red {
+  position: absolute; 
+  top: 12px; 
+  left: 12px;
+  background: #ef4444; 
+  color: #fff; 
+  font-weight: 700;
+  padding: 6px 10px; 
+  border-radius: 999px; 
+  font-size: 12px;
+  box-shadow: 0 6px 14px rgba(239,68,68,.25);
+  animation: pulse 2.2s infinite;
+}
+
+/* تأثير النبض للشارة الحمراء */
+@keyframes pulse { 
+  0%, 100% { 
+    transform: scale(1) 
+  } 
+  50% { 
+    transform: scale(1.06) 
+  } 
+}
+
+/* ========================================
+   شارات مستوى البلاغ
+   Report Level Pills
+   ======================================== */
+
+/* شارة مستوى البلاغ داخل القوائم */
+.pill { 
+  padding: 4px 10px; 
+  border-radius: 999px; 
+  font-size: 12px; 
+  font-weight: 600 
+}
+
+/* شارة البلاغ الأحمر (حرج) */
+.pill-red { 
+  background: rgba(239,68,68,.08); 
+  color: var(--alert-red, #ef4444); 
+}
+
+/* شارة البلاغ البرتقالي (متوسط) */
+.pill-orange { 
+  background: rgba(245,158,11,.08); 
+  color: var(--alert-orange, #f59e0b); 
+}
+
+/* شارة البلاغ الأصفر (منخفض) */
+.pill-yellow { 
+  background: rgba(234,179,8,.08); 
+  color: var(--alert-yellow, #eab308); 
+}
+
+/* ========================================
+   شارات مستوى الأولوية
+   Priority Level Chips
+   ======================================== */
+
+/* شارة مستوى الأولوية الأساسية */
+.priority-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* شارة الأولوية الحمراء (حرجة) */
+.priority-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* شارة الأولوية البرتقالية (متوسطة) */
+.priority-orange {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+/* شارة الأولوية الصفراء (منخفضة) */
+.priority-yellow {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* ========================================
+   تنسيق عناصر البلاغات
+   Report Items Styling
+   ======================================== */
+
+/* تنسيق بطاقة البلاغ في القائمة */
+.report-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #eef2f7;
+  background: #fff;
+  transition: background-color 0.2s ease;
+}
+
+/* تأثير التمرير على بطاقة البلاغ */
+.report-item:hover {
+  background: #fafafa;
+}
+
+/* الجزء الأيسر من بطاقة البلاغ */
+.report-left .id {
+  font-weight: 700;
+  color: #0f2b59;
+}
+
+.report-left .type {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* الجزء الأيمن من بطاقة البلاغ */
+.report-right {
+  text-align: right;
+}
+
+.report-right .hospital {
+  font-size: 12px;
+  color: #475569;
+}
+
+.report-right .date {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ========================================
+   متغيرات الألوان المخصصة
+   Custom Color Variables
+   ======================================== */
+
+:root {
+  /* ألوان التنبيه */
+  --alert-red: #ef4444;
+  --alert-orange: #f59e0b;
+  --alert-yellow: #eab308;
+  
+  /* الألوان الأساسية */
+  --primary-blue: #002B5B;
+  --secondary-blue: #004A9F;
+  --accent-green: #0FA47A;
+  
+  /* ألوان الخلفية */
+  --bg-light: #f8fafc;
+  --bg-white: #ffffff;
+  --bg-gray: #f1f5f9;
+}
+
+/* ========================================
+   تحسينات الاستجابة
+   Responsive Improvements
+   ======================================== */
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 768px) {
+  .badge-red {
+    top: 8px;
+    left: 8px;
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+  
+  .pill {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .priority-chip {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .report-item {
+    padding: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .report-right {
+    text-align: left;
+    width: 100%;
+  }
+}
+
+/* تحسينات للشاشات المتوسطة */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hospital-detail {
+    padding: 2rem 0;
+  }
+  
+  .report-item {
+    padding: 10px;
+  }
+}
+
+/* ========================================
+   تأثيرات إضافية
+   Additional Effects
+   ======================================== */
+
+/* تأثير التمرير السلس للبطاقات */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* تأثيرات خاصة للعدادات في الكروت */
+.card-hover .counter {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.card-hover:hover .counter {
+  transform: scale(1.1);
+  color: var(--primary-blue);
+}
+
+/* تأثير التمرير على الأزرار */
+.filter-btn {
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   تحسينات الطباعة
+   Print Styles
+   ======================================== */
+
+@media print {
+  .badge-red,
+  .filter-btn,
+  .card-hover:hover {
+    box-shadow: none;
+    transform: none;
+  }
+  
+  .hospital-detail {
+    display: block !important;
+  }
+  
+  .report-item {
+    border: 1px solid #000;
+    background: #fff !important;
+  }
+}
+
+/* ========================================
+   تمييز الأكثر تكرارًا
+   Most Frequent Highlighting
+   ======================================== */
+
+/* الصف الأكثر تكرارًا - أحمر غامق أنيق بحواف ناعمة */
+.highlight-row {
+  background-color: #b91c1c !important; /* أحمر غامق */
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 50px; /* حواف دائرية بالكامل */
+  box-shadow: 0 4px 15px rgba(185, 28, 28, 0.5);
+  transition: all 0.3s ease;
+  overflow: hidden; /* يمنع بروز الظل عن الحواف */
+}
+
+.highlight-row td {
+  color: #fff !important;
+  border: none !important;
+}
+
+.highlight-row:hover {
+  transform: none; /* لا يتحرك */
+  box-shadow: 0 6px 20px rgba(185, 28, 28, 0.7);
+}
+
+/* تمييز البطاقة */
+.highlight-box {
+  position: relative;
+  border: 2px solid #b91c1c !important;
+  box-shadow: 0 0 25px rgba(185, 28, 28, 0.6);
+  transform: scale(1.03);
+  transition: all 0.3s ease;
+  background: linear-gradient(145deg, #7f1d1d, #b91c1c) !important;
+  color: white !important;
+}
+
+.highlight-box * {
+  color: white !important;
+}
+
+.highlight-box .pill {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.highlight-box a {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.highlight-box a:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.highlight-box:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(185, 28, 28, 0.8);
+}
+
+/* شارة "الأكثر تكرارًا" */
+.highlight-box .top-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ef4444;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* ========================================
+   تمييز الأكثر تكرارًا - النسخة الخضراء (البلاغات المغلقة)
+   Most Frequent Highlighting - Green Version (Closed Reports)
+   ======================================== */
+
+/* تمييز الصف الأكثر تكرارًا - أخضر */
+.highlight-row-green {
+  background-color: #059669 !important; /* أخضر غامق */
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 50px; /* حواف دائرية بالكامل */
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.5);
+  transition: all 0.3s ease;
+  overflow: hidden; /* يمنع بروز الظل عن الحواف */
+}
+
+.highlight-row-green td {
+  color: #fff !important;
+  border: none !important;
+}
+
+.highlight-row-green:hover {
+  transform: none; /* لا يتحرك */
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.7);
+}
+
+/* تمييز البطاقة - أخضر */
+.highlight-box-green {
+  position: relative;
+  border: 2px solid #059669 !important;
+  box-shadow: 0 0 25px rgba(5, 150, 105, 0.6);
+  transform: scale(1.03);
+  transition: all 0.3s ease;
+  background: linear-gradient(145deg, #047857, #059669) !important;
+  color: white !important;
+}
+
+.highlight-box-green * {
+  color: white !important;
+}
+
+.highlight-box-green .pill {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.highlight-box-green a {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.highlight-box-green a:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.highlight-box-green:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(5, 150, 105, 0.8);
+}
+
+/* شارة "الأكثر تكرارًا" - أخضر */
+.highlight-box-green .top-badge-green {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #10b981;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* شارة البلاغات الخضراء (مغلقة) */
+.pill-green {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+}
+
+/* ========================================
+   تمييز الأكثر تكرارًا - النسخة البرتقالية (البلاغات المفتوحة)
+   Most Frequent Highlighting - Orange Version (Open Reports)
+   ======================================== */
+
+/* الصف الأكثر تكرارًا (Open) - برتقالي مع حواف دائرية */
+.highlight-row-open {
+  background-color: #9a3412 !important; /* برتقالي غامق */
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 50px;
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+  transition: all .2s ease;
+  overflow: hidden;
+}
+
+.highlight-row-open td { 
+  color:#fff !important; 
+  border:none !important; 
+}
+
+.highlight-row-open:hover {
+  transform: none;
+  box-shadow: 0 8px 22px rgba(234, 88, 12, 0.55);
+}
+
+/* ========================================
+   تمييز الأكثر تكرارًا - النسخة الزرقاء (إجمالي البلاغات)
+   Most Frequent Highlighting - Blue Version (Total Reports)
+   ======================================== */
+
+/* الصف الأعلى تكرارًا في إجمالي البلاغات (أزرق) */
+.highlight-row-total{
+  background-color:#1e40af !important;
+  color:#fff !important;
+  font-weight:600;
+  border-radius:50px;
+  box-shadow:0 6px 18px rgba(30,64,175,.45);
+  transition: all .2s ease;
+  overflow: hidden;
+}
+
+.highlight-row-total td{ 
+  color:#fff !important; 
+  border:none !important; 
+}
+
+.highlight-row-total:hover {
+  transform: none;
+  box-shadow: 0 8px 22px rgba(30,64,175,.55);
+}
+
+/* ========================================
+   بطاقات البلاغات - تمييز البلاغ الحرج
+   Report Cards - Critical Report Styling
+   ======================================== */
+
+/* كرت عام لبلاغ */
+.card-report {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: #fff;
+  transition: background .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+/* كرت البلاغ الحرج = أحمر بالكامل */
+.card-critical {
+  background: #b91c1c !important;        /* أحمر غامق */
+  border-color: #991b1b !important;
+  color: #fff !important;
+  box-shadow: 0 6px 18px rgba(185, 28, 28, 0.35);
+}
+
+.card-critical:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(185, 28, 28, 0.45);
+}
+
+/* تأكد أن كل النص داخلها أبيض وواضح */
+.card-critical * {
+  color: #fff !important;
+}
+
+/* الشارة داخل الكرت الأحمر تكون شفافة وحدها أبيض */
+.card-critical .pill,
+.card-critical .cat-chip {
+  background: rgba(255,255,255,.15) !important;
+  border: 1px solid rgba(255,255,255,.35) !important;
+  color: #fff !important;
+}
+
+/* لون النقطة داخل الشارة على الأحمر */
+.card-critical .dot {
+  background: #fff !important;
+}
+
+/* ==== Weekly board layout helpers ==== */
+#weekly-937-board h3 { font-size: 1.05rem; }
+#weekly-937-board .shadow { box-shadow: 0 10px 24px rgba(0,0,0,.06); }
+
+/* ========================================
+   تصغير محتوى بطاقات الإحصائيات
+   Statistics Cards Content Sizing
+   ======================================== */
+
+/* 🎯 تصغير محتوى بطاقات الإحصائيات أكثر */
+.card-hover .counter {
+  font-size: 1.3rem !important;
+}
+
+.card-hover .text-gray-600 {
+  font-size: 0.85rem !important;
+}
+
+.card-hover .text-sm {
+  font-size: 0.7rem !important;
+}
+
+.card-hover .service-icon {
+  width: 48px !important;
+  height: 48px !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.card-hover svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+/* توازن التباعد العام */
+.grid.md\:grid-cols-2.lg\:grid-cols-6.gap-6 {
+  gap: 1.25rem !important;
+}
+
+/* 🔹 تصغير بطاقات الإحصائيات لأقصى حد متناسق */
+.card-hover {
+  padding: 0.75rem !important;
+  min-width: 120px;
+}
+
+.card-hover .service-icon {
+  width: 40px !important;
+  height: 40px !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.card-hover .counter {
+  font-size: 1.1rem !important;
+}
+
+.card-hover .text-gray-600 {
+  font-size: 0.8rem !important;
+}
+
+.card-hover .text-xs {
+  font-size: 0.7rem !important;
+}
+
+.card-hover svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.grid.md\:grid-cols-3.lg\:grid-cols-6.gap-3 {
+  gap: 0.75rem !important;
+}
+
+/* ========================================
+   تحسينات صفحة التقارير المضغوطة
+   Reports Page Compact Styling
+   ======================================== */
+
+.card-hover { 
+  padding: 1.25rem !important; 
+}
+
+.card-hover h3 { 
+  font-size: 1.1rem !important; 
+}
+
+.card-hover .p-8 { 
+  padding: 1.25rem !important; 
+}
+
+canvas { 
+  /* تخلي الرسوم تستجيب بدون فراغات كبيرة */
+  display: block; 
+  width: 100% !important; 
+  height: auto;
+}
+
+/* ========================================
+   تقليل الفراغ العلوي في صفحة التقارير
+   Reports Header Spacing
+   ======================================== */
+
+.reports-header {
+  padding-top: 2rem !important;  /* بدل 4rem القديمة */
+  margin-top: 0 !important;
+}
+
+/* ========================================
+   تحسينات الداشبورد الأسبوعي (نمط جازان)
+   Weekly Dashboard Improvements (Jazan Style)
+   ======================================== */
+
+#wk-funnel, #wk-depts {
+  height: 280px !important;
+}
+
+#wk-funnel + canvas, #wk-depts + canvas {
+  margin-top: 0 !important;
+}
+
+/* ========================================
+   تحسينات الرسم الدائري للمستشفيات
+   Hospitals Pie Chart Improvements
+   ======================================== */
+
+#hospitals-chart {
+  max-height: 360px !important;
+  margin: 0 auto;
+}
+
+/* ========================================
+   تحسين مظهر شريط الفلاتر
+   Filters Bar Styling
+   ======================================== */
+
+#apply-filters {
+  background: linear-gradient(90deg, #004A9F, #0FA47A);
+  border: none;
+}
+#apply-filters:hover {
+  opacity: 0.9;
+}
+select {
+  background-color: #f9fafb;
+}
+
+/* ========================================
+   رفع عنوان الإحصائيات والكروت
+   Statistics Title and Cards Positioning
+   ======================================== */
+
+.mesh-gradient {
+  padding-top: 1rem !important;  /* بدل 2rem */
+  padding-bottom: 2.5rem !important;
+}
+
+.mesh-gradient .grid {
+  margin-top: -0.75rem !important; /* رفع الكروت شوي */
+}
+
+/* ========================================
+   🔴 تمييز الأقسام أو المستشفيات ذات البلاغات الحرجة
+   Critical Departments/Hospitals Highlighting
+   ======================================== */
+
+/* تمييز الرسم البياني الذي يحتوي على أقسام حرجة */
+.chart-bar-red {
+  border: 2px solid #b91c1c !important;
+  box-shadow: 0 0 18px rgba(185, 28, 28, 0.6);
+  background: rgba(185, 28, 28, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* تمييز الصفوف الحمراء في الجدول */
+.table-row-red {
+  background-color: #fee2e2 !important;
+  color: #b91c1c !important;
+  font-weight: bold;
+}
+
+.table-row-red:hover {
+  background-color: #fecaca !important;
+}
+
+/* تمييز الصفوف البرتقالية (متكررة) */
+.table-row-orange {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+  font-weight: 600;
+}
+
+.table-row-orange:hover {
+  background-color: #fed7aa !important;
+}
+
+/* تمييز الصفوف الخضراء (طبيعية) */
+.table-row-green {
+  background-color: #f0fdf4 !important;
+  color: #166534 !important;
+}
+
+.table-row-green:hover {
+  background-color: #dcfce7 !important;
+}

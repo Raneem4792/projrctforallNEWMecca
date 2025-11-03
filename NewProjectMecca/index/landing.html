@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>منصة البلاغات – الصفحة الرئيسية</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body class="bg-white" style="font-family:'Tajawal',sans-serif">
+
+  <!-- الهيدر (يتحوّل عند التمرير + زر تسجيل دخول) -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="landing.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="#features" id="nav-features" class="text-white hover:text-blue-200 transition-colors">ماذا نقدم؟</a>
+          <a href="#how" id="nav-how" class="text-white hover:text-blue-200 transition-colors">كيف يعمل؟</a>
+          <a href="#contact" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">تواصل</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="pt-28 pb-20 hero-gradient">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div class="animate-fade-in-up">
+          <h1 id="hero-title" class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            منصة رسمية لتقديم ومتابعة البلاغات
+          </h1>
+          <p id="hero-subtitle" class="text-lg text-gray-600 mb-8">بلّغ، تابع، وتلقَّ الحل — بسرعة وشفافية.</p>
+
+          <div class="flex items-center gap-3">
+            <!-- زر إنشاء حساب -->
+            <a href="../public/auth/signup.html"
+               id="signup-btn"
+               class="px-6 py-3 rounded-xl bg-[#002B5B] text-white font-semibold hover:bg-[#013b7a] shadow-md transition">
+              إنشاء حساب
+            </a>
+
+            <!-- زر تسجيل دخول -->
+            <a href="../public/auth/login.html"
+               id="login-btn"
+               class="px-6 py-3 rounded-xl border border-[#002B5B] text-[#002B5B] font-semibold hover:bg-blue-50 transition">
+              تسجيل دخول
+            </a>
+          </div>
+
+          <p id="hero-description" class="text-sm text-gray-500 mt-3">
+            سجّل حساب جديد أو ادخل بحسابك لبدء استخدام النظام.
+          </p>
+        </div>
+
+        <div class="flex justify-center animate-fade-in-up">
+          <div class="w-56 h-56 bg-blue-50 rounded-full flex items-center justify-center shadow-sm">
+            <svg class="w-32 h-32 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+              <path d="M14 2v6h6"/>
+              <path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ماذا نقدم -->
+  <section id="features" class="py-16 bg-white">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-12">
+        <h2 id="features-title" class="text-3xl font-bold text-gray-900 mb-3">ماذا تقدم المنصة؟</h2>
+        <p id="features-subtitle" class="text-gray-600">خدمات متكاملة لكل من المستفيدين والإدارات</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="landing-card bg-white rounded-xl p-7 shadow-lg">
+          <div class="landing-icon w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" d="M12 6v12M6 12h12"/>
+            </svg>
+          </div>
+          <h3 id="feature1-title" class="text-xl font-bold text-center mb-2">تقديم بلاغ</h3>
+          <p id="feature1-desc" class="text-gray-600 text-center">واجهة بسيطة لرفع البلاغات مع المرفقات وتتبعها.</p>
+        </div>
+
+        <div class="landing-card bg-white rounded-xl p-7 shadow-lg">
+          <div class="landing-icon w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/>
+            </svg>
+          </div>
+          <h3 id="feature2-title" class="text-xl font-bold text-center mb-2">متابعة الحالة</h3>
+          <p id="feature2-desc" class="text-gray-600 text-center">اطّلع على المستجدات والإشعارات حتى الإغلاق.</p>
+        </div>
+
+        <div class="landing-card bg-white rounded-xl p-7 shadow-lg">
+          <div class="landing-icon w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" d="M3 3h18v14H3zM7 21h10"/>
+            </svg>
+          </div>
+          <h3 id="feature3-title" class="text-xl font-bold text-center mb-2">لوحات وتقارير</h3>
+          <p id="feature3-desc" class="text-gray-600 text-center">مؤشرات فورية وإحصائيات لأقسام وتجميعات مختلفة.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- كيف يعمل -->
+  <section id="how" class="py-16" style="background-color:#F7FAFC;">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-10">
+        <h2 id="how-title" class="text-3xl font-bold text-gray-900 mb-3">كيف يعمل النظام؟</h2>
+        <p id="how-subtitle" class="text-gray-600">٣ خطوات بسيطة</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="landing-card bg-white rounded-xl p-6 shadow text-center">
+          <div class="step-number w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 font-bold">1</div>
+          <h3 id="step1-title" class="font-bold mb-2">تسجيل الدخول</h3>
+          <p id="step1-desc" class="text-gray-600">ادخل بحسابك المؤسسي للوصول لكل الأدوات.</p>
+        </div>
+        <div class="landing-card bg-white rounded-xl p-6 shadow text-center">
+          <div class="step-number w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 font-bold">2</div>
+          <h3 id="step2-title" class="font-bold mb-2">تقديم أو معالجة البلاغ</h3>
+          <p id="step2-desc" class="text-gray-600">رفع البلاغ أو إسناده والرد عليه حسب الصلاحيات.</p>
+        </div>
+        <div class="landing-card bg-white rounded-xl p-6 shadow text-center">
+          <div class="step-number w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 font-bold">3</div>
+          <h3 id="step3-title" class="font-bold mb-2">المتابعة والإغلاق</h3>
+          <p id="step3-desc" class="text-gray-600">متابعة مؤتمتة وإشعارات حتى الإغلاق والتقارير.</p>
+        </div>
+      </div>
+
+      <div class="text-center mt-10">
+        <a href="../public/auth/signup.html"
+           id="cta-signup-btn"
+           class="cta-button landing-btn px-7 py-3 rounded-xl text-white font-semibold shadow-md transition">
+          إنشاء حساب
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- تواصل -->
+  <section id="contact" class="py-12">
+    <div class="container mx-auto px-4 text-center text-gray-600">
+      <span id="contact-info">للدعم: 0559735137 — support@makkahhealth.gov.sa</span>
+    </div>
+  </section>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div id="footer-org-name" class="font-bold">تجمع مكة الصحي</div>
+              <div id="footer-system-name" class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p id="footer-description" class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 id="footer-links-title" class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="index.html" id="footer-link-home" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../public/complaints/submit/submit-complaint.html" id="footer-link-submit" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../public/complaints/track/track-complaint.html" id="footer-link-track" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="help.html" id="footer-link-faq" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 id="footer-contact-title" class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span id="footer-support-number">رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span id="footer-support-number-2">رقم الدعم: 0542282550</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span id="footer-support-email">support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span id="footer-working-hours">ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        <span id="footer-copyright">© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- سكربت تغيير لون الهيدر عند التمرير -->
+  <script>
+    window.addEventListener("scroll", function () {
+      const navbar = document.getElementById("navbar");
+      const links = navbar.querySelectorAll("a");
+      if (window.scrollY > 50) {
+        navbar.style.backgroundColor = "#ffffff";
+        navbar.classList.add("shadow-md");
+        links.forEach(a => { a.classList.remove("text-white","hover:text-blue-200"); a.classList.add("text-[#002B5B]","hover:text-blue-700"); });
+      } else {
+        navbar.style.backgroundColor = "#002B5B";
+        navbar.classList.remove("shadow-md");
+        links.forEach(a => { a.classList.add("text-white","hover:text-blue-200"); a.classList.remove("text-[#002B5B]","hover:text-blue-700"); });
+      }
+    });
+  </script>
+
+  <!-- Translation System - نظام الترجمة -->
+  <script>
+    // بيانات الترجمة
+    const translations = {
+      ar: {
+        // الهيدر
+        'nav-home': 'الرئيسية',
+        'nav-features': 'ماذا نقدم؟',
+        'nav-how': 'كيف يعمل؟',
+        'nav-contact': 'تواصل',
+        'language-button': '🌐 English',
+        
+        // العنوان الرئيسي
+        'hero-title': 'منصة رسمية لتقديم ومتابعة البلاغات',
+        'hero-subtitle': 'بلّغ، تابع، وتلقَّ الحل — بسرعة وشفافية.',
+        'hero-description': 'سجّل حساب جديد أو ادخل بحسابك لبدء استخدام النظام.',
+        'signup-btn': 'إنشاء حساب',
+        'login-btn': 'تسجيل دخول',
+        
+        // ماذا نقدم
+        'features-title': 'ماذا تقدم المنصة؟',
+        'features-subtitle': 'خدمات متكاملة لكل من المستفيدين والإدارات',
+        'feature1-title': 'تقديم بلاغ',
+        'feature1-desc': 'واجهة بسيطة لرفع البلاغات مع المرفقات وتتبعها.',
+        'feature2-title': 'متابعة الحالة',
+        'feature2-desc': 'اطّلع على المستجدات والإشعارات حتى الإغلاق.',
+        'feature3-title': 'لوحات وتقارير',
+        'feature3-desc': 'مؤشرات فورية وإحصائيات لأقسام وتجميعات مختلفة.',
+        
+        // كيف يعمل
+        'how-title': 'كيف يعمل النظام؟',
+        'how-subtitle': '٣ خطوات بسيطة',
+        'step1-title': 'تسجيل الدخول',
+        'step1-desc': 'ادخل بحسابك المؤسسي للوصول لكل الأدوات.',
+        'step2-title': 'تقديم أو معالجة البلاغ',
+        'step2-desc': 'رفع البلاغ أو إسناده والرد عليه حسب الصلاحيات.',
+        'step3-title': 'المتابعة والإغلاق',
+        'step3-desc': 'متابعة مؤتمتة وإشعارات حتى الإغلاق والتقارير.',
+        'cta-signup-btn': 'إنشاء حساب',
+        
+        // التواصل
+        'contact-info': 'للدعم: 0559735137 — support@makkahhealth.gov.sa',
+        
+        // الفوتير
+        'footer-org-name': 'تجمع مكة الصحي',
+        'footer-system-name': 'نظام البلاغات',
+        'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+        'footer-links-title': 'روابط سريعة',
+        'footer-link-home': 'الرئيسية',
+        'footer-link-submit': 'تقديم بلاغ',
+        'footer-link-track': 'متابعة بلاغ',
+        'footer-link-faq': 'الأسئلة الشائعة',
+        'footer-contact-title': 'معلومات التواصل',
+        'footer-support-number': 'رقم الدعم: 0559735137',
+        'footer-support-number-2': 'رقم الدعم: 0542282550',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'ساعات العمل: 24/7',
+        'footer-copyright': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة'
+      },
+      en: {
+        // الهيدر
+        'nav-home': 'Home',
+        'nav-features': 'What We Offer?',
+        'nav-how': 'How It Works?',
+        'nav-contact': 'Contact',
+        'language-button': '🌐 العربية',
+        
+        // العنوان الرئيسي
+        'hero-title': 'Official Platform for Filing and Tracking Complaints',
+        'hero-subtitle': 'Report, Track, and Get Solutions — Fast and Transparent.',
+        'hero-description': 'Create a new account or sign in to start using the system.',
+        'signup-btn': 'Create Account',
+        'login-btn': 'Sign In',
+        
+        // ماذا نقدم
+        'features-title': 'What Does the Platform Offer?',
+        'features-subtitle': 'Comprehensive services for beneficiaries and administrations',
+        'feature1-title': 'File Complaint',
+        'feature1-desc': 'Simple interface to submit complaints with attachments and tracking.',
+        'feature2-title': 'Track Status',
+        'feature2-desc': 'Stay updated with notifications until closure.',
+        'feature3-title': 'Dashboards & Reports',
+        'feature3-desc': 'Real-time indicators and statistics for different departments and clusters.',
+        
+        // كيف يعمل
+        'how-title': 'How Does the System Work?',
+        'how-subtitle': '3 Simple Steps',
+        'step1-title': 'Sign In',
+        'step1-desc': 'Access with your institutional account to use all tools.',
+        'step2-title': 'Submit or Process Complaint',
+        'step2-desc': 'Submit complaint or assign and respond based on permissions.',
+        'step3-title': 'Follow-up and Closure',
+        'step3-desc': 'Automated follow-up and notifications until closure and reports.',
+        'cta-signup-btn': 'Create Account',
+        
+        // التواصل
+        'contact-info': 'Support: 0559735137 — support@makkahhealth.gov.sa',
+        
+        // الفوتير
+        'footer-org-name': 'Makkah Health Cluster',
+        'footer-system-name': 'Complaint System',
+        'footer-description': 'Official platform for filing and tracking complaints',
+        'footer-links-title': 'Quick Links',
+        'footer-link-home': 'Home',
+        'footer-link-submit': 'Submit Complaint',
+        'footer-link-track': 'Track Complaint',
+        'footer-link-faq': 'FAQ',
+        'footer-contact-title': 'Contact Information',
+        'footer-support-number': 'Support Number: 0559735137',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'Working Hours: 24/7',
+        'footer-copyright': '© 2025 Makkah Health Cluster – All Rights Reserved'
+      }
+    };
+
+    // الحالة الحالية للغة
+    let currentLanguage = 'ar';
+
+    // دالة تطبيق الترجمة
+    function applyTranslation(lang) {
+      const elements = translations[lang];
+      if (!elements) return;
+
+      // تطبيق الترجمة على جميع العناصر
+      Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = elements[id];
+        }
+      });
+
+      // تغيير اتجاه النص
+      if (lang === 'en') {
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', 'en');
+        // تغيير محاذاة النصوص
+        document.querySelectorAll('section').forEach(el => {
+          el.classList.remove('text-right');
+          el.classList.add('text-left');
+        });
+      } else {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+        // استعادة محاذاة النصوص للعربية
+        document.querySelectorAll('section').forEach(el => {
+          el.classList.remove('text-left');
+          el.classList.add('text-right');
+        });
+      }
+
+      currentLanguage = lang;
+    }
+
+    // تهيئة النظام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+      // تطبيق اللغة المحفوظة أو الافتراضية
+      const savedLanguage = localStorage.getItem('selectedLanguage') || 'ar';
+      applyTranslation(savedLanguage);
+      
+      // ربط زر اللغة
+      const languageToggle = document.getElementById('languageToggle');
+      if (languageToggle) {
+        languageToggle.addEventListener('click', function() {
+          const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+          applyTranslation(newLang);
+          localStorage.setItem('selectedLanguage', newLang);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

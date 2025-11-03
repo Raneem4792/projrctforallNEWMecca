@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>إدارة المستشفيات</title>
+  <link rel="icon" href="../assets/img/logo.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="admin-hub.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">مركز الإدارة</a>
+          <a href="../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
+    <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-extrabold text-[#002B5B]">إدارة المستشفيات</h2>
+        <p class="text-sm text-gray-600">إضافة وتعديل وحذف مستشفيات التجمع</p>
+      </div>
+      <a id="btnAddHospital" href="hospital-new.html" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition flex items-center" style="display: none;">
+        + إضافة مستشفى جديد
+      </a>
+    </div>
+
+    <!-- قائمة المستشفيات -->
+    <div id="hospitals-empty" class="col-span-3 text-center text-red-600" style="display: none;">تعذر تحميل المستشفيات</div>
+    <div id="hospitalsList" class="grid md:grid-cols-3 sm:grid-cols-2 gap-4"></div>
+  </main>
+
+  <script>
+    const list = document.getElementById('hospitalsList');
+
+    // تحديد عنوان API حسب البيئة
+    const API_BASE = 
+      location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : ''; // للإنتاج مع Nginx/Proxy
+
+    function authHeaders(){
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+      return token ? { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      } : { 'Content-Type': 'application/json' };
+    }
+
+    // فحص صلاحية إضافة مستشفى وإظهار/إخفاء الزر
+    async function checkCreateHospitalPermission() {
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/api/auth/me-permissions`, {
+          headers: {
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include'
+        });
+        
+        if (!res.ok) {
+          console.warn('فشل التحقق من الصلاحيات');
+          return;
+        }
+        
+        const data = await res.json();
+        const canCreate = data?.canCreateHospital === true;
+        
+        const btn = document.getElementById('btnAddHospital');
+        if (btn && canCreate) {
+          btn.style.display = 'flex';
+        }
+      } catch (err) {
+        console.error('خطأ في فحص الصلاحيات:', err);
+      }
+    }
+
+    async function loadHospitals(){
+      const emptyEl = document.getElementById('hospitals-empty');
+      let data;
+
+      try{
+        const res = await fetch(`${API_BASE}/api/hospitals`, { 
+          headers: authHeaders(),
+          cache: 'no-store' // منع الكاش أثناء التطوير
+        });
+        
+        if (res.status === 304) {
+          data = []; // ما في جسم للرد – لا تكرّش
+        } else {
+          // حاول تقرأ JSON بأمان
+          try { 
+            data = await res.json(); 
+          } catch { 
+            data = []; 
+          }
+        }
+      }catch(e){
+        console.error('fetch /api/hospitals failed:', e);
+        data = [];
+      }
+
+      // طبّق كل الأشكال المحتملة وأخرج Array
+      const hospitals = Array.isArray(data) ? data
+                   : Array.isArray(data?.hospitals) ? data.hospitals
+                   : Array.isArray(data?.data) ? data.data
+                   : Array.isArray(data?.items) ? data.items
+                   : [];
+
+      renderHospitals(hospitals);
+    }
+
+    function renderHospitals(hospitals){
+      const emptyEl = document.getElementById('hospitals-empty');
+      
+      if (!Array.isArray(hospitals) || hospitals.length === 0) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        list.innerHTML = '';
+        return;
+      }
+
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      list.innerHTML = hospitals.map(h=>`
+        <div class="bg-white rounded-2xl p-5 shadow border border-gray-100 flex flex-col justify-between">
+          <div>
+            <div class="font-bold text-[#002B5B] text-lg">${h.NameAr || h.NameEn || '—'}</div>
+            <div class="text-sm text-gray-600 mb-2">الكود: ${h.Code || ''} • ${h.CityAr || h.CityEn || '-'} - ${h.RegionAr || h.RegionEn || '-'}</div>
+            <div class="inline-flex items-center text-xs ${h.IsActive ? 'text-green-600' : 'text-gray-500'}">
+              ${h.IsActive ? 'مفعّل' : 'غير مفعّل'}
+            </div>
+          </div>
+          <div class="mt-4 flex gap-2 justify-end">
+            <a href="javascript:void(0)" onclick="openEdit(${h.HospitalID})"
+               class="text-sm px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center gap-1">
+              ✏️ تعديل
+            </a>
+            <button onclick="deleteHospital(${h.HospitalID})"
+                    class="text-sm px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center gap-1">
+              🗑️ حذف
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function deleteHospital(id){
+      if(!confirm('هل أنت متأكد من حذف هذا المستشفى؟')) return;
+      try{
+        const res = await fetch(`${API_BASE}/api/hospitals/${id}`, { 
+          method:'DELETE', 
+          headers: authHeaders(),
+          cache: 'no-store'
+        });
+        if(!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'HTTP '+res.status);
+        }
+        await loadHospitals(); // إعادة التحميل بعد الحذف
+      }catch(err){
+        alert('حدث خطأ أثناء الحذف: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    // تحميل المستشفيات وفحص الصلاحيات عند فتح الصفحة
+    checkCreateHospitalPermission();
+    loadHospitals();
+  </script>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="../complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="../complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+
+  <!-- Overlay + Modal - v2.0 - جميع الحقول -->
+  <div id="editModal" class="fixed inset-0 z-50 hidden">
+    <!-- overlay -->
+    <div class="absolute inset-0 bg-black/40" onclick="closeEdit()"></div>
+
+    <!-- card -->
+    <div class="absolute inset-x-0 top-16 mx-auto w-[min(1000px,95vw)] rounded-2xl bg-white shadow-xl" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="text-lg font-bold text-[#002B5B]">تعديل بيانات المستشفى</h3>
+        <button class="text-gray-500 hover:text-gray-700" onclick="closeEdit()">✕</button>
+      </div>
+
+      <form id="editForm" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4" onsubmit="saveEdit(event)">
+        <input type="hidden" id="f_HospitalID">
+
+        <div>
+          <label class="block text-sm mb-1">الاسم (عربي)</label>
+          <input id="f_NameAr" class="w-full rounded-xl border px-3 py-2" required>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">الاسم (إنجليزي)</label>
+          <input id="f_NameEn" class="w-full rounded-xl border px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">المدينة (ع)</label>
+          <input id="f_CityAr" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">المدينة (En)</label>
+          <input id="f_CityEn" class="w-full rounded-xl border px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">المنطقة (ع)</label>
+          <input id="f_RegionAr" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">المنطقة (En)</label>
+          <input id="f_RegionEn" class="w-full rounded-xl border px-3 py-2">
+        </div>
+
+        <!-- الحقول العامة -->
+        <div>
+          <label class="block text-sm mb-1">المدينة</label>
+          <input id="f_City" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">المنطقة</label>
+          <input id="f_Region" class="w-full rounded-xl border px-3 py-2">
+        </div>
+
+        <!-- التواصل -->
+        <div>
+          <label class="block text-sm mb-1">البريد الإلكتروني</label>
+          <input id="f_Email" type="email" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">الهاتف</label>
+          <input id="f_Phone" class="w-full rounded-xl border px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm mb-1">النطاق (Domain)</label>
+          <input id="f_Domain" class="w-full rounded-xl border px-3 py-2" placeholder="example.com">
+        </div>
+
+        <div>
+          <label class="block text-sm mb-1">الكود</label>
+          <input id="f_Code" class="w-full rounded-xl border px-3 py-2" maxlength="20" required>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">ترتيب العرض</label>
+          <input id="f_SortOrder" type="number" class="w-full rounded-xl border px-3 py-2" min="0" value="100">
+        </div>
+
+        <!-- حالات التفعيل -->
+        <div class="flex items-center gap-3">
+          <input id="f_IsActive" type="checkbox" class="h-4 w-4">
+          <label for="f_IsActive" class="text-sm">مفعّل</label>
+        </div>
+
+        <div class="col-span-1 md:col-span-2 flex justify-end gap-3 pt-2">
+          <button type="button" class="px-4 py-2 rounded-xl border" onclick="closeEdit()">إلغاء</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-[#0ea5e9] text-white hover:bg-[#0284c7]">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast صغير -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 hidden px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm shadow-lg z-[60]">
+    تم الحفظ بنجاح
+  </div>
+
+  <script>
+    const modal = document.getElementById('editModal');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg='تم الحفظ بنجاح') {
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(()=> toast.classList.add('hidden'), 1800);
+    }
+
+    function openEdit(id){
+      // حمّلي البيانات من الـ API ثم افتحي المودال
+      fetch(`${API_BASE}/api/hospitals/${id}`, { 
+        headers: authHeaders(),
+        cache: 'no-store'
+      })
+        .then(r=> {
+          if (r.status === 304) {
+            return {}; // ما في جسم للرد
+          }
+          return r.ok ? r.json() : Promise.reject(r.status);
+        })
+        .then(data => {
+          // تعامل مع مختلف أشكال البيانات
+          const h = data?.data || data || {};
+          
+          // عبّي الحقول
+          document.getElementById('f_HospitalID').value = h.HospitalID || '';
+          document.getElementById('f_NameAr').value     = h.NameAr || '';
+          document.getElementById('f_NameEn').value     = h.NameEn || '';
+          document.getElementById('f_CityAr').value     = h.CityAr || '';
+          document.getElementById('f_CityEn').value     = h.CityEn || '';
+          document.getElementById('f_RegionAr').value   = h.RegionAr || '';
+          document.getElementById('f_RegionEn').value   = h.RegionEn || '';
+          document.getElementById('f_City').value       = h.City || '';
+          document.getElementById('f_Region').value     = h.Region || '';
+          document.getElementById('f_Email').value      = h.Email || '';
+          document.getElementById('f_Phone').value      = h.Phone || '';
+          document.getElementById('f_Domain').value     = h.Domain || '';
+          document.getElementById('f_Code').value       = h.Code || '';
+          document.getElementById('f_SortOrder').value  = h.SortOrder ?? 100;
+          document.getElementById('f_IsActive').checked = !!h.IsActive;
+
+          modal.classList.remove('hidden');
+          // تركيز أول خانة
+          setTimeout(()=> document.getElementById('f_NameAr').focus(), 50);
+        })
+        .catch(err => {
+          console.error('openEdit error', err);
+          alert('تعذر تحميل بيانات المستشفى');
+        });
+    }
+
+    function closeEdit(){
+      modal.classList.add('hidden');
+    }
+
+    // ESC يغلق المودال
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && !modal.classList.contains('hidden')) closeEdit();
+    });
+
+    async function saveEdit(e){
+      e.preventDefault();
+      const id = document.getElementById('f_HospitalID').value;
+
+      const payload = {
+        NameAr:   document.getElementById('f_NameAr').value.trim(),
+        NameEn:   document.getElementById('f_NameEn').value.trim(),
+        CityAr:   document.getElementById('f_CityAr').value.trim(),
+        CityEn:   document.getElementById('f_CityEn').value.trim(),
+        RegionAr: document.getElementById('f_RegionAr').value.trim(),
+        RegionEn: document.getElementById('f_RegionEn').value.trim(),
+        City:     document.getElementById('f_City').value.trim(),
+        Region:   document.getElementById('f_Region').value.trim(),
+        Email:    document.getElementById('f_Email').value.trim(),
+        Phone:    document.getElementById('f_Phone').value.trim(),
+        Domain:   document.getElementById('f_Domain').value.trim(),
+        Code:     document.getElementById('f_Code').value.trim(),
+        SortOrder: Number(document.getElementById('f_SortOrder').value || 100),
+        IsActive: document.getElementById('f_IsActive').checked ? 1 : 0
+      };
+
+      // فالديشن بسيط
+      if (!payload.NameAr) return alert('الاسم العربي مطلوب');
+      if (!payload.Code)   return alert('الكود مطلوب');
+
+      try{
+        const res = await fetch(`${API_BASE}/api/hospitals/${id}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+          cache: 'no-store'
+        });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+
+        closeEdit();
+        showToast('تم تحديث المستشفى');
+        await loadHospitals(); // إعادة تحميل القائمة
+      }catch(err){
+        console.error('saveEdit error', err);
+        alert('تعذر حفظ التعديلات');
+      }
+    }
+
+    // تأثير تغيير لون الهيدر عند التمرير
+    window.addEventListener("scroll", function () {
+      const navbar = document.getElementById("navbar");
+      if (window.scrollY > 50) {
+        navbar.style.backgroundColor = "#ffffff";
+        navbar.classList.add("shadow-md");
+        navbar.querySelectorAll("a").forEach(link => {
+          link.classList.remove("text-white", "hover:text-blue-200");
+          link.classList.add("text-[#002B5B]", "hover:text-blue-700");
+        });
+      } else {
+        navbar.style.backgroundColor = "#002B5B";
+        navbar.classList.remove("shadow-md");
+        navbar.querySelectorAll("a").forEach(link => {
+          link.classList.add("text-white", "hover:text-blue-200");
+          link.classList.remove("text-[#002B5B]", "hover:text-blue-700");
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+

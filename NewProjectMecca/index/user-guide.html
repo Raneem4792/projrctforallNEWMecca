@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>دليل المستخدم – نظام البلاغات</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- نفس ملفات المشروع لضمان التطابق -->
+  <link rel="stylesheet" href="../public/assets/css/styles.css" />
+  <link rel="stylesheet" href="index.css" />
+</head>
+<body class="bg-white smooth-scroll">
+
+  <!-- الهيدر -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="index.html" class="text-white hover:text-blue-200">الرئيسية</a>
+          <a href="../dashboard/dashboard.html" class="text-white hover:text-blue-200">لوحة التحكم</a>
+          <a href="about-system.html" class="text-white hover:text-blue-200">حول النظام</a>
+          <a href="help.html" class="text-white hover:text-blue-200">المساعدة</a>
+          <a href="user-guide.html" class="text-white font-bold border-b-2 border-white">دليل المستخدم</a>
+          <a href="#" class="text-white hover:text-blue-200 flex items-center">🌐 English</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- هيرو + مسار -->
+  <section class="hero-gradient pt-28 pb-10">
+    <div class="container mx-auto px-4">
+      <nav class="text-sm text-gray-500 mb-3">
+        <a href="index.html" class="hover:underline">الرئيسية</a>
+        <span class="mx-1">/</span>
+        <a href="help.html" class="hover:underline">المساعدة</a>
+        <span class="mx-1">/</span>
+        <span class="text-gray-700">دليل المستخدم</span>
+      </nav>
+      <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">دليل المستخدم</h1>
+      <p class="text-gray-600 max-w-2xl">شرح مصوّر خطوة بخطوة لاستخدام نظام البلاغات من التسجيل وحتى إغلاق البلاغ.</p>
+    </div>
+  </section>
+
+  <!-- محتوى بعمودين: فهرس جانبي + الدليل -->
+  <main class="py-8">
+    <div class="container mx-auto px-4 grid lg:grid-cols-[280px_1fr] gap-8">
+      <!-- فهرس جانبي -->
+      <aside class="hidden lg:block">
+        <div class="bg-white border border-gray-200 rounded-xl p-4 sticky top-24">
+          <h3 class="font-bold text-gray-900 mb-3">فهرس المحتوى</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#reqs" class="text-gray-700 hover:text-blue-700">المتطلبات الأساسية</a></li>
+            <li><a href="#account" class="text-gray-700 hover:text-blue-700">إنشاء حساب / تسجيل الدخول</a></li>
+            <li><a href="#submit" class="text-gray-700 hover:text-blue-700">تقديم بلاغ جديد</a></li>
+            <li><a href="#track" class="text-gray-700 hover:text-blue-700">تتبّع حالة البلاغ</a></li>
+            <li><a href="#reply" class="text-gray-700 hover:text-blue-700">الردود والمرفقات</a></li>
+            <li><a href="#tips" class="text-gray-700 hover:text-blue-700">نصائح شائعة</a></li>
+            <li><a href="#support" class="text-gray-700 hover:text-blue-700">الدعم الفني</a></li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- المحتوى الرئيسي -->
+      <section class="space-y-10">
+
+        <!-- المتطلبات -->
+        <div id="reqs" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">المتطلبات الأساسية</h2>
+          <ul class="list-disc pr-5 text-gray-700 leading-8">
+            <li>متصفح حديث محدث (Chrome/Edge/Firefox).</li>
+            <li>بريد إلكتروني ورقم جوال فعالان لاستقبال التحديثات.</li>
+            <li>الالتزام بسياسة الخصوصية واستخدام الحساب الشخصي فقط.</li>
+          </ul>
+        </div>
+
+        <!-- إنشاء حساب / تسجيل الدخول -->
+        <div id="account" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">إنشاء حساب / تسجيل الدخول</h2>
+          <ol class="list-decimal pr-5 text-gray-700 leading-8">
+            <li>اذهب إلى <strong>إنشاء حساب</strong> من الهيدر وعبّئ البيانات المطلوبة.</li>
+            <li>فعّل الحساب عبر الرمز المرسل إلى بريدك/جوالك (إن طُلب).</li>
+            <li>سجّل الدخول للوصول إلى خدمات تقديم وتتبّع البلاغات.</li>
+          </ol>
+          <!-- مكان صورة توضيحية مستقبلًا -->
+          <div class="mt-4 p-4 bg-blue-50 rounded-lg text-blue-800 text-sm">
+            تلميح: استخدم كلمة مرور قوية ولا تشارك بيانات الدخول.
+          </div>
+        </div>
+
+        <!-- تقديم بلاغ جديد -->
+        <div id="submit" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">تقديم بلاغ جديد</h2>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <div class="step-number w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center mb-2">1</div>
+              <p class="text-gray-700">من <strong>الخدمات الأساسية</strong> اختر <em>تقديم بلاغ جديد</em>.</p>
+            </div>
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <div class="step-number w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center mb-2">2</div>
+              <p class="text-gray-700">اختر نوع البلاغ (حضوري / 937) والقسم والتصنيف الفرعي.</p>
+            </div>
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <div class="step-number w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center mb-2">3</div>
+              <p class="text-gray-700">أدخل التفاصيل بدقة وأرفق المستندات/الصور إن وجدت.</p>
+            </div>
+            <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <div class="step-number w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center mb-2">4</div>
+              <p class="text-gray-700">أرسل البلاغ واحتفظ برقم التذكرة؛ ستصلك تحديثات آليًا.</p>
+            </div>
+          </div>
+          <div class="mt-4">
+            <a href="../public/complaints/submit/submit-complaint.html" class="inline-block cta-button text-white px-6 py-3 rounded-xl">ابدأ تقديم بلاغ</a>
+          </div>
+        </div>
+
+        <!-- تتبع الحالة -->
+        <div id="track" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">تتبّع حالة البلاغ</h2>
+          <p class="text-gray-700 mb-3">يمكنك متابعة البلاغ عبر رقم التذكرة أو من لوحة المستخدم.</p>
+          <a href="../public/complaints/track/track-complaint.html" class="inline-block bg-white border border-blue-200 text-blue-700 px-5 py-2 rounded-xl hover:bg-blue-50">اذهب لصفحة التتبّع</a>
+        </div>
+
+        <!-- الردود والمرفقات -->
+        <div id="reply" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">الردود والمرفقات</h2>
+          <ul class="list-disc pr-5 text-gray-700 leading-8">
+            <li>أضف ردًا على البلاغ لإيضاح معلومات إضافية أو الاستفسار.</li>
+            <li>أرفق ملفات بصيغ مسموحة (PDF, JPG, PNG) وبحجم مناسب.</li>
+            <li>ستظهر جميع الردود بترتيب زمني وتصل إشعارات بالتحديثات.</li>
+          </ul>
+        </div>
+
+        <!-- نصائح -->
+        <div id="tips" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">نصائح شائعة</h2>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="bg-blue-50 text-blue-900 p-4 rounded-lg">استخدم وصفًا واضحًا ومختصرًا وحدد القسم الصحيح لتسريع المعالجة.</div>
+            <div class="bg-blue-50 text-blue-900 p-4 rounded-lg">ارفع صورًا أو مستندات تدعم البلاغ متى ما أمكن.</div>
+          </div>
+        </div>
+
+        <!-- الدعم -->
+        <div id="support" class="landing-card rounded-xl bg-white p-6 border border-gray-200">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">هل تحتاج مساعدة؟</h2>
+          <p class="text-gray-700 mb-3">إن واجهت مشكلة لا يغطيها هذا الدليل، تواصل معنا.</p>
+          <a href="contact.html" class="inline-block cta-button text-white px-6 py-3 rounded-xl">التواصل مع الدعم</a>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- بانر -->
+  <div class="bg-gray-600 text-white py-2 text-center text-sm">منصة رسمية للتجمع الصحي بمكة المكرمة</div>
+
+  <!-- Footer - التذييل -->
+  <footer class="bg-gray-900 text-white py-14">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- Column 1 - العمود الأول -->
+        <div>
+          <div class="flex items-center space-x-reverse space-x-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-bold">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300">نظام البلاغات</div>
+            </div>
+          </div>
+          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+        </div>
+
+        <!-- Column 2 - العمود الثاني -->
+        <div>
+          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+          </ul>
+        </div>
+
+        <!-- Column 3 - العمود الثالث -->
+        <div>
+          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <div class="space-y-2 text-sm text-gray-300">
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <span>رقم الدعم: 0559735137</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <span>support@makkahhealth.gov.sa</span>
+            </div>
+            <div class="flex items-baseline">
+              <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>ساعات العمل: 24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      </div>
+    </div>
+  </footer>
+  <!-- سكربتات المشروع -->
+  <script src="index.js"></script>
+</body>
+</html>

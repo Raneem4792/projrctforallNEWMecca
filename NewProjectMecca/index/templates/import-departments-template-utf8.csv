@@ -1,0 +1,22 @@
+HospitalID,NameAr,NameEn,ParentNameAr,ParentNameEn
+1,الإدارة العامة,General Administration,,
+1,الموارد البشرية,Human Resources,الإدارة العامة,General Administration
+1,المالية,Finance,الإدارة العامة,General Administration
+1,تقنية المعلومات,Information Technology,الإدارة العامة,General Administration
+1,الطبي,Medical,الإدارة العامة,General Administration
+1,أمراض القلب,Cardiology,الطبي,Medical
+1,الأعصاب,Neurology,الطبي,Medical
+1,العظام,Orthopedics,الطبي,Medical
+1,التمريض,Nursing,الإدارة العامة,General Administration
+1,العناية المركزة,Intensive Care Unit,التمريض,Nursing
+1,الطوارئ,Emergency Room,التمريض,Nursing
+1,الصيدلية,Pharmacy,الإدارة العامة,General Administration
+1,المختبر,Laboratory,الإدارة العامة,General Administration
+1,الأشعة,Radiology,الإدارة العامة,General Administration
+1,بنك الدم,Blood Bank,الإدارة العامة,General Administration
+1,الصيانة,Maintenance,الإدارة العامة,General Administration
+1,الأمن,Security,الإدارة العامة,General Administration
+1,النظافة,Housekeeping,الإدارة العامة,General Administration
+1,المطبخ,Kitchen,الإدارة العامة,General Administration
+1,الاستقبال,Admission,الإدارة العامة,General Administration
+1,الخروج,Discharge,الإدارة العامة,General Administration
