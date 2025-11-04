@@ -4,6 +4,7 @@ import { requirePerm } from '../middleware/perm.js';
 import { 
   transferBetweenDepartments, 
   transferBetweenEmployees,
+  transferComplaintToHospital,
   getTransferHistory 
 } from '../controllers/complaints.transfer.controller.js';
 
@@ -27,6 +28,16 @@ router.post('/:id/transfer/employee',
   requireAuth,
   requirePerm('COMPLAINT_TRANSFER_USER'),
   transferBetweenEmployees
+);
+
+/**
+ * تحويل البلاغ بين المستشفيات
+ * POST /api/complaints/transfer-hospital
+ */
+router.post('/transfer-hospital',
+  requireAuth,
+  requirePerm('COMPLAINT_TRANSFER_DEPT'), // يمكن استخدام نفس الصلاحية أو إنشاء صلاحية جديدة
+  transferComplaintToHospital
 );
 
 /**

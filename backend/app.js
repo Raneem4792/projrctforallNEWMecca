@@ -53,6 +53,7 @@ import complaintsDeleteRoutes from './routes/complaints-delete.js';
 import complaintTargetsRoutes from './routes/complaintTargets.js';
 import utilsRoutes from './routes/utils.routes.js';
 import complaintsTransferRoutes from './routes/complaints.transfer.routes.js';
+import { startComplaintTransferProcessor } from './services/complaintTransferProcessor.js';
 import metaRoutesNew from './routes/meta.routes.js';
 import projectsRoutes from './routes/projects.routes.js';
 import improvementsRoutes from './routes/improvements.routes.js';
@@ -316,6 +317,7 @@ app.use(errorHandler);
 // تشغيل الخادم
 const port = process.env.PORT || 3001;
 const host = process.env.HOST || 'localhost';
+
 app.listen(port, host, () => {
   console.log(`🚀 API يعمل على http://${host}:${port}`);
   console.log(`🌐 يمكن الوصول أيضاً عبر: http://localhost:${port}`);
@@ -326,4 +328,7 @@ app.listen(port, host, () => {
   console.log(`🏢 Departments: http://${host}:${port}/api/departments`);
   console.log(`📋 Lookups: http://${host}:${port}/api/lookups`);
   console.log(`🔍 Track Complaints: http://${host}:${port}/api/complaints/track`);
+  
+  // بدء خدمة معالجة تحويلات البلاغات بين المستشفيات
+  startComplaintTransferProcessor();
 });

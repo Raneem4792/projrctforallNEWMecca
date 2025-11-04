@@ -148,6 +148,11 @@
                     <span>تحويل بين الموظفين</span>
                   </label>
 
+                  <label class="flex items-center gap-2">
+                    <input type="checkbox" id="p_complaint_transfer_hospital" class="w-4 h-4">
+                    <span>تحويل البلاغ بين المستشفيات</span>
+                  </label>
+
                   <label class="flex items-center gap-3">
                     <input type="checkbox" id="p_status" class="w-4 h-4">
                     <span>تغيير الحالة</span>
@@ -818,6 +823,7 @@ async function loadUserPerms(hid, userId){
     $('#p_reply').checked   = !!p.reply;
     $('#p_transfer_dept').checked = !!p.transferDept;
     $('#p_transfer_user').checked = !!p.transferUser;
+    $('#p_complaint_transfer_hospital').checked = !!p.complaintTransferHospital;
     $('#p_status').checked  = !!p.statusUpdate;
     $('#p_delete').checked  = !!p.remove;
     $('#p_admin_panel').checked = !!p.adminPanel;
@@ -947,6 +953,7 @@ document.addEventListener("DOMContentLoaded", () => {
       reply:   $('#p_reply').checked,
       transferDept: $('#p_transfer_dept').checked,
       transferUser: $('#p_transfer_user').checked,
+      complaintTransferHospital: $('#p_complaint_transfer_hospital').checked,
       statusUpdate: $('#p_status').checked,
       remove:  $('#p_delete').checked,
       adminPanel: $('#p_admin_panel').checked,

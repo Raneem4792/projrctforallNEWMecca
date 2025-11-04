@@ -58,7 +58,8 @@ async function applyActionPermissions(hospitalId) {
     const canReply        = !!(p.reply ?? p.canReply);
     const canTransferDept = !!(p.transferDept ?? p.canTransferDept);
     const canTransferUser = !!(p.transferUser ?? p.canTransferUser);
-    const canTransfer     = canTransferDept || canTransferUser; // أي نوع من التحويل
+    const canTransferHospital = !!(p.complaintTransferHospital ?? false);
+    const canTransfer     = canTransferDept || canTransferUser || canTransferHospital; // أي نوع من التحويل
     const canStatusUpdate = !!(p.statusUpdate ?? p.canStatusUpdate);
     const canDelete       = !!(p.remove ?? p.canDelete);
 
@@ -66,6 +67,7 @@ async function applyActionPermissions(hospitalId) {
       canReply, 
       canTransferDept, 
       canTransferUser, 
+      canTransferHospital,
       canTransfer, 
       canStatusUpdate, 
       canDelete 
@@ -91,14 +93,14 @@ async function applyActionPermissions(hospitalId) {
     if (tabEmpBtn) {
       tabEmpBtn.style.display = canTransferUser ? '' : 'none';
     }
-    // 💡 (اختياري) لو حبيتي التبويب يكون ظاهر حسب صلاحيات المستخدم:
-    // if (tabHospBtn) {
-    //   tabHospBtn.style.display = canTransferDept || canTransferUser ? '' : 'none';
-    // }
-    // لكن مبدئياً خليه ظاهر للجميع عشان تختبرين
+    // ✅ إخفاء تبويب "تحويل بين المستشفيات" إذا لم تكن الصلاحية موجودة
+    if (tabHospBtn) {
+      tabHospBtn.style.display = canTransferHospital ? '' : 'none';
+      console.log('🔒 [PERMISSIONS] تبويب تحويل بين المستشفيات:', canTransferHospital ? 'ظاهر' : 'مخفي');
+    }
 
     // لو ما فيه أي نوع تحويل → لا معنى لزر المودال
-    if (!canTransferDept && !canTransferUser) {
+    if (!canTransferDept && !canTransferUser && !canTransferHospital) {
       toggle('#btnTransfer', false);
     }
 
@@ -2025,17 +2027,90 @@ function updateDepartmentTransferHandler() {
 }
 
 // معالجة التحويلات الأخرى (واجهة فقط)
-function handleOtherTransfers(activeTab) {
+async function handleOtherTransfers(activeTab) {
   const ticket = qs('dTicket').textContent.trim();
+  const complaintId = window.currentComplaintId || document.body.dataset.complaintId || currentComplaint?.ComplaintID;
 
   if (activeTab === 'hosp') {
-    const hospitalId = Number($('transferHospital').value);
+    const targetHospitalId = Number($('transferHospital').value);
     const note = $('transferNote').value.trim();
-    if (!hospitalId) { 
-      alert('اختر المستشفى.'); 
+    
+    if (!targetHospitalId) { 
+      alert('يرجى اختيار المستشفى الهدف'); 
       return; 
     }
-    alert('تم التحويل بين المستشفيات ');
+
+    if (!complaintId) {
+      alert('خطأ: لا يمكن تحديد رقم البلاغ');
+      return;
+    }
+
+    if (!confirm('هل أنت متأكد من تحويل البلاغ إلى المستشفى المحدد؟')) {
+      return;
+    }
+
+    // ✅ التحقق من التوكن قبل الإرسال
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      alert('⚠️ غير مسجل دخول، يرجى تسجيل الدخول أولاً');
+      return;
+    }
+
+    console.log('🔑 [Transfer] التحقق من التوكن:', {
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 30) + '...' : 'none',
+      API_BASE: API_BASE_URL
+    });
+
+    // عرض رسالة تحميل
+    const confirmBtn = document.getElementById('confirmTransfer');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'جاري التحويل...';
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/complaints/transfer-hospital`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`  // ✅ إضافة مباشرة للتوكن
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          complaintId: Number(complaintId), 
+          targetHospitalId 
+        })
+      });
+
+      console.log('📡 [Transfer] Response status:', res.status, res.statusText);
+
+      const json = await res.json();
+
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'تحويل';
+      }
+
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || 'فشل تحويل البلاغ');
+      }
+
+      // نجاح التحويل (فوري)
+      alert(`✅ ${json.message || 'تم تحويل البلاغ بنجاح إلى المستشفى الجديد'}`);
+      
+      // إغلاق المودال
+      closeModals();
+      
+      // إعادة توجيه إلى صفحة البلاغات بعد ثانية واحدة
+      setTimeout(() => {
+        window.location.href = 'complaints-history.html';
+      }, 1000);
+
+    } catch (error) {
+      console.error('❌ خطأ في التحويل بين المستشفيات:', error);
+      alert('تعذر تحويل البلاغ: ' + error.message);
+    }
   } else if (activeTab === 'emp') {
     const deptId = Number($('empDept').value);
     const fromEmp = Number($('empFrom').value);

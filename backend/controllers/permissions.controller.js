@@ -88,6 +88,7 @@ export async function getUserPermissions(req, res) {
         transfer: has('COMPLAINT_TRANSFER'),
         transferDept: has('COMPLAINT_TRANSFER_DEPT'),
         transferUser: has('COMPLAINT_TRANSFER_USER'),
+        complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
         statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
         remove: has('COMPLAINT_DELETE'),
         // مدير التجمع (RoleID = 1) دائماً له صلاحية الإدارة
@@ -178,7 +179,7 @@ export async function saveUserPermissions(req, res) {
     const hid = resolveHid(req);
     const targetUserId = Number(req.params.userId);
     const {
-      submit, view, historyScope, reply, transfer, transferDept, transferUser, statusUpdate, remove, adminPanel,
+      submit, view, historyScope, reply, transfer, transferDept, transferUser, complaintTransferHospital, statusUpdate, remove, adminPanel,
       adminDepartments, adminHospital, adminClusters, hospitalCreate,
       hospitalTrash, hospitalLogs, hospitalPermissions, hospitalUsers, hospitalUserCreate, hospitalUserEdit, hospitalUserDelete,
       improvementCreate, improvementView, improvementEdit, improvementDelete, improvementReportView, improvementsModule,
@@ -229,6 +230,7 @@ export async function saveUserPermissions(req, res) {
     transfer ? await upsert('COMPLAINT_TRANSFER')  : await drop('COMPLAINT_TRANSFER');
     transferDept ? await upsert('COMPLAINT_TRANSFER_DEPT') : await drop('COMPLAINT_TRANSFER_DEPT');
     transferUser ? await upsert('COMPLAINT_TRANSFER_USER') : await drop('COMPLAINT_TRANSFER_USER');
+    complaintTransferHospital ? await upsert('COMPLAINT_TRANSFER_HOSPITAL') : await drop('COMPLAINT_TRANSFER_HOSPITAL');
     statusUpdate ? await upsert('COMPLAINT_STATUS_UPDATE') : await drop('COMPLAINT_STATUS_UPDATE');
     remove ? await upsert('COMPLAINT_DELETE')      : await drop('COMPLAINT_DELETE');
     adminPanel ? await upsert('ADMIN_PANEL_ACCESS') : await drop('ADMIN_PANEL_ACCESS');
@@ -459,6 +461,7 @@ export async function getMyPermissions(req, res) {
           transfer: has('COMPLAINT_TRANSFER'),
           transferDept: has('COMPLAINT_TRANSFER_DEPT'),
           transferUser: has('COMPLAINT_TRANSFER_USER'),
+          complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
           statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
           remove: has('COMPLAINT_DELETE'),
           // مدير التجمع (مركزي) دائماً له صلاحية الإدارة
@@ -563,6 +566,7 @@ export async function getMyPermissions(req, res) {
           transfer: has('COMPLAINT_TRANSFER'),
           transferDept: has('COMPLAINT_TRANSFER_DEPT'),
           transferUser: has('COMPLAINT_TRANSFER_USER'),
+          complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
           statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
           remove: has('COMPLAINT_DELETE'),
           // مدير التجمع (مركزي) دائماً له صلاحية الإدارة

@@ -8,7 +8,15 @@ import { getTenantPoolByHospitalId } from '../db/tenantManager.js';
 export function requirePerm(permissionKey) {
   return async (req, res, next) => {
     try {
-      const { UserID, HospitalID } = req.user;
+      const { UserID, HospitalID, RoleID, scope } = req.user || {};
+      
+      // ✅ السماح لمدير التجمع (Cluster Manager) تلقائياً
+      const isClusterManager = RoleID === 1 || scope === 'central' || HospitalID == null;
+      
+      if (isClusterManager) {
+        console.log(`✅ مدير التجمع - صلاحية ${permissionKey} ممنوحة تلقائياً`);
+        return next();
+      }
       
       if (!UserID || !HospitalID) {
         return res.status(401).json({ 

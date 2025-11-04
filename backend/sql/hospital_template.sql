@@ -1247,3 +1247,24 @@ ADD COLUMN SourceName VARCHAR(255) NULL AFTER CustomFileName;
 ALTER TABLE file_archive
   MODIFY UploadedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+CREATE TABLE IF NOT EXISTS complaint_transfer_outbox (
+  TransferID       BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ComplaintID      BIGINT UNSIGNED NOT NULL,
+  TargetHospitalID INT UNSIGNED   NOT NULL,
+  Payload          JSON           NOT NULL,
+  Status           ENUM('PENDING','SENT','FAILED') DEFAULT 'PENDING',
+  ErrorMessage     VARCHAR(255)   NULL,
+  CreatedAt        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  SentAt           TIMESTAMP NULL,
+  
+  INDEX idx_status (Status),
+  INDEX idx_complaint (ComplaintID),
+  INDEX idx_target (TargetHospitalID)
+);
+
+ALTER TABLE complaints 
+ADD COLUMN SourceHospitalID INT NULL AFTER HospitalID;
+
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
+VALUES ('COMPLAINT_TRANSFER_HOSPITAL', 'تحويل البلاغ بين المستشفيات', 'complaints');

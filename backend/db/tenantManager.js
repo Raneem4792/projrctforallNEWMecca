@@ -45,3 +45,6 @@ export async function getTenantPoolByHospitalId(hospitalId) {
   console.log(`✅ Connected to hospital DB: ${database} (HospitalID=${hospitalId}, user=${user || '(empty)'}@${host})`);
   return pool;
 }
+
+// إعادة تصدير getCentralPool ليكون متاحًا من tenantManager.js
+export { getCentralPool };
