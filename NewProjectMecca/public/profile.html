@@ -6,7 +6,7 @@
   <title>ملفي الشخصي - تجمع مكة المكرمة الصحي</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/public/assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
   <style>
     body { font-family: 'Tajawal', sans-serif; }
   </style>
@@ -19,23 +19,23 @@
       <div class="flex items-center justify-between h-16">
         <!-- Logo - الشعار -->
         <div class="flex items-center">
-          <a href="/index/index.html">
-            <img src="/public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+          <a href="../index/index.html">
+            <img src="assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
           </a>
         </div>
         
         <!-- Navigation - قائمة التنقل -->
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="/index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
-          <a href="/dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
-          <a href="/dashboard/hospitals.html" class="text-white hover:text-blue-200 transition-colors">المستشفيات</a>
-          <a href="/dashboard/reports.html" class="text-white hover:text-blue-200 transition-colors">التقارير والإحصائيات</a>
-          <a href="/public/complaints/submit/submit-complaint.html" class="text-white hover:text-blue-200 transition-colors">تقديم بلاغ</a>
-          <a href="/public/complaints/track/track-complaint.html" class="text-white hover:text-blue-200 transition-colors">متابعة بلاغ</a>
-          <a href="/public/profile.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">ملفي الشخصي</a>
-          <a href="/index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
-          <a href="/index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
-          <a href="/index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <a href="../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../dashboard/hospitals.html" class="text-white hover:text-blue-200 transition-colors">المستشفيات</a>
+          <a href="../dashboard/reports.html" class="text-white hover:text-blue-200 transition-colors">التقارير والإحصائيات</a>
+          <a href="complaints/submit/submit-complaint.html" class="text-white hover:text-blue-200 transition-colors">تقديم بلاغ</a>
+          <a href="complaints/track/track-complaint.html" class="text-white hover:text-blue-200 transition-colors">متابعة بلاغ</a>
+          <a href="profile.html" class="text-white hover:text-blue-200 transition-colors font-bold underline">ملفي الشخصي</a>
+          <a href="../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
           <button id="logoutBtn" class="text-white hover:text-red-300 transition-colors">تسجيل الخروج</button>
         </nav>
         
@@ -119,14 +119,16 @@
   </main>
 
   <script>
-    const API_BASE_URL = '';
+    const API_BASE_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
 
     // حارس الصفحة - التحقق من تسجيل الدخول
     async function requireAuth() {
       try {
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         if (!token) {
-          location.href = '/public/auth/login.html';
+          location.href = 'auth/login.html';
           return null;
         }
 
@@ -140,14 +142,14 @@
         
         if (!res.ok) {
           localStorage.clear();
-          location.href = '/public/auth/login.html';
+          location.href = 'auth/login.html';
           return null;
         }
         
         const me = await res.json();
         if (!me?.authenticated && !me?.UserID) {
           localStorage.clear();
-          location.href = '/public/auth/login.html';
+          location.href = 'auth/login.html';
           return null;
         }
         
@@ -155,7 +157,7 @@
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.clear();
-        location.href = '/NewProjectMecca/public/auth/login.html';
+        location.href = 'auth/login.html';
         return null;
       }
     }
@@ -329,7 +331,7 @@
     // تسجيل الخروج
     document.getElementById('logoutBtn').addEventListener('click', () => {
       localStorage.clear();
-      location.href = '/NewProjectMecca/public/auth/login.html';
+      location.href = 'auth/login.html';
     });
 
     // تحميل البيانات عند فتح الصفحة

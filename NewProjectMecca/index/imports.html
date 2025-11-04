@@ -86,12 +86,12 @@
           </div>
 
           <!-- لمدير التجمع فقط: المستشفى -->
-          <div id="mysteryExtra" class="mt-3 hidden">
+          <div id="mysteryExtra" class="mt-3" style="display:none;">
             <label class="block text-sm font-medium text-gray-700 mb-1">المستشفى</label>
-            <select id="mysteryHospitalId" class="w-full border rounded-lg px-3 py-2">
+            <select id="mysteryHospitalId" class="w-full border rounded-lg px-3 py-2" style="display:none;">
               <option value="">اختر المستشفى…</option>
             </select>
-            <small class="text-gray-500">يظهر فقط لمدير التجمع</small>
+            <small id="mysteryHospitalNote" class="text-gray-500" style="display:none;">يظهر فقط لمدير التجمع</small>
           </div>
           
 
@@ -375,10 +375,131 @@
       } catch { return false; }
     }
 
-    // إظهار خانة المستشفى لمدير التجمع
-    document.addEventListener('DOMContentLoaded', () => {
-      const extra = document.getElementById('mysteryExtra');
-      if (extra && isClusterManager()) extra.classList.remove('hidden');
+    // تهيئة خانة المستشفى حسب نوع المستخدم
+    async function initMysteryHospitalField() {
+      const hospitalSelect = document.getElementById('mysteryHospitalId');
+      const hospitalNote = document.getElementById('mysteryHospitalNote');
+      const mysteryExtra = document.getElementById('mysteryExtra');
+      
+      if (!hospitalSelect || !mysteryExtra) return;
+
+      try {
+        // جلب بيانات المستخدم
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          console.warn('[initMysteryHospitalField] API response not OK:', res.status);
+          return;
+        }
+        
+        const user = await res.json();
+        console.log('[initMysteryHospitalField] User data:', user);
+        
+        const isCM = user?.RoleID === 1 || user?.isClusterManager === true || user?.role?.isClusterManager === true;
+        
+        // محاولة جلب HospitalID من مصادر متعددة
+        let userHospitalId = user?.HospitalID || user?.hospitalId || user?.Hospital?.id || null;
+        
+        // إذا لم يكن موجوداً في API، جرب localStorage
+        if (!userHospitalId) {
+          try {
+            const userDataStr = localStorage.getItem('userData');
+            if (userDataStr) {
+              const userData = JSON.parse(userDataStr);
+              userHospitalId = userData?.HospitalID || userData?.hospitalId || null;
+            }
+          } catch (e) {
+            console.warn('[initMysteryHospitalField] Failed to parse userData from localStorage:', e);
+          }
+        }
+        
+        // محاولة أخيرة: من localStorage مباشرة
+        if (!userHospitalId) {
+          const storedHospitalId = localStorage.getItem('hospitalId');
+          if (storedHospitalId) {
+            userHospitalId = parseInt(storedHospitalId, 10);
+          }
+        }
+        
+        console.log('[initMysteryHospitalField] Final hospitalId:', userHospitalId, 'isCM:', isCM);
+
+        if (isCM) {
+          // مدير التجمع: إظهار القائمة
+          mysteryExtra.style.display = 'block';
+          hospitalSelect.style.display = 'block';
+          if (hospitalNote) hospitalNote.style.display = 'block';
+          
+          // تحميل قائمة المستشفيات
+          await loadHospitalsForMysterySelect();
+        } else {
+          // موظف مستشفى: إخفاء القائمة وإظهار اسم المستشفى
+          mysteryExtra.style.display = 'block';
+          hospitalSelect.style.display = 'none';
+          if (hospitalNote) hospitalNote.style.display = 'none';
+          
+          // جلب اسم المستشفى
+          const hospitalName = localStorage.getItem('hospitalNameAr') || 'مستشفى غير محدد';
+          
+          // إنشاء label لعرض اسم المستشفى
+          const autoLabel = document.createElement('div');
+          autoLabel.className = 'text-gray-700 mt-2 font-semibold';
+          autoLabel.innerHTML = `📍 المستشفى: <span class="text-blue-600">${hospitalName}</span>`;
+          
+          // إدراج Label قبل select
+          if (hospitalSelect.parentNode) {
+            hospitalSelect.parentNode.insertBefore(autoLabel, hospitalSelect);
+          }
+          
+          // حفظ HospitalID في متغير عام
+          window.currentMysteryHospitalId = userHospitalId;
+          
+          console.log('[initMysteryHospitalField] Saved hospitalId for employee:', window.currentMysteryHospitalId);
+          
+          // إذا لم يكن هناك HospitalID، أظهر تحذير
+          if (!userHospitalId) {
+            console.error('[initMysteryHospitalField] ⚠️ HospitalID is null for non-cluster manager user!');
+            autoLabel.innerHTML += ' <span class="text-red-600 text-xs">⚠️ تحذير: لم يتم تحديد المستشفى</span>';
+          }
+        }
+      } catch (err) {
+        console.error('خطأ في تهيئة حقل المستشفى:', err);
+      }
+    }
+
+    // تحميل قائمة المستشفيات لمدير التجمع
+    async function loadHospitalsForMysterySelect() {
+      const sel = document.getElementById('mysteryHospitalId');
+      if (!sel) return;
+
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      try {
+        const res = await fetch(`${API_BASE}/api/central/hospitals?active=1`, {
+          headers: { 'Authorization': `Bearer ${token || ''}` }
+        });
+        if (!res.ok) return;
+
+        const list = await res.json();
+        sel.innerHTML = '<option value="">— اختر مستشفى —</option>';
+        
+        list
+          .sort((a, b) => (a?.NameAr || '').localeCompare(b?.NameAr || '', 'ar'))
+          .forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h.HospitalID;
+            opt.textContent = `${h.NameAr || h.NameEn} ${h.Code ? '('+h.Code+')' : ''}`;
+            sel.appendChild(opt);
+          });
+      } catch (error) {
+        console.error('Error loading hospitals:', error);
+      }
+    }
+
+    // تهيئة عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initMysteryHospitalField();
     });
 
     function wireForm(formId, statusId, endpoint){
@@ -402,13 +523,42 @@
             return;
           }
           
-        // التحقق من المستشفى لمدير التجمع
+        // التحقق من المستشفى
+        let selectedHospitalId;
         if (isClusterManager()) {
-          const hospitalId = document.getElementById('mysteryHospitalId')?.value;
-          if (!hospitalId) {
+          selectedHospitalId = document.getElementById('mysteryHospitalId')?.value;
+          if (!selectedHospitalId) {
             status.textContent='الرجاء اختيار المستشفى (لأنك مدير التجمع).';
             status.className='text-red-600 text-sm';
             return;
+          }
+        } else {
+          selectedHospitalId = window.currentMysteryHospitalId;
+          if (!selectedHospitalId) {
+            // محاولة أخيرة: جلب من localStorage
+            try {
+              const userDataStr = localStorage.getItem('userData');
+              if (userDataStr) {
+                const userData = JSON.parse(userDataStr);
+                selectedHospitalId = userData?.HospitalID || userData?.hospitalId || null;
+              }
+            } catch (e) {
+              console.warn('Failed to get hospitalId from localStorage:', e);
+            }
+            
+            if (!selectedHospitalId) {
+              const storedHospId = localStorage.getItem('hospitalId');
+              if (storedHospId) {
+                selectedHospitalId = parseInt(storedHospId, 10);
+              }
+            }
+            
+            if (!selectedHospitalId) {
+              status.textContent='خطأ: لم يتم تحديد المستشفى تلقائياً. يرجى تحديث الصفحة أو الاتصال بالدعم.';
+              status.className='text-red-600 text-sm';
+              console.error('[wireForm] HospitalID is missing for employee user');
+              return;
+            }
           }
         }
         }
@@ -427,10 +577,39 @@
           fd.append('dateFrom', dateFrom);
           fd.append('dateTo', dateTo);
           
-          // إضافة معرف المستشفى لمدير التجمع
+          // إضافة معرف المستشفى
+          let selectedHospitalId;
           if (isClusterManager()) {
-            const hospitalId = document.getElementById('mysteryHospitalId')?.value;
-            fd.append('hospitalId', hospitalId);
+            selectedHospitalId = document.getElementById('mysteryHospitalId')?.value;
+          } else {
+            selectedHospitalId = window.currentMysteryHospitalId;
+            
+            // محاولة أخيرة إذا لم يكن موجوداً
+            if (!selectedHospitalId) {
+              try {
+                const userDataStr = localStorage.getItem('userData');
+                if (userDataStr) {
+                  const userData = JSON.parse(userDataStr);
+                  selectedHospitalId = userData?.HospitalID || userData?.hospitalId || null;
+                }
+              } catch (e) {
+                console.warn('Failed to get hospitalId from localStorage in FormData:', e);
+              }
+              
+              if (!selectedHospitalId) {
+                const storedHospId = localStorage.getItem('hospitalId');
+                if (storedHospId) {
+                  selectedHospitalId = parseInt(storedHospId, 10);
+                }
+              }
+            }
+          }
+          
+          if (selectedHospitalId) {
+            fd.append('hospitalId', selectedHospitalId);
+            console.log('[wireForm] Sending hospitalId:', selectedHospitalId);
+          } else {
+            console.error('[wireForm] ⚠️ No hospitalId to send!');
           }
         }
         
@@ -888,42 +1067,6 @@
     });
   </script>
 
-  <!-- تحميل قائمة المستشفيات لمدير التجمع -->
-  <script>
-    async function loadHospitalsForSelect(){
-      if (!isClusterManager()) return;
-      const sel = document.getElementById('mysteryHospitalId');
-      if (!sel) return;
-
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      try {
-        const res = await fetch('http://localhost:3001/api/central/hospitals?active=1', {
-          headers: { 'Authorization': `Bearer ${token||''}` }
-        });
-        if (!res.ok) return; // لو صار خطأ، نتركها فاضية
-
-        const list = await res.json(); // [{HospitalID,NameAr,NameEn,Code}]
-        const frag = document.createDocumentFragment();
-        list.sort((a,b)=> (a.SortOrder??999)-(b.SortOrder??999) || a.NameAr.localeCompare(b.NameAr,'ar'));
-        for (const h of list){
-          const opt = document.createElement('option');
-          opt.value = h.HospitalID;
-          opt.textContent = `${h.NameAr || h.NameEn} ${h.Code ? '('+h.Code+')' : ''}`;
-          frag.appendChild(opt);
-        }
-        sel.appendChild(frag);
-      } catch (error) {
-        console.error('Error loading hospitals:', error);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', ()=>{
-      if (isClusterManager()) {
-        document.getElementById('mysteryExtra')?.classList.remove('hidden');
-        loadHospitalsForSelect();
-      }
-    });
-  </script>
 
   <!-- تحليل نص تقرير الزائر السري -->
   <script>
@@ -1083,8 +1226,33 @@
       const dateFrom = qs('#mysteryFrom')?.value;
       const dateTo = qs('#mysteryTo')?.value;
 
-      // المستشفى: إن كنتِ مدير التجمع نقرأه من السلكت، غير ذلك من التوكن/السيرفر
-      const hospitalId = (isClusterManager() ? qs('#mysteryHospitalId')?.value : null);
+      // المستشفى: إن كنتِ مدير التجمع نقرأه من السلكت، غير ذلك من المتغير العام
+      let hospitalId;
+      if (isClusterManager()) {
+        hospitalId = qs('#mysteryHospitalId')?.value;
+      } else {
+        hospitalId = window.currentMysteryHospitalId;
+        
+        // محاولة أخيرة: جلب من localStorage
+        if (!hospitalId) {
+          try {
+            const userDataStr = localStorage.getItem('userData');
+            if (userDataStr) {
+              const userData = JSON.parse(userDataStr);
+              hospitalId = userData?.HospitalID || userData?.hospitalId || null;
+            }
+          } catch (e) {
+            console.warn('[saveMysterySummary] Failed to get hospitalId from localStorage:', e);
+          }
+          
+          if (!hospitalId) {
+            const storedHospId = localStorage.getItem('hospitalId');
+            if (storedHospId) {
+              hospitalId = parseInt(storedHospId, 10);
+            }
+          }
+        }
+      }
 
       if (!ticket || !dateFrom || !dateTo) {
         statusEl.textContent = 'رقم التذكرة و(من/إلى) إلزامية.';
@@ -1094,6 +1262,12 @@
       if (isClusterManager() && !hospitalId) {
         statusEl.textContent = 'اختر المستشفى (لأنك مدير التجمع).';
         statusEl.className = 'mt-2 text-sm text-red-600';
+        return;
+      }
+      if (!isClusterManager() && !hospitalId) {
+        statusEl.textContent = 'خطأ: لم يتم تحديد المستشفى تلقائياً. يرجى تحديث الصفحة أو الاتصال بالدعم.';
+        statusEl.className = 'mt-2 text-sm text-red-600';
+        console.error('[saveMysterySummary] HospitalID is missing for employee user');
         return;
       }
       if (!rawText) {

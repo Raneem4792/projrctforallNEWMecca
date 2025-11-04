@@ -1525,18 +1525,12 @@ function updateLastUpdateTime() {
  */
 async function applyDashboardPermissions() {
   try {
-    // تحقق من أن المستخدم مدير تجمع - إذا كان كذلك، أظهر جميع العناصر
-    if (isClusterManager) {
-      console.log('Cluster manager detected - showing all dashboard elements');
-      showAllElementsForClusterManager();
-      return;
-    }
-
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3001' : '';
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     
     if (!token) {
-      console.warn('No auth token found, skipping permission check');
+      console.warn('No auth token found, hiding dashboard content');
+      hideDashboardContent();
       return;
     }
 
@@ -1546,11 +1540,30 @@ async function applyDashboardPermissions() {
     
     if (!res.ok) {
       console.warn('Failed to fetch permissions:', res.status);
+      hideDashboardContent();
       return;
     }
     
     const js = await res.json();
     const p = js?.data || {};
+
+    // ====== فحص صلاحية عرض لوحة التحكم ======
+    // إذا لم تكن هناك صلاحية DASH_PAGE، أخفي الصفحة بالكامل
+    if (!p.dashPage) {
+      console.log('🔒 لا توجد صلاحية DASH_PAGE - إخفاء لوحة التحكم');
+      hideDashboardContent();
+      return;
+    }
+
+    // إذا كانت الصلاحية موجودة، أظهر المحتوى
+    showDashboardContent();
+
+    // تحقق من أن المستخدم مدير تجمع - إذا كان كذلك، أظهر جميع العناصر
+    if (isClusterManager) {
+      console.log('Cluster manager detected - showing all dashboard elements');
+      showAllElementsForClusterManager();
+      return;
+    }
 
     // مُحوِّل اسم فلاغ -> PermissionKey
     const allow = new Set();
@@ -1580,7 +1593,42 @@ async function applyDashboardPermissions() {
     console.log('Dashboard permissions applied:', Array.from(allow));
   } catch (error) {
     console.error('Error applying dashboard permissions:', error);
+    hideDashboardContent(); // إخفاء كإجراء أمان في حالة الخطأ
   }
+}
+
+/**
+ * إخفاء محتوى لوحة التحكم وإظهار رسالة عدم الصلاحية
+ */
+function hideDashboardContent() {
+  const main = document.querySelector('main');
+  if (main) {
+    main.innerHTML = `
+      <div class="pt-20 flex items-center justify-center min-h-screen">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+          <div class="mb-6">
+            <svg class="w-24 h-24 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold mb-4" style="color:#002B5B;">لا تملك صلاحية عرض لوحة التحكم</h2>
+          <p class="text-gray-600 mb-6">عذراً، ليس لديك صلاحية للوصول إلى هذه الصفحة.</p>
+          <a href="../index/index.html" class="inline-block px-6 py-3 rounded-xl text-white font-medium hover:opacity-90 transition-opacity" style="background: linear-gradient(135deg, #002B5B, #004A9F);">
+            العودة للصفحة الرئيسية
+          </a>
+        </div>
+      </div>
+    `;
+  }
+}
+
+/**
+ * إظهار محتوى لوحة التحكم
+ */
+function showDashboardContent() {
+  // إذا كان المحتوى مخفي، لا نفعل شيء لأن الصفحة لم يتم تحميلها بعد
+  // هذه الدالة موجودة للتناسق مع منطق التقارير
+  console.log('✅ صلاحية DASH_PAGE موجودة - عرض لوحة التحكم');
 }
 
 /**

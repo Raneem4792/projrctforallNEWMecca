@@ -68,7 +68,14 @@
 
     <!-- فلاتر -->
     <div class="bg-white border border-gray-100 rounded-2xl shadow p-4 md:p-5 mb-5">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3" id="filtersContainer">
+        <!-- فلتر المستشفى (للمدير فقط) -->
+        <div id="hospitalFilterContainer" class="hidden">
+          <label class="block text-sm text-gray-600 mb-1">المستشفى</label>
+          <select id="fltHospital" class="w-full border rounded-xl p-2.5 bg-white">
+            <option value="">جميع المستشفيات</option>
+          </select>
+        </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1">الحالة</label>
           <select id="fltStatus" class="w-full border rounded-xl p-2.5 bg-white">
@@ -87,7 +94,7 @@
             <option value="">الكل</option>
           </select>
         </div>
-        <div class="md:col-span-2">
+        <div class="md:col-span-2" id="searchContainer">
           <label class="block text-sm text-gray-600 mb-1">بحث</label>
           <div class="flex gap-2">
             <input id="fltQ" class="w-full border rounded-xl p-2.5" placeholder="عنوان / وصف المشكلة / الهدف">
@@ -120,6 +127,7 @@
         <table class="min-w-full text-sm">
           <thead class="bg-gray-50 text-gray-600">
             <tr>
+              <th class="px-4 py-3 text-right" id="hospitalHeader" style="display: none;">المستشفى</th>
               <th class="px-4 py-3 text-right">العنوان</th>
               <th class="px-4 py-3 text-right">القسم</th>
               <th class="px-4 py-3 text-right">الأولوية</th>
@@ -181,6 +189,12 @@
     const fltStatus = $('#fltStatus');
     const fltDept = $('#fltDept');
     const fltQ = $('#fltQ');
+    const fltHospital = $('#fltHospital');
+    const hospitalFilterContainer = $('#hospitalFilterContainer');
+    const hospitalHeader = $('#hospitalHeader');
+    
+    // متغير لتخزين حالة المدير
+    let isCentralAdmin = false;
 
     const toast = (msg, type='info')=>{
       const el = $('#toast'), box = $('#toastInner');
@@ -203,13 +217,56 @@
       return h;
     };
 
+    // تحميل قائمة المستشفيات (للمدير فقط)
+    async function loadHospitals(){
+      try{
+        const res = await fetch(`${API_BASE}/api/hospitals?active=1`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        
+        const hospitals = await res.json();
+        fltHospital.innerHTML = '<option value="">جميع المستشفيات</option>';
+        
+        hospitals.forEach(h => {
+          const option = document.createElement('option');
+          option.value = h.HospitalID;
+          option.textContent = h.NameAr || h.NameEn || `مستشفى ${h.Code}`;
+          fltHospital.appendChild(option);
+        });
+        
+        // إذا كان هناك hospitalId في الرابط، حدده
+        const urlParams = new URLSearchParams(location.search);
+        const preHospitalId = urlParams.get('hospitalId') || urlParams.get('hid');
+        if (preHospitalId) {
+          fltHospital.value = preHospitalId;
+        }
+      }catch(e){ 
+        console.error('❌ [loadHospitals] Error:', e);
+        toast('تعذّر تحميل المستشفيات', 'error'); 
+      }
+    }
+
     // تحميل الأقسام للفلاتر
     async function loadDepartments(){
       try{
         // ✅ بناء URL للأقسام مع hospitalId دائماً إذا توفر
         const params = new URLSearchParams();
-        const hid = effectiveHospitalId();
-        if (hid) params.set('hospitalId', hid);  // ✅ أضفناه للجميع
+        let hid = effectiveHospitalId();
+        
+        // إذا كان مدير واختار مستشفى، استخدمه
+        if (isCentralAdmin && fltHospital && fltHospital.value) {
+          hid = Number(fltHospital.value);
+        }
+        
+        if (hid) params.set('hospitalId', hid);
+        
+        // إذا كان مدير ولم يختر مستشفى، لا تحمل الأقسام
+        if (isCentralAdmin && !hid) {
+          fltDept.innerHTML = '<option value="">اختر مستشفى أولاً</option>';
+          return;
+        }
         
         const url = `${API_BASE}/api/lookups/departments${params.toString() ? '?' + params.toString() : ''}`;
         console.log('🏢 [loadDepartments] Request URL:', url);
@@ -273,35 +330,111 @@
       }
     }
 
+    // دالة لجلب المشاريع من مستشفى واحد
+    async function fetchProjectsForHospital(hospitalId, status, dept, q) {
+      const qs = new URLSearchParams();
+      qs.set('hospitalId', hospitalId);
+      
+      if (status) qs.set('status', status);
+      if (dept) qs.set('dept', dept);
+      if (q) qs.set('q', q);
+      
+      const url = `${API_BASE}/api/improvements?${qs.toString()}`;
+      const res = await fetch(url, { 
+        headers: { 
+          ...authHeaders(),
+          'x-hospital-id': String(hospitalId)
+        } 
+      });
+      
+      if (!res.ok) {
+        console.error(`❌ Error fetching projects for hospital ${hospitalId}:`, res.status);
+        return [];
+      }
+      
+      const projects = await res.json();
+      // إضافة معلومات المستشفى لكل مشروع
+      return (projects || []).map(p => ({ ...p, _hospitalId: hospitalId }));
+    }
+
     // تحميل قائمة المشاريع
     async function loadProjects(){
       rowsEl.innerHTML = '';
       emptyEl.classList.add('hidden');
 
-      const qs = new URLSearchParams();
-      
-      // ✅ إضافة hospitalId دائماً إذا توفر (حتى لمدير التجمع)
-      const hid = effectiveHospitalId();
-      if (hid) qs.set('hospitalId', hid);   // ✅ أضفناه للجميع
-      
-      if (fltStatus.value) qs.set('status', fltStatus.value);
-      if (fltDept.value)   qs.set('dept', fltDept.value);
-      if (fltQ.value.trim()) qs.set('q', fltQ.value.trim());
-
-      const url = `${API_BASE}/api/improvements?${qs.toString()}`;
-      console.log('🌐 [loadProjects] Request URL:', url);
-
-      try{
-        const res = await fetch(url, { headers: authHeaders() });
-        console.log('📊 [loadProjects] Response status:', res.status);
+      try {
+        let list = [];
         
-        if(!res.ok){ 
-          const errorText = await res.text();
-          console.error('❌ [loadProjects] Error:', res.status, errorText);
-          throw new Error('HTTP '+res.status); 
+        // إذا كان مدير تجمع ولم يختر مستشفى: جلب من جميع المستشفيات
+        if (isCentralAdmin && (!fltHospital || !fltHospital.value)) {
+          console.log('👑 [loadProjects] Central Admin - Loading from all hospitals');
+          
+          // جلب جميع المستشفيات النشطة
+          const hospitalsRes = await fetch(`${API_BASE}/api/hospitals?active=1`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          
+          if (!hospitalsRes.ok) throw new Error('Failed to load hospitals');
+          
+          const hospitals = await hospitalsRes.json();
+          console.log(`📋 [loadProjects] Found ${hospitals.length} hospitals`);
+          
+          // جلب المشاريع من كل مستشفى
+          const promises = hospitals.map(h => 
+            fetchProjectsForHospital(
+              h.HospitalID, 
+              fltStatus.value, 
+              fltDept.value, 
+              fltQ.value.trim()
+            )
+          );
+          
+          const results = await Promise.all(promises);
+          list = results.flat();
+          
+          // إضافة اسم المستشفى لكل مشروع
+          const hospitalsMap = new Map(hospitals.map(h => [h.HospitalID, h]));
+          list = list.map(p => ({
+            ...p,
+            HospitalName: hospitalsMap.get(p._hospitalId)?.NameAr || hospitalsMap.get(p._hospitalId)?.NameEn || `مستشفى ${p._hospitalId}`
+          }));
+        } else {
+          // حالة عادية: مستشفى واحد
+          const qs = new URLSearchParams();
+          let hid = effectiveHospitalId();
+          
+          // إذا كان مدير واختار مستشفى، استخدمه
+          if (isCentralAdmin && fltHospital && fltHospital.value) {
+            hid = Number(fltHospital.value);
+          }
+          
+          if (!hid) {
+            emptyEl.classList.remove('hidden');
+            toast('يجب اختيار مستشفى', 'warn');
+            return;
+          }
+          
+          qs.set('hospitalId', hid);
+          
+          if (fltStatus.value) qs.set('status', fltStatus.value);
+          if (fltDept.value) qs.set('dept', fltDept.value);
+          if (fltQ.value.trim()) qs.set('q', fltQ.value.trim());
+          
+          const url = `${API_BASE}/api/improvements?${qs.toString()}`;
+          console.log('🌐 [loadProjects] Request URL:', url);
+          
+          const res = await fetch(url, { headers: authHeaders() });
+          console.log('📊 [loadProjects] Response status:', res.status);
+          
+          if(!res.ok){ 
+            const errorText = await res.text();
+            console.error('❌ [loadProjects] Error:', res.status, errorText);
+            throw new Error('HTTP '+res.status); 
+          }
+          
+          list = await res.json();
         }
         
-        const list = await res.json();
         console.log('📋 [loadProjects] Projects count:', list?.length || 0);
         
         if(!list || list.length===0){
@@ -364,16 +497,22 @@
         // بناء أزرار الإجراءات حسب الصلاحيات
         let actionButtons = '';
         if (userPermissions.improvementView) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}">عرض</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">عرض</button>`;
         }
         if (userPermissions.improvementEdit) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}">تعديل</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">تعديل</button>`;
         }
         if (userPermissions.improvementReportView) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}">تقرير</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">تقرير</button>`;
         }
         
+        // عمود المستشفى (للمدير فقط عند عرض جميع المستشفيات)
+        const hospitalCell = isCentralAdmin && (!fltHospital || !fltHospital.value) 
+          ? `<td class="px-4 py-3 align-top">${escapeHtml(item.HospitalName || '—')}</td>`
+          : '';
+        
         tr.innerHTML = `
+          ${hospitalCell}
           <td class="px-4 py-3 align-top">
             <div class="font-semibold text-gray-900">${escapeHtml(item.Title)}</div>
             <div class="text-xs text-gray-500">${item.AimStatement ? escapeHtml(item.AimStatement).slice(0,120)+'…' : ''}</div>
@@ -410,6 +549,7 @@
         // ✅ مدير التجمع: منحه كامل الصلاحيات مباشرة
         if (isClusterManager()) {
           console.log('👑 [applyPermissions] Cluster Manager - Full permissions granted');
+          isCentralAdmin = true; // تعيين المتغير
           userPermissions = {
             improvementView: true,
             improvementCreate: true,
@@ -417,6 +557,27 @@
             improvementDelete: true,
             improvementReportView: true
           };
+          
+          // إظهار فلتر المستشفى وعمود المستشفى
+          if (hospitalFilterContainer) {
+            hospitalFilterContainer.classList.remove('hidden');
+            // تحديث grid layout
+            const filtersContainer = document.getElementById('filtersContainer');
+            if (filtersContainer) {
+              filtersContainer.className = 'grid grid-cols-1 md:grid-cols-5 gap-3';
+            }
+            const searchContainer = document.getElementById('searchContainer');
+            if (searchContainer) {
+              searchContainer.className = 'md:col-span-2';
+            }
+          }
+          if (hospitalHeader) {
+            hospitalHeader.style.display = '';
+          }
+          
+          // تحميل قائمة المستشفيات
+          await loadHospitals();
+          
           return;
         }
 
@@ -456,7 +617,7 @@
         userPermissions = p;
 
         // مدير التجمع (RoleID = 1) يرى كل شيء بدون قيود
-        const isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
+        isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
         
         if (isCentralAdmin) {
           console.log('✅ [applyPermissions] Central Admin detected - Full permissions');
@@ -467,7 +628,36 @@
             improvementDelete: true,
             improvementReportView: true
           };
+          
+          // إظهار فلتر المستشفى وعمود المستشفى
+          if (hospitalFilterContainer) {
+            hospitalFilterContainer.classList.remove('hidden');
+            // تحديث grid layout
+            const filtersContainer = document.getElementById('filtersContainer');
+            if (filtersContainer) {
+              filtersContainer.className = 'grid grid-cols-1 md:grid-cols-5 gap-3';
+            }
+            const searchContainer = document.getElementById('searchContainer');
+            if (searchContainer) {
+              searchContainer.className = 'md:col-span-2';
+            }
+          }
+          if (hospitalHeader) {
+            hospitalHeader.style.display = '';
+          }
+          
+          // تحميل قائمة المستشفيات
+          await loadHospitals();
+          
           return;
+        }
+        
+        // إخفاء فلتر المستشفى للموظفين العاديين
+        if (hospitalFilterContainer) {
+          hospitalFilterContainer.classList.add('hidden');
+        }
+        if (hospitalHeader) {
+          hospitalHeader.style.display = 'none';
         }
 
         // حراسة دخول الموديول/الصفحة: لو ما عنده صلاحية عرض التحسينات، رجعيه صفحة 403 أو الرئيسية
@@ -488,6 +678,7 @@
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         if (userData.RoleID === 1 || userData.IsClusterManager) {
           console.log('✅ [applyPermissions] Cluster Manager (fallback) - Full permissions');
+          isCentralAdmin = true; // تعيين المتغير
           userPermissions = {
             improvementView: true,
             improvementCreate: true,
@@ -495,6 +686,26 @@
             improvementDelete: true,
             improvementReportView: true
           };
+          
+          // إظهار فلتر المستشفى وعمود المستشفى
+          if (hospitalFilterContainer) {
+            hospitalFilterContainer.classList.remove('hidden');
+            const filtersContainer = document.getElementById('filtersContainer');
+            if (filtersContainer) {
+              filtersContainer.className = 'grid grid-cols-1 md:grid-cols-5 gap-3';
+            }
+            const searchContainer = document.getElementById('searchContainer');
+            if (searchContainer) {
+              searchContainer.className = 'md:col-span-2';
+            }
+          }
+          if (hospitalHeader) {
+            hospitalHeader.style.display = '';
+          }
+          
+          // تحميل قائمة المستشفيات
+          await loadHospitals();
+          
           return;
         }
         // لو فشل، خليه يشوف الصفحة بس بدون أزرار حساسة
@@ -505,8 +716,18 @@
     // أحداث الفلاتر
     $('#btnApply').addEventListener('click', loadProjects);
     $('#btnReset').addEventListener('click', ()=>{
-      fltStatus.value=''; fltDept.value=''; fltQ.value=''; loadProjects();
+      fltStatus.value=''; fltDept.value=''; fltQ.value=''; 
+      if (fltHospital) fltHospital.value='';
+      loadProjects();
     });
+    
+    // عند تغيير المستشفى: إعادة تحميل الأقسام والمشاريع
+    if (fltHospital) {
+      fltHospital.addEventListener('change', async () => {
+        await loadDepartments();
+        await loadProjects();
+      });
+    }
 
     btnAdd.addEventListener('click', ()=>{
       window.location.href = './new.html';
@@ -518,19 +739,30 @@
       if(!btn) return;
       const id = btn.getAttribute('data-id');
       const act = btn.getAttribute('data-act');
+      const hospitalId = btn.getAttribute('data-hospital');
+      
+      // بناء URL مع hospitalId إذا كان مدير واختار مستشفى
+      let url = '';
       if (act === 'view'){
-        window.location.href = `./view.html?id=${id}`;
+        url = `./view.html?id=${id}`;
       } else if (act === 'edit'){
-        window.location.href = `./edit.html?id=${id}`;
+        url = `./edit.html?id=${id}`;
       } else if (act === 'report'){
-        window.location.href = `./report.html?id=${id}`;
+        url = `./report.html?id=${id}`;
+      }
+      
+      if (url) {
+        if (isCentralAdmin && hospitalId) {
+          url += `&hospitalId=${hospitalId}`;
+        }
+        window.location.href = url;
       }
     });
 
     // بدء
     (async function init(){
-      await loadDepartments();
       await applyPermissions();
+      await loadDepartments();
       await Promise.all([loadKPIs(), loadProjects()]);
     })();
   </script>

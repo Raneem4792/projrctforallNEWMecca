@@ -11,6 +11,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-funnel@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-box-and-violin-plot@3"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- مكتبة XLSX لتصدير Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- نعيد استخدام نفس ستايلات الداشبورد عشان الشكل يظل موحّد -->
   <link rel="stylesheet" href="../public/assets/css/styles.css" />
   <link rel="stylesheet" href="dashboard.css" />
@@ -1050,7 +1052,7 @@
         </h2>
         <div class="bg-white rounded-2xl p-5 shadow-xl border border-gray-100 space-y-4">
           <!-- تقرير ملخّص التجمع -->
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3" data-perm="REPORT_SUMMARY_EXPORT">
             <div>
               <div class="font-semibold">تقرير ملخّص التجمع</div>
               <div class="text-sm text-gray-500">
@@ -1075,7 +1077,7 @@
           </div>
 
           <!-- تقرير البلاغات التفصيلية -->
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3" data-perm="REPORT_DETAILS_EXPORT">
             <div>
               <div class="font-semibold">تقرير البلاغات التفصيلية</div>
               <div class="text-sm text-gray-500">
@@ -1107,7 +1109,7 @@
           </div>
 
           <!-- تقرير أداء الأقسام -->
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3" data-perm="REPORT_DEPARTMENTS_EXPORT">
             <div>
               <div class="font-semibold">تقرير أداء الأقسام</div>
               <div class="text-sm text-gray-500">
@@ -1133,7 +1135,7 @@
           </div>
 
           <!-- تقرير أداء الموظفين -->
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b pb-3" data-perm="REPORT_EMPLOYEES_EXPORT">
             <div>
               <div class="font-semibold">تقرير أداء الموظفين</div>
               <div class="text-sm text-gray-500">
@@ -1159,7 +1161,7 @@
           </div>
 
           <!-- تقرير البلاغات الحرجة فقط -->
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3" data-perm="REPORT_CRITICAL_EXPORT">
             <div>
               <div class="font-semibold">تقرير البلاغات الحرجة فقط</div>
               <div class="text-sm text-gray-500">
@@ -1267,6 +1269,7 @@
     </div>
   </footer>
 
+  <script src="../public/assets/js/navbar-permissions.js"></script>
   <script src="reports.js"></script>
 </body>
 </html>

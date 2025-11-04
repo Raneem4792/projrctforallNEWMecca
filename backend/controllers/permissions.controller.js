@@ -150,6 +150,12 @@ export async function getUserPermissions(req, res) {
         reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
         reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
         reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+        // ===== صلاحيات تصدير التقارير =====
+        reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
+        reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
+        reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
+        reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
+        reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
         // ===== صلاحيات بلاغات إدارة التجمع =====
         clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
         clusterView:    has('CLUSTER_REPORT_VIEW'),
@@ -289,6 +295,14 @@ export async function saveUserPermissions(req, res) {
         reportsChartByDepartment       ? await upsert('REPORTS_CHART_BY_DEPARTMENT')        : await drop('REPORTS_CHART_BY_DEPARTMENT');
         reportsChartTopEmployees       ? await upsert('REPORTS_CHART_TOP_EMPLOYEES')         : await drop('REPORTS_CHART_TOP_EMPLOYEES');
     
+    // صلاحيات تصدير التقارير
+    const { reportSummaryExport, reportDetailsExport, reportDepartmentsExport, reportEmployeesExport, reportCriticalExport } = req.body;
+    reportSummaryExport     ? await upsert('REPORT_SUMMARY_EXPORT')     : await drop('REPORT_SUMMARY_EXPORT');
+    reportDetailsExport     ? await upsert('REPORT_DETAILS_EXPORT')     : await drop('REPORT_DETAILS_EXPORT');
+    reportDepartmentsExport ? await upsert('REPORT_DEPARTMENTS_EXPORT') : await drop('REPORT_DEPARTMENTS_EXPORT');
+    reportEmployeesExport   ? await upsert('REPORT_EMPLOYEES_EXPORT')   : await drop('REPORT_EMPLOYEES_EXPORT');
+    reportCriticalExport    ? await upsert('REPORT_CRITICAL_EXPORT')    : await drop('REPORT_CRITICAL_EXPORT');
+    
     // صلاحيات بلاغات إدارة التجمع
     clusterSubmit  ? await upsert('CLUSTER_REPORT_CREATE')   : await drop('CLUSTER_REPORT_CREATE');
     clusterView    ? await upsert('CLUSTER_REPORT_VIEW')     : await drop('CLUSTER_REPORT_VIEW');
@@ -405,6 +419,12 @@ export async function getMyPermissions(req, res) {
             reportsChartUrgentPercent: true,
             reportsChartByDepartment: true,
             reportsChartTopEmployees: true,
+            // ===== صلاحيات تصدير التقارير =====
+            reportSummaryExport: true,
+            reportDetailsExport: true,
+            reportDepartmentsExport: true,
+            reportEmployeesExport: true,
+            reportCriticalExport: true,
             // ===== صلاحيات بلاغات إدارة التجمع =====
             clusterSubmit:  true,
             clusterView:    true,
@@ -496,6 +516,12 @@ export async function getMyPermissions(req, res) {
           reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
           reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
           reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+          // ===== صلاحيات تصدير التقارير =====
+          reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
+          reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
+          reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
+          reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
+          reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
           // ===== صلاحيات بلاغات إدارة التجمع =====
           clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
           clusterView:    has('CLUSTER_REPORT_VIEW'),
@@ -594,6 +620,12 @@ export async function getMyPermissions(req, res) {
           reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
           reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
           reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+          // ===== صلاحيات تصدير التقارير =====
+          reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
+          reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
+          reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
+          reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
+          reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
           // ===== صلاحيات بلاغات إدارة التجمع =====
           clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
           clusterView:    has('CLUSTER_REPORT_VIEW'),

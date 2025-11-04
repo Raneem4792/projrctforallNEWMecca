@@ -13,7 +13,54 @@
 
   <!-- Tajawal -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+  <style>
+    body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    
+    /* تحسين طباعة الصفحة - صفحة واحدة طويلة */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+
+      html, body {
+        height: 100%;
+        overflow: visible !important;
+      }
+
+      /* نخلي كل التقرير في صفحة واحدة طويلة */
+      #reportContent {
+        page-break-before: avoid;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+        overflow: visible !important;
+        transform: scale(0.7); /* تصغير بسيط عشان كله يدخل */
+        transform-origin: top center;
+      }
+
+      /* نخفي الشريط العلوي والأزرار */
+      #navbar,
+      #btnPrint,
+      #btnExport,
+      .flex.gap-2 {
+        display: none !important;
+      }
+
+      body {
+        background: white !important;
+      }
+      
+      /* منع تقسيم العناصر على صفحات */
+      .bg-white {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+  </style>
+  
+  <!-- مكتبات jsPDF و html2canvas لتصدير PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <!-- هوية مشروعك -->
   <link rel="stylesheet" href="../hospital/hospital.css">
@@ -335,19 +382,25 @@
 
       try {
         const hid = effectiveHospitalId();
-        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        // استخدام route التقرير المخصص
+        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}/report${hid ? '?hospitalId=' + hid : ''}`;
         const res = await fetch(url, { headers: authHeaders() });
         
         if (!res.ok) {
+          if (res.status === 404) {
+            showError('المشروع غير موجود أو تم حذفه');
+            return;
+          }
           throw new Error('HTTP ' + res.status);
         }
         
         const project = await res.json();
+        console.log('Report project loaded:', project);
         renderReport(project);
         
       } catch (e) {
         console.error('Error loading report:', e);
-        showError('فشل في تحميل بيانات التقرير');
+        showError('فشل في تحميل بيانات التقرير: ' + e.message);
       }
     }
 
@@ -358,28 +411,79 @@
       toast(message, 'error');
     }
 
+    async function loadHospitalName(hospitalId) {
+      if (!hospitalId) return 'غير محدد';
+      try {
+        const url = `${API_BASE}/api/hospitals/${hospitalId}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          // التعامل مع البنية المختلفة للاستجابة
+          const hospital = data.data || data;
+          return hospital.NameAr || hospital.NameEn || `مستشفى ${hospital.Code || hospitalId}`;
+        }
+      } catch (e) {
+        console.error('Error loading hospital:', e);
+      }
+      return 'مستشفى التجمع الصحي'; // قيمة افتراضية
+    }
+
     function renderReport(project) {
       // Header
       $('#reportTitle').textContent = project.Title || 'بدون عنوان';
       $('#reportSubtitle').textContent = `تقرير مشروع تحسيني - ${getStatusText(project.Status)}`;
-      $('#reportDate').textContent = new Date().toLocaleDateString('ar-SA');
-      $('#reportHospital').textContent = 'مستشفى التجمع الصحي'; // يمكن جلبها من API
+      $('#reportDate').textContent = new Date().toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // تحميل اسم المستشفى
+      loadHospitalName(project.HospitalID).then(name => {
+        $('#reportHospital').textContent = name;
+      });
+      
       $('#reportDepartment').textContent = project.DepartmentName || project.DepartmentID || 'غير محدد';
 
-      // Summary
+      // Summary - استخدام ProgressPercent من قاعدة البيانات
       $('#summaryStatus').textContent = getStatusText(project.Status);
       $('#summaryPriority').textContent = getPriorityText(project.Priority);
-      $('#summaryProgress').textContent = calculateProgress(project.StartDate, project.DueDate, project.Status);
+      
+      // استخدام ProgressPercent من قاعدة البيانات إذا كان موجوداً
+      let progressValue = 'غير محدد';
+      if (project.ProgressPercent != null && project.ProgressPercent >= 0 && project.ProgressPercent <= 100) {
+        progressValue = Math.round(project.ProgressPercent) + '%';
+      } else {
+        // إذا لم يكن موجوداً، نحسبه من التواريخ
+        progressValue = calculateProgress(project.StartDate, project.DueDate, project.Status);
+      }
+      $('#summaryProgress').textContent = progressValue;
+      
       $('#summaryDuration').textContent = calculateDuration(project.StartDate, project.DueDate);
       
-      // Executive Summary
-      const execSummary = `
-        مشروع تحسيني ${getPriorityText(project.Priority).toLowerCase()} الأولوية، 
-        حالته ${getStatusText(project.Status).toLowerCase()}، 
-        يهدف إلى ${project.AimStatement || 'تحسين الخدمات'}.
-        ${project.ProgressNotes ? 'آخر التحديثات: ' + project.ProgressNotes : ''}
-      `;
-      $('#executiveSummary').textContent = execSummary;
+      // Executive Summary - تحسين النص
+      const lastUpdate = project.UpdatedAt 
+        ? new Date(project.UpdatedAt).toLocaleDateString('ar-SA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : '';
+      
+      let execSummaryText = `مشروع تحسيني ${getPriorityText(project.Priority).toLowerCase()} الأولوية، حالته ${getStatusText(project.Status).toLowerCase()}، يهدف إلى ${project.AimStatement || 'تحسين الخدمات'}.`;
+      
+      if (project.ProgressNotes && project.ProgressNotes.trim()) {
+        // نأخذ آخر ملاحظة من ProgressNotes
+        const notes = project.ProgressNotes.split('\n').filter(n => n.trim());
+        const lastNote = notes[notes.length - 1] || project.ProgressNotes;
+        execSummaryText += ` آخر التحديثات: ${lastNote.substring(0, 100)}${lastNote.length > 100 ? '...' : ''}`;
+      } else if (lastUpdate) {
+        execSummaryText += ` آخر تحديث: ${lastUpdate}`;
+      }
+      
+      $('#executiveSummary').textContent = execSummaryText;
 
       // Overview
       $('#problemOverview').textContent = project.ProblemStatement || 'لا يوجد وصف للمشكلة';
@@ -390,8 +494,28 @@
       $('#timelineDue').textContent = fmt(project.DueDate);
       $('#timelineUpdate').textContent = fmt(project.UpdatedAt);
 
-      // Team & Resources
-      $('#teamInfo').textContent = project.TeamMembers || 'لا يوجد فريق محدد';
+      // Team & Resources - تحليل JSON أو عرض نص
+      let teamInfoText = 'لا يوجد فريق محدد';
+      if (project.TeamMembers && project.TeamMembers.trim()) {
+        try {
+          const team = JSON.parse(project.TeamMembers);
+          if (Array.isArray(team) && team.length > 0) {
+            teamInfoText = team.map(m => {
+              let line = m.name || '—';
+              if (m.task && m.task.trim()) {
+                line += ': ' + m.task;
+              }
+              return line;
+            }).join('\n');
+          } else {
+            teamInfoText = project.TeamMembers;
+          }
+        } catch (e) {
+          // fallback للنص القديم
+          teamInfoText = project.TeamMembers;
+        }
+      }
+      $('#teamInfo').textContent = teamInfoText;
       $('#successInfo').textContent = project.SuccessCriteria || 'لا توجد معايير نجاح محددة';
 
       // Progress
@@ -402,13 +526,78 @@
       reportDetailsEl.classList.remove('hidden');
     }
 
-    // Event listeners
-    $('#btnPrint').addEventListener('click', () => {
+    // ✅ طباعة التقرير بدون الشريط العلوي - صفحة واحدة طويلة
+    $('#btnPrint').addEventListener('click', async () => {
+      const navbar = document.getElementById('navbar');
+      const buttons = document.querySelector('.flex.gap-2');
+      
+      // إخفاء العناصر قبل الطباعة
+      if (navbar) navbar.style.display = 'none';
+      if (buttons) buttons.style.display = 'none';
+      
+      // ننتظر لحظة عشان CSS للطباعة يتطبّق
+      await new Promise(r => setTimeout(r, 300));
+      
+      // فتح نافذة الطباعة
       window.print();
+      
+      // نرجّع العناصر بعد الطباعة
+      setTimeout(() => {
+        if (navbar) navbar.style.display = '';
+        if (buttons) buttons.style.display = '';
+      }, 1000);
     });
 
-    $('#btnExport').addEventListener('click', () => {
-      toast('ميزة التصدير قيد التطوير', 'info');
+    // ✅ تصدير التقرير إلى PDF
+    $('#btnExport').addEventListener('click', async () => {
+      const report = document.getElementById('reportDetails');
+      if (!report) {
+        toast('لم يتم العثور على محتوى التقرير', 'error');
+        return;
+      }
+
+      try {
+        // إظهار رسالة تحميل
+        toast('جاري تصدير التقرير إلى PDF...', 'info');
+        
+        const { jsPDF } = window.jspdf;
+        
+        // نحول الصفحة إلى صورة
+        const canvas = await html2canvas(report, {
+          scale: 2,
+          useCORS: true,
+          scrollY: -window.scrollY,
+          backgroundColor: '#ffffff'
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+        
+        let position = 0;
+        pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+        
+        // لو التقرير طويل جدًا، نقسم الصفحات
+        let heightLeft = imgHeight - pageHeight;
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        const reportTitle = document.getElementById('reportTitle')?.textContent || 'تقرير مشروع تحسيني';
+        const fileName = `${reportTitle.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+        pdf.save(fileName);
+        
+        toast('تم تصدير التقرير إلى PDF بنجاح', 'success');
+      } catch (error) {
+        console.error('Error exporting PDF:', error);
+        toast('حدث خطأ أثناء تصدير PDF', 'error');
+      }
     });
 
     // Initialize

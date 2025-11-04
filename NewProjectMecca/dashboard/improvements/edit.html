@@ -150,8 +150,77 @@
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="وصف المشكلة التي يحاول المشروع حلها..."></textarea>
             </div>
+            <!-- معايير SMART -->
+            <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">معايير SMART للهدف التحسيني</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                  حددي المعايير المتوفرة في الهدف الخاص بالمشروع التحسيني.
+                </p>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                      <th class="text-right py-3 px-4 font-semibold text-sm text-gray-700">المعيار</th>
+                      <th class="text-right py-3 px-4 font-semibold text-sm text-gray-700">الوصف</th>
+                      <th class="text-center py-3 px-4 font-semibold text-sm text-gray-700">متوفر في الهدف؟</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                      <td class="py-3 px-4 text-sm font-medium text-gray-900">محدد (Specific)</td>
+                      <td class="py-3 px-4 text-sm text-gray-600">وصف الهدف بوضوح وبشكل محدد.</td>
+                      <td class="py-3 px-4 text-center">
+                        <input type="checkbox" id="smart_specific" name="SmartSpecific" 
+                               class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                      </td>
+                    </tr>
+
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                      <td class="py-3 px-4 text-sm font-medium text-gray-900">قابل للقياس (Measurable)</td>
+                      <td class="py-3 px-4 text-sm text-gray-600">حدد كيفية قياس التقدم أو النجاح بالأرقام أو النسب.</td>
+                      <td class="py-3 px-4 text-center">
+                        <input type="checkbox" id="smart_measurable" name="SmartMeasurable"
+                               class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                      </td>
+                    </tr>
+
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                      <td class="py-3 px-4 text-sm font-medium text-gray-900">قابل للتحقق (Achievable)</td>
+                      <td class="py-3 px-4 text-sm text-gray-600">هل يمكن تحقيق الهدف فعلاً بالإمكانيات الحالية؟</td>
+                      <td class="py-3 px-4 text-center">
+                        <input type="checkbox" id="smart_achievable" name="SmartAchievable"
+                               class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                      </td>
+                    </tr>
+
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                      <td class="py-3 px-4 text-sm font-medium text-gray-900">واقعي (Realistic)</td>
+                      <td class="py-3 px-4 text-sm text-gray-600">هل الهدف مناسب للواقع الحالي والإمكانيات؟</td>
+                      <td class="py-3 px-4 text-center">
+                        <input type="checkbox" id="smart_realistic" name="SmartRealistic"
+                               class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                      </td>
+                    </tr>
+
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                      <td class="py-3 px-4 text-sm font-medium text-gray-900">بزمن محدد (Time-bound)</td>
+                      <td class="py-3 px-4 text-sm text-gray-600">حدد الإطار الزمني لتحقيق الهدف.</td>
+                      <td class="py-3 px-4 text-center">
+                        <input type="checkbox" id="smart_timebound" name="SmartTimebound"
+                               class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">الهدف من المشروع *</label>
+              <p class="text-xs text-gray-500 mb-2">اكتب/ي الهدف النهائي بصيغة تجمع كل المعايير السابقة.</p>
               <textarea id="aimStatement" name="aimStatement" rows="4" required
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="الهدف المحدد من هذا المشروع..."></textarea>
@@ -163,10 +232,18 @@
                         placeholder="كيف سيتم قياس نجاح المشروع..."></textarea>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">فريق العمل</label>
-              <textarea id="teamMembers" name="teamMembers" rows="3"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholder="أعضاء فريق العمل..."></textarea>
+              <label class="block text-sm font-medium text-gray-700 mb-2">فريق العمل والمهام</label>
+              
+              <!-- قائمة الفريق -->
+              <div id="teamEditList" class="space-y-3 mb-3"></div>
+              
+              <!-- أزرار الإضافة -->
+              <button type="button" id="btnAddMember"
+                      class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium">
+                ➕ إضافة عضو جديد
+              </button>
+              
+              <p class="text-xs text-gray-500 mt-2">يمكنك إدخال أسماء أعضاء الفريق، مهامهم، وتحديد ما إذا تم تنفيذ المهمة أم لا.</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">ملاحظات التقدم</label>
@@ -300,14 +377,35 @@
 
       try {
         const hid = effectiveHospitalId();
+        if (!hid) {
+          showError('لم يتم تحديد المستشفى. يرجى التأكد من تسجيل الدخول.');
+          return;
+        }
+        
         const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        console.log('Loading project:', { projectId, hospitalId: hid, url });
+        
         const res = await fetch(url, { headers: authHeaders() });
         
         if (!res.ok) {
-          throw new Error('HTTP ' + res.status);
+          if (res.status === 404) {
+            const errorMsg = `المشروع (ID: ${projectId}) غير موجود في المستشفى (ID: ${hid}) أو تم حذفه.`;
+            console.error(errorMsg);
+            showError(errorMsg);
+            return;
+          }
+          const errorData = await res.json().catch(() => ({ error: 'خطأ غير معروف' }));
+          throw new Error(errorData.error || 'HTTP ' + res.status);
         }
         
         const project = await res.json();
+        console.log('Project loaded:', project);
+        
+        if (!project || !project.ProjectID) {
+          showError('بيانات المشروع غير صحيحة');
+          return;
+        }
+        
         populateForm(project);
         
         loadingEl.classList.add('hidden');
@@ -315,7 +413,7 @@
         
       } catch (e) {
         console.error('Error loading project:', e);
-        showError('فشل في تحميل بيانات المشروع');
+        showError('فشل في تحميل بيانات المشروع: ' + e.message);
       }
     }
 
@@ -323,7 +421,14 @@
       loadingEl.classList.add('hidden');
       errorEl.classList.remove('hidden');
       formContentEl.classList.add('hidden');
-      toast(message, 'error');
+      
+      // تحديث رسالة الخطأ في الـ HTML
+      const errorMessageEl = errorEl.querySelector('.text-red-600');
+      if (errorMessageEl) {
+        errorMessageEl.textContent = message || 'حدث خطأ في تحميل المشروع';
+      }
+      
+      toast(message || 'حدث خطأ في تحميل المشروع', 'error');
     }
 
     function populateForm(project) {
@@ -336,8 +441,15 @@
       $('#problemStatement').value = project.ProblemStatement || '';
       $('#aimStatement').value = project.AimStatement || '';
       $('#successCriteria').value = project.SuccessCriteria || '';
-      $('#teamMembers').value = project.TeamMembers || '';
+      // تحميل فريق العمل
+      renderExistingTeam(project.TeamMembers || '');
       $('#progressNotes').value = project.ProgressNotes || '';
+      // معايير SMART
+      $('#smart_specific').checked = project.SmartSpecific === 1 || project.SmartSpecific === true;
+      $('#smart_measurable').checked = project.SmartMeasurable === 1 || project.SmartMeasurable === true;
+      $('#smart_achievable').checked = project.SmartAchievable === 1 || project.SmartAchievable === true;
+      $('#smart_realistic').checked = project.SmartRealistic === 1 || project.SmartRealistic === true;
+      $('#smart_timebound').checked = project.SmartTimebound === 1 || project.SmartTimebound === true;
     }
 
     // Form submission
@@ -349,7 +461,29 @@
 
       try {
         const formData = new FormData(formEl);
-        const data = Object.fromEntries(formData.entries());
+        const raw = Object.fromEntries(formData.entries());
+        
+        // تحويل أسماء الحقول لتطابق ما يتوقعه الـ backend (أحرف كبيرة في البداية)
+        const data = {
+          Title: raw.title?.trim() || '',
+          ProblemStatement: raw.problemStatement?.trim() || '',
+          AimStatement: raw.aimStatement?.trim() || '',
+          DepartmentID: raw.departmentId ? Number(raw.departmentId) : null,
+          Priority: raw.priority || 'MEDIUM',
+          Status: raw.status || 'DRAFT',
+          StartDate: raw.startDate || null,
+          DueDate: raw.dueDate || null,
+          BudgetEstimate: raw.budgetEstimate ? parseFloat(raw.budgetEstimate) : null,
+          SuccessCriteria: raw.successCriteria?.trim() || null,
+          TeamMembers: collectTeamMembersForSave().length > 0 ? JSON.stringify(collectTeamMembersForSave()) : null,
+          ProgressNotes: raw.progressNotes?.trim() || null,
+          // معايير SMART
+          SmartSpecific: $('#smart_specific').checked,
+          SmartMeasurable: $('#smart_measurable').checked,
+          SmartAchievable: $('#smart_achievable').checked,
+          SmartRealistic: $('#smart_realistic').checked,
+          SmartTimebound: $('#smart_timebound').checked
+        };
 
         const hid = effectiveHospitalId();
         const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
@@ -363,17 +497,19 @@
         });
 
         if (!res.ok) {
-          throw new Error('HTTP ' + res.status);
+          const errorData = await res.json().catch(() => ({ error: 'خطأ غير معروف' }));
+          throw new Error(errorData.error || 'HTTP ' + res.status);
         }
 
-        toast('تم حفظ التغييرات بنجاح', 'success');
+        const result = await res.json();
+        toast(result.message || 'تم حفظ التغييرات بنجاح', 'success');
         setTimeout(() => {
           window.location.href = `./view.html?id=${projectId}`;
         }, 1500);
 
       } catch (e) {
         console.error('Error saving project:', e);
-        toast('فشل في حفظ التغييرات', 'error');
+        toast('فشل في حفظ التغييرات: ' + e.message, 'error');
       } finally {
         btnSave.disabled = false;
         btnSave.textContent = 'حفظ التغييرات';
@@ -456,6 +592,96 @@
         });
       }
     });
+
+    // -------------------------
+    // قائمة فريق العمل التفاعلية مع حالة التنفيذ
+    // -------------------------
+    const teamEditList = document.getElementById('teamEditList');
+    const btnAddMember = document.getElementById('btnAddMember');
+
+    if (btnAddMember) {
+      btnAddMember.addEventListener('click', () => addTeamMemberRow());
+    }
+
+    // إنشاء صف جديد لعضو فريق
+    function addTeamMemberRow(member = { name: '', task: '', done: false }) {
+      if (!teamEditList) return;
+      
+      const div = document.createElement('div');
+      div.className = "border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-3 relative shadow-sm transition-all hover:shadow-md";
+
+      const escapedName = (member.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const escapedTask = (member.task || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      div.innerHTML = `
+        <button type="button" class="absolute top-2 left-2 text-red-500 hover:text-red-700 text-lg font-bold remove-member w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors" title="حذف العضو">✕</button>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-start pt-1">
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-1 block">اسم العضو</label>
+            <input type="text" class="member-name w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value="${escapedName}" placeholder="مثلاً: د. سارة العتيبي">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-1 block">المهمة</label>
+            <input type="text" class="member-task w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value="${escapedTask}" placeholder="مثلاً: متابعة التحليل...">
+          </div>
+          <div class="flex items-center gap-2 mt-6">
+            <input type="checkbox" class="member-done w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" ${member.done ? 'checked' : ''}>
+            <label class="text-sm text-gray-700 font-medium cursor-pointer">تم التنفيذ</label>
+          </div>
+        </div>
+      `;
+      
+      teamEditList.appendChild(div);
+
+      // زر حذف العضو
+      div.querySelector('.remove-member').addEventListener('click', () => div.remove());
+    }
+
+    // تحميل الفريق الحالي من قاعدة البيانات
+    function renderExistingTeam(teamData) {
+      if (!teamEditList) return;
+      
+      teamEditList.innerHTML = '';
+      let team = [];
+      
+      try {
+        team = JSON.parse(teamData || '[]');
+      } catch (e) {
+        // fallback لو النص قديم (كان plain text)
+        const oldText = (teamData || '').trim();
+        if (oldText) {
+          team = [{ name: oldText, task: '', done: false }];
+        }
+      }
+      
+      if (!Array.isArray(team) || team.length === 0) {
+        addTeamMemberRow();
+      } else {
+        team.forEach(m => addTeamMemberRow(m));
+      }
+    }
+
+    // جمع البيانات عند الحفظ
+    function collectTeamMembersForSave() {
+      const members = [];
+      if (!teamEditList) return members;
+      
+      const rows = teamEditList.querySelectorAll('.border');
+      rows.forEach(row => {
+        const name = row.querySelector('.member-name')?.value.trim() || '';
+        const task = row.querySelector('.member-task')?.value.trim() || '';
+        const done = row.querySelector('.member-done')?.checked || false;
+        if (name || task) {
+          members.push({ name, task, done });
+        }
+      });
+      return members;
+    }
+
+    // دالة لتحميل بيانات الفريق في النموذج (للتوافق مع الكود القديم)
+    function populateTeamMembers(teamMembersStr) {
+      renderExistingTeam(teamMembersStr);
+    }
   </script>
 </body>
 </html>

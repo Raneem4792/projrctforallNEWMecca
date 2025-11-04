@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { getTenantPoolByHospitalId } from '../db/tenantManager.js';
+import { getCentralPool } from '../db/centralPool.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/checkPermission.js';
 
@@ -109,18 +110,25 @@ router.post('/upload',
       // المسار النسبي
       const relPath = path.relative(process.cwd(), filePath).split(path.sep).join('/');
 
+      // استقبال الحقول الجديدة
+      const customFileName = req.body.fileName || req.body.customFileName || null;
+      const sourceName = req.body.sourceName || null;
+      const sourceModule = req.body.sourceModule || req.body.source || 'غير محدد';
+      
       // INSERT في جدول المستشفى
       console.log(`[archive/upload] إدراج بيانات الملف في قاعدة البيانات...`);
       let result;
       try {
         [result] = await db.execute(
           `INSERT INTO file_archive
-           (HospitalID, Category, SourceModule, OriginalName, StoredName, MimeType, FileSizeBytes, StoragePath, Notes, UploadedByUserID, Sha256Hash)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+           (HospitalID, Category, SourceModule, CustomFileName, SourceName, OriginalName, StoredName, MimeType, FileSizeBytes, StoragePath, Notes, UploadedByUserID, Sha256Hash)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             hospitalId,
-            req.body.category || null,
-            req.body.source || null,
+            req.body.category || 'archive',
+            sourceModule || 'غير محدد',
+            customFileName,
+            sourceName,
             req.file.originalname,
             req.file.filename,
             req.file.mimetype || null,
@@ -187,28 +195,161 @@ router.post('/upload',
   }
 );
 
+// دالة مساعدة: جلب الملفات من جميع المستشفيات
+async function getAllHospitalsFiles(req, res, page, pageSize, q, type, source) {
+  try {
+    const central = await getCentralPool();
+    
+    // جلب جميع المستشفيات النشطة
+    const [hospitals] = await central.query(
+      'SELECT HospitalID, NameAr FROM hospitals WHERE (IsActive = 1 OR Active = 1) ORDER BY HospitalID'
+    );
+
+    const allFiles = [];
+    const hospitalsMap = new Map(); // لربط HospitalID مع NameAr
+
+    // جمع أسماء المستشفيات
+    hospitals.forEach(h => {
+      hospitalsMap.set(h.HospitalID, h.NameAr);
+    });
+
+    // البحث في كل مستشفى
+    for (const hospital of hospitals) {
+      try {
+        const db = await getTenantPoolByHospitalId(hospital.HospitalID);
+        
+        const where = [];
+        const args = [];
+        
+        if (q) {
+          where.push('(fa.OriginalName LIKE ? OR fa.MimeType LIKE ?)');
+          args.push(`%${q}%`, `%${q}%`);
+        }
+        if (type) {
+          if (type.endsWith('/')) {
+            where.push('fa.MimeType LIKE ?');
+            args.push(`${type}%`);
+          } else {
+            where.push('fa.MimeType = ?');
+            args.push(type);
+          }
+        }
+        if (source && source.toLowerCase() !== 'all') {
+          where.push('fa.SourceModule = ?');
+          args.push(source);
+        }
+
+        const whereSql = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
+        
+        const [rows] = await db.execute(
+          `SELECT 
+             fa.FileID,
+             fa.HospitalID,
+             fa.SourceModule,
+             fa.CustomFileName,
+             fa.SourceName,
+             fa.Notes,
+             fa.OriginalName,
+             fa.FileSizeBytes,
+             fa.UploadedByUserID,
+             fa.UploadedAt,
+             u.FullName,
+             u.RoleID
+           FROM file_archive fa
+           LEFT JOIN users u ON u.UserID = fa.UploadedByUserID
+           ${whereSql}
+           ORDER BY fa.UploadedAt DESC`,
+          args
+        );
+
+        // إضافة اسم المستشفى لكل ملف
+        rows.forEach(f => {
+          allFiles.push({
+            ...f,
+            hospitalName: hospitalsMap.get(f.HospitalID) || '—'
+          });
+        });
+      } catch (err) {
+        console.error(`[archive/list] خطأ في جلب ملفات المستشفى ${hospital.HospitalID}:`, err.message);
+        // نستمر في البحث في المستشفيات الأخرى
+      }
+    }
+
+    // ترتيب جميع الملفات حسب التاريخ
+    allFiles.sort((a, b) => new Date(b.UploadedAt) - new Date(a.UploadedAt));
+
+    // تطبيق Pagination
+    const total = allFiles.length;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const paginatedFiles = allFiles.slice(start, end);
+
+    // تنسيق النتائج
+    const formattedFiles = paginatedFiles.map(f => ({
+      fileId: f.FileID,
+      hospitalId: f.HospitalID,
+      hospitalName: f.hospitalName || '—',
+      source: f.SourceModule || '—',
+      fileName: f.CustomFileName || f.OriginalName,
+      sourceName: f.SourceName || '—',
+      notes: f.Notes || '',
+      sizeMB: (f.FileSizeBytes / 1024 / 1024).toFixed(2),
+      uploadedBy: f.RoleID === 1 ? 'إدارة التجمع' : (f.FullName || 'غير معروف'),
+      uploadedAt: f.UploadedAt,
+      downloadUrl: `/api/archive/download/${f.FileID}?hospitalId=${f.HospitalID}`
+    }));
+
+    return res.json({
+      ok: true,
+      files: formattedFiles,
+      total,
+      page,
+      pageSize,
+      items: formattedFiles,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      }
+    });
+  } catch (err) {
+    console.error('[archive/list] خطأ في جلب ملفات جميع المستشفيات:', err);
+    return res.status(500).json({
+      ok: false,
+      error: 'Server error',
+      message: 'حدث خطأ أثناء جلب الملفات',
+      total: 0,
+      items: []
+    });
+  }
+}
+
 // 🟢 جلب قائمة الملفات من الأرشيف
 router.get('/list', optionalAuth, async (req, res) => {
   try {
     // الحصول على hospitalId من query أو من المستخدم
-    const qHosp = (req.query.hospitalId || '').toString().trim();
-    const queryHospId = parseInt(qHosp, 10);
+    const qHosp = (req.query.hospitalId || '').toString().trim().toLowerCase();
+    const queryHospId = qHosp === 'all' ? 'all' : parseInt(qHosp, 10);
     const userHospId = req.user ? parseInt(req.user?.HospitalID || req.user?.hospitalId || '0', 10) : 0;
     const isCM = req.user ? (!!req.user?.isClusterManager || req.user?.RoleID === 1) : false;
     
-    // تحديد hospitalId: المدير يستطيع اختيار، الآخرون يستخدمون مستشفاهم أو query
-    let hospitalId = isCM && queryHospId ? queryHospId : (userHospId || queryHospId);
-
-    if (!hospitalId) {
-      // مؤقتاً نرجّع فاضي بدل 400
-      return res.json({ 
-        ok: true,
-        total: 0, 
-        page: 1, 
-        pageSize: 20, 
-        items: [],
-        message: 'يجب تحديد معرف المستشفى'
-      });
+    // تحديد hospitalId: المدير يستطيع اختيار "all" أو مستشفى محدد، الآخرون يستخدمون مستشفاهم
+    let hospitalId;
+    if (isCM) {
+      hospitalId = queryHospId === 'all' ? 'all' : (queryHospId || 'all');
+    } else {
+      hospitalId = userHospId || queryHospId;
+      if (!hospitalId || isNaN(hospitalId)) {
+        return res.json({ 
+          ok: true,
+          total: 0, 
+          page: 1, 
+          pageSize: 20, 
+          items: [],
+          message: 'يجب تحديد معرف المستشفى'
+        });
+      }
     }
 
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
@@ -219,11 +360,39 @@ router.get('/list', optionalAuth, async (req, res) => {
     const type = (req.query.type || '').trim();
     const source = (req.query.source || '').trim();
 
+    // إذا كان "all"، نجمع الملفات من جميع المستشفيات
+    if (hospitalId === 'all' && isCM) {
+      return await getAllHospitalsFiles(req, res, page, pageSize, q, type, source);
+    }
+
     // قاعدة المستشفى (الفرعية)
     const db = await getTenantPoolByHospitalId(hospitalId);
+    
+    // جلب اسم المستشفى من القاعدة المركزية
+    let hospitalName = '—';
+    try {
+      const central = await getCentralPool();
+      if (central) {
+        const [hospRows] = await central.query(
+          'SELECT NameAr FROM hospitals WHERE HospitalID = ? LIMIT 1',
+          [hospitalId]
+        );
+        if (hospRows.length > 0) {
+          hospitalName = hospRows[0].NameAr || '—';
+        }
+      }
+    } catch (err) {
+      console.error('[archive/list] خطأ في جلب اسم المستشفى:', err);
+    }
 
-    const where = ['fa.HospitalID = ?'];
-    const args = [hospitalId];
+    // بناء شروط WHERE - لا نضيف شرط HospitalID إذا كان "all"
+    const where = [];
+    const args = [];
+    
+    if (hospitalId !== 'all') {
+      where.push('fa.HospitalID = ?');
+      args.push(hospitalId);
+    }
 
     if (q) {
       where.push('(fa.OriginalName LIKE ? OR fa.MimeType LIKE ?)');
@@ -243,7 +412,7 @@ router.get('/list', optionalAuth, async (req, res) => {
       args.push(source);
     }
 
-    const whereSql = 'WHERE ' + where.join(' AND ');
+    const whereSql = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
 
     // العدد
     const [cnt] = await db.execute(
@@ -256,18 +425,18 @@ router.get('/list', optionalAuth, async (req, res) => {
     const sqlRows = `SELECT 
          fa.FileID,
          fa.HospitalID,
-         fa.Category,
          fa.SourceModule,
-         fa.OriginalName,
-         fa.StoredName,
-         fa.MimeType,
-         fa.FileSizeBytes,
-         fa.StoragePath,
+         fa.CustomFileName,
+         fa.SourceName,
          fa.Notes,
+         fa.OriginalName,
+         fa.FileSizeBytes,
          fa.UploadedByUserID,
          fa.UploadedAt,
-         fa.Sha256Hash
+         u.FullName,
+         u.RoleID
        FROM file_archive fa
+       LEFT JOIN users u ON u.UserID = fa.UploadedByUserID
        ${whereSql}
        ORDER BY fa.UploadedAt DESC
        LIMIT ${Number(pageSize)} OFFSET ${Number(offset)}`;
@@ -275,26 +444,18 @@ router.get('/list', optionalAuth, async (req, res) => {
     const [rows] = await db.execute(sqlRows, args);
 
     // تنسيق النتائج
-    const formattedFiles = rows.map(file => ({
-      fileId: file.FileID,
-      hospitalId: file.HospitalID,
-      hospitalName: null, // لا يوجد JOIN مع hospitals في قاعدة المستشفى
-      category: file.Category,
-      source: file.SourceModule,
-      originalName: file.OriginalName,
-      storedName: file.StoredName,
-      mimeType: file.MimeType,
-      fileSizeBytes: file.FileSizeBytes,
-      fileSizeMB: (file.FileSizeBytes / 1024 / 1024).toFixed(2),
-      storagePath: file.StoragePath,
-      notes: file.Notes,
-      uploadedBy: {
-        userId: file.UploadedByUserID,
-        username: null
-      },
-      uploadedAt: file.UploadedAt,
-      sha256Hash: file.Sha256Hash,
-      downloadUrl: `/api/archive/download/${file.FileID}?hospitalId=${hospitalId}`
+    const formattedFiles = rows.map(f => ({
+      fileId: f.FileID,
+      hospitalId: f.HospitalID,
+      hospitalName: hospitalName || '—',
+      source: f.SourceModule || '—',
+      fileName: f.CustomFileName || f.OriginalName,
+      sourceName: f.SourceName || '—',
+      notes: f.Notes || '',
+      sizeMB: (f.FileSizeBytes / 1024 / 1024).toFixed(2),
+      uploadedBy: f.RoleID === 1 ? 'إدارة التجمع' : (f.FullName || 'غير معروف'),
+      uploadedAt: f.UploadedAt,
+      downloadUrl: `/api/archive/download/${f.FileID}?hospitalId=${f.HospitalID}`
     }));
 
     res.json({ 

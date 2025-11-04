@@ -1713,8 +1713,71 @@ async function updateTopEmployeesChart(hospitalId, topN) {
   await createTopEmployeesChart(hospitalId, topN);
 }
 
+// تطبيق صلاحيات تصدير التقارير (PDF/Excel)
+async function applyReportExportPermissions() {
+  try {
+    const res = await fetch(`${API_BASE}/api/permissions/me`, {
+      headers: { 
+        'Accept': 'application/json', 
+        'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}` 
+      },
+      credentials: 'include'
+    });
+    
+    if (!res.ok) {
+      console.warn('⚠️ فشل تحميل صلاحيات التقارير:', res.status);
+      return;
+    }
+    
+    const json = await res.json();
+    const p = json.data || {};
+
+    console.log('🔍 الصلاحيات المحملة للتقارير:', {
+      reportSummaryExport: p.reportSummaryExport,
+      reportDetailsExport: p.reportDetailsExport,
+      reportDepartmentsExport: p.reportDepartmentsExport,
+      reportEmployeesExport: p.reportEmployeesExport,
+      reportCriticalExport: p.reportCriticalExport
+    });
+    
+    document.querySelectorAll('[data-perm]').forEach(el => {
+      const key = el.dataset.perm;
+      const map = {
+        'REPORT_SUMMARY_EXPORT': p.reportSummaryExport,
+        'REPORT_DETAILS_EXPORT': p.reportDetailsExport,
+        'REPORT_DEPARTMENTS_EXPORT': p.reportDepartmentsExport,
+        'REPORT_EMPLOYEES_EXPORT': p.reportEmployeesExport,
+        'REPORT_CRITICAL_EXPORT': p.reportCriticalExport
+      };
+      
+      // إذا كانت الصلاحية موجودة في الـ map (للتقارير فقط)
+      if (map.hasOwnProperty(key)) {
+        const hasPermission = map[key] === true || map[key] === 1 || map[key] === 'true';
+        if (hasPermission) {
+          // إذا كانت الصلاحية موجودة وصحيحة، عرض العنصر
+          el.style.display = '';
+          el.style.visibility = 'visible';
+          el.removeAttribute('hidden');
+          console.log(`✅ عرض التقرير: ${key} (الصلاحية: ${map[key]})`);
+        } else {
+          // إذا لم تكن الصلاحية موجودة، إخفاء العنصر
+          el.style.display = 'none';
+          el.setAttribute('hidden', '');
+          console.log(`❌ إخفاء التقرير: ${key} (الصلاحية: ${map[key]})`);
+        }
+      }
+      // إذا لم تكن في الـ map (مثل REPORTS_CARD_*)، نتركها كما هي
+    });
+  } catch (err) {
+    console.error('❌ فشل تحميل صلاحيات التقارير:', err);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // تطبيق صلاحيات تصدير التقارير
+    await applyReportExportPermissions();
+    
     await createMainCharts();
     await createHospitalChart();
     await createCriticalRatioChart();
@@ -1729,6 +1792,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (funnelSel) fillHospitalSelect(funnelSel, hospitals, defaultId);
     if (deptSel)   fillHospitalSelect(deptSel, hospitals, defaultId);
     if (empSel)    fillHospitalSelect(empSel, hospitals, defaultId);
+    
+    // ملء قوائم المستشفيات في قسم التصدير
+    const detailHospitalSel = document.getElementById('detailHospital');
+    const deptReportHospitalSel = document.getElementById('deptReportHospital');
+    const empReportHospitalSel = document.getElementById('empReportHospital');
+    const criticalHospitalSel = document.getElementById('criticalHospital');
+    
+    // تحديد صلاحيات المستخدم
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const isCM = userData.RoleID === 1 || userData.roleId === 1;
+    const userHospId = userData.HospitalID || userData.hospitalId || null;
+    
+    // ملء القوائم حسب نوع المستخدم
+    if (isCM) {
+      // مدير التجمع: يظهر جميع المستشفيات مع خيار "الكل"
+      if (detailHospitalSel) fillHospitalSelect(detailHospitalSel, hospitals, defaultId);
+      if (deptReportHospitalSel) fillHospitalSelect(deptReportHospitalSel, hospitals, defaultId);
+      if (empReportHospitalSel) fillHospitalSelect(empReportHospitalSel, hospitals, defaultId);
+      if (criticalHospitalSel) fillHospitalSelect(criticalHospitalSel, hospitals, defaultId);
+    } else {
+      // موظف عادي: يظهر فقط مستشفاه (بدون قائمة منسدلة، أو قائمة مع خيار واحد)
+      const userHospital = hospitals.find(h => Number(h.HospitalID) === Number(userHospId));
+      if (userHospital) {
+        // ملء القوائم بمستشفى واحد فقط (بدون خيار "الكل")
+        if (detailHospitalSel) {
+          detailHospitalSel.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = String(userHospital.HospitalID);
+          opt.textContent = userHospital.HospitalName;
+          opt.selected = true;
+          detailHospitalSel.appendChild(opt);
+          detailHospitalSel.disabled = true; // تعطيل القائمة
+        }
+        if (deptReportHospitalSel) {
+          deptReportHospitalSel.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = String(userHospital.HospitalID);
+          opt.textContent = userHospital.HospitalName;
+          opt.selected = true;
+          deptReportHospitalSel.appendChild(opt);
+          deptReportHospitalSel.disabled = true;
+        }
+        if (empReportHospitalSel) {
+          empReportHospitalSel.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = String(userHospital.HospitalID);
+          opt.textContent = userHospital.HospitalName;
+          opt.selected = true;
+          empReportHospitalSel.appendChild(opt);
+          empReportHospitalSel.disabled = true;
+        }
+        if (criticalHospitalSel) {
+          criticalHospitalSel.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = String(userHospital.HospitalID);
+          opt.textContent = userHospital.HospitalName;
+          opt.selected = true;
+          criticalHospitalSel.appendChild(opt);
+          criticalHospitalSel.disabled = true;
+        }
+      }
+    }
 
     // تطبيق قيود الواجهة حسب صلاحيات المستخدم
     applyUserPermissions();
@@ -1916,7 +2041,11 @@ function applyUserPermissions() {
       const hospitalSelects = [
         'funnelHospital',
         'deptCountHospital',
-        'topEmployeesHospital'
+        'topEmployeesHospital',
+        'detailHospital',
+        'deptReportHospital',
+        'empReportHospital',
+        'criticalHospital'
       ];
       
       hospitalSelects.forEach(selectId => {
@@ -2157,10 +2286,12 @@ async function applyReportPermissions() {
       return;
     }
 
-    // اخفاء أي عنصر ليس مصرح به
+    // اخفاء أي عنصر ليس مصرح به (للصلاحيات القديمة فقط)
     document.querySelectorAll('[data-perm]').forEach(el => {
       const key = el.getAttribute('data-perm');
-      const map = {
+      
+      // صلاحيات التقارير القديمة (الكروت والرسوم البيانية)
+      const oldMap = {
         'REPORTS_CARD_TOTALS': p.reportsCardTotals,
         'REPORTS_CARD_OPEN': p.reportsCardOpen,
         'REPORTS_CARD_CLOSED': p.reportsCardClosed,
@@ -2174,7 +2305,28 @@ async function applyReportPermissions() {
         'REPORTS_CHART_BY_DEPARTMENT': p.reportsChartByDepartment,
         'REPORTS_CHART_TOP_EMPLOYEES': p.reportsChartTopEmployees,
       };
-      if (!map[key]) el.remove(); // أو el.style.display='none'
+      
+      // صلاحيات تصدير التقارير الجديدة
+      const exportMap = {
+        'REPORT_SUMMARY_EXPORT': p.reportSummaryExport,
+        'REPORT_DETAILS_EXPORT': p.reportDetailsExport,
+        'REPORT_DEPARTMENTS_EXPORT': p.reportDepartmentsExport,
+        'REPORT_EMPLOYEES_EXPORT': p.reportEmployeesExport,
+        'REPORT_CRITICAL_EXPORT': p.reportCriticalExport
+      };
+      
+      // إذا كانت صلاحية تصدير، نتعامل معها في الدالة الأخرى
+      if (exportMap.hasOwnProperty(key)) {
+        // لا نفعل شيء هنا، الدالة الأولى ستتعامل معها
+        return;
+      }
+      
+      // إذا كانت صلاحية قديمة، نطبق المنطق القديم
+      if (oldMap.hasOwnProperty(key)) {
+        if (!oldMap[key]) {
+          el.style.display = 'none';
+        }
+      }
     });
 
     console.log('✅ تم تطبيق صلاحيات التقارير بنجاح');
@@ -3395,6 +3547,113 @@ async function exportReport(reportKey, format) {
           criticalImage
         })
       };
+    } else if (format === 'excel') {
+      // ✅ تصدير Excel من الواجهة مباشرة
+      console.log('[Export] ✅ تصدير Excel من الواجهة:', reportKey);
+      
+      let table = null;
+      let sheetName = 'تقرير';
+      let fileName = `${reportKey}-${Date.now()}.xlsx`;
+
+      // تحديد الجدول والبيانات حسب نوع التقرير
+      if (reportKey === 'summary') {
+        // جلب البيانات أولاً
+        showLoadingIndicator('جاري تحميل بيانات التقرير...');
+        const month = document.getElementById('summaryMonth')?.value || '';
+        
+        try {
+          // جلب البيانات والرسم البياني بالتوازي
+          await Promise.all([
+            loadHospitalsData(),
+            new Promise(resolve => setTimeout(resolve, 100)) // انتظار قصير للتأكد من رندر الجدول
+          ]);
+        } catch (err) {
+          console.error('❌ فشل تحميل بيانات ملخص التجمع:', err);
+          hideLoadingIndicator();
+          throw new Error('فشل تحميل بيانات التقرير: ' + err.message);
+        }
+        
+        hideLoadingIndicator();
+        
+        table = document.querySelector('#summaryTableArea table');
+        if (!table) {
+          throw new Error('لم يتم العثور على جدول ملخص البلاغات. تأكد من تحميل البيانات أولاً.');
+        }
+        
+        sheetName = 'ملخص البلاغات';
+        fileName = `ملخص-البلاغات-${month || 'كل-الأشهر'}-${Date.now()}.xlsx`;
+      } else if (reportKey === 'details') {
+        const fromDate = document.getElementById('detailFrom')?.value || '';
+        const toDate = document.getElementById('detailTo')?.value || '';
+        const hospitalId = document.getElementById('detailHospital')?.value || 'all';
+        
+        showLoadingIndicator('جاري تحميل بيانات البلاغات...');
+        const complaints = await fetchDetailedComplaintsData({ fromDate, toDate, hospitalId });
+        renderDetailsTable(complaints);
+        hideLoadingIndicator();
+        
+        table = document.querySelector('#detailsTableArea table');
+        sheetName = 'البلاغات التفصيلية';
+        fileName = `البلاغات-التفصيلية-${fromDate || 'كل-التواريخ'}-${Date.now()}.xlsx`;
+      } else if (reportKey === 'departments') {
+        const hospitalId = document.getElementById('deptReportHospital')?.value || 'all';
+        
+        showLoadingIndicator('جاري تحميل بيانات الأقسام...');
+        const departments = await fetchDepartmentsPerformanceData({ hospitalId });
+        renderDepartmentsTable(departments);
+        hideLoadingIndicator();
+        
+        table = document.querySelector('#departmentsTableArea table');
+        sheetName = 'أداء الأقسام';
+        fileName = `أداء-الأقسام-${hospitalId === 'all' ? 'كل-المستشفيات' : hospitalId}-${Date.now()}.xlsx`;
+      } else if (reportKey === 'employees') {
+        const hospitalId = document.getElementById('empReportHospital')?.value || 'all';
+        
+        showLoadingIndicator('جاري تحميل بيانات الموظفين...');
+        const employees = await fetchEmployeesPerformanceData({ hospitalId });
+        renderEmployeesTable(employees);
+        hideLoadingIndicator();
+        
+        table = document.querySelector('#employeesTableArea table');
+        sheetName = 'أداء الموظفين';
+        fileName = `أداء-الموظفين-${hospitalId === 'all' ? 'كل-المستشفيات' : hospitalId}-${Date.now()}.xlsx`;
+      } else if (reportKey === 'critical') {
+        const hospitalId = document.getElementById('criticalHospital')?.value || 'all';
+        const fromDate = document.getElementById('criticalFrom')?.value || '';
+        const toDate = document.getElementById('criticalTo')?.value || '';
+        
+        showLoadingIndicator('جاري تحميل البلاغات الحرجة...');
+        const complaints = await fetchCriticalComplaintsData({ hospitalId, fromDate, toDate });
+        renderCriticalTable(complaints);
+        hideLoadingIndicator();
+        
+        table = document.querySelector('#criticalTableArea table');
+        sheetName = 'البلاغات الحرجة';
+        fileName = `البلاغات-الحرجة-${fromDate || 'كل-التواريخ'}-${Date.now()}.xlsx`;
+      }
+
+      if (!table) {
+        throw new Error('لم يتم العثور على الجدول للتصدير. تأكد من تحميل البيانات أولاً.');
+      }
+
+      // التحقق من وجود بيانات في الجدول
+      const tbody = table.querySelector('tbody');
+      if (!tbody || tbody.children.length === 0) {
+        throw new Error('لا توجد بيانات في الجدول. تأكد من اختيار الفلاتر الصحيحة.');
+      }
+
+      // تحويل الجدول إلى Excel باستخدام XLSX
+      const wb = XLSX.utils.table_to_book(table, { 
+        sheet: sheetName,
+        raw: false // تحويل التنسيقات
+      });
+
+      // حفظ الملف
+      XLSX.writeFile(wb, fileName);
+      
+      console.log('✅ تم تصدير Excel بنجاح:', fileName);
+      showSuccessMessage('تم تصدير التقرير إلى Excel بنجاح');
+      return; // لا نكمل مع fetch
     } else {
       console.log('[Export] حالة عادية - استخدام GET');
     }
@@ -3431,3 +3690,139 @@ async function exportReport(reportKey, format) {
 
 // جعل الدالة متاحة عالمياً للاستخدام من HTML
 window.exportReport = exportReport;
+
+// دالة رسائل نجاح / خطأ عامة
+function showSuccessMessage(message, isError = false) {
+  const alertBox = document.createElement("div");
+  alertBox.className = `fixed top-5 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold z-[9999] ${
+    isError ? "bg-red-600" : "bg-green-600"
+  }`;
+  alertBox.textContent = message;
+  document.body.appendChild(alertBox);
+  setTimeout(() => alertBox.remove(), 3500);
+}
+
+// ====== تصفية التقارير حسب المستشفى ======
+// دوال مساعدة لإعادة تحميل بيانات كل تقرير
+async function loadDetailsData(hospitalId) {
+  const fromDate = document.getElementById('detailFrom')?.value || '';
+  const toDate = document.getElementById('detailTo')?.value || '';
+  
+  showLoadingIndicator('جاري تحديث بيانات البلاغات التفصيلية...');
+  
+  try {
+    const complaints = await fetchDetailedComplaintsData({ fromDate, toDate, hospitalId });
+    renderDetailsTable(complaints);
+    
+    // جلب اسم المستشفى إذا كان محدد
+    let hospitalName = null;
+    if (hospitalId && hospitalId !== 'all' && complaints.length > 0) {
+      hospitalName = complaints[0].hospital || complaints[0].HospitalName || null;
+    }
+    
+    updateDetailsMeta({ fromDate, toDate, hospitalId, hospitalName });
+    hideLoadingIndicator();
+  } catch (err) {
+    hideLoadingIndicator();
+    throw err;
+  }
+}
+
+async function loadDepartmentsData(hospitalId) {
+  showLoadingIndicator('جاري تحديث بيانات الأقسام...');
+  
+  try {
+    const departments = await fetchDepartmentsPerformanceData({ hospitalId });
+    await renderDepartmentsChart(departments);
+    renderDepartmentsTable(departments);
+    
+    // جلب اسم المستشفى
+    let hospitalName = null;
+    if (hospitalId && hospitalId !== 'all' && departments.length > 0) {
+      // يمكن جلب اسم المستشفى من API آخر أو من البيانات
+      hospitalName = null;
+    }
+    
+    updateDepartmentsMeta({ hospitalId, hospitalName });
+    hideLoadingIndicator();
+  } catch (err) {
+    hideLoadingIndicator();
+    throw err;
+  }
+}
+
+async function loadEmployeesData(hospitalId) {
+  showLoadingIndicator('جاري تحديث بيانات الموظفين...');
+  
+  try {
+    const employees = await fetchEmployeesPerformanceData({ hospitalId });
+    await renderEmployeesChart(employees);
+    renderEmployeesTable(employees);
+    
+    // جلب اسم المستشفى
+    let hospitalName = null;
+    if (hospitalId && hospitalId !== 'all' && employees.length > 0) {
+      hospitalName = null;
+    }
+    
+    updateEmployeesMeta({ hospitalId, hospitalName });
+    hideLoadingIndicator();
+  } catch (err) {
+    hideLoadingIndicator();
+    throw err;
+  }
+}
+
+async function loadCriticalData(hospitalId) {
+  const fromDate = document.getElementById('criticalFrom')?.value || '';
+  const toDate = document.getElementById('criticalTo')?.value || '';
+  
+  showLoadingIndicator('جاري تحديث البلاغات الحرجة...');
+  
+  try {
+    const complaints = await fetchCriticalComplaintsData({ hospitalId, fromDate, toDate });
+    renderCriticalTable(complaints);
+    
+    // جلب اسم المستشفى إذا كان محدد
+    let hospitalName = null;
+    if (hospitalId && hospitalId !== 'all' && complaints.length > 0) {
+      hospitalName = complaints[0].hospitalName || complaints[0].HospitalName || null;
+    }
+    
+    updateCriticalMeta({ hospitalId, hospitalName, fromDate, toDate });
+    hideLoadingIndicator();
+  } catch (err) {
+    hideLoadingIndicator();
+    throw err;
+  }
+}
+
+// ربط الأحداث بالقوائم المنسدلة للمستشفيات
+document.addEventListener("DOMContentLoaded", () => {
+  // ربط الأحداث بالقوائم المنسدلة
+  const selects = [
+    { id: "detailHospital", reportKey: "details", loadFn: loadDetailsData },
+    { id: "deptReportHospital", reportKey: "departments", loadFn: loadDepartmentsData },
+    { id: "empReportHospital", reportKey: "employees", loadFn: loadEmployeesData },
+    { id: "criticalHospital", reportKey: "critical", loadFn: loadCriticalData }
+  ];
+
+  selects.forEach(sel => {
+    const el = document.getElementById(sel.id);
+    if (!el) return;
+
+    el.addEventListener("change", async () => {
+      const hospitalId = el.value;
+      console.log(`🔍 تم اختيار مستشفى (${hospitalId}) لتقرير ${sel.reportKey}`);
+
+      try {
+        // استدعاء الدالة الخاصة بكل تقرير لإعادة تحميل البيانات
+        await sel.loadFn(hospitalId);
+        showSuccessMessage(`✅ تم تصفية تقرير ${sel.reportKey} بنجاح`);
+      } catch (err) {
+        console.error(`❌ خطأ أثناء التصفية لتقرير ${sel.reportKey}:`, err);
+        showSuccessMessage(`⚠️ فشل في تحميل بيانات التقرير: ${err.message}`, true);
+      }
+    });
+  });
+});

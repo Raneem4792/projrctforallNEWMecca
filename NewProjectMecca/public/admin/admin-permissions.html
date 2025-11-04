@@ -419,6 +419,12 @@
                   <label class="flex items-center gap-3"><input type="checkbox" id="p_reports_chart_urgent_pct" class="w-4 h-4"><span>رسم نسبة الحرجة</span></label>
                   <label class="flex items-center gap-3"><input type="checkbox" id="p_reports_chart_by_dept" class="w-4 h-4"><span>رسم عدد البلاغات لكل قسم</span></label>
                   <label class="flex items-center gap-3"><input type="checkbox" id="p_reports_chart_top_employees" class="w-4 h-4"><span>الموظفون الأكثر تكرّرًا في البلاغات</span></label>
+                  <!-- صلاحيات تصدير التقارير -->
+                  <label class="flex items-center gap-3"><input type="checkbox" id="p_report_summary_export" class="w-4 h-4"><span>تصدير تقرير ملخص التجمع</span></label>
+                  <label class="flex items-center gap-3"><input type="checkbox" id="p_report_details_export" class="w-4 h-4"><span>تصدير تقرير البلاغات التفصيلية</span></label>
+                  <label class="flex items-center gap-3"><input type="checkbox" id="p_report_departments_export" class="w-4 h-4"><span>تصدير تقرير أداء الأقسام</span></label>
+                  <label class="flex items-center gap-3"><input type="checkbox" id="p_report_employees_export" class="w-4 h-4"><span>تصدير تقرير أداء الموظفين</span></label>
+                  <label class="flex items-center gap-3"><input type="checkbox" id="p_report_critical_export" class="w-4 h-4"><span>تصدير تقرير البلاغات الحرجة</span></label>
                 </div>
               </section>
 
@@ -875,6 +881,11 @@ async function loadUserPerms(hid, userId){
     $('#p_reports_chart_urgent_pct').checked   = !!p.reportsChartUrgentPercent;
     $('#p_reports_chart_by_dept').checked      = !!p.reportsChartByDepartment;
     $('#p_reports_chart_top_employees').checked = !!p.reportsChartTopEmployees;
+    $('#p_report_summary_export').checked = !!p.reportSummaryExport;
+    $('#p_report_details_export').checked = !!p.reportDetailsExport;
+    $('#p_report_departments_export').checked = !!p.reportDepartmentsExport;
+    $('#p_report_employees_export').checked = !!p.reportEmployeesExport;
+    $('#p_report_critical_export').checked = !!p.reportCriticalExport;
     // صلاحيات بلاغات إدارة التجمع
     $('#p_cluster_submit').checked  = !!p.clusterSubmit;
     $('#p_cluster_view').checked    = !!p.clusterView;
@@ -999,6 +1010,11 @@ document.addEventListener("DOMContentLoaded", () => {
       reportsChartUrgentPercent: $('#p_reports_chart_urgent_pct').checked,
       reportsChartByDepartment: $('#p_reports_chart_by_dept').checked,
       reportsChartTopEmployees: $('#p_reports_chart_top_employees').checked,
+      reportSummaryExport: $('#p_report_summary_export').checked,
+      reportDetailsExport: $('#p_report_details_export').checked,
+      reportDepartmentsExport: $('#p_report_departments_export').checked,
+      reportEmployeesExport: $('#p_report_employees_export').checked,
+      reportCriticalExport: $('#p_report_critical_export').checked,
       // صلاحيات بلاغات إدارة التجمع
       clusterSubmit:  $('#p_cluster_submit').checked,
       clusterView:    $('#p_cluster_view').checked,

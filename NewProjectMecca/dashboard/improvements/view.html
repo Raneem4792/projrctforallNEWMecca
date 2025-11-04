@@ -13,7 +13,75 @@
 
   <!-- Tajawal -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+  <style>
+    body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    
+    /* معايير SMART Badges */
+    .smart-badge {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    
+    .smart-badge .badge-text {
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .smart-badge.active {
+      background: #c6f6d5;
+      color: #065f46;
+      border-right: 4px solid #10b981;
+    }
+    
+    .smart-badge.active .badge-text::after {
+      content: ' ✅';
+      margin-right: 8px;
+    }
+    
+    .smart-badge.inactive {
+      background: #fee2e2;
+      color: #991b1b;
+      border-right: 4px solid #ef4444;
+    }
+    
+    .smart-badge.inactive .badge-text::after {
+      content: ' ❌';
+      margin-right: 8px;
+    }
+
+    /* تحسين الخط الرابط في سير المشروع */
+    #projectProgressDiagram {
+      position: relative;
+    }
+
+    #projectProgressDiagram .flex.flex-col.items-center {
+      transition: transform 0.3s ease;
+    }
+
+    #projectProgressDiagram .flex.flex-col.items-center:hover {
+      transform: translateY(-3px);
+    }
+
+    /* الخط الرابط - سمك ووضوح أفضل */
+    #projectProgressDiagram .progress-connector {
+      height: 3px;
+      border-radius: 9999px;
+      transition: all 0.3s ease;
+    }
+
+    #projectProgressDiagram .progress-connector.active {
+      opacity: 0.9;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #projectProgressDiagram .progress-connector.inactive {
+      opacity: 0.4;
+      background-color: #e5e7eb;
+    }
+  </style>
 
   <!-- هوية مشروعك -->
   <link rel="stylesheet" href="../hospital/hospital.css">
@@ -110,6 +178,9 @@
               <button id="btnReport" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-[#00366f] text-sm">
                 تقرير
               </button>
+              <button id="btnAddProgress" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm flex items-center gap-1">
+                ➕ إضافة تقدم
+              </button>
             </div>
           </div>
         </div>
@@ -133,6 +204,14 @@
           </div>
         </div>
 
+        <!-- سير المشروع -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">سير المشروع</h3>
+          <div id="projectProgressDiagram" class="relative">
+            <!-- سيتم توليد المخطط تلقائياً -->
+          </div>
+        </div>
+
         <!-- Problem Statement -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">وصف المشكلة</h3>
@@ -145,22 +224,99 @@
           <div id="aimStatement" class="text-gray-700 whitespace-pre-wrap"></div>
         </div>
 
-        <!-- Success Criteria -->
+        <!-- معايير SMART -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">معايير النجاح</h3>
-          <div id="successCriteria" class="text-gray-700 whitespace-pre-wrap"></div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">معايير SMART</h3>
+          <div class="space-y-3">
+            <div id="smartSpecific" class="smart-badge">
+              <span class="badge-text">محدد (Specific)</span>
+            </div>
+            <div id="smartMeasurable" class="smart-badge">
+              <span class="badge-text">قابل للقياس (Measurable)</span>
+            </div>
+            <div id="smartAchievable" class="smart-badge">
+              <span class="badge-text">قابل للتحقق (Achievable)</span>
+            </div>
+            <div id="smartRealistic" class="smart-badge">
+              <span class="badge-text">واقعي (Realistic)</span>
+            </div>
+            <div id="smartTimebound" class="smart-badge">
+              <span class="badge-text">بزمن محدد (Time-bound)</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Team Members -->
+        <!-- الأثر المتوقع والميزانية -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">الأثر المتوقع والميزانية</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm font-medium text-gray-700 mb-2">الأثر المتوقع</div>
+              <p id="projectImpact" class="text-sm text-gray-600 whitespace-pre-line">—</p>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-700 mb-2">الميزانية التقديرية</div>
+              <p id="projectBudget" class="text-sm text-gray-600">—</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- فريق العمل -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">فريق العمل</h3>
-          <div id="teamMembers" class="text-gray-700"></div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="p-3 text-right border border-gray-300 font-semibold text-gray-700">العضو</th>
+                  <th class="p-3 text-right border border-gray-300 font-semibold text-gray-700">المهام</th>
+                  <th class="p-3 text-center border border-gray-300 font-semibold text-gray-700">الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="teamMembersTable">
+                <tr>
+                  <td colspan="3" class="text-gray-400 text-center p-4">جاري تحميل بيانات الفريق...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <!-- Progress Notes -->
+        <!-- معايير النجاح -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">ملاحظات التقدم</h3>
-          <div id="progressNotes" class="text-gray-700 whitespace-pre-wrap"></div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">معايير النجاح</h3>
+          <p id="projectSuccess" class="text-sm text-gray-700 whitespace-pre-line">—</p>
+        </div>
+
+        <!-- ملاحظات التقدم -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">ملاحظات التقدم</h3>
+            <div id="progressPercentBadge" class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold hidden">
+              <span id="progressPercentValue">0</span>%
+            </div>
+          </div>
+          
+          <!-- شريط التقدم -->
+          <div id="progressBarContainer" class="mb-4 hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-gray-600">نسبة الإنجاز</span>
+              <span id="progressBarPercent" class="text-xs font-semibold text-gray-700">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div id="progressBarFill" class="h-full rounded-full transition-all duration-500 ease-out" style="width: 0%;"></div>
+            </div>
+          </div>
+          
+          <p id="projectProgress" class="text-sm text-gray-700 whitespace-pre-line">—</p>
+        </div>
+
+        <!-- سجل التعديلات -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">سجل التعديلات</h3>
+          <ul id="projectHistory" class="space-y-3 text-sm text-gray-700">
+            <li class="text-gray-400 text-center py-4">جاري تحميل سجل التعديلات...</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -344,18 +500,322 @@
       // Content
       $('#problemStatement').textContent = project.ProblemStatement || 'لا يوجد وصف للمشكلة';
       $('#aimStatement').textContent = project.AimStatement || 'لا يوجد هدف محدد';
-      $('#successCriteria').textContent = project.SuccessCriteria || 'لا توجد معايير نجاح محددة';
-      $('#teamMembers').textContent = project.TeamMembers || 'لا يوجد فريق محدد';
-      $('#progressNotes').textContent = project.ProgressNotes || 'لا توجد ملاحظات تقدم';
 
-      // إخفاء الحقول الفارغة
-      hideIfEmpty('successCriteria', project.SuccessCriteria);
-      hideIfEmpty('teamMembers', project.TeamMembers);
-      hideIfEmpty('progressNotes', project.ProgressNotes);
+      // عرض معايير SMART
+      renderSmartCriteria(project);
+
+      // عرض سير المشروع
+      renderProjectProgressDiagram(project.Status);
+
+      // عرض التفاصيل الإضافية
+      renderExtraDetails(project);
+
+      // تحميل سجل التعديلات
+      const hid = effectiveHospitalId();
+      loadProjectHistory(project.ProjectID, hid);
 
       // Show details
       loadingEl.classList.add('hidden');
       detailsEl.classList.remove('hidden');
+    }
+
+    // دالة لعرض معايير SMART
+    function renderSmartCriteria(project) {
+      const map = {
+        SmartSpecific: 'smartSpecific',
+        SmartMeasurable: 'smartMeasurable',
+        SmartAchievable: 'smartAchievable',
+        SmartRealistic: 'smartRealistic',
+        SmartTimebound: 'smartTimebound'
+      };
+
+      Object.entries(map).forEach(([dbField, htmlId]) => {
+        const el = document.getElementById(htmlId);
+        if (!el) return;
+
+        // التحقق من القيمة (1 أو true = متوفر)
+        const value = project[dbField] === 1 || project[dbField] === true || project[dbField] === '1';
+        
+        // إزالة الكلاسات السابقة
+        el.classList.remove('active', 'inactive');
+        
+        // إضافة الكلاس المناسب
+        el.classList.add(value ? 'active' : 'inactive');
+      });
+    }
+
+    // دالة لعرض مخطط سير المشروع
+    function renderProjectProgressDiagram(status) {
+      const container = document.getElementById('projectProgressDiagram');
+      if (!container) return;
+
+      const stages = [
+        { key: 'DRAFT', label: 'مسودة', color: 'bg-gray-400', textColor: 'text-gray-700', ringColor: 'ring-gray-400' },
+        { key: 'PROPOSED', label: 'مقترح', color: 'bg-blue-400', textColor: 'text-blue-700', ringColor: 'ring-blue-400' },
+        { key: 'APPROVED', label: 'معتمد', color: 'bg-blue-600', textColor: 'text-blue-800', ringColor: 'ring-blue-600' },
+        { key: 'IN_PROGRESS', label: 'قيد التنفيذ', color: 'bg-orange-400', textColor: 'text-orange-700', ringColor: 'ring-orange-400' },
+        { key: 'COMPLETED', label: 'مكتمل', color: 'bg-green-500', textColor: 'text-green-700', ringColor: 'ring-green-500' },
+      ];
+
+      // حالة CANCELLED تعتبر خاصة
+      if (status === 'CANCELLED') {
+        container.innerHTML = `
+          <div class="flex items-center justify-center py-8">
+            <div class="text-center">
+              <div class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xl mx-auto mb-3 shadow-lg">
+                ✕
+              </div>
+              <div class="text-lg font-semibold text-red-600">المشروع ملغي</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // نعرف أي مرحلة حالية
+      const currentIndex = stages.findIndex(s => s.key === status);
+      const activeIndex = currentIndex >= 0 ? currentIndex : 0;
+
+      // نولّد الرسم
+      container.innerHTML = `
+        <div class="flex items-center justify-between relative py-4 overflow-x-auto">
+          ${stages.map((stage, i) => {
+            const isActive = i <= activeIndex;
+            const isCurrent = i === activeIndex;
+            const stageColor = isActive ? stage.color : 'bg-gray-300';
+            const textColor = isActive ? stage.textColor : 'text-gray-500';
+            const borderRing = isCurrent ? `ring-4 ring-offset-2 ${stage.ringColor}` : '';
+            
+            // تحديد لون الخط الرابط - نستخدم لون المرحلة النشطة أو رمادي للخاملة
+            let connectorColor = '';
+            let connectorClass = '';
+            if (i < stages.length - 1) {
+              if (i < activeIndex) {
+                // المراحل المكتملة - نستخدم لون المرحلة
+                connectorColor = stage.color;
+                connectorClass = 'progress-connector active';
+              } else {
+                // المراحل المستقبلية - رمادي فاتح
+                connectorColor = 'bg-gray-300';
+                connectorClass = 'progress-connector inactive';
+              }
+            }
+            
+            return `
+              <div class="flex flex-col items-center flex-1 relative z-10 min-w-0">
+                <div class="w-12 h-12 rounded-full ${stageColor} ${borderRing} flex items-center justify-center text-white font-bold text-sm shadow-lg transition-all duration-300 ${isCurrent ? 'scale-110' : ''}">
+                  ${isCurrent ? '📍' : i + 1}
+                </div>
+                <span class="text-xs mt-2 ${textColor} font-medium text-center whitespace-nowrap">${stage.label}</span>
+                ${i < stages.length - 1 ? `
+                  <div class="absolute top-1/2 left-1/2 ${connectorClass} ${connectorColor} z-0" 
+                       style="width: calc(100% - 3.5rem); transform: translate(-50%, -50%);"></div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    // دالة لعرض التفاصيل الإضافية
+    function renderExtraDetails(project) {
+      // الأثر المتوقع والميزانية
+      const impactEl = document.getElementById('projectImpact');
+      const budgetEl = document.getElementById('projectBudget');
+      const teamEl = document.getElementById('projectTeam');
+      const successEl = document.getElementById('projectSuccess');
+      const progEl = document.getElementById('projectProgress');
+
+      if (impactEl) {
+        impactEl.textContent = project.ExpectedImpact && project.ExpectedImpact.trim()
+          ? project.ExpectedImpact
+          : 'لم يتم إدخال الأثر المتوقع.';
+      }
+
+      if (budgetEl) {
+        if (project.BudgetEstimate != null && project.BudgetEstimate !== '' && project.BudgetEstimate !== 0) {
+          const budgetValue = parseFloat(project.BudgetEstimate);
+          if (budgetValue === 0) {
+            budgetEl.textContent = '0 ريال (لا توجد ميزانية مخصصة)';
+          } else {
+            budgetEl.textContent = `${budgetValue.toLocaleString('ar-SA')} ريال`;
+          }
+        } else {
+          budgetEl.textContent = 'لم يتم تحديد الميزانية.';
+        }
+      }
+
+      // عرض فريق العمل في جدول
+      renderTeamMembers(project);
+
+      if (successEl) {
+        successEl.textContent = project.SuccessCriteria && project.SuccessCriteria.trim()
+          ? project.SuccessCriteria
+          : 'لم يتم تحديد معايير النجاح.';
+      }
+
+      if (progEl) {
+        progEl.textContent = project.ProgressNotes && project.ProgressNotes.trim()
+          ? project.ProgressNotes
+          : 'لا توجد ملاحظات مسجلة حتى الآن.';
+      }
+
+      // عرض نسبة التقدم
+      const progressPercentEl = document.getElementById('progressPercentBadge');
+      const progressPercentValueEl = document.getElementById('progressPercentValue');
+      const progressBarContainer = document.getElementById('progressBarContainer');
+      const progressBarFill = document.getElementById('progressBarFill');
+      const progressBarPercent = document.getElementById('progressBarPercent');
+      
+      if (progressPercentEl && progressPercentValueEl) {
+        const percent = project.ProgressPercent != null ? parseFloat(project.ProgressPercent) : null;
+        if (percent != null && percent >= 0 && percent <= 100) {
+          const roundedPercent = Math.round(percent);
+          progressPercentValueEl.textContent = roundedPercent;
+          progressPercentEl.classList.remove('hidden');
+          
+          // تغيير اللون حسب النسبة للـ Badge
+          progressPercentEl.className = 'px-3 py-1 rounded-full text-sm font-semibold';
+          let barColor = '';
+          if (percent >= 80) {
+            progressPercentEl.classList.add('bg-green-100', 'text-green-700');
+            barColor = 'bg-green-500';
+          } else if (percent >= 50) {
+            progressPercentEl.classList.add('bg-emerald-100', 'text-emerald-700');
+            barColor = 'bg-emerald-500';
+          } else if (percent >= 25) {
+            progressPercentEl.classList.add('bg-amber-100', 'text-amber-700');
+            barColor = 'bg-amber-500';
+          } else {
+            progressPercentEl.classList.add('bg-gray-100', 'text-gray-700');
+            barColor = 'bg-gray-400';
+          }
+          
+          // عرض شريط التقدم
+          if (progressBarContainer && progressBarFill && progressBarPercent) {
+            progressBarContainer.classList.remove('hidden');
+            progressBarPercent.textContent = roundedPercent + '%';
+            progressBarFill.className = `h-full rounded-full transition-all duration-500 ease-out ${barColor}`;
+            // استخدام setTimeout لضمان أن الانتقال يظهر بشكل صحيح
+            setTimeout(() => {
+              progressBarFill.style.width = percent + '%';
+            }, 100);
+          }
+        } else {
+          progressPercentEl.classList.add('hidden');
+          if (progressBarContainer) {
+            progressBarContainer.classList.add('hidden');
+          }
+        }
+      }
+    }
+
+    // دالة لعرض فريق العمل في جدول
+    function renderTeamMembers(project) {
+      const table = document.getElementById('teamMembersTable');
+      if (!table) return;
+
+      if (!project.TeamMembers || !project.TeamMembers.trim()) {
+        table.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-gray-400 text-center p-4">لم يتم إدخال فريق العمل.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      let team = [];
+      try {
+        // محاولة تحليل JSON
+        team = JSON.parse(project.TeamMembers);
+      } catch (e) {
+        // fallback لو النص قديم (كان plain text)
+        const oldText = project.TeamMembers.trim();
+        if (oldText) {
+          team = [{ name: oldText, task: '', done: false }];
+        }
+      }
+
+      if (!Array.isArray(team) || team.length === 0) {
+        table.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-gray-400 text-center p-4">لا يوجد أعضاء فريق بعد.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      table.innerHTML = team.map(m => {
+        const name = (m.name || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const task = (m.task || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const done = m.done === true || m.done === 1 || m.done === 'true';
+        const statusHtml = done 
+          ? '<span class="text-green-600 font-semibold">تم ✅</span>' 
+          : '<span class="text-gray-400">لم يتم ❌</span>';
+        
+        return `
+          <tr class="border-t border-gray-200 hover:bg-gray-50 transition-colors">
+            <td class="p-3 border border-gray-200 text-gray-800 font-medium">${name}</td>
+            <td class="p-3 border border-gray-200 text-gray-700">${task}</td>
+            <td class="p-3 border border-gray-200 text-center">${statusHtml}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // دالة لتحميل سجل التعديلات
+    async function loadProjectHistory(projectId, hospitalId) {
+      if (!projectId || !hospitalId) return;
+
+      const listEl = document.getElementById('projectHistory');
+      if (!listEl) return;
+
+      try {
+        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}/history${hospitalId ? '?hospitalId=' + hospitalId : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+        
+        const items = await res.json();
+        
+        listEl.innerHTML = '';
+        
+        if (!items || items.length === 0) {
+          listEl.innerHTML = '<li class="text-gray-400 text-center py-4">لا توجد تعديلات مسجلة حتى الآن.</li>';
+          return;
+        }
+        
+        items.forEach(h => {
+          const li = document.createElement('li');
+          const date = new Date(h.ChangedAt).toLocaleDateString('ar-SA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          li.className = 'border-b border-gray-100 pb-3 last:border-0';
+          li.innerHTML = `
+            <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">${h.ChangedByName || h.ChangedByUsername || 'مستخدم غير معروف'}</div>
+                <div class="text-xs text-gray-500 mt-1">${date}</div>
+              </div>
+              <div class="text-xs md:text-sm text-gray-700 text-right md:text-left">
+                ${h.ChangeSummary || 'تم إجراء تعديلات على المشروع'}
+              </div>
+            </div>
+          `;
+          listEl.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Error loading history:', err);
+        listEl.innerHTML = '<li class="text-red-400 text-center py-4">تعذّر تحميل سجل التعديلات.</li>';
+      }
     }
 
     // Event listeners
@@ -440,6 +900,154 @@
           applyTranslation(newLang);
           localStorage.setItem('selectedLanguage', newLang);
         });
+      }
+    });
+  </script>
+
+  <!-- Modal إضافة تقدم -->
+  <div id="progressModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 mx-4">
+      <h3 class="text-lg font-semibold mb-4 text-gray-900">إضافة تقدم للمشروع</h3>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700">وصف التقدم *</label>
+          <textarea id="progressNote" rows="3"
+                    class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="مثال: تم الانتهاء من مرحلة جمع البيانات وتحليلها..."></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700">نسبة التقدم الحالية (اختياري)</label>
+          <div class="flex items-center gap-2">
+            <input type="number" id="progressPercent" min="0" max="100"
+                   class="w-32 border rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                   placeholder="مثلاً: 40">
+            <span class="text-xs text-gray-500">% من الإنجاز الكلي للمشروع</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700">تحديث الحالة (اختياري)</label>
+          <select id="progressStatus" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+            <option value="">بدون تغيير</option>
+            <option value="DRAFT">مسودة</option>
+            <option value="PROPOSED">مقترح</option>
+            <option value="APPROVED">معتمد</option>
+            <option value="IN_PROGRESS">قيد التنفيذ</option>
+            <option value="COMPLETED">مكتمل</option>
+            <option value="CANCELLED">ملغي</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button id="btnCloseProgress"
+                class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm">
+          إلغاء
+        </button>
+        <button id="btnSaveProgress"
+                class="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm">
+          حفظ التقدم
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // إدارة مودال إضافة التقدم
+    const btnAddProgress = document.getElementById('btnAddProgress');
+    const progressModal = document.getElementById('progressModal');
+    const btnCloseProgress = document.getElementById('btnCloseProgress');
+    const btnSaveProgress = document.getElementById('btnSaveProgress');
+
+    function openProgressModal(currentStatus) {
+      document.getElementById('progressNote').value = '';
+      document.getElementById('progressPercent').value = '';
+      document.getElementById('progressStatus').value = currentStatus || '';
+      progressModal.classList.remove('hidden');
+    }
+
+    function closeProgressModal() {
+      progressModal.classList.add('hidden');
+    }
+
+    // فتح المودال عند النقر على الزر
+    btnAddProgress?.addEventListener('click', () => {
+      // نمرر الحالة الحالية للمشروع (اختياري)
+      const currentStatusEl = document.getElementById('projectStatus');
+      const currentStatus = currentStatusEl?.textContent?.trim() || '';
+      openProgressModal();
+    });
+
+    // إغلاق المودال
+    btnCloseProgress?.addEventListener('click', closeProgressModal);
+
+    // إغلاق المودال عند النقر خارج المحتوى
+    progressModal?.addEventListener('click', (e) => {
+      if (e.target === progressModal) {
+        closeProgressModal();
+      }
+    });
+
+    // حفظ التقدم
+    btnSaveProgress?.addEventListener('click', async () => {
+      const note = document.getElementById('progressNote').value.trim();
+      const percent = document.getElementById('progressPercent').value;
+      const status = document.getElementById('progressStatus').value;
+
+      if (!note) {
+        toast('يرجى كتابة وصف التقدم أولاً', 'warn');
+        return;
+      }
+
+      btnSaveProgress.disabled = true;
+      btnSaveProgress.textContent = 'جاري الحفظ...';
+
+      try {
+        const hid = effectiveHospitalId();
+        if (!hid) {
+          toast('لم يتم تحديد المستشفى', 'error');
+          return;
+        }
+
+        const body = {
+          note,
+          progressPercent: percent ? Number(percent) : null,
+          newStatus: status || null
+        };
+
+        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}/progress${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders()
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: 'خطأ غير معروف' }));
+          throw new Error(errorData.error || 'HTTP ' + res.status);
+        }
+
+        const result = await res.json();
+        toast('تم حفظ التقدم بنجاح ✅', 'success');
+        closeProgressModal();
+
+        // إعادة تحميل التفاصيل وسجل التعديلات
+        await loadProject();
+        const hidAfterReload = effectiveHospitalId();
+        if (hidAfterReload) {
+          await loadProjectHistory(projectId, hidAfterReload);
+        }
+      } catch (err) {
+        console.error('Error saving progress:', err);
+        toast('فشل حفظ التقدم: ' + err.message, 'error');
+      } finally {
+        btnSaveProgress.disabled = false;
+        btnSaveProgress.textContent = 'حفظ التقدم';
       }
     });
   </script>

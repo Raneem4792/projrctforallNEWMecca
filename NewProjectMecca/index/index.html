@@ -185,7 +185,7 @@
         </div>
 
         <!-- Service 7 - بلاغات الزائر السري -->
-        <div id="cardMystery" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
+        <div id="cardMystery" data-card="mystery" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
              tabindex="0" role="button" aria-label="بلاغات الزائر السري"
              onclick="window.location.href='../public/complaints/mystery/mystery-complaints.html'">
           <div class="service-icon w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
@@ -724,22 +724,20 @@
         const canSeeImports = imports.importsPage || imports.importDepartments || imports.importMystery || imports.import937;
         if (cardImports) cardImports.style.display = canSeeImports ? '' : 'none';
 
-        // الزائر السري: يظهر فقط لمن لديه صلاحية الدخول للصفحة
+        // الزائر السري: يظهر فقط لمن لديه صلاحية MYSTERY_MODULE
         const mystery = payload.mystery || {};
-        const canSeeMystery = mystery.module || mystery.view || adminPanel;
+        // استخدام mysteryModule من الصلاحيات الرئيسية أو mystery.module كـ fallback
+        const canSeeMystery = payload.mysteryModule || mystery.module || mystery.view || adminPanel;
         
-        // Debug: طباعة معلومات الصلاحيات (يمكن إزالته لاحقاً)
-        // console.log('🔍 Debug - Mystery permissions:', {
-        //   mystery,
-        //   adminPanel,
-        //   canSeeMystery,
-        //   cardMystery: !!cardMystery
-        // });
-        
-        // اختبار: إخفاء الأيقونة مؤقتاً للاختبار
-        // if (cardMystery) cardMystery.style.display = 'none'; // إخفاء مؤقت للاختبار
-        
-        if (cardMystery) cardMystery.style.display = canSeeMystery ? '' : 'none';
+        if (cardMystery) {
+          if (canSeeMystery) {
+            cardMystery.style.display = '';
+            console.log('✅ بطاقة الزائر السري مرئية - الصلاحية موجودة');
+          } else {
+            cardMystery.style.display = 'none';
+            console.log('🔒 تم إخفاء بطاقة الزائر السري (لا توجد صلاحية MYSTERY_MODULE)');
+          }
+        }
 
         // تقديم بلاغ / متابعة / السجل
         if (payload.canSubmit && cardSubmit) cardSubmit.style.display = '';
@@ -881,5 +879,8 @@
       window.location.href = '../public/complaints/cluster/cluster-reports-list.html';
     }
   </script>
+
+  <!-- ملف JavaScript لإخفاء البطاقات والروابط بناءً على الصلاحيات -->
+  <script src="../public/assets/js/navbar-permissions.js"></script>
 </body>
 </html>

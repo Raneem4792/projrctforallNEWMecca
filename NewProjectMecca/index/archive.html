@@ -89,9 +89,34 @@
 
       <div id="archiveQueue" class="mt-4 space-y-2 hidden"></div>
 
-      <div class="mt-4 flex items-center gap-3">
-        <input id="archiveNotes" type="text" class="form-input flex-1" placeholder="ملاحظات (اختياري)">
-        <button id="btnArchiveUpload" class="btn btn-primary" disabled>رفع المرفقات</button>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+        <!-- اسم الملف -->
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">اسم الملف</label>
+          <input id="archiveFileName" type="text" class="form-input w-full" placeholder="اكتب اسم الملف يدوياً">
+        </div>
+
+        <!-- المصدر -->
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">المصدر</label>
+          <input id="archiveSourceModule" type="text" class="form-input w-full" placeholder="اكتب مصدر الملف">
+        </div>
+
+        <!-- جهة رفع الملف -->
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">جهة رفع الملف</label>
+          <input id="archiveSourceName" type="text" class="form-input w-full bg-gray-100" readonly>
+        </div>
+
+        <!-- الملاحظات -->
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">ملاحظات</label>
+          <input id="archiveNotes" type="text" class="form-input w-full" placeholder="اختياري">
+        </div>
+      </div>
+
+      <div class="mt-4 text-left">
+        <button id="btnArchiveUpload" class="btn btn-primary" disabled>📤 رفع المرفقات</button>
       </div>
 
       <div id="archiveResult" class="mt-4 text-sm"></div>
@@ -108,13 +133,13 @@
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <!-- فلترة حسب المصدر -->
-          <select id="filterSource" class="form-select">
-            <option value="">كل المصادر</option>
-            <option value="imports">الإرفاق</option>
-            <option value="archive">الأرشيف</option>
-            <option value="complaints">البلاغات</option>
-          </select>
+          <!-- حقل البحث -->
+          <input 
+            id="searchArchiveInput"
+            type="text"
+            class="form-input w-64"
+            placeholder="بحث باسم الملف أو المصدر..."
+            oninput="filterArchiveTable()">
           <button id="btnRefreshFiles" class="btn btn-primary">🔄 تحديث</button>
         </div>
       </div>
@@ -123,7 +148,7 @@
       <div id="filterHospitalWrapper" class="mb-4 hidden">
         <label class="block text-sm text-gray-600 mb-1">فلترة حسب المستشفى</label>
         <select id="filterHospitalId" class="form-select w-64">
-          <option value="">كل المستشفيات</option>
+          <option value="all">كل المستشفيات</option>
         </select>
       </div>
 
@@ -280,6 +305,17 @@
         window.currentUser = user;
         isClusterManager = user?.RoleID === 1 || user?.isClusterManager === true;
         userHospitalId = user?.HospitalID || user?.hospitalId || null;
+        
+        // تحديد جهة الرفع تلقائيًا
+        const sourceInput = document.getElementById('archiveSourceName');
+        if (sourceInput) {
+          if (isClusterManager) {
+            sourceInput.value = 'إدارة التجمع';
+          } else {
+            const hospName = localStorage.getItem('hospitalNameAr') || 'مستشفى غير محدد';
+            sourceInput.value = hospName;
+          }
+        }
         
         // تفعيل اختيار المستشفى لمدير التجمع
         const hospWrap = document.getElementById('archive-hosp-wrapper');
@@ -446,9 +482,13 @@
         // نرفع ملفًا ملفًا لإظهار التقدم لكل واحد
         const uploadResults = { success: 0, failed: 0, errors: [] };
         
+        const customFileName = document.getElementById('archiveFileName')?.value || '';
+        const sourceName = document.getElementById('archiveSourceName')?.value || '';
+        const sourceModule = document.getElementById('archiveSourceModule')?.value || '';
+        
         for (let i = 0; i < filesToUpload.length; i++) {
           try {
-            await uploadSingleFile(filesToUpload[i], i, chosenHospitalId, notes?.value || '', API_BASE, token);
+            await uploadSingleFile(filesToUpload[i], i, chosenHospitalId, notes?.value || '', API_BASE, token, customFileName, sourceName, sourceModule);
             uploadResults.success++;
           } catch (error) {
             uploadResults.failed++;
@@ -484,7 +524,7 @@
       });
     }
 
-    function uploadSingleFile(file, idx, hospitalId, notesText, API_BASE, token) {
+    function uploadSingleFile(file, idx, hospitalId, notesText, API_BASE, token, customFileName = '', sourceName = '', sourceModule = '') {
       return new Promise((resolve, reject) => {
         const form = new FormData();
         
@@ -492,6 +532,9 @@
         form.append('hospitalId', String(hospitalId));
         form.append('notes', notesText || '');
         form.append('source', 'archive'); // مصدر الرفع (صفحة الأرشيف)
+        form.append('fileName', customFileName || ''); // اسم الملف المخصص
+        form.append('sourceName', sourceName || ''); // جهة الرفع
+        form.append('sourceModule', sourceModule || ''); // المصدر (يدخله المستخدم)
         
         // ثم الملف
         form.append('file', file);
@@ -552,7 +595,6 @@
     // ===== عرض الملفات =====
     let currentPage = 1;
     let currentHospitalId = null;
-    let currentSource = '';
 
     // عناصر عرض الملفات
     const filesLoading = document.getElementById('filesLoading');
@@ -560,7 +602,6 @@
     const filesTable = document.getElementById('filesTable');
     const filesTableBody = document.getElementById('filesTableBody');
     const btnRefreshFiles = document.getElementById('btnRefreshFiles');
-    const filterSource = document.getElementById('filterSource');
     const filterHospitalId = document.getElementById('filterHospitalId');
     const filterHospitalWrapper = document.getElementById('filterHospitalWrapper');
     const btnPrevPage = document.getElementById('btnPrevPage');
@@ -588,16 +629,10 @@
           pageSize: '20'
         });
 
-        // إضافة source فقط إذا كان محدداً وليس "all"
-        const sourceValue = currentSource || '';
-        if (sourceValue && sourceValue.toLowerCase() !== 'all') {
-          params.append('source', sourceValue);
-        }
-
         // إرسال hospitalId حسب نوع المستخدم
         if (isClusterManager) {
           // مدير التجمع: يرسل "all" أو hospitalId محدد
-          const hospValue = currentHospitalId || 'all';
+          const hospValue = (currentHospitalId === null || currentHospitalId === '') ? 'all' : currentHospitalId;
           params.append('hospitalId', hospValue);
         }
         // المستخدم العادي: لا نرسل hospitalId (السيرفر يأخذه من الجلسة تلقائياً)
@@ -647,49 +682,48 @@
     function renderFilesTable(files) {
       if (!filesTableBody) return;
 
-      filesTableBody.innerHTML = '';
-
-      files.forEach(file => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
-        
-        const fileIcon = getFileIcon(file.mimeType);
-        const uploadDate = new Date(file.uploadedAt).toLocaleDateString('ar-SA', {
+      filesTableBody.innerHTML = files.map((f, i) => {
+        const uploadDate = new Date(f.uploadedAt).toLocaleString('ar-SA', {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit'
         });
-
-        row.innerHTML = `
-          <td class="px-4 py-3 whitespace-nowrap">
-            <div class="flex items-center gap-2">
-              <span class="text-2xl">${fileIcon}</span>
-              <div>
-                <div class="text-sm font-medium text-gray-900">${file.originalName}</div>
-                ${file.notes ? `<div class="text-xs text-gray-500">${file.notes}</div>` : ''}
+        
+        return `
+          <tr class="border-b hover:bg-gray-50 cursor-pointer main-row"
+              data-filename="${f.fileName || ''}"
+              data-source="${f.source || ''}"
+              data-index="${i}"
+              onclick="toggleDetails(${i})">
+            <td class="px-4 py-3 text-sm">${f.fileName}</td>
+            <td class="px-4 py-3 text-sm">${f.sizeMB} MB</td>
+            <td class="px-4 py-3 text-sm">${f.hospitalName}</td>
+            <td class="px-4 py-3 text-sm">${f.source}</td>
+            <td class="px-4 py-3 text-sm">${f.uploadedBy}</td>
+            <td class="px-4 py-3 text-sm">${uploadDate}</td>
+            <td class="px-4 py-3 text-sm text-center">
+              <a href="${f.downloadUrl}" 
+                 data-file-id="${f.fileId}"
+                 data-file-name="${f.fileName}"
+                 data-hospital-id="${f.hospitalId}"
+                 class="download-link text-blue-600 hover:underline" 
+                 onclick="event.stopPropagation()">تنزيل</a>
+            </td>
+          </tr>
+          <tr id="details-${i}" class="hidden bg-gray-50">
+            <td colspan="7" class="p-4 text-sm text-gray-600">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><strong>اسم الملف:</strong> ${f.fileName}</div>
+                <div><strong>المصدر:</strong> ${f.source}</div>
+                <div><strong>جهة الرفع:</strong> ${f.sourceName}</div>
+                <div><strong>ملاحظات:</strong> ${f.notes || '—'}</div>
               </div>
-            </div>
-          </td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${file.fileSizeMB} MB</td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${file.hospitalName || `مستشفى ${file.hospitalId}`}</td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-            <span class="px-2 py-1 rounded bg-gray-100">${file.source || '—'}</span>
-          </td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${file.uploadedBy?.username || '—'}</td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${uploadDate}</td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm">
-            <a href="#" 
-               data-file-id="${file.fileId}"
-               data-file-name="${file.originalName}"
-               data-hospital-id="${file.hospitalId}"
-               class="download-link text-blue-600 hover:text-blue-800 font-medium cursor-pointer">⬇️ تنزيل</a>
-          </td>
+            </td>
+          </tr>
         `;
-
-        filesTableBody.appendChild(row);
-      });
+      }).join('');
 
       // ربط أحداث التنزيل
       filesTableBody.querySelectorAll('.download-link').forEach(link => {
@@ -725,6 +759,39 @@
         });
       });
     }
+
+    // دالة لإظهار/إخفاء تفاصيل الصف (في النطاق العام)
+    window.toggleDetails = function(i) {
+      const row = document.getElementById(`details-${i}`);
+      if (row) {
+        row.classList.toggle('hidden');
+      }
+    };
+
+    // دالة فلترة الجدول حسب البحث (مع debounce)
+    let searchTimeout;
+    window.filterArchiveTable = function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const query = document.getElementById('searchArchiveInput')?.value.toLowerCase() || '';
+        const rows = document.querySelectorAll('#filesTableBody tr.main-row');
+        
+        rows.forEach(row => {
+          const fileName = (row.dataset.filename || '').toLowerCase();
+          const source = (row.dataset.source || '').toLowerCase();
+          
+          const match = fileName.includes(query) || source.includes(query);
+          row.style.display = match ? '' : 'none';
+          
+          // إخفاء صف التفاصيل إذا كان الصف الرئيسي مخفي
+          const index = row.dataset.index;
+          const details = document.getElementById(`details-${index}`);
+          if (details) {
+            details.style.display = match ? '' : 'none';
+          }
+        });
+      }, 200);
+    };
 
     // تحديد أيقونة الملف حسب نوعه
     function getFileIcon(mimeType) {
@@ -767,17 +834,10 @@
       });
     }
 
-    if (filterSource) {
-      filterSource.addEventListener('change', (e) => {
-        currentSource = e.target.value || '';
-        currentPage = 1;
-        loadFilesList();
-      });
-    }
-
     if (filterHospitalId) {
       filterHospitalId.addEventListener('change', (e) => {
-        currentHospitalId = e.target.value || null;
+        const value = e.target.value;
+        currentHospitalId = (value === '' || value === 'all') ? 'all' : value;
         currentPage = 1;
         loadFilesList();
       });
@@ -895,7 +955,12 @@
         }
       } else {
         // للمستخدم العادي: استخدام مستشفاه تلقائياً
-        currentHospitalId = userHospitalId;
+        currentHospitalId = userHospitalId || null;
+      }
+      
+      // تهيئة القيمة الأولية لفلترة المستشفى
+      if (isClusterManager && filterHospitalId) {
+        currentHospitalId = 'all'; // القيمة الافتراضية لمدير التجمع
       }
       
       // تحميل قائمة الملفات

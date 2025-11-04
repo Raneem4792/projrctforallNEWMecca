@@ -70,6 +70,16 @@
       </div>
 
       <form id="form" class="space-y-6">
+        <!-- اختيار المستشفى (للمدير فقط) -->
+        <div id="hospitalSelectContainer" class="hidden">
+          <label class="block mb-1 font-semibold">المستشفى <span class="text-red-600">*</span></label>
+          <select name="HospitalID" id="HospitalID"
+                  class="w-full border rounded-xl p-3 bg-white focus:ring-2 focus:ring-primary/30 focus:outline-none" required>
+            <option value="" disabled selected>— اختر المستشفى —</option>
+          </select>
+          <p id="hospitalHint" class="mt-1 text-xs text-gray-500"></p>
+        </div>
+
         <!-- العنوان -->
         <div>
           <label class="block mb-1 font-semibold">عنوان المشروع <span class="text-red-600">*</span></label>
@@ -90,15 +100,100 @@
                     required maxlength="1000" placeholder="اشرح المشكلة الحالية وأثرها وسبب تكرارها (إن وُجد)."></textarea>
         </div>
 
+        <!-- معايير SMART -->
+        <section class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">معايير SMART للهدف التحسيني</h3>
+            <p class="text-sm text-gray-600 mt-1">
+              حددي المعايير المتوفرة في الهدف الخاص بالمشروع التحسيني.
+            </p>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="bg-gray-50 border-b border-gray-200">
+                  <th class="text-right py-3 px-4 font-semibold text-sm text-gray-700">المعيار</th>
+                  <th class="text-right py-3 px-4 font-semibold text-sm text-gray-700">الوصف</th>
+                  <th class="text-center py-3 px-4 font-semibold text-sm text-gray-700">متوفر في الهدف؟</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 text-sm font-medium text-gray-900">محدد (Specific)</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">وصف الهدف بوضوح وبشكل محدد.</td>
+                  <td class="py-3 px-4 text-center">
+                    <input type="checkbox" id="smart_specific" name="smart_specific" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                  </td>
+                </tr>
+
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 text-sm font-medium text-gray-900">قابل للقياس (Measurable)</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">حدد كيفية قياس التقدم أو النجاح بالأرقام أو النسب.</td>
+                  <td class="py-3 px-4 text-center">
+                    <input type="checkbox" id="smart_measurable" name="smart_measurable"
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                  </td>
+                </tr>
+
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 text-sm font-medium text-gray-900">قابل للتحقق (Achievable)</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">هل يمكن تحقيق الهدف فعلاً بالإمكانيات الحالية؟</td>
+                  <td class="py-3 px-4 text-center">
+                    <input type="checkbox" id="smart_achievable" name="smart_achievable"
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                  </td>
+                </tr>
+
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 text-sm font-medium text-gray-900">واقعي (Realistic)</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">هل الهدف مناسب للواقع الحالي والإمكانيات؟</td>
+                  <td class="py-3 px-4 text-center">
+                    <input type="checkbox" id="smart_realistic" name="smart_realistic"
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                  </td>
+                </tr>
+
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 text-sm font-medium text-gray-900">بزمن محدد (Time-bound)</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">حدد الإطار الزمني لتحقيق الهدف.</td>
+                  <td class="py-3 px-4 text-center">
+                    <input type="checkbox" id="smart_timebound" name="smart_timebound"
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- الهدف -->
         <div>
           <div class="flex items-center justify-between">
             <label class="block mb-1 font-semibold">الهدف (SMART)</label>
             <span id="aimCount" class="text-xs text-gray-500">0/800</span>
           </div>
+          <p class="text-xs text-gray-500 mb-2">اكتب/ي الهدف النهائي بصيغة تجمع كل المعايير السابقة.</p>
           <textarea name="AimStatement" id="AimStatement"
                     class="w-full border rounded-xl p-3 h-24 focus:ring-2 focus:ring-primary/30 focus:outline-none"
                     maxlength="800" placeholder="تقليل زمن الانتظار بنسبة 30% خلال 90 يوم في قسم الطوارئ."></textarea>
+        </div>
+
+        <!-- فريق العمل -->
+        <div>
+          <label class="block mb-1 font-semibold">فريق العمل (اختياري)</label>
+          
+          <!-- قائمة الفريق -->
+          <div id="teamList" class="space-y-3 mb-3"></div>
+          
+          <!-- أزرار الإضافة -->
+          <button type="button" id="btnAddMember"
+                  class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium">
+            ➕ إضافة عضو
+          </button>
+          
+          <p class="text-xs text-gray-500 mt-2">يمكنك إدخال أسماء أعضاء الفريق والمسؤوليات لكل منهم (اختياري).</p>
         </div>
 
         <!-- القسم + الأولوية -->
@@ -267,6 +362,7 @@
     }
 
     // فحص الصلاحيات قبل السماح بالإنشاء
+    window.isCentralAdmin = false; // متغير عام للوصول من دوال أخرى
     (async function guardCreate(){
       const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
       const token = localStorage.getItem('token');
@@ -276,9 +372,19 @@
       const p = res.ok ? (await res.json()).data || {} : {};
       
       // مدير التجمع (RoleID = 1) يرى كل شيء بدون قيود
-      const isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
+      window.isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
       
-      if (isCentralAdmin) {
+      // إظهار/إخفاء قائمة اختيار المستشفى
+      const hospitalSelectContainer = document.getElementById('hospitalSelectContainer');
+      if (window.isCentralAdmin && hospitalSelectContainer) {
+        hospitalSelectContainer.classList.remove('hidden');
+        // تحميل قائمة المستشفيات
+        await loadHospitals();
+      } else if (hospitalSelectContainer) {
+        hospitalSelectContainer.classList.add('hidden');
+      }
+      
+      if (window.isCentralAdmin) {
         return; // مدير التجمع يمكنه الوصول
       }
       
@@ -289,7 +395,49 @@
       }
     })();
 
+    // تحميل قائمة المستشفيات
+    async function loadHospitals() {
+      const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
+      const token = localStorage.getItem('token');
+      const hospitalSelect = document.getElementById('HospitalID');
+      const hospitalHint = document.getElementById('hospitalHint');
+      
+      if (!hospitalSelect) return;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/hospitals?active=1`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        
+        const hospitals = await res.json();
+        hospitalSelect.innerHTML = '<option value="" disabled selected>— اختر المستشفى —</option>';
+        
+        hospitals.forEach(h => {
+          const option = document.createElement('option');
+          option.value = h.HospitalID;
+          option.textContent = h.NameAr || h.NameEn || `مستشفى ${h.Code}`;
+          hospitalSelect.appendChild(option);
+        });
+        
+        // إذا كان هناك hospitalId في الرابط، حدده
+        const urlParams = new URLSearchParams(location.search);
+        const preHospitalId = urlParams.get('hospitalId') || urlParams.get('hid');
+        if (preHospitalId) {
+          hospitalSelect.value = preHospitalId;
+        }
+      } catch (e) {
+        console.error('Error loading hospitals:', e);
+        hospitalHint.textContent = `تعذّر تحميل المستشفيات: ${e.message}`;
+        hospitalHint.classList.remove('hidden');
+      }
+    }
+
     (async function () {
+      // انتظار تحميل الصلاحيات أولاً
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // إعداد عنوان API
       const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
       const token = localStorage.getItem('token');
@@ -317,44 +465,82 @@
       // تحميل الأقسام
       const deptSel = document.getElementById('DepartmentID');
       const deptHint = document.getElementById('deptHint');
+      const hospitalSelect = document.getElementById('HospitalID');
       
-      // امسحي كل الخيارات أولاً ثم أضيفي Placeholder واحد
-      deptSel.innerHTML = '<option value="" disabled selected>— اختر القسم —</option>';
-      
-      try {
-        // جرب الـ endpoint الرئيسي أولاً
-        const hid = effectiveHospitalId();
-        const authH = token ? { Authorization: `Bearer ${token}`, ...(hid ? {'x-hospital-id': String(hid)} : {}) } : {};
-        let deptRes = await fetch(`${API_BASE}/api/departments${hid ? '?hospitalId=' + hid : ''}`, {
-          headers: authH
-        });
+      // دالة لتحميل الأقسام بناءً على المستشفى المحدد
+      async function loadDepartmentsForHospital(hospitalId) {
+        if (!hospitalId) {
+          deptSel.innerHTML = '<option value="" disabled selected>— اختر القسم —</option>';
+          return;
+        }
         
-        // إذا فشل، جرب الـ endpoint البديل
-        if (!deptRes.ok) {
-          console.log('Trying alternative endpoint...');
-          deptRes = await fetch(`${API_BASE}/api/departments/public${hid ? '?hospitalId=' + hid : ''}`, {
+        deptSel.innerHTML = '<option value="" disabled selected>— جاري التحميل... —</option>';
+        
+        try {
+          const authH = token ? { Authorization: `Bearer ${token}`, 'x-hospital-id': String(hospitalId) } : {};
+          let deptRes = await fetch(`${API_BASE}/api/departments?hospitalId=${hospitalId}`, {
             headers: authH
           });
+          
+          // إذا فشل، جرب الـ endpoint البديل
+          if (!deptRes.ok) {
+            console.log('Trying alternative endpoint...');
+            deptRes = await fetch(`${API_BASE}/api/departments/public?hospitalId=${hospitalId}`, {
+              headers: authH
+            });
+          }
+          
+          if (!deptRes.ok) throw new Error('HTTP ' + deptRes.status);
+          
+          const deptData = await deptRes.json();
+          console.log('Departments response:', deptData);
+          
+          // امسحي كل الخيارات أولاً ثم أضيفي Placeholder واحد
+          deptSel.innerHTML = '<option value="" disabled selected>— اختر القسم —</option>';
+          
+          // التعامل مع البنية المختلفة للاستجابة
+          const depts = deptData.items || deptData.data || deptData || [];
+          (depts || []).forEach(d => {
+            const o = document.createElement('option');
+            o.value = d.DepartmentID; 
+            o.textContent = d.NameAr || d.DepartmentName || d.name; 
+            deptSel.appendChild(o);
+          });
+          
+          if (preDept) { 
+            deptSel.value = preDept; 
+            if (!deptSel.value) { 
+              deptHint.classList.remove('hidden'); 
+              deptHint.textContent = 'القسم المطلوب في الرابط غير موجود.'; 
+            } 
+          }
+        } catch (e) {
+          console.error('Error loading departments:', e);
+          deptSel.innerHTML = '<option value="" disabled selected>— خطأ في التحميل —</option>';
+          deptHint.classList.remove('hidden');
+          deptHint.textContent = `تعذّر تحميل الأقسام: ${e.message}`;
+          showToast(`تعذّر تحميل الأقسام: ${e.message}`, 'error');
         }
-        if (!deptRes.ok) throw new Error('HTTP ' + deptRes.status);
-        const deptData = await deptRes.json();
-        console.log('Departments response:', deptData);
-        
-        // التعامل مع البنية المختلفة للاستجابة
-        const depts = deptData.items || deptData.data || deptData || [];
-        (depts || []).forEach(d => {
-          const o = document.createElement('option');
-          o.value = d.DepartmentID; 
-          o.textContent = d.NameAr || d.DepartmentName || d.name; 
-          deptSel.appendChild(o);
-        });
-        if (preDept) { deptSel.value = preDept; if (!deptSel.value) { deptHint.classList.remove('hidden'); deptHint.textContent = 'القسم المطلوب في الرابط غير موجود.'; } }
-      } catch (e) {
-        console.error('Error loading departments:', e);
-        deptHint.classList.remove('hidden');
-        deptHint.textContent = `تعذّر تحميل الأقسام: ${e.message}`;
-        showToast(`تعذّر تحميل الأقسام: ${e.message}`, 'error');
       }
+      
+      // إذا كان مدير تجمع، استمع لتغيير المستشفى لإعادة تحميل الأقسام
+      if (window.isCentralAdmin && hospitalSelect) {
+        hospitalSelect.addEventListener('change', async () => {
+          const selectedHospitalId = hospitalSelect.value;
+          if (selectedHospitalId) {
+            await loadDepartmentsForHospital(Number(selectedHospitalId));
+          } else {
+            deptSel.innerHTML = '<option value="" disabled selected>— اختر المستشفى أولاً —</option>';
+          }
+        });
+      }
+      
+      // تحميل الأقسام الأولي
+      let initialHid = effectiveHospitalId();
+      if (window.isCentralAdmin && hospitalSelect && hospitalSelect.value) {
+        initialHid = Number(hospitalSelect.value);
+      }
+      await loadDepartmentsForHospital(initialHid);
 
       // منع فقدان البيانات
       let dirty = false;
@@ -384,13 +570,33 @@
           const fd = new FormData(form);
           const payload = Object.fromEntries(fd.entries());
 
-          const hid = effectiveHospitalId();
-          const url = `${API_BASE}/api/improvements${hid ? '?hospitalId=' + hid : ''}`;
+          // تحديد hospitalId: إذا كان مدير تجمع واختار مستشفى، استخدمه. وإلا استخدم الافتراضي
+          let hid = effectiveHospitalId();
+          if (window.isCentralAdmin) {
+            const selectedHospitalId = document.getElementById('HospitalID')?.value;
+            if (selectedHospitalId) {
+              hid = Number(selectedHospitalId);
+            } else {
+              showToast('يجب اختيار المستشفى أولاً', 'warn');
+              btnSubmit.disabled = false;
+              btnSubmit.textContent = oldText;
+              return;
+            }
+          }
+
+          if (!hid) {
+            showToast('معرف المستشفى مطلوب', 'error');
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = oldText;
+            return;
+          }
+
+          const url = `${API_BASE}/api/improvements?hospitalId=${hid}`;
           const res = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}`, ...(hid ? {'x-hospital-id': String(hid)} : {}) } : {})
+              ...(token ? { Authorization: `Bearer ${token}`, 'x-hospital-id': String(hid) } : {})
             },
             body: JSON.stringify({
               Title: payload.Title.trim(),
@@ -400,7 +606,14 @@
               Priority: payload.Priority || 'MEDIUM',
               StartDate: payload.StartDate || null,
               DueDate: payload.DueDate || null,
-              BudgetEstimate: payload.BudgetEstimate || null
+              BudgetEstimate: payload.BudgetEstimate || null,
+              TeamMembers: collectTeamMembers().length > 0 ? JSON.stringify(collectTeamMembers()) : null,
+              // معايير SMART
+              SmartSpecific: document.getElementById('smart_specific').checked,
+              SmartMeasurable: document.getElementById('smart_measurable').checked,
+              SmartAchievable: document.getElementById('smart_achievable').checked,
+              SmartRealistic: document.getElementById('smart_realistic').checked,
+              SmartTimebound: document.getElementById('smart_timebound').checked
             })
           });
 
@@ -425,6 +638,61 @@
         }
       });
     })();
+
+    // -------------------------
+    // قائمة فريق العمل التفاعلية
+    // -------------------------
+    let teamMembersData = [];
+
+    const teamList = document.getElementById('teamList');
+    const btnAddMember = document.getElementById('btnAddMember');
+
+    btnAddMember.addEventListener('click', () => {
+      const index = teamMembersData.length;
+      const member = { name: '', task: '' };
+      teamMembersData.push(member);
+
+      const div = document.createElement('div');
+      div.className = "border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-3 relative transition-all hover:shadow-sm";
+      div.setAttribute('data-index', index);
+      div.innerHTML = `
+        <button type="button" class="absolute top-2 left-2 text-red-500 hover:text-red-700 text-lg font-bold remove-member w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors" title="حذف العضو">✕</button>
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-1 block">اسم العضو</label>
+          <input type="text" class="member-name w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="مثلاً: د. سارة العتيبي">
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-1 block">المهام أو المسؤوليات</label>
+          <textarea class="member-task w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" rows="2" placeholder="مثلاً: متابعة تحليل البيانات، إعداد التقرير..."></textarea>
+        </div>
+      `;
+      teamList.appendChild(div);
+
+      // حذف العضو
+      div.querySelector('.remove-member').addEventListener('click', () => {
+        const idx = parseInt(div.getAttribute('data-index'));
+        div.remove();
+        teamMembersData = teamMembersData.filter((_, i) => i !== idx);
+        // تحديث الـ indices
+        teamList.querySelectorAll('[data-index]').forEach((el, i) => {
+          el.setAttribute('data-index', i);
+        });
+      });
+    });
+
+    // 🧠 دالة لجمع بيانات الفريق عند الحفظ
+    function collectTeamMembers() {
+      const members = [];
+      const memberBlocks = teamList.querySelectorAll('[data-index]');
+      memberBlocks.forEach(block => {
+        const name = block.querySelector('.member-name').value.trim();
+        const task = block.querySelector('.member-task').value.trim();
+        if (name || task) {
+          members.push({ name, task });
+        }
+      });
+      return members;
+    }
   </script>
 
   <!-- JavaScript Files - ملفات الجافاسكريبت -->
