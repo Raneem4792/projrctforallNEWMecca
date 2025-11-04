@@ -294,6 +294,12 @@ async function loadHospitalsData() {
     // 4) تحديث مؤشرات الأداء
     updateMainStatsCards();
 
+    // 5) عرض الجدول الملخص
+    renderSummaryTable();
+
+    // 6) تحديث العنوان + تاريخ التصدير
+    updateSummaryMeta();
+
     hideLoadingIndicator();
 
   } catch (error) {
@@ -310,6 +316,95 @@ async function loadHospitalsData() {
 /**
  * تحديث الكروت الرئيسية بالإحصائيات
  */
+// ===== دالة عرض جدول الملخص =====
+function renderSummaryTable() {
+  const tbody = document.getElementById('summaryTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  let totalAll = 0;
+  let openAll = 0;
+  let closedAll = 0;
+  let criticalAll = 0;
+
+  hospitalsData.forEach((h, idx) => {
+    const name = h.hospitalName || h.HospitalName || 'غير محدد';
+    const total = Number(h.totalReports || h.counts?.total || 0);
+    const open = Number(h.openReports || h.counts?.open || 0);
+    const closed = Number(h.closedReports || h.counts?.closed || 0);
+    const critical = Number(h.priorityCounts?.red || h.counts?.critical || 0);
+    const criticalPct = total > 0 ? ((critical / total) * 100).toFixed(1) + '%' : '0%';
+
+    totalAll += total;
+    openAll += open;
+    closedAll += closed;
+    criticalAll += critical;
+
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+    tr.innerHTML = `
+      <td class="px-2 py-1 text-center border border-gray-200">${idx + 1}</td>
+      <td class="px-2 py-1 text-right border border-gray-200 font-medium">${name}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${total}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${open}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${closed}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${critical}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${criticalPct}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // صف الإجمالي
+  if (hospitalsData.length) {
+    const totalCriticalPct =
+      totalAll > 0 ? ((criticalAll / totalAll) * 100).toFixed(1) + '%' : '0%';
+
+    const trTotal = document.createElement('tr');
+    trTotal.className = 'bg-gray-200 font-bold';
+    trTotal.innerHTML = `
+      <td class="px-2 py-1 text-center border border-gray-200" colspan="2">الإجمالي</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${totalAll}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${openAll}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${closedAll}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${criticalAll}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${totalCriticalPct}</td>
+    `;
+    tbody.appendChild(trTotal);
+  }
+}
+
+/**
+ * تحديث عنوان الشهر + تاريخ التصدير
+ */
+function updateSummaryMeta() {
+  const monthInput = document.getElementById('summaryMonth');
+  const monthSpan = document.getElementById('summaryHeaderMonth');
+  const dateSpan = document.getElementById('summaryExportDate');
+
+  // شهر التقرير
+  if (monthSpan && monthInput) {
+    const val = monthInput.value; // شكلها YYYY-MM
+    if (val) {
+      const [year, m] = val.split('-');
+      monthSpan.textContent = `عن شهر ${m}/${year}`;
+    } else {
+      monthSpan.textContent = '';
+    }
+  }
+
+  // تاريخ التصدير الآن
+  if (dateSpan) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-SA');
+    const timeStr = now.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    dateSpan.textContent = `تاريخ التصدير: ${dateStr} ${timeStr}`;
+  }
+}
+
 function updateMainStatsCards() {
   // حساب الإحصائيات حسب دور المستخدم
   let totalReports, openReports, closedReports, criticalReports, hospitalCount, slaCompliance;
@@ -2098,6 +2193,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // ثم تهيئة التقارير
   await initializeReports();
+
+  // إضافة مستمع لتحديث الهيدر عند تغيير الشهر
+  const monthInput = document.getElementById('summaryMonth');
+  if (monthInput) {
+    monthInput.addEventListener('change', updateSummaryMeta);
+    updateSummaryMeta(); // أول مرة
+  }
 });
 
 // ========================================
@@ -2150,3 +2252,1182 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ========================================
+// ===== دوال تقرير البلاغات التفصيلية =====
+// ========================================
+
+/**
+ * جلب بيانات البلاغات التفصيلية من API
+ */
+async function fetchDetailedComplaintsData({ fromDate, toDate, hospitalId }) {
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('لا يوجد توكن للمصادقة');
+    }
+
+    const params = new URLSearchParams();
+    if (fromDate) params.set('from', fromDate);
+    if (toDate) params.set('to', toDate);
+    if (hospitalId && hospitalId !== 'all') {
+      params.set('hospitalId', hospitalId);
+    }
+    // جلب جميع البلاغات (بدون pagination)
+    params.set('pageSize', '10000');
+    params.set('page', '1');
+
+    const url = `${API_BASE}/api/complaints/history?${params.toString()}`;
+    console.log('🔍 جاري جلب بيانات البلاغات التفصيلية من:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    // البيانات في result.items أو result.data
+    const data = result.items || result.data || [];
+    
+    console.log('✅ تم جلب بيانات البلاغات التفصيلية:', data.length, 'بلاغ');
+    return data;
+  } catch (error) {
+    console.error('❌ خطأ في جلب بيانات البلاغات التفصيلية:', error);
+    throw error;
+  }
+}
+
+/**
+ * ملء جدول البلاغات التفصيلية
+ */
+function renderDetailsTable(complaints) {
+  const tbody = document.getElementById('detailsTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!complaints || complaints.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="8" class="px-2 py-4 text-center border border-gray-200 text-red-500">
+        لا توجد بلاغات مطابقة للفترة/المستشفى المحدّد
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  complaints.forEach((complaint, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+    
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('ar-SA');
+    };
+
+    // دعم أسماء الأعمدة المختلفة من API
+    const ticketNumber = complaint.ticket || complaint.TicketNumber || complaint.id || '';
+    const hospitalName = complaint.hospital || complaint.HospitalName || '';
+    const departmentName = complaint.department || complaint.DepartmentName || '';
+    const statusName = complaint.statusName || complaint.status || (complaint.StatusCode === 'CLOSED' ? 'مغلق' : complaint.StatusCode === 'OPEN' ? 'مفتوح' : '');
+    const priorityName = complaint.priorityName || complaint.priority || '';
+    const createdAt = complaint.createdAt || complaint.CreatedAt || '';
+    const lastUpdate = complaint.lastUpdate || complaint.UpdatedAt || '';
+    const isClosed = complaint.status === 'CLOSED' || complaint.StatusCode === 'CLOSED';
+
+    tr.innerHTML = `
+      <td class="px-2 py-1 text-center border border-gray-200">${idx + 1}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${ticketNumber}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${hospitalName}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${departmentName}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${statusName}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${priorityName}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${formatDate(createdAt)}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${isClosed ? formatDate(lastUpdate) : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * جلب بيانات أداء الأقسام
+ */
+async function fetchDepartmentsPerformanceData({ hospitalId }) {
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('لا يوجد توكن للمصادقة');
+    }
+
+    const params = new URLSearchParams();
+    if (hospitalId && hospitalId !== 'all') {
+      params.set('hospitalId', hospitalId);
+    }
+
+    const url = `${API_BASE}/api/reports/departments/data?${params.toString()}`;
+    console.log('🔍 جاري جلب بيانات أداء الأقسام من:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    const data = result.data || result.items || [];
+    
+    console.log('✅ تم جلب بيانات أداء الأقسام:', data.length, 'قسم');
+    return data;
+  } catch (error) {
+    console.error('❌ خطأ في جلب بيانات أداء الأقسام:', error);
+    throw error;
+  }
+}
+
+/**
+ * رسم الرسم البياني لأداء الأقسام (horizontal bar chart)
+ */
+async function renderDepartmentsChart(departments) {
+  const canvas = document.getElementById('departmentsChart');
+  const chartArea = document.getElementById('departmentsChartArea');
+  if (!canvas || !chartArea) return;
+
+  // تدمير الرسم البياني السابق إن وجد
+  if (window.departmentsChartInstance) {
+    window.departmentsChartInstance.destroy();
+    window.departmentsChartInstance = null;
+  }
+
+  // إزالة الرسالة السابقة إن وجدت
+  const existingMsg = chartArea.querySelector('.no-data-message');
+  if (existingMsg) existingMsg.remove();
+
+  // إظهار canvas
+  canvas.style.display = 'block';
+
+  // لا توجد بيانات ➜ إظهار رسالة بدلاً من فراغ
+  if (!departments || departments.length === 0) {
+    canvas.style.display = 'none';
+
+    const msg = document.createElement('div');
+    msg.className = 'no-data-message text-center text-gray-400 py-16 text-lg';
+    msg.textContent = 'لا توجد بيانات كافية لعرض الرسم البياني للأقسام في الفترة المحددة.';
+
+    chartArea.appendChild(msg);
+    return;
+  }
+
+  // ترتيب الأقسام حسب عدد البلاغات (تنازلي)
+  const sorted = [...departments].sort((a, b) => {
+    const totalA = a.totalComplaints || 0;
+    const totalB = b.totalComplaints || 0;
+    return totalB - totalA;
+  });
+
+  const labels = sorted.map(d => d.departmentName || 'غير محدد');
+  const data = sorted.map(d => d.totalComplaints || 0);
+
+  // ألوان متدرجة للأشرطة
+  const colors = [
+    '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA',
+    '#22C55E', '#10B981', '#F59E0B', '#EF4444',
+    '#8B5CF6', '#A855F7', '#EC4899', '#F43F5E'
+  ];
+
+  const ctx = canvas.getContext('2d');
+  window.departmentsChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'عدد البلاغات',
+        data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderRadius: 6,
+        barThickness: 20
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 0 },
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: 'عدد البلاغات لكل قسم',
+          font: { size: 16, family: 'Tajawal, Arial' },
+          padding: { bottom: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${ctx.formattedValue} بلاغ`
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { display: false },
+          ticks: {
+            color: '#475569',
+            font: { family: 'Tajawal, Arial' }
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            color: '#475569',
+            font: { family: 'Tajawal, Arial' }
+          }
+        }
+      }
+    }
+  });
+
+  // انتظار اكتمال الرسم
+  await new Promise(resolve => setTimeout(resolve, 300));
+  console.log('✅ تم رسم الرسم البياني للأقسام');
+}
+
+/**
+ * رسم جدول أداء الأقسام
+ */
+function renderDepartmentsTable(departments) {
+  const tbody = document.getElementById('departmentsTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!departments || departments.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="6" class="px-2 py-4 text-center border border-gray-200 text-red-500">
+        لا توجد بيانات للأقسام
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  departments.forEach((dept, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+    
+    const deptName = dept.departmentName || dept.DepartmentName || dept.name || '';
+    const totalComplaints = dept.totalComplaints || dept.TotalComplaints || dept.total || 0;
+    const closedComplaints = dept.closedComplaints || dept.ClosedComplaints || dept.closed || 0;
+    const criticalComplaints = dept.criticalComplaints || dept.CriticalComplaints || dept.critical || 0;
+    const avgCloseTime = dept.avgCloseTime || dept.AvgCloseTime || dept.averageCloseTime || 0;
+    
+    const avgCloseTimeDays = avgCloseTime ? parseFloat(avgCloseTime).toFixed(1) : '—';
+
+    tr.innerHTML = `
+      <td class="px-2 py-1 text-center border border-gray-200">${idx + 1}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${deptName}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${totalComplaints}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${closedComplaints}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${criticalComplaints}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${avgCloseTimeDays}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * تحديث معلومات الهيدر والفوتر لتقرير أداء الأقسام
+ */
+function updateDepartmentsMeta({ hospitalId, hospitalName }) {
+  const headerInfo = document.getElementById('departmentsHeaderInfo');
+  const exportDate = document.getElementById('departmentsExportDate');
+
+  let hospitalText = 'المستشفى: جميع المستشفيات';
+  if (hospitalId && hospitalId !== 'all') {
+    hospitalText = `المستشفى: ${hospitalName || `ID ${hospitalId}`}`;
+  }
+
+  if (headerInfo) {
+    headerInfo.textContent = hospitalText;
+  }
+
+  // تاريخ التصدير
+  if (exportDate) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-SA');
+    const timeStr = now.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    exportDate.textContent = `تاريخ التصدير: ${dateStr} ${timeStr}`;
+  }
+}
+
+/**
+ * جلب بيانات أداء الموظفين
+ */
+async function fetchEmployeesPerformanceData({ hospitalId }) {
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('لا يوجد توكن للمصادقة');
+    }
+
+    const params = new URLSearchParams();
+    if (hospitalId && hospitalId !== 'all') {
+      params.set('hospitalId', hospitalId);
+    }
+
+    const url = `${API_BASE}/api/reports/employees/data?${params.toString()}`;
+    console.log('🔍 جاري جلب بيانات أداء الموظفين من:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    const data = result.data || result.items || [];
+    
+    console.log('✅ تم جلب بيانات أداء الموظفين:', data.length, 'موظف');
+    return data;
+  } catch (error) {
+    console.error('❌ خطأ في جلب بيانات أداء الموظفين:', error);
+    throw error;
+  }
+}
+
+/**
+ * رسم الرسم البياني لأداء الموظفين (horizontal bar chart)
+ */
+async function renderEmployeesChart(employees) {
+  const canvas = document.getElementById('employeesChart');
+  const chartArea = document.getElementById('employeesChartArea');
+  if (!canvas || !chartArea) return;
+
+  // تدمير الرسم البياني السابق إن وجد
+  if (window.employeesChartInstance) {
+    window.employeesChartInstance.destroy();
+    window.employeesChartInstance = null;
+  }
+
+  // إزالة الرسالة السابقة إن وجدت
+  const existingMsg = chartArea.querySelector('.no-data-message');
+  if (existingMsg) existingMsg.remove();
+
+  // إظهار canvas
+  canvas.style.display = 'block';
+
+  // لا توجد بيانات ➜ إظهار رسالة بدلاً من فراغ
+  if (!employees || employees.length === 0) {
+    canvas.style.display = 'none';
+
+    const msg = document.createElement('div');
+    msg.className = 'no-data-message text-center text-gray-400 py-16 text-lg';
+    msg.textContent = 'لا توجد بيانات كافية لعرض الرسم البياني للموظفين في الفترة المحددة.';
+
+    chartArea.appendChild(msg);
+    return;
+  }
+
+  // ترتيب الموظفين حسب عدد البلاغات (تنازلي)
+  const sorted = [...employees].sort((a, b) => {
+    const countA = a.complaintCount || a.totalComplaints || 0;
+    const countB = b.complaintCount || b.totalComplaints || 0;
+    return countB - countA;
+  });
+
+  const labels = sorted.map(e => e.employeeName || e.name || 'غير محدد');
+  const data = sorted.map(e => e.complaintCount || e.totalComplaints || 0);
+
+  // ألوان متدرجة للأشرطة
+  const colors = [
+    '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA',
+    '#22C55E', '#10B981', '#F59E0B', '#EF4444',
+    '#8B5CF6', '#A855F7', '#EC4899', '#F43F5E'
+  ];
+
+  const ctx = canvas.getContext('2d');
+  window.employeesChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'عدد البلاغات',
+        data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderRadius: 6,
+        barThickness: 20
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 0 },
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: 'عدد البلاغات لكل موظف',
+          font: { size: 16, family: 'Tajawal, Arial' },
+          padding: { bottom: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${ctx.formattedValue} بلاغ`
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { display: false },
+          ticks: {
+            color: '#475569',
+            font: { family: 'Tajawal, Arial' }
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            color: '#475569',
+            font: { family: 'Tajawal, Arial' }
+          }
+        }
+      }
+    }
+  });
+
+  // انتظار اكتمال الرسم
+  await new Promise(resolve => setTimeout(resolve, 300));
+  console.log('✅ تم رسم الرسم البياني للموظفين');
+}
+
+/**
+ * رسم جدول أداء الموظفين
+ */
+function renderEmployeesTable(employees) {
+  const tbody = document.getElementById('employeesTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!employees || employees.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="6" class="px-2 py-4 text-center border border-gray-200 text-red-500">
+        لا توجد بيانات للموظفين
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  // ترتيب حسب عدد البلاغات (تنازلي)
+  const sorted = [...employees].sort((a, b) => {
+    const countA = a.complaintCount || a.totalComplaints || 0;
+    const countB = b.complaintCount || b.totalComplaints || 0;
+    return countB - countA;
+  });
+
+  sorted.forEach((emp, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+    
+    const employeeName = emp.employeeName || emp.name || 'غير محدد';
+    const departmentName = emp.departmentName || emp.department || '';
+    const complaintCount = emp.complaintCount || emp.totalComplaints || 0;
+    const firstComplaint = emp.firstComplaint ? new Date(emp.firstComplaint).toLocaleDateString('ar-SA') : '—';
+    const lastComplaint = emp.lastComplaint ? new Date(emp.lastComplaint).toLocaleDateString('ar-SA') : '—';
+
+    tr.innerHTML = `
+      <td class="px-2 py-1 text-center border border-gray-200">${idx + 1}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${employeeName}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${departmentName}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${complaintCount}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${firstComplaint}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${lastComplaint}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * تحديث معلومات الهيدر والفوتر لتقرير أداء الموظفين
+ */
+function updateEmployeesMeta({ hospitalId, hospitalName }) {
+  const headerInfo = document.getElementById('employeesHeaderInfo');
+  const exportDate = document.getElementById('employeesExportDate');
+
+  let hospitalText = 'المستشفى: جميع المستشفيات';
+  if (hospitalId && hospitalId !== 'all') {
+    hospitalText = `المستشفى: ${hospitalName || `ID ${hospitalId}`}`;
+  }
+
+  if (headerInfo) {
+    headerInfo.textContent = hospitalText;
+  }
+
+  // تاريخ التصدير
+  if (exportDate) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-SA');
+    const timeStr = now.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    exportDate.textContent = `تاريخ التصدير: ${dateStr} ${timeStr}`;
+  }
+}
+
+/**
+ * جلب بيانات البلاغات الحرجة
+ */
+async function fetchCriticalComplaintsData({ hospitalId, fromDate, toDate }) {
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('لا يوجد توكن للمصادقة');
+    }
+
+    const params = new URLSearchParams();
+    if (hospitalId && hospitalId !== 'all') {
+      params.set('hospitalId', hospitalId);
+    }
+    if (fromDate) {
+      params.set('fromDate', fromDate);
+    }
+    if (toDate) {
+      params.set('toDate', toDate);
+    }
+
+    const url = `${API_BASE}/api/reports/critical/data?${params.toString()}`;
+    console.log('🔍 جاري جلب بيانات البلاغات الحرجة من:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    const data = result.data || result.items || [];
+    
+    console.log('✅ تم جلب بيانات البلاغات الحرجة:', data.length, 'بلاغ');
+    return data;
+  } catch (error) {
+    console.error('❌ خطأ في جلب بيانات البلاغات الحرجة:', error);
+    throw error;
+  }
+}
+
+/**
+ * رسم جدول البلاغات الحرجة
+ */
+function renderCriticalTable(complaints) {
+  const tbody = document.getElementById('criticalTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!complaints || complaints.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="7" class="px-2 py-4 text-center border border-gray-200 text-red-500">
+        لا توجد بلاغات حرجة
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  // ترتيب حسب تاريخ البلاغ (تنازلي)
+  const sorted = [...complaints].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.CreatedAt || 0);
+    const dateB = new Date(b.createdAt || b.CreatedAt || 0);
+    return dateB - dateA;
+  });
+
+  sorted.forEach((complaint, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+    
+    const ticketNumber = complaint.ticketNumber || complaint.TicketNumber || complaint.ticket || '—';
+    const hospitalName = complaint.hospitalName || complaint.HospitalName || '—';
+    const departmentName = complaint.departmentName || complaint.DepartmentName || '—';
+    const priorityCode = complaint.priorityCode || complaint.PriorityCode || '—';
+    const statusCode = complaint.statusCode || complaint.StatusCode || '—';
+    const createdAt = complaint.createdAt || complaint.CreatedAt;
+    const dateStr = createdAt ? new Date(createdAt).toLocaleDateString('ar-SA') : '—';
+
+    tr.innerHTML = `
+      <td class="px-2 py-1 text-center border border-gray-200">${idx + 1}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${ticketNumber}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${hospitalName}</td>
+      <td class="px-2 py-1 text-right border border-gray-200">${departmentName}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${priorityCode}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${statusCode}</td>
+      <td class="px-2 py-1 text-center border border-gray-200">${dateStr}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * تحديث معلومات الهيدر والفوتر لتقرير البلاغات الحرجة
+ */
+function updateCriticalMeta({ hospitalId, hospitalName, fromDate, toDate }) {
+  const headerInfo = document.getElementById('criticalHeaderInfo');
+  const exportDate = document.getElementById('criticalExportDate');
+
+  let infoText = '';
+  if (hospitalId && hospitalId !== 'all') {
+    infoText = `المستشفى: ${hospitalName || `ID ${hospitalId}`}`;
+  } else {
+    infoText = 'المستشفى: جميع المستشفيات';
+  }
+
+  if (fromDate || toDate) {
+    infoText += ` | الفترة: ${fromDate || '—'} إلى ${toDate || '—'}`;
+  }
+
+  if (headerInfo) {
+    headerInfo.textContent = infoText;
+  }
+
+  // تاريخ التصدير
+  if (exportDate) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-SA');
+    const timeStr = now.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    exportDate.textContent = `تاريخ التصدير: ${dateStr} ${timeStr}`;
+  }
+}
+
+/**
+ * تحديث معلومات الهيدر والفوتر لتقرير التفاصيل
+ */
+function updateDetailsMeta({ fromDate, toDate, hospitalId, hospitalName }) {
+  const headerInfo = document.getElementById('detailsHeaderInfo');
+  const exportDate = document.getElementById('detailsExportDate');
+
+  // معلومات الفترة والمستشفى
+  let periodText = 'الفترة: جميع التواريخ';
+  if (fromDate || toDate) {
+    periodText = `الفترة: ${fromDate || '—'} إلى ${toDate || '—'}`;
+  }
+
+  let hospitalText = 'المستشفى: جميع المستشفيات';
+  if (hospitalId && hospitalId !== 'all') {
+    hospitalText = `المستشفى: ${hospitalName || `ID ${hospitalId}`}`;
+  }
+
+  if (headerInfo) {
+    headerInfo.textContent = `${periodText} | ${hospitalText}`;
+  }
+
+  // تاريخ التصدير
+  if (exportDate) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-SA');
+    const timeStr = now.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    exportDate.textContent = `تاريخ التصدير: ${dateStr} ${timeStr}`;
+  }
+}
+
+// ========================================
+// ===== تصدير التقارير إلى PDF أو Excel =====
+// ========================================
+async function exportReport(reportKey, format) {
+  try {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('يرجى تسجيل الدخول أولاً');
+    }
+
+    const params = new URLSearchParams();
+
+    // التقارير المختلفة والفلاتر الخاصة بها
+    if (reportKey === 'summary') {
+      const month = document.getElementById('summaryMonth')?.value || '';
+      if (month) params.set('month', month); // شكلها YYYY-MM
+    }
+
+    if (reportKey === 'details') {
+      params.set('fromDate', document.getElementById('detailFrom')?.value || '');
+      params.set('toDate', document.getElementById('detailTo')?.value || '');
+      params.set('hospitalId', document.getElementById('detailHospital')?.value || 'all');
+    }
+
+    if (reportKey === 'departments') {
+      params.set('hospitalId', document.getElementById('deptReportHospital')?.value || 'all');
+    }
+
+    if (reportKey === 'employees') {
+      params.set('hospitalId', document.getElementById('empReportHospital')?.value || 'all');
+    }
+
+    if (reportKey === 'critical') {
+      params.set('fromDate', document.getElementById('criticalFrom')?.value || '');
+      params.set('toDate', document.getElementById('criticalTo')?.value || '');
+      params.set('hospitalId', document.getElementById('criticalHospital')?.value || 'all');
+    }
+
+    let url = `${API_BASE}/api/reports/${reportKey}.${format}?${params.toString()}`;
+    let fetchOptions = {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    };
+
+    // ✅ حالة خاصة لتقرير ملخص التجمع PDF:
+    // نستخدم html2canvas لتصوير منطقة التقرير كاملة كصورة واحدة + جدول أرقام
+    console.log('[Export] فحص حالة خاصة:', { reportKey, format, isSummaryPdf: reportKey === 'summary' && format === 'pdf', isDetailsPdf: reportKey === 'details' && format === 'pdf' });
+    
+    if (reportKey === 'summary' && format === 'pdf') {
+      console.log('[Export] ✅ ملخص التجمع PDF - تقرير احترافي');
+
+      const month = document.getElementById('summaryMonth')?.value || '';
+
+      // تحديث العنوان + تاريخ التصدير في أسفل الصفحة
+      updateSummaryMeta();
+
+      const container = document.getElementById('summaryCombinedArea');
+      if (!container) {
+        throw new Error('لم يتم العثور على العنصر summaryCombinedArea في الصفحة');
+      }
+
+      // تشغيل وضع التصدير (CSS خاص)
+      document.body.classList.add('summary-exporting');
+      container.classList.add('summary-export');
+
+      // ننتظر فريم عشان الـCSS يطبّق
+      await new Promise(r => setTimeout(r, 50));
+
+      const canvas = await html2canvas(container, {
+        scale: 1.5, // تقليل من 2 إلى 1.5 لتقليل الحجم
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff'
+      });
+
+      // إرجاع الصفحة كما كانت
+      container.classList.remove('summary-export');
+      document.body.classList.remove('summary-exporting');
+
+      // استخدام JPEG بدلاً من PNG لتقليل الحجم (جودة 0.85)
+      const summaryImage = canvas.toDataURL('image/jpeg', 0.85);
+      const sizeMB = (summaryImage.length / 1024 / 1024).toFixed(2);
+      console.log('[Export] ✅ تم إنشاء صورة التقرير، طول الداتا:', summaryImage.length, 'بايت');
+      console.log('[Export] 📊 حجم الصورة:', sizeMB, 'MB');
+
+      url = `${API_BASE}/api/reports/${reportKey}.${format}`;
+      fetchOptions = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          month,
+          summaryImage
+        })
+      };
+    } else if (reportKey === 'details' && format === 'pdf') {
+      console.log('[Export] ✅ تقرير البلاغات التفصيلية PDF - تقرير احترافي');
+
+      const fromDate = document.getElementById('detailFrom')?.value || '';
+      const toDate = document.getElementById('detailTo')?.value || '';
+      const hospitalId = document.getElementById('detailHospital')?.value || 'all';
+
+      // جلب بيانات البلاغات
+      showLoadingIndicator('جاري تحميل بيانات البلاغات...');
+      const complaints = await fetchDetailedComplaintsData({ fromDate, toDate, hospitalId });
+      hideLoadingIndicator();
+
+      // جلب اسم المستشفى إذا كان محدد
+      let hospitalName = null;
+      if (hospitalId && hospitalId !== 'all' && complaints.length > 0) {
+        hospitalName = complaints[0].hospital || complaints[0].HospitalName || null;
+      }
+
+      // ملء الجدول
+      renderDetailsTable(complaints);
+
+      // تحديث معلومات الهيدر والفوتر
+      updateDetailsMeta({ fromDate, toDate, hospitalId, hospitalName });
+
+      const container = document.getElementById('detailsCombinedArea');
+      if (!container) {
+        throw new Error('لم يتم العثور على العنصر detailsCombinedArea في الصفحة');
+      }
+
+      // التأكد من أن الجدول يحتوي على بيانات
+      const tableBody = document.getElementById('detailsTableBody');
+      if (!tableBody || tableBody.children.length === 0) {
+        throw new Error('لا توجد بيانات في الجدول. تأكد من اختيار الفلاتر الصحيحة.');
+      }
+
+      // تشغيل وضع التصدير (CSS خاص)
+      // الحاوية ستكون مخفية خارج viewport (left: -10000px) ولكن html2canvas سيستطيع تصويرها
+      document.body.classList.add('details-exporting');
+      container.classList.remove('hidden');
+      container.classList.add('details-export');
+
+      // ننتظر أكثر من فريم عشان الـCSS يطبّق والبيانات تظهر
+      await new Promise(r => setTimeout(r, 300));
+
+      // التحقق من أن الحاوية موجودة في DOM (html2canvas يعمل مع العناصر حتى لو كانت خارج viewport)
+      const rect = container.getBoundingClientRect();
+      console.log('[Export] 📐 أبعاد الحاوية:', { width: rect.width, height: rect.height, left: rect.left });
+
+      // html2canvas يعمل حتى لو كانت الحاوية خارج viewport
+      // تقليل scale لتقليل حجم الصورة
+      const canvas = await html2canvas(container, {
+        scale: 1.5, // تقليل من 2 إلى 1.5 لتقليل الحجم
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff',
+        logging: false,
+        allowTaint: true,
+        windowWidth: container.scrollWidth,
+        windowHeight: container.scrollHeight
+      });
+
+      // إرجاع الصفحة كما كانت
+      container.classList.remove('details-export');
+      container.classList.add('hidden');
+      document.body.classList.remove('details-exporting');
+
+      // استخدام JPEG بدلاً من PNG لتقليل الحجم (جودة 0.85)
+      const detailsImage = canvas.toDataURL('image/jpeg', 0.85);
+      console.log('[Export] ✅ تم إنشاء صورة التقرير، طول الداتا:', detailsImage.length, 'بايت');
+      
+      // تحويل إلى MB للتحقق
+      const sizeMB = (detailsImage.length / 1024 / 1024).toFixed(2);
+      console.log('[Export] 📊 حجم الصورة:', sizeMB, 'MB');
+      
+      if (detailsImage.length < 100) {
+        throw new Error('الصورة المُنشأة فارغة أو صغيرة جداً. تأكد من أن الجدول يحتوي على بيانات.');
+      }
+
+      url = `${API_BASE}/api/reports/${reportKey}.${format}`;
+      fetchOptions = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fromDate,
+          toDate,
+          hospitalId,
+          detailsImage
+        })
+      };
+    } else if (reportKey === 'departments' && format === 'pdf') {
+      console.log('[Export] ✅ تقرير أداء الأقسام PDF - تقرير احترافي');
+
+      const hospitalId = document.getElementById('deptReportHospital')?.value || 'all';
+
+      // جلب بيانات الأقسام
+      showLoadingIndicator('جاري تحميل بيانات الأقسام...');
+      const departments = await fetchDepartmentsPerformanceData({ hospitalId });
+      hideLoadingIndicator();
+
+      // جلب اسم المستشفى إذا كان محدد
+      let hospitalName = null;
+      if (hospitalId && hospitalId !== 'all' && departments.length > 0) {
+        // يمكن جلب اسم المستشفى من API آخر أو من البيانات
+        hospitalName = null; // سيتم جلبها لاحقاً إذا لزم
+      }
+
+      // رسم الرسم البياني
+      await renderDepartmentsChart(departments);
+
+      // ملء الجدول
+      renderDepartmentsTable(departments);
+
+      // تحديث معلومات الهيدر والفوتر
+      updateDepartmentsMeta({ hospitalId, hospitalName });
+
+      const container = document.getElementById('departmentsCombinedArea');
+      if (!container) {
+        throw new Error('لم يتم العثور على العنصر departmentsCombinedArea في الصفحة');
+      }
+
+      // التأكد من أن الجدول يحتوي على بيانات
+      const tableBody = document.getElementById('departmentsTableBody');
+      if (!tableBody || tableBody.children.length === 0) {
+        throw new Error('لا توجد بيانات في الجدول. تأكد من اختيار المستشفى الصحيح.');
+      }
+
+      // تشغيل وضع التصدير (CSS خاص)
+      document.body.classList.add('departments-exporting');
+      container.classList.remove('hidden');
+      container.classList.add('departments-export');
+
+      // ننتظر فريم عشان الـCSS يطبّق
+      await new Promise(r => setTimeout(r, 50));
+
+      const canvas = await html2canvas(container, {
+        scale: 1.5, // تقليل من 2 إلى 1.5 لتقليل الحجم
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff'
+      });
+
+      // إرجاع الصفحة كما كانت
+      container.classList.remove('departments-export');
+      container.classList.add('hidden');
+      document.body.classList.remove('departments-exporting');
+
+      // استخدام JPEG بدلاً من PNG لتقليل الحجم (جودة 0.85)
+      const departmentsImage = canvas.toDataURL('image/jpeg', 0.85);
+      const sizeMB = (departmentsImage.length / 1024 / 1024).toFixed(2);
+      console.log('[Export] ✅ تم إنشاء صورة التقرير، طول الداتا:', departmentsImage.length, 'بايت');
+      console.log('[Export] 📊 حجم الصورة:', sizeMB, 'MB');
+
+      if (departmentsImage.length < 100) {
+        throw new Error('الصورة المُنشأة فارغة أو صغيرة جداً. تأكد من أن الجدول يحتوي على بيانات.');
+      }
+
+      url = `${API_BASE}/api/reports/${reportKey}.${format}`;
+      fetchOptions = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          hospitalId,
+          departmentsImage
+        })
+      };
+    } else if (reportKey === 'employees' && format === 'pdf') {
+      console.log('[Export] ✅ تقرير أداء الموظفين PDF - تقرير احترافي');
+
+      const hospitalId = document.getElementById('empReportHospital')?.value || 'all';
+
+      // جلب بيانات الموظفين
+      showLoadingIndicator('جاري تحميل بيانات الموظفين...');
+      const employees = await fetchEmployeesPerformanceData({ hospitalId });
+      hideLoadingIndicator();
+
+      // جلب اسم المستشفى إذا كان محدد
+      let hospitalName = null;
+      if (hospitalId && hospitalId !== 'all' && employees.length > 0) {
+        hospitalName = null; // سيتم جلبها لاحقاً إذا لزم
+      }
+
+      // رسم الرسم البياني
+      await renderEmployeesChart(employees);
+
+      // ملء الجدول
+      renderEmployeesTable(employees);
+
+      // تحديث معلومات الهيدر والفوتر
+      updateEmployeesMeta({ hospitalId, hospitalName });
+
+      const container = document.getElementById('employeesCombinedArea');
+      if (!container) {
+        throw new Error('لم يتم العثور على العنصر employeesCombinedArea في الصفحة');
+      }
+
+      // التأكد من أن الجدول يحتوي على بيانات
+      const tableBody = document.getElementById('employeesTableBody');
+      if (!tableBody || tableBody.children.length === 0) {
+        throw new Error('لا توجد بيانات في الجدول. تأكد من اختيار المستشفى الصحيح.');
+      }
+
+      // تشغيل وضع التصدير (CSS خاص)
+      document.body.classList.add('employees-exporting');
+      container.classList.remove('hidden');
+      container.classList.add('employees-export');
+
+      // ننتظر فريم عشان الـCSS يطبّق
+      await new Promise(r => setTimeout(r, 50));
+
+      const canvas = await html2canvas(container, {
+        scale: 1.5, // تقليل من 2 إلى 1.5 لتقليل الحجم
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff'
+      });
+
+      // إرجاع الصفحة كما كانت
+      container.classList.remove('employees-export');
+      container.classList.add('hidden');
+      document.body.classList.remove('employees-exporting');
+
+      // استخدام JPEG بدلاً من PNG لتقليل الحجم (جودة 0.85)
+      const employeesImage = canvas.toDataURL('image/jpeg', 0.85);
+      const sizeMB = (employeesImage.length / 1024 / 1024).toFixed(2);
+      console.log('[Export] ✅ تم إنشاء صورة التقرير، طول الداتا:', employeesImage.length, 'بايت');
+      console.log('[Export] 📊 حجم الصورة:', sizeMB, 'MB');
+
+      if (employeesImage.length < 100) {
+        throw new Error('الصورة المُنشأة فارغة أو صغيرة جداً. تأكد من أن الجدول يحتوي على بيانات.');
+      }
+
+      url = `${API_BASE}/api/reports/${reportKey}.${format}`;
+      fetchOptions = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          hospitalId,
+          employeesImage
+        })
+      };
+    } else if (reportKey === 'critical' && format === 'pdf') {
+      console.log('[Export] ✅ تقرير البلاغات الحرجة PDF - تقرير احترافي');
+
+      const hospitalId = document.getElementById('criticalReportHospital')?.value || 'all';
+      const fromDate = document.getElementById('criticalFrom')?.value || '';
+      const toDate = document.getElementById('criticalTo')?.value || '';
+
+      // جلب بيانات البلاغات الحرجة
+      showLoadingIndicator('جاري تحميل البلاغات الحرجة...');
+      const complaints = await fetchCriticalComplaintsData({ hospitalId, fromDate, toDate });
+      hideLoadingIndicator();
+
+      // جلب اسم المستشفى إذا كان محدد
+      let hospitalName = null;
+      if (hospitalId && hospitalId !== 'all' && complaints.length > 0) {
+        hospitalName = complaints[0].hospitalName || complaints[0].HospitalName || null;
+      }
+
+      // ملء الجدول
+      renderCriticalTable(complaints);
+
+      // تحديث معلومات الهيدر والفوتر
+      updateCriticalMeta({ hospitalId, hospitalName, fromDate, toDate });
+
+      const container = document.getElementById('criticalCombinedArea');
+      if (!container) {
+        throw new Error('لم يتم العثور على العنصر criticalCombinedArea في الصفحة');
+      }
+
+      // التأكد من أن الجدول يحتوي على بيانات
+      const tableBody = document.getElementById('criticalTableBody');
+      if (!tableBody || tableBody.children.length === 0) {
+        throw new Error('لا توجد بيانات في الجدول. تأكد من اختيار المستشفى الصحيح.');
+      }
+
+      // تشغيل وضع التصدير (CSS خاص)
+      document.body.classList.add('critical-exporting');
+      container.classList.remove('hidden');
+      container.classList.add('critical-export');
+
+      // ننتظر فريم عشان الـCSS يطبّق
+      await new Promise(r => setTimeout(r, 50));
+
+      const canvas = await html2canvas(container, {
+        scale: 1.5, // تقليل من 2 إلى 1.5 لتقليل الحجم
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff'
+      });
+
+      // إرجاع الصفحة كما كانت
+      container.classList.remove('critical-export');
+      container.classList.add('hidden');
+      document.body.classList.remove('critical-exporting');
+
+      // استخدام JPEG بدلاً من PNG لتقليل الحجم (جودة 0.85)
+      const criticalImage = canvas.toDataURL('image/jpeg', 0.85);
+      const sizeMB = (criticalImage.length / 1024 / 1024).toFixed(2);
+      console.log('[Export] ✅ تم إنشاء صورة التقرير، طول الداتا:', criticalImage.length, 'بايت');
+      console.log('[Export] 📊 حجم الصورة:', sizeMB, 'MB');
+
+      if (criticalImage.length < 100) {
+        throw new Error('الصورة المُنشأة فارغة أو صغيرة جداً. تأكد من أن الجدول يحتوي على بيانات.');
+      }
+
+      url = `${API_BASE}/api/reports/${reportKey}.${format}`;
+      fetchOptions = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          hospitalId,
+          fromDate,
+          toDate,
+          criticalImage
+        })
+      };
+    } else {
+      console.log('[Export] حالة عادية - استخدام GET');
+    }
+
+    console.log('[Export] طلب تقرير:', { url, method: fetchOptions.method, hasAuth: !!fetchOptions.headers.Authorization });
+
+    const res = await fetch(url, fetchOptions);
+
+    // التحقق من نوع المحتوى أولاً
+    const contentType = res.headers.get('content-type') || '';
+
+    if (!res.ok || !contentType.includes('application')) {
+      const errText = await res.text();
+      console.error('استجابة غير صحيحة من السيرفر:', errText);
+      throw new Error(`فشل إنشاء التقرير (HTTP ${res.status})`);
+    }
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `${reportKey}-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    console.log('✅ تم تحميل التقرير بنجاح');
+  } catch (error) {
+    console.error('❌ خطأ في تصدير التقرير:', error);
+    showErrorMessage('خطأ في تصدير التقرير', error.message);
+  }
+}
+
+// جعل الدالة متاحة عالمياً للاستخدام من HTML
+window.exportReport = exportReport;

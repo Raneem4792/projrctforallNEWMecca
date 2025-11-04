@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-funnel@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-box-and-violin-plot@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <!-- نعيد استخدام نفس ستايلات الداشبورد عشان الشكل يظل موحّد -->
   <link rel="stylesheet" href="../public/assets/css/styles.css" />
   <link rel="stylesheet" href="dashboard.css" />
@@ -47,6 +48,524 @@
     select:disabled {
       background-color: #f8f9fa;
       cursor: not-allowed;
+    }
+
+    /* الوضع العادي */
+    #summaryCombinedArea {
+      margin-top: 1.5rem;
+    }
+
+    /* وضع التصدير إلى PDF */
+    body.summary-exporting {
+      background: #ffffff !important;
+    }
+
+    /* شكل التقرير في الـPDF - عمودي A4 */
+    #summaryCombinedArea.summary-export {
+      margin: 0 auto !important;
+      padding: 40px 50px !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      /* جعل الحاوية عمودية بطول صفحة A4 */
+      width: 210mm;                 /* عرض A4 portrait */
+      min-height: 297mm;             /* ارتفاع A4 portrait */
+      max-width: 210mm;               /* تحديد العرض */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* رأس التقرير في الأعلى */
+    #summaryCombinedArea.summary-export #summaryHeader {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    /* جسم التقرير ياخذ الفراغ بين الهيدر والفوتر */
+    #summaryCombinedArea.summary-export #summaryBody {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      min-height: 0;
+    }
+
+    /* توزيع داخل الجسم (رسم + جدول) */
+    #summaryCombinedArea.summary-export #summaryReportArea {
+      flex: 1 1 auto;
+      margin-bottom: 30px;
+      min-height: 0;
+    }
+
+    #summaryCombinedArea.summary-export #summaryReportArea .card-hover {
+      box-shadow: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      height: 100%;
+    }
+
+    /* تكبير حجم الرسم البياني في وضع التصدير */
+    #summaryCombinedArea.summary-export #summaryReportArea {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #summaryCombinedArea.summary-export #summaryReportArea canvas {
+      max-height: 400px !important;
+      width: 100% !important;
+    }
+
+    /* ضبط ارتفاع حاوية الرسم */
+    #summaryCombinedArea.summary-export #summaryReportArea > div {
+      height: auto !important;
+      min-height: 300px !important;
+    }
+
+    #summaryCombinedArea.summary-export #summaryReportArea > div > div {
+      height: 100% !important;
+    }
+
+    /* جدول الملخص يأخذ مساحة محددة */
+    #summaryCombinedArea.summary-export #summaryTableArea {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    /* الفوتر في الأسفل */
+    #summaryCombinedArea.summary-export #summaryFooter {
+      flex-shrink: 0;
+      margin-top: 20px;
+    }
+
+    /* تكبير الخطوط داخل وضع التصدير فقط */
+    #summaryCombinedArea.summary-export #summaryHeaderTitle {
+      font-size: 32px !important;              /* عنوان التقرير - أكبر */
+      font-weight: bold !important;
+    }
+
+    #summaryCombinedArea.summary-export #summaryHeader {
+      font-size: 14px !important;               /* نص الهيدر */
+    }
+
+    #summaryCombinedArea.summary-export .section-title {
+      font-size: 20px !important;                /* عناوين الأقسام - أكبر */
+      font-weight: 600 !important;
+      margin-bottom: 12px !important;
+    }
+
+    #summaryCombinedArea.summary-export table {
+      font-size: 14px !important;                /* نص الجدول - أكبر */
+    }
+
+    #summaryCombinedArea.summary-export th {
+      padding: 10px 12px !important;
+      font-size: 15px !important;                 /* رؤوس الجدول */
+      font-weight: 600 !important;
+    }
+
+    #summaryCombinedArea.summary-export td {
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+    }
+
+    /* تكبير نص الفوتر */
+    #summaryCombinedArea.summary-export #summaryFooter {
+      font-size: 12px !important;
+    }
+
+    /* إخفاء الأزرار الغير مهمة في الـPDF */
+    body.summary-exporting .summary-floating-btn {
+      display: none !important;
+    }
+
+    /* ========================================
+       تنسيق تقرير البلاغات التفصيلية
+       ======================================== */
+
+    /* الوضع العادي */
+    #detailsCombinedArea {
+      display: none; /* مخفي بشكل افتراضي */
+    }
+
+    /* وضع التصدير إلى PDF */
+    body.details-exporting {
+      background: #ffffff !important;
+    }
+
+    /* شكل التقرير في الـPDF - عمودي A4 */
+    /* نستخدم clip-path لإخفائها تماماً من viewport ولكن html2canvas يستطيع تصويرها */
+    #detailsCombinedArea.details-export {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      margin: 0 !important;
+      padding: 40px 50px !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: -9999px !important; /* خارج viewport - لا يظهر للمستخدم */
+      transform: none !important;
+      z-index: -1 !important; /* خلف كل شيء */
+      pointer-events: none !important; /* لا تفاعل */
+      overflow: visible !important;
+      clip-path: none !important;
+      /* جعل الحاوية عمودية بطول صفحة A4 */
+      width: 210mm;
+      min-height: 297mm;
+      max-width: 210mm;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* رأس التقرير في الأعلى */
+    #detailsCombinedArea.details-export #detailsHeader {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    /* جسم التقرير ياخذ الفراغ بين الهيدر والفوتر */
+    #detailsCombinedArea.details-export #detailsBody {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* جدول الملخص يأخذ مساحة محددة */
+    #detailsCombinedArea.details-export #detailsTableArea {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    /* الفوتر في الأسفل */
+    #detailsCombinedArea.details-export #detailsFooter {
+      flex-shrink: 0;
+      margin-top: 20px;
+    }
+
+    /* تكبير الخطوط داخل وضع التصدير فقط */
+    #detailsCombinedArea.details-export #detailsHeaderTitle {
+      font-size: 32px !important;
+      font-weight: bold !important;
+    }
+
+    #detailsCombinedArea.details-export #detailsHeader {
+      font-size: 14px !important;
+    }
+
+    #detailsCombinedArea.details-export table {
+      font-size: 14px !important;
+    }
+
+    #detailsCombinedArea.details-export th {
+      padding: 10px 12px !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+    }
+
+    #detailsCombinedArea.details-export td {
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+    }
+
+    /* تكبير نص الفوتر */
+    #detailsCombinedArea.details-export #detailsFooter {
+      font-size: 12px !important;
+    }
+
+    /* ========================================
+       تنسيق تقرير أداء الأقسام
+       ======================================== */
+
+    /* الوضع العادي */
+    #departmentsCombinedArea {
+      display: none; /* مخفي بشكل افتراضي */
+    }
+
+    /* وضع التصدير إلى PDF */
+    body.departments-exporting {
+      background: #ffffff !important;
+    }
+
+    /* شكل التقرير في الـPDF - عمودي A4 */
+    #departmentsCombinedArea.departments-export {
+      display: block !important;
+      margin: 0 auto !important;
+      padding: 40px 50px !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      /* جعل الحاوية عمودية بطول صفحة A4 */
+      width: 210mm;
+      min-height: 297mm;
+      max-width: 210mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* رأس التقرير في الأعلى */
+    #departmentsCombinedArea.departments-export #departmentsHeader {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    /* جسم التقرير ياخذ الفراغ بين الهيدر والفوتر */
+    #departmentsCombinedArea.departments-export #departmentsBody {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* منطقة الرسم البياني */
+    #departmentsCombinedArea.departments-export #departmentsChartArea {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    #departmentsCombinedArea.departments-export #departmentsChartArea canvas {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* الصورة المتحولة من الرسم البياني */
+    #departmentsCombinedArea.departments-export #departmentsChartArea img {
+      max-width: 100% !important;
+      height: auto !important;
+      display: block !important;
+      margin: 0 auto !important;
+    }
+
+    /* جدول الأقسام يأخذ مساحة محددة */
+    #departmentsCombinedArea.departments-export #departmentsTableArea {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    /* الفوتر في الأسفل */
+    #departmentsCombinedArea.departments-export #departmentsFooter {
+      flex-shrink: 0;
+      margin-top: 20px;
+    }
+
+    /* تكبير الخطوط داخل وضع التصدير فقط */
+    #departmentsCombinedArea.departments-export #departmentsHeaderTitle {
+      font-size: 32px !important;
+      font-weight: bold !important;
+    }
+
+    #departmentsCombinedArea.departments-export #departmentsHeader {
+      font-size: 14px !important;
+    }
+
+    #departmentsCombinedArea.departments-export table {
+      font-size: 14px !important;
+    }
+
+    #departmentsCombinedArea.departments-export th {
+      padding: 10px 12px !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+    }
+
+    #departmentsCombinedArea.departments-export td {
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+    }
+
+    /* تكبير نص الفوتر */
+    #departmentsCombinedArea.departments-export #departmentsFooter {
+      font-size: 12px !important;
+    }
+
+    /* ========================================
+       تنسيق تقرير أداء الموظفين
+       ======================================== */
+
+    /* الوضع العادي */
+    #employeesCombinedArea {
+      display: none; /* مخفي بشكل افتراضي */
+    }
+
+    /* وضع التصدير إلى PDF */
+    body.employees-exporting {
+      background: #ffffff !important;
+    }
+
+    /* شكل التقرير في الـPDF - عمودي A4 */
+    #employeesCombinedArea.employees-export {
+      display: block !important;
+      margin: 0 auto !important;
+      padding: 40px 50px !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      /* جعل الحاوية عمودية بطول صفحة A4 */
+      width: 210mm;
+      min-height: 297mm;
+      max-width: 210mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* رأس التقرير في الأعلى */
+    #employeesCombinedArea.employees-export #employeesHeader {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    /* جسم التقرير ياخذ الفراغ بين الهيدر والفوتر */
+    #employeesCombinedArea.employees-export #employeesBody {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* منطقة الرسم البياني */
+    #employeesCombinedArea.employees-export #employeesChartArea {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    #employeesCombinedArea.employees-export #employeesChartArea canvas {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* جدول الموظفين يأخذ مساحة محددة */
+    #employeesCombinedArea.employees-export #employeesTableArea {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    /* الفوتر في الأسفل */
+    #employeesCombinedArea.employees-export #employeesFooter {
+      flex-shrink: 0;
+      margin-top: 20px;
+    }
+
+    /* تكبير الخطوط داخل وضع التصدير فقط */
+    #employeesCombinedArea.employees-export #employeesHeaderTitle {
+      font-size: 32px !important;
+      font-weight: bold !important;
+    }
+
+    #employeesCombinedArea.employees-export #employeesHeader {
+      font-size: 14px !important;
+    }
+
+    #employeesCombinedArea.employees-export table {
+      font-size: 14px !important;
+    }
+
+    #employeesCombinedArea.employees-export th {
+      padding: 10px 12px !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+    }
+
+    #employeesCombinedArea.employees-export td {
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+    }
+
+    /* تكبير نص الفوتر */
+    #employeesCombinedArea.employees-export #employeesFooter {
+      font-size: 12px !important;
+    }
+
+    /* ========================================
+       تنسيق تقرير البلاغات الحرجة
+       ======================================== */
+
+    /* الوضع العادي */
+    #criticalCombinedArea {
+      display: none; /* مخفي بشكل افتراضي */
+    }
+
+    /* وضع التصدير إلى PDF */
+    body.critical-exporting {
+      background: #ffffff !important;
+    }
+
+    /* شكل التقرير في الـPDF - عمودي A4 */
+    #criticalCombinedArea.critical-export {
+      display: block !important;
+      margin: 0 auto !important;
+      padding: 40px 50px !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      /* جعل الحاوية عمودية بطول صفحة A4 */
+      width: 210mm;
+      min-height: 297mm;
+      max-width: 210mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* رأس التقرير في الأعلى */
+    #criticalCombinedArea.critical-export #criticalHeader {
+      flex-shrink: 0;
+      margin-bottom: 20px;
+    }
+
+    /* جسم التقرير ياخذ الفراغ بين الهيدر والفوتر */
+    #criticalCombinedArea.critical-export #criticalBody {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* جدول البلاغات الحرجة يأخذ مساحة محددة */
+    #criticalCombinedArea.critical-export #criticalTableArea {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    /* الفوتر في الأسفل */
+    #criticalCombinedArea.critical-export #criticalFooter {
+      flex-shrink: 0;
+      margin-top: 20px;
+    }
+
+    /* تكبير الخطوط داخل وضع التصدير فقط */
+    #criticalCombinedArea.critical-export #criticalHeaderTitle {
+      font-size: 32px !important;
+      font-weight: bold !important;
+    }
+
+    #criticalCombinedArea.critical-export #criticalHeader {
+      font-size: 14px !important;
+    }
+
+    #criticalCombinedArea.critical-export table {
+      font-size: 14px !important;
+    }
+
+    #criticalCombinedArea.critical-export th {
+      padding: 10px 12px !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+    }
+
+    #criticalCombinedArea.critical-export td {
+      padding: 8px 12px !important;
+      font-size: 14px !important;
+    }
+
+    /* تكبير نص الفوتر */
+    #criticalCombinedArea.critical-export #criticalFooter {
+      font-size: 12px !important;
     }
   </style>
 </head>
@@ -164,21 +683,257 @@
           </div>
         </div>
 
-        <!-- الوضع في كل مستشفى - في الأعلى -->
-        <div class="mb-12" data-perm="REPORTS_CHART_BY_HOSPITAL_TYPE">
-          <div class="card-hover bg-white rounded-2xl p-5 shadow-xl border border-gray-100">
-            <div class="flex items-center mb-6">
-              <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center ml-4">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M3 3h18M3 7h18M3 11h18M3 15h18M3 19h18" />
-                </svg>
+        <!-- حاوية واحدة للتقرير كامل (هي اللي نصوّرها) -->
+        <div id="summaryCombinedArea" class="bg-white mb-12">
+          <!-- رأس التقرير -->
+          <div id="summaryHeader" class="flex items-center justify-between mb-2">
+            
+            <div id="summaryHeaderTitle" class="font-bold text-gray-800">
+              تقرير ملخّص البلاغات
+            </div>
+            <div id="summaryHeaderMonth" class="text-xs text-gray-500 text-left"></div>
+          </div>
+
+          <hr class="mb-3 border-gray-200" />
+
+          <!-- جسم التقرير (رسم + جدول) -->
+          <div id="summaryBody">
+            <!-- عنوان القسم + الرسم -->
+            <div class="flex items-center justify-between mb-2">
+              <div class="section-title text-gray-800 font-semibold">
+                الوضع في كل مستشفى
               </div>
-              <h3 class="text-2xl font-bold" style="color:#002B5B;">الوضع في كل مستشفى</h3>
+              <button class="summary-floating-btn bg-pink-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow">
+                <i class="bi bi-list"></i>
+              </button>
             </div>
-            <div style="height:300px">
-              <canvas id="hospitalChart"></canvas>
+
+            <div id="summaryReportArea" class="mb-4" data-perm="REPORTS_CHART_BY_HOSPITAL_TYPE">
+              <div class="card-hover bg-white rounded-2xl p-5 shadow-xl border border-gray-100">
+                <div style="height:300px">
+                  <canvas id="hospitalChart"></canvas>
+                </div>
+              </div>
             </div>
+
+            <!-- جدول الملخص -->
+            <div id="summaryTableArea" class="mt-2">
+              <h3 class="section-title text-gray-800 mb-2 text-right">
+                ملخص البلاغات لكل مستشفى
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-200 text-xs">
+                  <thead class="bg-blue-600 text-white">
+                    <tr>
+                      <th class="px-2 py-1 text-center">#</th>
+                      <th class="px-2 py-1 text-center">المستشفى</th>
+                      <th class="px-2 py-1 text-center">إجمالي البلاغات</th>
+                      <th class="px-2 py-1 text-center">بلاغات مفتوحة</th>
+                      <th class="px-2 py-1 text-center">بلاغات مغلقة</th>
+                      <th class="px-2 py-1 text-center">بلاغات حرجة</th>
+                      <th class="px-2 py-1 text-center">نسبة الحرجة %</th>
+                    </tr>
+                  </thead>
+                  <tbody id="summaryTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- الفوتر -->
+          <div id="summaryFooter" class="mt-4 pt-2 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-500">
+            <div id="summaryExportDate"></div>
+            <div>صفحة ١ من ١</div>
+          </div>
+        </div>
+
+        <!-- حاوية تقرير البلاغات التفصيلية (مخفية، تُستخدم للتصدير) -->
+        <div id="detailsCombinedArea" class="bg-white mb-12 hidden">
+          <!-- رأس التقرير -->
+          <div id="detailsHeader" class="flex items-center justify-between mb-2">
+            <div id="detailsHeaderTitle" class="font-bold text-gray-800">
+              تقرير البلاغات التفصيلية
+            </div>
+            <div id="detailsHeaderInfo" class="text-xs text-gray-500 text-left"></div>
+          </div>
+
+          <hr class="mb-3 border-gray-200" />
+
+          <!-- جسم التقرير (جدول البلاغات) -->
+          <div id="detailsBody">
+            <!-- جدول البلاغات -->
+            <div id="detailsTableArea" class="mt-2">
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-200 text-xs">
+                  <thead class="bg-blue-600 text-white">
+                    <tr>
+                      <th class="px-2 py-1 text-center">#</th>
+                      <th class="px-2 py-1 text-center">رقم البلاغ</th>
+                      <th class="px-2 py-1 text-center">المستشفى</th>
+                      <th class="px-2 py-1 text-center">القسم</th>
+                      <th class="px-2 py-1 text-center">الحالة</th>
+                      <th class="px-2 py-1 text-center">الأولوية</th>
+                      <th class="px-2 py-1 text-center">تاريخ البلاغ</th>
+                      <th class="px-2 py-1 text-center">تاريخ الإغلاق</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detailsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- الفوتر -->
+          <div id="detailsFooter" class="mt-4 pt-2 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-500">
+            <div id="detailsExportDate"></div>
+            <div>صفحة ١ من ١</div>
+          </div>
+        </div>
+
+        <!-- حاوية تقرير أداء الأقسام (مخفية، تُستخدم للتصدير) -->
+        <div id="departmentsCombinedArea" class="bg-white mb-12 hidden">
+          <!-- رأس التقرير -->
+          <div id="departmentsHeader" class="flex items-center justify-between mb-2">
+            <div id="departmentsHeaderTitle" class="font-bold text-gray-800">
+              تقرير أداء الأقسام
+            </div>
+            <div id="departmentsHeaderInfo" class="text-xs text-gray-500 text-left"></div>
+          </div>
+
+          <hr class="mb-3 border-gray-200" />
+
+          <!-- جسم التقرير (الرسم البياني + الجدول) -->
+          <div id="departmentsBody">
+            <!-- الرسم البياني (سيتم تحويله إلى صورة) -->
+            <div id="departmentsChartArea" class="mb-4">
+              <div style="height:300px">
+                <canvas id="departmentsChart"></canvas>
+              </div>
+            </div>
+
+            <!-- جدول الأقسام -->
+            <div id="departmentsTableArea" class="mt-2">
+              <h3 class="section-title text-gray-800 mb-2 text-right">
+                تفاصيل أداء الأقسام
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-200 text-xs">
+                  <thead class="bg-blue-600 text-white">
+                    <tr>
+                      <th class="px-2 py-1 text-center">#</th>
+                      <th class="px-2 py-1 text-center">القسم</th>
+                      <th class="px-2 py-1 text-center">إجمالي البلاغات</th>
+                      <th class="px-2 py-1 text-center">بلاغات مغلقة</th>
+                      <th class="px-2 py-1 text-center">بلاغات حرجة</th>
+                      <th class="px-2 py-1 text-center">متوسط زمن الإغلاق (يوم)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="departmentsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- الفوتر -->
+          <div id="departmentsFooter" class="mt-4 pt-2 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-500">
+            <div id="departmentsExportDate"></div>
+            <div>صفحة ١ من ١</div>
+          </div>
+        </div>
+
+        <!-- حاوية تقرير أداء الموظفين (مخفية، تُستخدم للتصدير) -->
+        <div id="employeesCombinedArea" class="bg-white mb-12 hidden">
+          <!-- رأس التقرير -->
+          <div id="employeesHeader" class="flex items-center justify-between mb-2">
+            <div id="employeesHeaderTitle" class="font-bold text-gray-800">
+              تقرير أداء الموظفين
+            </div>
+            <div id="employeesHeaderInfo" class="text-xs text-gray-500 text-left"></div>
+          </div>
+
+          <hr class="mb-3 border-gray-200" />
+
+          <!-- جسم التقرير (الرسم البياني + الجدول) -->
+          <div id="employeesBody">
+            <!-- الرسم البياني (سيتم تحويله إلى صورة) -->
+            <div id="employeesChartArea" class="mb-4">
+              <div style="height:300px">
+                <canvas id="employeesChart"></canvas>
+              </div>
+            </div>
+
+            <!-- جدول الموظفين -->
+            <div id="employeesTableArea" class="mt-2">
+              <h3 class="section-title text-gray-800 mb-2 text-right">
+                تفاصيل أداء الموظفين
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-200 text-xs">
+                  <thead class="bg-blue-600 text-white">
+                    <tr>
+                      <th class="px-2 py-1 text-center">#</th>
+                      <th class="px-2 py-1 text-center">اسم الموظف</th>
+                      <th class="px-2 py-1 text-center">القسم</th>
+                      <th class="px-2 py-1 text-center">عدد البلاغات</th>
+                      <th class="px-2 py-1 text-center">أول بلاغ</th>
+                      <th class="px-2 py-1 text-center">آخر بلاغ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employeesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- الفوتر -->
+          <div id="employeesFooter" class="mt-4 pt-2 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-500">
+            <div id="employeesExportDate"></div>
+            <div>صفحة ١ من ١</div>
+          </div>
+        </div>
+
+        <!-- حاوية تقرير البلاغات الحرجة (مخفية، تُستخدم للتصدير) -->
+        <div id="criticalCombinedArea" class="bg-white mb-12 hidden">
+          <!-- رأس التقرير -->
+          <div id="criticalHeader" class="flex items-center justify-between mb-2">
+            <div id="criticalHeaderTitle" class="font-bold text-gray-800">
+              تقرير البلاغات الحرجة
+            </div>
+            <div id="criticalHeaderInfo" class="text-xs text-gray-500 text-left"></div>
+          </div>
+
+          <hr class="mb-3 border-gray-200" />
+
+          <!-- جسم التقرير (جدول فقط) -->
+          <div id="criticalBody">
+            <!-- جدول البلاغات الحرجة -->
+            <div id="criticalTableArea" class="mt-2">
+              <h3 class="section-title text-gray-800 mb-2 text-right">
+                تفاصيل البلاغات الحرجة
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-200 text-xs">
+                  <thead class="bg-red-600 text-white">
+                    <tr>
+                      <th class="px-2 py-1 text-center">#</th>
+                      <th class="px-2 py-1 text-center">رقم البلاغ</th>
+                      <th class="px-2 py-1 text-center">المستشفى</th>
+                      <th class="px-2 py-1 text-center">القسم</th>
+                      <th class="px-2 py-1 text-center">الأولوية</th>
+                      <th class="px-2 py-1 text-center">الحالة</th>
+                      <th class="px-2 py-1 text-center">تاريخ البلاغ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="criticalTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- الفوتر -->
+          <div id="criticalFooter" class="mt-4 pt-2 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-500">
+            <div id="criticalExportDate"></div>
+            <div>صفحة ١ من ١</div>
           </div>
         </div>
 

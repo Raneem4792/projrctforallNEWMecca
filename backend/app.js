@@ -65,8 +65,12 @@ import publicStatsRoutes from './routes/publicStats.js';
 import archiveRoutes from './routes/archiveRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import clusterReportsRoutes from './routes/clusterReports.js';
+import reportsRoutes from './routes/reports.routes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// تأكيد تحميل reports routes
+console.log('📦 [app.js] جاري تحميل reports routes...');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,7 +83,9 @@ app.use(helmet({
   contentSecurityPolicy: false, // تعطيل CSP لتجنب مشاكل تحميل الموارد
   crossOriginEmbedderPolicy: false
 }));
-app.use(express.json({ limit: '2mb' }));
+// زيادة حجم body limit لاستيعاب الصور الكبيرة (base64)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(morgan('dev'));
 
 // إعدادات CORS (يتم إعادة استخدامها لضمان الاتساق)
@@ -247,8 +253,21 @@ app.use('/api/improvements', improvementsRoutes); // مشاريع التحسين
 app.use('/api/archive', archiveRoutes); // ركن الأرشيف ✅
 app.use('/api/cluster-reports', clusterReportsRoutes); // بلاغات إدارة التجمع ✅
 
-// Debug: تأكيد تسجيل archive routes
+// ✅ تقارير PDF/Excel - مع logging للتأكد
+console.log('📦 [app.js] جاري تركيب reports routes على /api/reports...');
+if (!reportsRoutes) {
+  console.error('❌ [app.js] reportsRoutes is undefined!');
+} else {
+  console.log('✅ [app.js] reportsRoutes loaded successfully');
+}
+app.use('/api/reports', reportsRoutes); // تقارير PDF/Excel ✅
+
+// Debug: تأكيد تسجيل routes
 console.log('✅ Archive routes mounted at /api/archive');
+console.log('✅ Reports routes mounted at /api/reports');
+console.log('   - GET  /api/reports/test (اختباري)');
+console.log('   - GET  /api/reports/summary.pdf');
+console.log('   - POST /api/reports/summary.pdf');
 console.log('   - GET  /api/archive/test (اختباري)');
 console.log('   - POST /api/archive/upload');
 console.log('   - GET  /api/archive/list');
@@ -277,6 +296,18 @@ console.log('   - /api/reply-types (before usersRoutes)');
 console.log('   - /api/complaint-statuses (before usersRoutes)');
 console.log('   - /api/users (multi-tenant, with /:id)');
 console.log('   - Other multi-tenant routes');
+
+// Logging middleware للتتبع (قبل notFound) - للتأكد من وصول الطلبات
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/reports')) {
+    console.log(`🔍 [REQUEST] ${req.method} ${req.path}`, {
+      hasAuth: !!req.headers.authorization,
+      contentType: req.headers['content-type'],
+      query: Object.keys(req.query).length ? req.query : null
+    });
+  }
+  next();
+});
 
 // معالجة الأخطاء
 app.use(notFound);
