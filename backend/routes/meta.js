@@ -58,17 +58,42 @@ router.get('/genders', async (_req, res) => {
   }
 });
 
-// التصنيفات الرئيسية (937)
-router.get('/complaint-types', async (_req, res) => {
+// ✅ قراءة التصنيفات من قاعدة بيانات المستشفى الحالي
+router.get('/complaint-types', async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    // محاولة الحصول على hospitalId من مصادر متعددة
+    let hospitalId = Number(
+      req.headers['x-hospital-id'] ||
+      req.query.hospitalId ||
+      req.body?.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    // إذا لم يكن موجوداً، نستخدم القاعدة المركزية (للتوافق مع الكود القديم)
+    let queryPool = pool;
+    if (hospitalId) {
+      try {
+        queryPool = await getHospitalPool(hospitalId);
+        console.log(`✅ جلب التصنيفات من قاعدة بيانات المستشفى: ${hospitalId}`);
+      } catch (err) {
+        console.warn('⚠️ لم يتم العثور على pool المستشفى، استخدام القاعدة المركزية:', err.message);
+        queryPool = pool;
+      }
+    } else {
+      console.log('⚠️ لا يوجد hospitalId، استخدام القاعدة المركزية');
+    }
+
+    const [rows] = await queryPool.query(
       `SELECT ComplaintTypeID AS id, TypeName AS nameAr, TypeNameEn AS nameEn, TypeCode
        FROM complaint_types ORDER BY TypeName`
     );
+
+    console.log(`✅ تم جلب ${rows.length} تصنيف من قاعدة البيانات`);
     res.json(rows);
   } catch (error) {
-    console.error('خطأ في جلب التصنيفات الرئيسية:', error);
-    res.status(500).json({ error: 'internal_error' });
+    console.error('❌ خطأ في جلب التصنيفات الرئيسية:', error);
+    res.status(500).json({ error: 'internal_error', message: error.message });
   }
 });
 
@@ -149,42 +174,218 @@ router.post('/complaint-types/custom', requireAuth, async (req, res, next) => {
 
     const pool = await getHospitalPool(hospitalId);
 
-    const typeCode = makeTypeCode(nameAr, nameEn);
+    // توليد كود بسيط من الاسم
+    const typeCode = (nameEn || nameAr)
+      .trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s]+/g, '')
+      .replace(/\s+/g, '_')
+      .toUpperCase()
+      .slice(0, 50) || 'TYPE_' + Date.now();
 
-    const [result] = await pool.query(
-      `INSERT IGNORE INTO complaint_types (TypeName, TypeCode, TypeNameEn)
-       VALUES (?,?,?)`,
-      [nameAr, typeCode, nameEn || null]
+    // التحقق من وجود تصنيف بنفس الاسم أو الكود
+    const [existingRows] = await pool.query(
+      'SELECT ComplaintTypeID FROM complaint_types WHERE TypeName = ? OR TypeCode = ? LIMIT 1',
+      [nameAr, typeCode]
     );
 
-    let id = result.insertId;
-
-    // لو كان موجود مسبقاً بنفس TypeCode نجيب الـ ID
-    if (!id) {
-      const [rows] = await pool.query(
-        'SELECT ComplaintTypeID FROM complaint_types WHERE TypeCode = ? LIMIT 1',
-        [typeCode]
+    let id;
+    if (existingRows && existingRows.length > 0) {
+      // موجود مسبقاً - نرجع الـ ID الموجود
+      id = existingRows[0].ComplaintTypeID;
+      console.log(`⚠️ التصنيف موجود مسبقاً:`, { ComplaintTypeID: id, TypeName: nameAr });
+    } else {
+      // نحاول نضيفه
+      const [result] = await pool.query(
+        `INSERT INTO complaint_types (TypeName, TypeCode, TypeNameEn)
+         VALUES (?,?,?)`,
+        [nameAr, typeCode, nameEn || null]
       );
-      id = rows[0]?.ComplaintTypeID;
-    }
 
-    if (!id) {
-      return res.status(500).json({
-        success: false,
-        message: 'لم يتم إنشاء التصنيف'
+      id = result.insertId;
+
+      if (!id) {
+        console.error('❌ فشل إدخال التصنيف: insertId = 0');
+        return res.status(500).json({
+          success: false,
+          message: 'فشل إدخال التصنيف في قاعدة بيانات المستشفى'
+        });
+      }
+
+      console.log(`✅ تم إدخال التصنيف الجديد في قاعدة البيانات:`, {
+        ComplaintTypeID: id,
+        TypeName: nameAr,
+        TypeCode: typeCode,
+        HospitalID: hospitalId
       });
     }
 
-    res.json({
+    // ✅ التحقق من أن البيانات تم حفظها في complaint_types
+    const [verifyRows] = await pool.query(
+      'SELECT ComplaintTypeID, TypeName, TypeCode, TypeNameEn FROM complaint_types WHERE ComplaintTypeID = ?',
+      [id]
+    );
+
+    if (!verifyRows || verifyRows.length === 0) {
+      console.error('❌ فشل التحقق: التصنيف لم يتم حفظه في complaint_types');
+      return res.status(500).json({
+        success: false,
+        message: 'تم إنشاء التصنيف لكن فشل التحقق من الحفظ'
+      });
+    }
+
+    const savedData = verifyRows[0];
+    console.log(`✅ تم حفظ التصنيف الأساسي في complaint_types:`, {
+      ComplaintTypeID: savedData.ComplaintTypeID,
+      TypeName: savedData.TypeName,
+      TypeCode: savedData.TypeCode,
+      TypeNameEn: savedData.TypeNameEn,
+      HospitalID: hospitalId,
+      Database: pool.config?.database || 'unknown'
+    });
+
+    // ✅ إرسال الاستجابة النهائية
+    return res.json({
       success: true,
-      id,
-      nameAr,
-      nameEn,
-      typeCode
+      id: savedData.ComplaintTypeID,
+      nameAr: savedData.TypeName,
+      nameEn: savedData.TypeNameEn,
+      typeCode: savedData.TypeCode
     });
   } catch (err) {
     console.error('❌ خطأ في إنشاء التصنيف الجديد:', err);
+    console.error('تفاصيل الخطأ:', {
+      message: err.message,
+      code: err.code,
+      sqlState: err.sqlState,
+      sqlMessage: err.sqlMessage
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'خطأ في قاعدة البيانات: ' + (err.message || 'خطأ غير معروف')
+    });
+  }
+});
+
+// PUT /api/complaint-types/:id - تعديل تصنيف أساسي
+router.put('/complaint-types/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id || 0);
+    const { nameAr, nameEn } = req.body || {};
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'معرف التصنيف غير صحيح' });
+    }
+    if (!nameAr) {
+      return res.status(400).json({ success: false, message: 'الاسم العربي مطلوب' });
+    }
+
+    const hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.body.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    if (!hospitalId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد hospitalId في header X-Hospital-Id' 
+      });
+    }
+
+    const pool = await getHospitalPool(hospitalId);
+
+    const [result] = await pool.query(
+      `UPDATE complaint_types
+       SET TypeName = ?, TypeNameEn = ?
+       WHERE ComplaintTypeID = ?`,
+      [nameAr, nameEn || null, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'لم يتم العثور على التصنيف' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ خطأ في تعديل complaint_type:', err);
     next(err);
+  }
+});
+
+// DELETE /api/complaint-types/:id - حذف تصنيف أساسي
+router.delete('/complaint-types/:id', requireAuth, async (req, res, next) => {
+  const id = Number(req.params.id || 0);
+  if (!id) {
+    return res.status(400).json({ success: false, message: 'معرف التصنيف غير صحيح' });
+  }
+
+  try {
+    const hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.body.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    if (!hospitalId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد hospitalId في header X-Hospital-Id' 
+      });
+    }
+
+    const hospPool = await getHospitalPool(hospitalId);
+
+    // 1) نتأكد أولاً هل هذا النوع (أو أحد تصنيفاته الفرعية) مستخدم في بلاغات؟
+    const [usageRows] = await hospPool.query(
+      `SELECT COUNT(*) AS cnt
+         FROM complaints
+        WHERE ComplaintTypeID = ?
+           OR SubTypeID IN (
+                SELECT SubTypeID
+                  FROM complaint_subtypes
+                 WHERE ComplaintTypeID = ?
+              )`,
+      [id, id]
+    );
+
+    const usedCount = usageRows[0]?.cnt || 0;
+
+    if (usedCount > 0) {
+      // فيه بلاغات مربوطة بهذا التصنيف → ما نحذف
+      return res.status(400).json({
+        success: false,
+        message: 'لا يمكن حذف التصنيف الأساسي لأنه مستخدم في بلاغات قائمة'
+      });
+    }
+
+    // 2) لا توجد بلاغات → نحذف التصنيفات الفرعية التابعة له أولاً
+    await hospPool.query(
+      'DELETE FROM complaint_subtypes WHERE ComplaintTypeID = ?',
+      [id]
+    );
+
+    // 3) ثم نحذف التصنيف الأساسي نفسه
+    const [result] = await hospPool.query(
+      'DELETE FROM complaint_types WHERE ComplaintTypeID = ?',
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'لم يتم العثور على التصنيف'
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('❌ خطأ في حذف complaint_type:', err);
+    return next(err);
   }
 });
 
@@ -218,6 +419,7 @@ router.post('/complaint-subtypes/custom', requireAuth, async (req, res, next) =>
 
     const pool = await getHospitalPool(hospitalId);
 
+    // ✅ إضافة التصنيف الفرعي في جدول complaint_subtypes
     const [result] = await pool.query(
       `INSERT IGNORE INTO complaint_subtypes (ComplaintTypeID, SubTypeName, SubTypeNameEn)
        VALUES (?,?,?)`,
@@ -243,6 +445,28 @@ router.post('/complaint-subtypes/custom', requireAuth, async (req, res, next) =>
       });
     }
 
+    // ✅ التحقق من أن البيانات تم حفظها في complaint_subtypes
+    const [verifyRows] = await pool.query(
+      'SELECT SubTypeID, ComplaintTypeID, SubTypeName, SubTypeNameEn FROM complaint_subtypes WHERE SubTypeID = ?',
+      [id]
+    );
+
+    if (!verifyRows || verifyRows.length === 0) {
+      console.error('❌ فشل التحقق: التصنيف الفرعي لم يتم حفظه في complaint_subtypes');
+      return res.status(500).json({
+        success: false,
+        message: 'تم إنشاء التصنيف الفرعي لكن فشل التحقق من الحفظ'
+      });
+    }
+
+    console.log(`✅ تم حفظ التصنيف الفرعي في complaint_subtypes:`, {
+      SubTypeID: id,
+      ComplaintTypeID: typeId,
+      SubTypeName: verifyRows[0].SubTypeName,
+      SubTypeNameEn: verifyRows[0].SubTypeNameEn,
+      HospitalID: hospitalId
+    });
+
     res.json({
       success: true,
       id,
@@ -252,6 +476,103 @@ router.post('/complaint-subtypes/custom', requireAuth, async (req, res, next) =>
     });
   } catch (err) {
     console.error('❌ خطأ في إنشاء التصنيف الفرعي الجديد:', err);
+    next(err);
+  }
+});
+
+// PUT /api/complaint-subtypes/:id - تعديل تصنيف فرعي
+router.put('/complaint-subtypes/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id || 0);
+    const { nameAr, nameEn } = req.body || {};
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'معرف التصنيف الفرعي غير صحيح' });
+    }
+    if (!nameAr) {
+      return res.status(400).json({ success: false, message: 'الاسم العربي مطلوب' });
+    }
+
+    const hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.body.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    if (!hospitalId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد hospitalId في header X-Hospital-Id' 
+      });
+    }
+
+    const pool = await getHospitalPool(hospitalId);
+
+    const [result] = await pool.query(
+      `UPDATE complaint_subtypes
+       SET SubTypeName = ?, SubTypeNameEn = ?
+       WHERE SubTypeID = ?`,
+      [nameAr, nameEn || null, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'لم يتم العثور على التصنيف الفرعي' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ خطأ في تعديل complaint_subtype:', err);
+    next(err);
+  }
+});
+
+// DELETE /api/complaint-subtypes/:id - حذف تصنيف فرعي
+router.delete('/complaint-subtypes/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id || 0);
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'معرف التصنيف الفرعي غير صحيح' });
+    }
+
+    const hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.body.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    if (!hospitalId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد hospitalId في header X-Hospital-Id' 
+      });
+    }
+
+    const pool = await getHospitalPool(hospitalId);
+
+    try {
+      const [result] = await pool.query(
+        `DELETE FROM complaint_subtypes WHERE SubTypeID = ?`,
+        [id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'لم يتم العثور على التصنيف الفرعي' });
+      }
+
+      res.json({ success: true });
+    } catch (dbErr) {
+      console.error('DB error deleting subtype:', dbErr);
+      return res.status(400).json({
+        success: false,
+        message: 'لا يمكن حذف التصنيف الفرعي لأنه مستخدم في بلاغات'
+      });
+    }
+  } catch (err) {
+    console.error('❌ خطأ في حذف complaint_subtype:', err);
     next(err);
   }
 });

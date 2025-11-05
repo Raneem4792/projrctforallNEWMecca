@@ -45,6 +45,14 @@ const newSubTypeEls = {
   cancel: document.getElementById('cancelNewSubType'),
 };
 
+// عناصر أزرار إدارة التصنيفات
+const manageTypeEls = {
+  editType: document.getElementById('btnEditType'),
+  deleteType: document.getElementById('btnDeleteType'),
+  editSubType: document.getElementById('btnEditSubType'),
+  deleteSubType: document.getElementById('btnDeleteSubType'),
+};
+
 function toggleNewSubTypeBox(show) {
   if (!newSubTypeEls.box) return;
   if (show) newSubTypeEls.box.classList.remove('hidden');
@@ -53,23 +61,14 @@ function toggleNewSubTypeBox(show) {
 
 // دالة تجيب hospitalId الحالي
 function getCurrentHospitalId() {
-  const hospitalSelect = document.getElementById('hospitalSelect');     // مدير التجمع
-  const hospitalIdHidden = document.getElementById('hospitalIdHidden'); // موظف مستشفى
-  const hospitalId = document.getElementById('hospitalId');             // بديل آخر
-  
-  if (hospitalSelect && hospitalSelect.offsetParent !== null && hospitalSelect.value) {
-    return hospitalSelect.value;
-  }
-  if (hospitalIdHidden && hospitalIdHidden.value) {
-    return hospitalIdHidden.value;
-  }
-  if (hospitalId && hospitalId.value) {
-    return hospitalId.value;
-  }
-  if (els.hospitalId && els.hospitalId.value) {
-    return els.hospitalId.value;
-  }
-  return null;
+  const hospitalSelect   = document.getElementById('hospitalSelect');
+  const hospitalIdHidden = document.getElementById('hospitalIdHidden');
+
+  return (
+    (hospitalSelect && hospitalSelect.value) ||
+    (hospitalIdHidden && hospitalIdHidden.value) ||
+    ''
+  );
 }
 
 // دالة إظهار/إخفاء فورم التصنيف الجديد
@@ -461,8 +460,19 @@ async function loadTypesAndGenders() {
     const genders = await apiGet('/genders');
     fillSelect(els.gender, genders.map(g => ({ value: g.code, label: g.labelAr })), true);
 
-    // تحميل التصنيفات الرئيسية
-    const types = await apiGet('/complaint-types');
+    // تحميل التصنيفات الرئيسية من قاعدة بيانات المستشفى
+    const hospitalSelect   = document.getElementById('hospitalSelect');
+    const hospitalIdHidden = document.getElementById('hospitalIdHidden');
+    const hospitalId =
+      (hospitalSelect && hospitalSelect.value) ||
+      (hospitalIdHidden && hospitalIdHidden.value) || '';
+
+    // بناء URL مع hospitalId إن وجد
+    const typesUrl = hospitalId 
+      ? `/complaint-types?hospitalId=${hospitalId}`
+      : '/complaint-types';
+    
+    const types = await apiGet(typesUrl);
     window._types = types;
     fillSelectComplex(els.complaintType, types.map(t => ({ value: t.id, label: t.nameAr })), true);
 
@@ -632,6 +642,243 @@ async function saveNewComplaintSubType() {
   } catch (err) {
     console.error('❌ خطأ في إضافة التصنيف الفرعي الجديد:', err);
     alert('فشل إضافة التصنيف الفرعي الجديد: ' + err.message);
+  }
+}
+
+// دالة تعديل التصنيف الأساسي
+async function editComplaintType() {
+  const select = els.complaintType;
+  if (!select) return;
+
+  const id = Number(select.value || 0);
+  if (!id) {
+    alert('اختاري التصنيف الأساسي أولاً');
+    return;
+  }
+
+  const currentName = select.options[select.selectedIndex].textContent;
+  const newNameAr = prompt('اكتبي الاسم الجديد للتصنيف الأساسي:', currentName || '');
+  if (newNameAr === null) return;      // إلغاء
+  const trimmedName = newNameAr.trim();
+  if (!trimmedName) {
+    alert('الاسم لا يمكن أن يكون فارغاً');
+    return;
+  }
+
+  const newNameEn = prompt('الاسم بالإنجليزي (اختياري):', '') || null;
+
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+    window.location.href = '../../auth/login.html';
+    return;
+  }
+
+  const hospitalId = getCurrentHospitalId();
+  if (!hospitalId) {
+    alert('يرجى اختيار المستشفى أولاً');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + `/complaint-types/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Hospital-Id': hospitalId,
+      },
+      body: JSON.stringify({
+        nameAr: trimmedName,
+        nameEn: newNameEn,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    }
+
+    // نحدث النص في الـ select
+    select.options[select.selectedIndex].textContent = trimmedName;
+    alert('✅ تم تعديل التصنيف الأساسي بنجاح');
+  } catch (err) {
+    console.error('❌ خطأ في تعديل التصنيف الأساسي:', err);
+    alert('فشل تعديل التصنيف الأساسي: ' + err.message);
+  }
+}
+
+// دالة حذف التصنيف الأساسي
+async function deleteComplaintType() {
+  const select = els.complaintType;
+  if (!select) return;
+
+  const id = Number(select.value || 0);
+  if (!id) {
+    alert('اختاري التصنيف الأساسي أولاً');
+    return;
+  }
+
+  if (!confirm('هل أنتِ متأكدة من حذف هذا التصنيف؟ قد لا يمكن استرجاعه.')) {
+    return;
+  }
+
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+    window.location.href = '../../auth/login.html';
+    return;
+  }
+
+  const hospitalId = getCurrentHospitalId();
+  if (!hospitalId) {
+    alert('يرجى اختيار المستشفى أولاً');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + `/complaint-types/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Hospital-Id': hospitalId,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    }
+
+    // نحذف الـ option من القائمة
+    select.remove(select.selectedIndex);
+    select.value = '';
+    if (els.subType) {
+      els.subType.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+      els.subType.disabled = true;
+    }
+
+    alert('✅ تم حذف التصنيف الأساسي بنجاح');
+  } catch (err) {
+    console.error('❌ خطأ في حذف التصنيف الأساسي:', err);
+    alert('فشل حذف التصنيف الأساسي: ' + err.message);
+  }
+}
+
+// دالة تعديل التصنيف الفرعي
+async function editComplaintSubType() {
+  const select = els.subType;
+  if (!select) return;
+
+  const id = Number(select.value || 0);
+  if (!id) {
+    alert('اختاري التصنيف الفرعي أولاً');
+    return;
+  }
+
+  const currentName = select.options[select.selectedIndex].textContent;
+  const newNameAr = prompt('اكتبي الاسم الجديد للتصنيف الفرعي:', currentName || '');
+  if (newNameAr === null) return;
+  const trimmedName = newNameAr.trim();
+  if (!trimmedName) {
+    alert('الاسم لا يمكن أن يكون فارغاً');
+    return;
+  }
+
+  const newNameEn = prompt('الاسم بالإنجليزي (اختياري):', '') || null;
+
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+    window.location.href = '../../auth/login.html';
+    return;
+  }
+
+  const hospitalId = getCurrentHospitalId();
+  if (!hospitalId) {
+    alert('يرجى اختيار المستشفى أولاً');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + `/complaint-subtypes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Hospital-Id': hospitalId,
+      },
+      body: JSON.stringify({
+        nameAr: trimmedName,
+        nameEn: newNameEn,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    }
+
+    select.options[select.selectedIndex].textContent = trimmedName;
+    alert('✅ تم تعديل التصنيف الفرعي بنجاح');
+  } catch (err) {
+    console.error('❌ خطأ في تعديل التصنيف الفرعي:', err);
+    alert('فشل تعديل التصنيف الفرعي: ' + err.message);
+  }
+}
+
+// دالة حذف التصنيف الفرعي
+async function deleteComplaintSubType() {
+  const select = els.subType;
+  if (!select) return;
+
+  const id = Number(select.value || 0);
+  if (!id) {
+    alert('اختاري التصنيف الفرعي أولاً');
+    return;
+  }
+
+  if (!confirm('هل أنتِ متأكدة من حذف هذا التصنيف الفرعي؟')) {
+    return;
+  }
+
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+    window.location.href = '../../auth/login.html';
+    return;
+  }
+
+  const hospitalId = getCurrentHospitalId();
+  if (!hospitalId) {
+    alert('يرجى اختيار المستشفى أولاً');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + `/complaint-subtypes/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Hospital-Id': hospitalId,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    }
+
+    select.remove(select.selectedIndex);
+    select.value = '';
+    alert('✅ تم حذف التصنيف الفرعي بنجاح');
+  } catch (err) {
+    console.error('❌ خطأ في حذف التصنيف الفرعي:', err);
+    alert('فشل حذف التصنيف الفرعي: ' + err.message);
   }
 }
 
@@ -1193,12 +1440,14 @@ async function initClusterMode() {
       
       console.log(`✅ تم تحميل ${hospitals.length} مستشفى`);
       
-      // عند اختيار مستشفى، حمّل أقسامه
+      // عند اختيار مستشفى، حمّل أقسامه وأعد تحميل التصنيفات
       hospitalSelect.addEventListener('change', async () => {
         const hospId = hospitalSelect.value;
         if (hospId) {
           console.log(`✅ تم اختيار المستشفى: ${hospId}`);
           await loadDepartmentsForHospital(hospId);
+          // إعادة تحميل التصنيفات من قاعدة بيانات المستشفى المختار
+          await loadTypesAndGenders();
         } else {
           // مسح الأقسام
           window.departments = [];
@@ -1397,6 +1646,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           toggleNewSubTypeBox(true);
         }
       });
+    }
+
+    // أزرار تعديل / حذف التصنيف الأساسي
+    if (manageTypeEls.editType) {
+      manageTypeEls.editType.addEventListener('click', editComplaintType);
+    }
+    if (manageTypeEls.deleteType) {
+      manageTypeEls.deleteType.addEventListener('click', deleteComplaintType);
+    }
+
+    // أزرار تعديل / حذف التصنيف الفرعي
+    if (manageTypeEls.editSubType) {
+      manageTypeEls.editSubType.addEventListener('click', editComplaintSubType);
+    }
+    if (manageTypeEls.deleteSubType) {
+      manageTypeEls.deleteSubType.addEventListener('click', deleteComplaintSubType);
     }
     
     // معاينة الأولوية المباشرة

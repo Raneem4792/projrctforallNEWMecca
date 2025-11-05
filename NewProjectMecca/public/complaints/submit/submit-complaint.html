@@ -131,14 +131,19 @@
           <div class="field">
             <div class="flex items-center justify-between mb-1">
               <label id="main-category-label" class="mb-0">التصنيف الرئيسي (937)</label>
-              
-              <!-- زر إضافة تصنيف جديد -->
-              <button type="button" id="btnAddType"
-                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
-                + إضافة تصنيف جديد
-              </button>
+
+              <div class="flex gap-2 text-xs">
+                <button type="button" id="btnEditType"
+                        class="text-blue-600 hover:text-blue-800 hover:underline">
+                  تعديل
+                </button>
+                <button type="button" id="btnDeleteType"
+                        class="text-red-600 hover:text-red-800 hover:underline">
+                  حذف
+                </button>
+              </div>
             </div>
-            
+
             <select id="complaintType">
               <option value="" id="main-category-placeholder">اختر التصنيف الرئيسي</option>
               <!-- باقي الخيارات تجي من الـ API -->
@@ -170,11 +175,16 @@
             <div class="flex items-center justify-between mb-1">
               <label id="sub-category-label" class="mb-0">التصنيف الفرعي</label>
 
-              <!-- زر إضافة تصنيف فرعي جديد -->
-              <button type="button" id="btnAddSubType"
-                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
-                + إضافة تصنيف فرعي جديد
-              </button>
+              <div class="flex gap-2 text-xs">
+                <button type="button" id="btnEditSubType"
+                        class="text-blue-600 hover:text-blue-800 hover:underline">
+                  تعديل
+                </button>
+                <button type="button" id="btnDeleteSubType"
+                        class="text-red-600 hover:text-red-800 hover:underline">
+                  حذف
+                </button>
+              </div>
             </div>
 
             <!-- قائمة التصنيفات الفرعية -->
