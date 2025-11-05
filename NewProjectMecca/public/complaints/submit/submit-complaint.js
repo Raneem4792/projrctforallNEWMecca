@@ -35,6 +35,22 @@ const newTypeEls = {
   cancel: document.getElementById('cancelNewType'),
 };
 
+// عناصر التصنيف الفرعي الجديد
+const newSubTypeEls = {
+  box: document.getElementById('newSubTypeBox'),
+  btn: document.getElementById('btnAddSubType'),
+  nameAr: document.getElementById('newSubTypeNameAr'),
+  nameEn: document.getElementById('newSubTypeNameEn'),
+  save: document.getElementById('saveNewSubType'),
+  cancel: document.getElementById('cancelNewSubType'),
+};
+
+function toggleNewSubTypeBox(show) {
+  if (!newSubTypeEls.box) return;
+  if (show) newSubTypeEls.box.classList.remove('hidden');
+  else newSubTypeEls.box.classList.add('hidden');
+}
+
 // دالة تجيب hospitalId الحالي
 function getCurrentHospitalId() {
   const hospitalSelect = document.getElementById('hospitalSelect');     // مدير التجمع
@@ -469,6 +485,7 @@ async function loadTypesAndGenders() {
           // نفرّغ اختيار التصنيف عشان ما ينحسب في الفاليديشن قبل الحفظ
           els.complaintType.value = '';
           // ما نحمل تصنيفات فرعية هنا
+          toggleNewSubTypeBox(false);
           return;
         } else {
           // إخفاء فورم التصنيف الجديد لو كان ظاهر
@@ -476,18 +493,48 @@ async function loadTypesAndGenders() {
         }
 
         const typeId = Number(val || 0);
+        
+        // لو ما فيه نوع رئيسي نوقف ونفضي الفرعي
         if (!typeId) {
           if (els.subType) {
             els.subType.disabled = true;
-            els.subType.innerHTML = '<option value="">اختر</option>';
+            els.subType.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
           }
+          toggleNewSubTypeBox(false);
           return;
         }
         
         try {
-          const subs = await apiGet(`/complaint-subtypes?typeId=${typeId}`);
-          fillSelectComplex(els.subType, subs.map(s => ({ value: s.id, label: s.nameAr })), true);
-          if (els.subType) els.subType.disabled = false;
+          // استخراج hospitalId لإرساله مع الطلب
+          const hospitalSelect = document.getElementById('hospitalSelect');
+          const hospitalIdHidden = document.getElementById('hospitalIdHidden');
+          const hospitalId = (hospitalSelect && hospitalSelect.value) || (hospitalIdHidden && hospitalIdHidden.value) || '';
+          
+          // بناء URL مع hospitalId إن وجد
+          const url = hospitalId 
+            ? `/complaint-subtypes?typeId=${typeId}&hospitalId=${hospitalId}`
+            : `/complaint-subtypes?typeId=${typeId}`;
+          
+          const subs = await apiGet(url);
+
+          // نعبي القائمة الأساسية
+          fillSelectComplex(
+            els.subType,
+            subs.map(s => ({ value: s.id, label: s.nameAr })),
+            true
+          );
+
+          if (els.subType) {
+            els.subType.disabled = false;
+
+            // 👉 نضيف خيار "تصنيف فرعي جديد"
+            const newOpt = document.createElement('option');
+            newOpt.value = '__NEW_SUB__';
+            newOpt.textContent = '+ تصنيف فرعي جديد...';
+            els.subType.appendChild(newOpt);
+          }
+
+          toggleNewSubTypeBox(false);
         } catch (err) {
           console.error('خطأ في جلب التصنيفات الفرعية:', err);
         }
@@ -496,6 +543,95 @@ async function loadTypesAndGenders() {
   } catch (err) {
     console.error('خطأ في تحميل البيانات:', err);
     alert('تعذر تحميل البيانات المرجعية. تأكد من أن الـ API يعمل.');
+  }
+}
+
+// دالة حفظ التصنيف الفرعي الجديد
+async function saveNewComplaintSubType() {
+  const nameAr = (newSubTypeEls.nameAr?.value || '').trim();
+  const nameEn = (newSubTypeEls.nameEn?.value || '').trim() || null;
+
+  if (!nameAr) {
+    alert('اكتبي اسم التصنيف الفرعي بالعربي');
+    return;
+  }
+
+  // لازم يكون فيه تصنيف رئيسي مختار
+  const typeId = Number(els.complaintType?.value || 0);
+  if (!typeId) {
+    alert('اختاري التصنيف الرئيسي أولاً');
+    return;
+  }
+
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى');
+    window.location.href = '../../auth/login.html';
+    return;
+  }
+
+  // نفس منطق البلاغ في استخراج hospitalId
+  const hospitalSelect   = document.getElementById('hospitalSelect');
+  const hospitalIdHidden = document.getElementById('hospitalIdHidden');
+
+  const hospitalId =
+    (hospitalSelect && hospitalSelect.value) ||
+    (hospitalIdHidden && hospitalIdHidden.value) || '';
+
+  if (!hospitalId) {
+    alert('يرجى اختيار المستشفى أولاً');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + '/complaint-subtypes/custom', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Hospital-Id': hospitalId,  // يحدد قاعدة بيانات المستشفى
+      },
+      body: JSON.stringify({
+        typeId,
+        nameAr,
+        nameEn,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    }
+
+    const newId = data.id;
+    const select = els.subType;
+    if (!select) return;
+
+    // ننشئ option جديد قبل "__NEW_SUB__"
+    const opt = document.createElement('option');
+    opt.value = String(newId);
+    opt.textContent = nameAr;
+
+    const newPlaceholder = select.querySelector('option[value="__NEW_SUB__"]');
+    if (newPlaceholder) {
+      select.insertBefore(opt, newPlaceholder);
+    } else {
+      select.appendChild(opt);
+    }
+
+    // نختار التصنيف الفرعي الجديد
+    select.value = String(newId);
+
+    // تنظيف وإخفاء الفورم
+    if (newSubTypeEls.nameAr) newSubTypeEls.nameAr.value = '';
+    if (newSubTypeEls.nameEn) newSubTypeEls.nameEn.value = '';
+    toggleNewSubTypeBox(false);
+
+    alert('✅ تم إضافة التصنيف الفرعي الجديد لهذا المستشفى وتم اختياره في البلاغ.');
+  } catch (err) {
+    console.error('❌ خطأ في إضافة التصنيف الفرعي الجديد:', err);
+    alert('فشل إضافة التصنيف الفرعي الجديد: ' + err.message);
   }
 }
 
@@ -1239,6 +1375,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (newTypeEls.save) {
       newTypeEls.save.addEventListener('click', saveNewComplaintType);
+    }
+
+    // أزرار التصنيف الفرعي الجديد
+    if (newSubTypeEls.btn) {
+      newSubTypeEls.btn.addEventListener('click', () => toggleNewSubTypeBox(true));
+    }
+    if (newSubTypeEls.cancel) {
+      newSubTypeEls.cancel.addEventListener('click', () => toggleNewSubTypeBox(false));
+    }
+    if (newSubTypeEls.save) {
+      newSubTypeEls.save.addEventListener('click', saveNewComplaintSubType);
+    }
+
+    // لو المستخدم اختار من القائمة "تصنيف فرعي جديد..."
+    if (els.subType) {
+      els.subType.addEventListener('change', () => {
+        if (els.subType.value === '__NEW_SUB__') {
+          // نعرض الفورم ونفرغ القيمة عشان ما تنحسب تصنيف فعلي
+          els.subType.value = '';
+          toggleNewSubTypeBox(true);
+        }
+      });
     }
     
     // معاينة الأولوية المباشرة

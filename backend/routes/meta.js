@@ -77,7 +77,27 @@ router.get('/complaint-subtypes', async (req, res) => {
   try {
     const typeId = Number(req.query.typeId || 0);
     if (!typeId) return res.status(400).json({ error: 'typeId required' });
-    const [rows] = await pool.query(
+    
+    // محاولة الحصول على hospitalId من مصادر متعددة
+    let hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.user?.HospitalID ||
+      0
+    );
+
+    // إذا لم يكن موجوداً، نستخدم القاعدة المركزية (للتوافق مع الكود القديم)
+    let queryPool = pool;
+    if (hospitalId) {
+      try {
+        queryPool = await getHospitalPool(hospitalId);
+      } catch (err) {
+        console.warn('⚠️ لم يتم العثور على pool المستشفى، استخدام القاعدة المركزية:', err.message);
+        queryPool = pool;
+      }
+    }
+
+    const [rows] = await queryPool.query(
       `SELECT SubTypeID AS id, SubTypeName AS nameAr, SubTypeNameEn AS nameEn
        FROM complaint_subtypes WHERE ComplaintTypeID=?
        ORDER BY SubTypeName`, 
@@ -164,6 +184,74 @@ router.post('/complaint-types/custom', requireAuth, async (req, res, next) => {
     });
   } catch (err) {
     console.error('❌ خطأ في إنشاء التصنيف الجديد:', err);
+    next(err);
+  }
+});
+
+// POST /api/complaint-subtypes/custom
+router.post('/complaint-subtypes/custom', requireAuth, async (req, res, next) => {
+  try {
+    const { typeId, nameAr, nameEn } = req.body || {};
+
+    if (!typeId) {
+      return res.status(400).json({ success: false, message: 'رقم التصنيف الرئيسي مطلوب' });
+    }
+    if (!nameAr) {
+      return res.status(400).json({ success: false, message: 'الاسم العربي للتصنيف الفرعي مطلوب' });
+    }
+
+    // نجيب pool قاعدة بيانات المستشفى من X-Hospital-Id
+    const hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.body.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    if (!hospitalId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد hospitalId في header X-Hospital-Id' 
+      });
+    }
+
+    const pool = await getHospitalPool(hospitalId);
+
+    const [result] = await pool.query(
+      `INSERT IGNORE INTO complaint_subtypes (ComplaintTypeID, SubTypeName, SubTypeNameEn)
+       VALUES (?,?,?)`,
+      [typeId, nameAr, nameEn || null]
+    );
+
+    let id = result.insertId;
+
+    // لو موجود مسبقاً بنفس الاسم لنفس التصنيف، نجيب الـ ID
+    if (!id) {
+      const [rows] = await pool.query(
+        `SELECT SubTypeID FROM complaint_subtypes
+         WHERE ComplaintTypeID = ? AND SubTypeName = ? LIMIT 1`,
+        [typeId, nameAr]
+      );
+      id = rows[0]?.SubTypeID;
+    }
+
+    if (!id) {
+      return res.status(500).json({
+        success: false,
+        message: 'لم يتم إنشاء التصنيف الفرعي',
+      });
+    }
+
+    res.json({
+      success: true,
+      id,
+      typeId,
+      nameAr,
+      nameEn,
+    });
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء التصنيف الفرعي الجديد:', err);
     next(err);
   }
 });

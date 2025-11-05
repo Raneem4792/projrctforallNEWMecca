@@ -167,10 +167,42 @@
             </div>
           </div>
           <div class="field">
-            <label id="sub-category-label">التصنيف الفرعي</label>
+            <div class="flex items-center justify-between mb-1">
+              <label id="sub-category-label" class="mb-0">التصنيف الفرعي</label>
+
+              <!-- زر إضافة تصنيف فرعي جديد -->
+              <button type="button" id="btnAddSubType"
+                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
+                + إضافة تصنيف فرعي جديد
+              </button>
+            </div>
+
+            <!-- قائمة التصنيفات الفرعية -->
             <select id="subType" disabled>
               <option value="" id="sub-category-placeholder">اختر التصنيف الفرعي</option>
             </select>
+
+            <!-- فورم التصنيف الفرعي الجديد (يظهر عند الحاجة) -->
+            <div id="newSubTypeBox" class="mt-2 space-y-2 hidden">
+              <input type="text" id="newSubTypeNameAr"
+                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                     placeholder="اسم التصنيف الفرعي بالعربي">
+
+              <input type="text" id="newSubTypeNameEn"
+                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                     placeholder="اسم التصنيف الفرعي بالإنجليزي (اختياري)">
+
+              <div class="flex justify-end gap-2">
+                <button type="button" id="saveNewSubType"
+                        class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white hover:bg-blue-700">
+                  حفظ التصنيف الفرعي
+                </button>
+                <button type="button" id="cancelNewSubType"
+                        class="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700 hover:bg-gray-300">
+                  إلغاء
+                </button>
+              </div>
+            </div>
           </div>
           <div class="field md:col-span-2">
             <label id="complaint-description-label">وصف البلاغ</label>
