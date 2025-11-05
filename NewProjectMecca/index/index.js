@@ -508,7 +508,7 @@ function handleKeydown(e) {
 // ========================================
 
 /**
- * إظهار رابط "ملفي الشخصي" إذا كان المستخدم مسجل دخول
+ * إظهار رابط "ملفي الشخصي" وعبارة الترحيب إذا كان المستخدم مسجل دخول
  */
 async function initializeProfileLink() {
   try {
@@ -531,13 +531,41 @@ async function initializeProfileLink() {
     
     const me = await res.json();
     if (me?.authenticated || me?.UserID) {
+      // إظهار رابط الملف الشخصي
       const profileLink = document.getElementById('nav-profile');
       if (profileLink) {
         profileLink.classList.remove('hidden');
       }
+
+      // ⭐ إظهار "مرحباً + اسم المستخدم" في الهيدر
+      const greetingContainer = document.getElementById('nav-greeting');
+      if (greetingContainer) {
+        // نحاول نجيب أفضل اسم متوفر من الـ API
+        const displayName =
+          me.DisplayName ||
+          me.FullName ||
+          me.NameAr ||
+          me.NameEn ||
+          me.username ||
+          me.UserName ||
+          'المستخدم';
+
+        // نحدد اللغة الحالية (العربية أو الإنجليزية)
+        const lang = (window.currentLanguage) ||
+                     document.documentElement.getAttribute('lang') ||
+                     'ar';
+
+        const greetingText =
+          lang === 'en'
+            ? `Welcome, ${displayName}`
+            : `مرحباً، ${displayName}`;
+
+        greetingContainer.textContent = greetingText;
+        greetingContainer.classList.remove('hidden');
+      }
     }
   } catch (error) {
-    console.log('Profile link check failed:', error);
+    console.log('Profile link / greeting check failed:', error);
   }
 }
 
