@@ -165,7 +165,9 @@ export async function getUserPermissions(req, res) {
         clusterStatus:  has('CLUSTER_REPORT_STATUS'),
         // ===== صلاحيات الأرشيف =====
         archiveView:   has('ARCHIVE_VIEW'),
-        archiveUpload: has('ARCHIVE_UPLOAD')
+        archiveUpload: has('ARCHIVE_UPLOAD'),
+        // ===== صلاحيات تصدير البلاغات =====
+        complaintsExport: has('COMPLAINTS_EXPORT')
       }
     });
   } catch (e) {
@@ -194,7 +196,9 @@ export async function saveUserPermissions(req, res) {
       // صلاحيات بلاغات إدارة التجمع
       clusterSubmit, clusterView, clusterDetails, clusterReply, clusterStatus,
       // صلاحيات الأرشيف
-      archiveView, archiveUpload
+      archiveView, archiveUpload,
+      // صلاحيات تصدير البلاغات
+      complaintsExport
     } = req.body;
     
     console.log('📥 Received archive permissions:', {
@@ -320,6 +324,9 @@ export async function saveUserPermissions(req, res) {
     archiveView   ? await upsert('ARCHIVE_VIEW')   : await drop('ARCHIVE_VIEW');
     archiveUpload ? await upsert('ARCHIVE_UPLOAD') : await drop('ARCHIVE_UPLOAD');
     console.log('✅ Archive permissions saved successfully');
+    
+    // صلاحيات تصدير البلاغات
+    complaintsExport ? await upsert('COMPLAINTS_EXPORT') : await drop('COMPLAINTS_EXPORT');
 
     // نطاق السجل
     if (historyScope) {
@@ -435,7 +442,9 @@ export async function getMyPermissions(req, res) {
             clusterStatus:  true,
             // ===== صلاحيات الأرشيف =====
             archiveView:   true,
-            archiveUpload: true
+            archiveUpload: true,
+            // ===== صلاحيات تصدير البلاغات =====
+            complaintsExport: true
           }
         });
         return;
@@ -451,90 +460,101 @@ export async function getMyPermissions(req, res) {
       const has = k => perms.some(p => p.PermissionKey === k);
       const scope = perms.find(p => p.PermissionKey==='COMPLAINT_HISTORY_SCOPE')?.ViewScope || null;
 
+      // بناء البيانات قبل الإرسال
+      const responseData = {
+        submit: has('COMPLAINT_SUBMIT'),
+        view:   has('COMPLAINT_VIEW'),
+        historyScope: scope,
+        reply:  has('COMPLAINT_REPLY'),
+        transfer: has('COMPLAINT_TRANSFER'),
+        transferDept: has('COMPLAINT_TRANSFER_DEPT'),
+        transferUser: has('COMPLAINT_TRANSFER_USER'),
+        complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
+        statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
+        remove: has('COMPLAINT_DELETE'),
+        // مدير التجمع (مركزي) دائماً له صلاحية الإدارة
+        adminPanel: has('ADMIN_PANEL_ACCESS') || (req.user?.HospitalID == null),
+        adminDepartments: has('ADMIN_DEPARTMENTS'),
+        adminHospital: has('ADMIN_HOSPITAL'),
+        adminClusters: has('ADMIN_CLUSTERS'),
+        hospitalCreate: has('HOSPITAL_CREATE'),
+        // صلاحيات إدارة المستشفى (الأيقونات الأربعة)
+        hospitalTrash: has('HOSPITAL_TRASH'),
+        hospitalLogs: has('HOSPITAL_LOGS'),
+        hospitalPermissions: has('HOSPITAL_PERMISSIONS'),
+        hospitalUsers: has('HOSPITAL_USERS'),
+        hospitalUserCreate: has('HOSPITAL_USER_CREATE'),
+        hospitalUserEdit: has('HOSPITAL_USER_EDIT'),
+        hospitalUserDelete: has('HOSPITAL_USER_DELETE'),
+        improvementCreate: has('IMPROVEMENT_CREATE'),
+        improvementView: has('IMPROVEMENT_VIEW'),
+        improvementEdit: has('IMPROVEMENT_EDIT'),
+        improvementDelete: has('IMPROVEMENT_DELETE'),
+        improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
+        improvementsModule: has('IMPROVEMENTS_MODULE'),
+        // صلاحيات الزائر السري
+        mysteryModule: has('MYSTERY_MODULE'),
+        mysteryView: has('MYSTERY_VIEW'),
+        mysteryReplyAdd: has('MYSTERY_REPLY_ADD'),
+        mysteryStatusUpdate: has('MYSTERY_STATUS_UPDATE'),
+        mysteryTransferDept: has('MYSTERY_TRANSFER_DEPT'),
+        mysteryTransferEmp: has('MYSTERY_TRANSFER_EMP'),
+        mysteryDelete: has('MYSTERY_DELETE'),
+        // ===== Dashboard permissions =====
+        dashPage:             has('DASH_PAGE'),
+        dashCardTotals:       has('DASH_CARD_TOTALS'),
+        dashCardOpen:         has('DASH_CARD_OPEN'),
+        dashCardClosed:       has('DASH_CARD_CLOSED'),
+        dashCardUrgent:       has('DASH_CARD_URGENT'),
+        dashCardCloseRate:    has('DASH_CARD_CLOSE_RATE'),
+        dashCardHospCount:    has('DASH_CARD_HOSPITAL_COUNT'),
+        dashChartMystery:     has('DASH_CHART_MYSTERY_BY_DEPT'),
+        dashChartClasses:     has('DASH_CHART_CLASSIFICATIONS'),
+        dashChartTopClinics:  has('DASH_CHART_TOP_CLINICS'),
+        dashChartDailyTrend:  has('DASH_CHART_DAILY_TREND'),
+        dashUrgentList:       has('DASH_URGENT_LIST'),
+        // ===== Reports permissions =====
+        reportsPage:              has('REPORTS_PAGE'),
+        reportsCardTotals:        has('REPORTS_CARD_TOTALS'),
+        reportsCardOpen:          has('REPORTS_CARD_OPEN'),
+        reportsCardClosed:        has('REPORTS_CARD_CLOSED'),
+        reportsCardUrgent:        has('REPORTS_CARD_URGENT'),
+        reportsCardSLA:           has('REPORTS_CARD_SLA'),
+        reportsCardHospitals:     has('REPORTS_CARD_HOSPITALS'),
+        reportsChartByHospitalType:    has('REPORTS_CHART_BY_HOSPITAL_TYPE'),
+        reportsChartStatusDistribution: has('REPORTS_CHART_STATUS_DISTRIBUTION'),
+        reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
+        reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
+        reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
+        reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+        // ===== صلاحيات تصدير التقارير =====
+        reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
+        reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
+        reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
+        reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
+        reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
+        // ===== صلاحيات بلاغات إدارة التجمع =====
+        clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
+        clusterView:    has('CLUSTER_REPORT_VIEW'),
+        clusterDetails: has('CLUSTER_REPORT_DETAILS'),
+        clusterReply:   has('CLUSTER_REPORT_REPLY'),
+        clusterStatus:  has('CLUSTER_REPORT_STATUS'),
+        // ===== صلاحيات الأرشيف =====
+        archiveView:   has('ARCHIVE_VIEW'),
+        archiveUpload: has('ARCHIVE_UPLOAD'),
+        // ===== صلاحيات تصدير البلاغات =====
+        complaintsExport: has('COMPLAINTS_EXPORT')
+      };
+
+      // لوج للتشخيص - قبل إرسال الرد
+      console.log('🔍 [getMyPermissions - Cluster Manager] UserID:', userId, 'HospitalID:', hospitalId);
+      console.log('🔍 [getMyPermissions - Cluster Manager] All permissions keys:', perms.map(p => p.PermissionKey));
+      console.log('🔍 [getMyPermissions - Cluster Manager] complaintsExport value:', responseData.complaintsExport);
+      console.log('🔍 [getMyPermissions - Cluster Manager] Full response data:', JSON.stringify(responseData, null, 2));
+
       res.json({
         ok:true,
-        data: {
-          submit: has('COMPLAINT_SUBMIT'),
-          view:   has('COMPLAINT_VIEW'),
-          historyScope: scope,
-          reply:  has('COMPLAINT_REPLY'),
-          transfer: has('COMPLAINT_TRANSFER'),
-          transferDept: has('COMPLAINT_TRANSFER_DEPT'),
-          transferUser: has('COMPLAINT_TRANSFER_USER'),
-          complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
-          statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
-          remove: has('COMPLAINT_DELETE'),
-          // مدير التجمع (مركزي) دائماً له صلاحية الإدارة
-          adminPanel: has('ADMIN_PANEL_ACCESS') || (req.user?.HospitalID == null),
-          adminDepartments: has('ADMIN_DEPARTMENTS'),
-          adminHospital: has('ADMIN_HOSPITAL'),
-          adminClusters: has('ADMIN_CLUSTERS'),
-          hospitalCreate: has('HOSPITAL_CREATE'),
-          // صلاحيات إدارة المستشفى (الأيقونات الأربعة)
-          hospitalTrash: has('HOSPITAL_TRASH'),
-          hospitalLogs: has('HOSPITAL_LOGS'),
-          hospitalPermissions: has('HOSPITAL_PERMISSIONS'),
-          hospitalUsers: has('HOSPITAL_USERS'),
-          hospitalUserCreate: has('HOSPITAL_USER_CREATE'),
-          hospitalUserEdit: has('HOSPITAL_USER_EDIT'),
-          hospitalUserDelete: has('HOSPITAL_USER_DELETE'),
-          improvementCreate: has('IMPROVEMENT_CREATE'),
-          improvementView: has('IMPROVEMENT_VIEW'),
-          improvementEdit: has('IMPROVEMENT_EDIT'),
-          improvementDelete: has('IMPROVEMENT_DELETE'),
-          improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
-          improvementsModule: has('IMPROVEMENTS_MODULE'),
-          // صلاحيات الزائر السري
-          mysteryModule: has('MYSTERY_MODULE'),
-          mysteryView: has('MYSTERY_VIEW'),
-          mysteryReplyAdd: has('MYSTERY_REPLY_ADD'),
-          mysteryStatusUpdate: has('MYSTERY_STATUS_UPDATE'),
-          mysteryTransferDept: has('MYSTERY_TRANSFER_DEPT'),
-          mysteryTransferEmp: has('MYSTERY_TRANSFER_EMP'),
-          mysteryDelete: has('MYSTERY_DELETE'),
-          // ===== Dashboard permissions =====
-          dashPage:             has('DASH_PAGE'),
-          dashCardTotals:       has('DASH_CARD_TOTALS'),
-          dashCardOpen:         has('DASH_CARD_OPEN'),
-          dashCardClosed:       has('DASH_CARD_CLOSED'),
-          dashCardUrgent:       has('DASH_CARD_URGENT'),
-          dashCardCloseRate:    has('DASH_CARD_CLOSE_RATE'),
-          dashCardHospCount:    has('DASH_CARD_HOSPITAL_COUNT'),
-          dashChartMystery:     has('DASH_CHART_MYSTERY_BY_DEPT'),
-          dashChartClasses:     has('DASH_CHART_CLASSIFICATIONS'),
-          dashChartTopClinics:  has('DASH_CHART_TOP_CLINICS'),
-          dashChartDailyTrend:  has('DASH_CHART_DAILY_TREND'),
-          dashUrgentList:       has('DASH_URGENT_LIST'),
-          // ===== Reports permissions =====
-          reportsPage:              has('REPORTS_PAGE'),
-          reportsCardTotals:        has('REPORTS_CARD_TOTALS'),
-          reportsCardOpen:          has('REPORTS_CARD_OPEN'),
-          reportsCardClosed:        has('REPORTS_CARD_CLOSED'),
-          reportsCardUrgent:        has('REPORTS_CARD_URGENT'),
-          reportsCardSLA:           has('REPORTS_CARD_SLA'),
-          reportsCardHospitals:     has('REPORTS_CARD_HOSPITALS'),
-          reportsChartByHospitalType:    has('REPORTS_CHART_BY_HOSPITAL_TYPE'),
-          reportsChartStatusDistribution: has('REPORTS_CHART_STATUS_DISTRIBUTION'),
-          reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
-          reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
-          reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
-          reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
-          // ===== صلاحيات تصدير التقارير =====
-          reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
-          reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
-          reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
-          reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
-          reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
-          // ===== صلاحيات بلاغات إدارة التجمع =====
-          clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
-          clusterView:    has('CLUSTER_REPORT_VIEW'),
-          clusterDetails: has('CLUSTER_REPORT_DETAILS'),
-          clusterReply:   has('CLUSTER_REPORT_REPLY'),
-          clusterStatus:  has('CLUSTER_REPORT_STATUS'),
-          // ===== صلاحيات الأرشيف =====
-          archiveView:   has('ARCHIVE_VIEW'),
-          archiveUpload: has('ARCHIVE_UPLOAD')
-        }
+        data: responseData
       });
     } else {
       // مدير مستشفى أو موظف عادي - صلاحياته من مستشفاه فقط
@@ -556,87 +576,101 @@ export async function getMyPermissions(req, res) {
       const has = k => perms.some(p => p.PermissionKey === k);
       const scope = perms.find(p => p.PermissionKey==='COMPLAINT_HISTORY_SCOPE')?.ViewScope || null;
 
+      // بناء البيانات قبل الإرسال
+      const responseData = {
+        submit: has('COMPLAINT_SUBMIT'),
+        view:   has('COMPLAINT_VIEW'),
+        historyScope: scope,             // HOSPITAL|DEPARTMENT|ASSIGNED|null
+        reply:  has('COMPLAINT_REPLY'),
+        transfer: has('COMPLAINT_TRANSFER'),
+        transferDept: has('COMPLAINT_TRANSFER_DEPT'),
+        transferUser: has('COMPLAINT_TRANSFER_USER'),
+        complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
+        statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
+        remove: has('COMPLAINT_DELETE'),
+        // مدير التجمع (مركزي) دائماً له صلاحية الإدارة
+        adminPanel: has('ADMIN_PANEL_ACCESS') || (req.user?.HospitalID == null),
+        adminDepartments: has('ADMIN_DEPARTMENTS'),
+        adminHospital: has('ADMIN_HOSPITAL'),
+        adminClusters: has('ADMIN_CLUSTERS'),
+        hospitalCreate: has('HOSPITAL_CREATE'),
+        // صلاحيات إدارة المستشفى (الأيقونات الأربعة)
+        hospitalTrash: has('HOSPITAL_TRASH'),
+        hospitalLogs: has('HOSPITAL_LOGS'),
+        hospitalPermissions: has('HOSPITAL_PERMISSIONS'),
+        hospitalUsers: has('HOSPITAL_USERS'),
+        hospitalUserCreate: has('HOSPITAL_USER_CREATE'),
+        hospitalUserEdit: has('HOSPITAL_USER_EDIT'),
+        hospitalUserDelete: has('HOSPITAL_USER_DELETE'),
+        improvementCreate: has('IMPROVEMENT_CREATE'),
+        improvementView: has('IMPROVEMENT_VIEW'),
+        improvementEdit: has('IMPROVEMENT_EDIT'),
+        improvementDelete: has('IMPROVEMENT_DELETE'),
+        improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
+        improvementsModule: has('IMPROVEMENTS_MODULE'),
+        // صلاحيات الزائر السري
+        mysteryModule: has('MYSTERY_MODULE'),
+        mysteryView: has('MYSTERY_VIEW'),
+        mysteryReplyAdd: has('MYSTERY_REPLY_ADD'),
+        mysteryStatusUpdate: has('MYSTERY_STATUS_UPDATE'),
+        mysteryTransferDept: has('MYSTERY_TRANSFER_DEPT'),
+        mysteryTransferEmp: has('MYSTERY_TRANSFER_EMP'),
+        mysteryDelete: has('MYSTERY_DELETE'),
+        // ===== Dashboard permissions =====
+        dashPage:             has('DASH_PAGE'),
+        dashCardTotals:       has('DASH_CARD_TOTALS'),
+        dashCardOpen:         has('DASH_CARD_OPEN'),
+        dashCardClosed:       has('DASH_CARD_CLOSED'),
+        dashCardUrgent:       has('DASH_CARD_URGENT'),
+        dashCardCloseRate:    has('DASH_CARD_CLOSE_RATE'),
+        dashCardHospCount:    has('DASH_CARD_HOSPITAL_COUNT'),
+        dashChartMystery:     has('DASH_CHART_MYSTERY_BY_DEPT'),
+        dashChartClasses:     has('DASH_CHART_CLASSIFICATIONS'),
+        dashChartTopClinics:  has('DASH_CHART_TOP_CLINICS'),
+        dashChartDailyTrend:  has('DASH_CHART_DAILY_TREND'),
+        dashUrgentList:       has('DASH_URGENT_LIST'),
+        // ===== Reports permissions =====
+        reportsPage:              has('REPORTS_PAGE'),
+        reportsCardTotals:        has('REPORTS_CARD_TOTALS'),
+        reportsCardOpen:          has('REPORTS_CARD_OPEN'),
+        reportsCardClosed:        has('REPORTS_CARD_CLOSED'),
+        reportsCardUrgent:        has('REPORTS_CARD_URGENT'),
+        reportsCardSLA:           has('REPORTS_CARD_SLA'),
+        reportsCardHospitals:     has('REPORTS_CARD_HOSPITALS'),
+        reportsChartByHospitalType:    has('REPORTS_CHART_BY_HOSPITAL_TYPE'),
+        reportsChartStatusDistribution: has('REPORTS_CHART_STATUS_DISTRIBUTION'),
+        reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
+        reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
+        reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
+        reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
+        // ===== صلاحيات تصدير التقارير =====
+        reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
+        reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
+        reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
+        reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
+        reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
+        // ===== صلاحيات بلاغات إدارة التجمع =====
+        clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
+        clusterView:    has('CLUSTER_REPORT_VIEW'),
+        clusterDetails: has('CLUSTER_REPORT_DETAILS'),
+        clusterReply:   has('CLUSTER_REPORT_REPLY'),
+        clusterStatus:  has('CLUSTER_REPORT_STATUS'),
+        // ===== صلاحيات الأرشيف =====
+        archiveView:   has('ARCHIVE_VIEW'),
+        archiveUpload: has('ARCHIVE_UPLOAD'),
+        // ===== صلاحيات تصدير البلاغات =====
+        complaintsExport: has('COMPLAINTS_EXPORT')
+      };
+
+      // لوج للتشخيص - قبل إرسال الرد
+      console.log('🔍 [getMyPermissions - Regular User] UserID:', userId, 'HospitalID:', hospitalId);
+      console.log('🔍 [getMyPermissions - Regular User] All permissions keys:', perms.map(p => p.PermissionKey));
+      console.log('🔍 [getMyPermissions - Regular User] complaintsExport value:', responseData.complaintsExport);
+      console.log('🔍 [getMyPermissions - Regular User] COMPLAINTS_EXPORT exists in DB:', has('COMPLAINTS_EXPORT'));
+
       res.json({
         ok:true,
-        data: {
-          submit: has('COMPLAINT_SUBMIT'),
-          view:   has('COMPLAINT_VIEW'),
-          historyScope: scope,             // HOSPITAL|DEPARTMENT|ASSIGNED|null
-          reply:  has('COMPLAINT_REPLY'),
-          transfer: has('COMPLAINT_TRANSFER'),
-          transferDept: has('COMPLAINT_TRANSFER_DEPT'),
-          transferUser: has('COMPLAINT_TRANSFER_USER'),
-          complaintTransferHospital: has('COMPLAINT_TRANSFER_HOSPITAL'),
-          statusUpdate: has('COMPLAINT_STATUS_UPDATE'),
-          remove: has('COMPLAINT_DELETE'),
-          // مدير التجمع (مركزي) دائماً له صلاحية الإدارة
-          adminPanel: has('ADMIN_PANEL_ACCESS') || (req.user?.HospitalID == null),
-          adminDepartments: has('ADMIN_DEPARTMENTS'),
-          adminHospital: has('ADMIN_HOSPITAL'),
-          adminClusters: has('ADMIN_CLUSTERS'),
-          hospitalCreate: has('HOSPITAL_CREATE'),
-          // صلاحيات إدارة المستشفى (الأيقونات الأربعة)
-          hospitalTrash: has('HOSPITAL_TRASH'),
-          hospitalLogs: has('HOSPITAL_LOGS'),
-          hospitalPermissions: has('HOSPITAL_PERMISSIONS'),
-          hospitalUsers: has('HOSPITAL_USERS'),
-          hospitalUserCreate: has('HOSPITAL_USER_CREATE'),
-          hospitalUserEdit: has('HOSPITAL_USER_EDIT'),
-          hospitalUserDelete: has('HOSPITAL_USER_DELETE'),
-          improvementCreate: has('IMPROVEMENT_CREATE'),
-          improvementView: has('IMPROVEMENT_VIEW'),
-          improvementEdit: has('IMPROVEMENT_EDIT'),
-          improvementDelete: has('IMPROVEMENT_DELETE'),
-          improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
-          improvementsModule: has('IMPROVEMENTS_MODULE'),
-          // صلاحيات الزائر السري
-          mysteryModule: has('MYSTERY_MODULE'),
-          mysteryView: has('MYSTERY_VIEW'),
-          mysteryReplyAdd: has('MYSTERY_REPLY_ADD'),
-          mysteryStatusUpdate: has('MYSTERY_STATUS_UPDATE'),
-          mysteryTransferDept: has('MYSTERY_TRANSFER_DEPT'),
-          mysteryTransferEmp: has('MYSTERY_TRANSFER_EMP'),
-          mysteryDelete: has('MYSTERY_DELETE'),
-          // ===== Dashboard permissions =====
-          dashPage:             has('DASH_PAGE'),
-          dashCardTotals:       has('DASH_CARD_TOTALS'),
-          dashCardOpen:         has('DASH_CARD_OPEN'),
-          dashCardClosed:       has('DASH_CARD_CLOSED'),
-          dashCardUrgent:       has('DASH_CARD_URGENT'),
-          dashCardCloseRate:    has('DASH_CARD_CLOSE_RATE'),
-          dashCardHospCount:    has('DASH_CARD_HOSPITAL_COUNT'),
-          dashChartMystery:     has('DASH_CHART_MYSTERY_BY_DEPT'),
-          dashChartClasses:     has('DASH_CHART_CLASSIFICATIONS'),
-          dashChartTopClinics:  has('DASH_CHART_TOP_CLINICS'),
-          dashChartDailyTrend:  has('DASH_CHART_DAILY_TREND'),
-          dashUrgentList:       has('DASH_URGENT_LIST'),
-          // ===== Reports permissions =====
-          reportsPage:              has('REPORTS_PAGE'),
-          reportsCardTotals:        has('REPORTS_CARD_TOTALS'),
-          reportsCardOpen:          has('REPORTS_CARD_OPEN'),
-          reportsCardClosed:        has('REPORTS_CARD_CLOSED'),
-          reportsCardUrgent:        has('REPORTS_CARD_URGENT'),
-          reportsCardSLA:           has('REPORTS_CARD_SLA'),
-          reportsCardHospitals:     has('REPORTS_CARD_HOSPITALS'),
-          reportsChartByHospitalType:    has('REPORTS_CHART_BY_HOSPITAL_TYPE'),
-          reportsChartStatusDistribution: has('REPORTS_CHART_STATUS_DISTRIBUTION'),
-          reportsChartTrend6m:           has('REPORTS_CHART_TREND_6M'),
-          reportsChartUrgentPercent:     has('REPORTS_CHART_URGENT_PERCENT'),
-          reportsChartByDepartment:      has('REPORTS_CHART_BY_DEPARTMENT'),
-          reportsChartTopEmployees:      has('REPORTS_CHART_TOP_EMPLOYEES'),
-          // ===== صلاحيات تصدير التقارير =====
-          reportSummaryExport:            has('REPORT_SUMMARY_EXPORT'),
-          reportDetailsExport:            has('REPORT_DETAILS_EXPORT'),
-          reportDepartmentsExport:        has('REPORT_DEPARTMENTS_EXPORT'),
-          reportEmployeesExport:          has('REPORT_EMPLOYEES_EXPORT'),
-          reportCriticalExport:           has('REPORT_CRITICAL_EXPORT'),
-          // ===== صلاحيات بلاغات إدارة التجمع =====
-          clusterSubmit:  has('CLUSTER_REPORT_CREATE'),
-          clusterView:    has('CLUSTER_REPORT_VIEW'),
-          clusterDetails: has('CLUSTER_REPORT_DETAILS'),
-          clusterReply:   has('CLUSTER_REPORT_REPLY'),
-          clusterStatus:  has('CLUSTER_REPORT_STATUS')
-        }
+        data: responseData
       });
     }
   } catch (e) {

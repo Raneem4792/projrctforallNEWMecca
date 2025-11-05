@@ -169,6 +169,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   els.btnSearch.addEventListener('click', () => { page = 1; runSearch(); });
   els.btnReset.addEventListener('click', resetFilters);
   
+  // ربط أزرار التصدير
+  const btnExportExcel = document.getElementById('btnExportExcel');
+  const btnExportPDF = document.getElementById('btnExportPDF');
+  
+  if (btnExportExcel) {
+    btnExportExcel.addEventListener('click', () => exportComplaints('excel'));
+  }
+  
+  if (btnExportPDF) {
+    btnExportPDF.addEventListener('click', () => exportComplaints('pdf'));
+  }
+  
   // ربط زر "المسنّدة لي"
   const btnAssigned = document.getElementById('btnAssignedMe');
   if (btnAssigned) {
@@ -198,7 +210,386 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   els.pPrev.addEventListener('click', () => changePage(-1));
   els.pNext.addEventListener('click', () => changePage(1));
+
+  // التحقق من صلاحية التصدير
+  checkExportPermission();
 });
+
+// دالة التحقق من صلاحية التصدير
+async function checkExportPermission() {
+  try {
+    const token = localStorage.getItem('token');
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+
+    // التحقق من كون المستخدم مدير تجمع أولاً
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const userMode = getUserMode(user);
+        isClusterManager = userMode === 'cluster' || userMode === 'central';
+      } catch (error) {
+        console.error('❌ خطأ في قراءة التوكن:', error);
+      }
+    }
+
+    // إذا كان مدير تجمع، نعرض الأزرار مباشرة
+    if (isClusterManager) {
+      const btnExcel = document.getElementById('btnExportExcel');
+      const btnPDF = document.getElementById('btnExportPDF');
+      const exportArea = document.querySelector('.flex.flex-wrap.gap-3.items-end.mb-4.p-4.bg-gray-50');
+      
+      if (btnExcel) btnExcel.style.display = 'inline-flex';
+      if (btnPDF) btnPDF.style.display = 'inline-flex';
+      if (exportArea) exportArea.style.display = 'flex';
+      console.log('✅ مدير التجمع - عرض أزرار التصدير');
+      return;
+    }
+
+    // للمستخدمين الآخرين، نتحقق من الصلاحية
+    const res = await fetch(`${API_BASE}/api/permissions/me`, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+
+    const json = await res.json();
+    console.log('🔍 [Export Permission] Response from API:', json);
+    
+    if (!json.ok) {
+      console.warn('⚠️ [Export Permission] API response not ok:', json);
+      // في حالة فشل الاستجابة، نخفي الأزرار
+      const btnExcel = document.getElementById('btnExportExcel');
+      const btnPDF = document.getElementById('btnExportPDF');
+      const exportArea = document.querySelector('.flex.flex-wrap.gap-3.items-end.mb-4.p-4.bg-gray-50');
+      if (btnExcel) btnExcel.style.display = 'none';
+      if (btnPDF) btnPDF.style.display = 'none';
+      if (exportArea) exportArea.style.display = 'none';
+      return;
+    }
+
+    const perms = json.data || {};
+    const canExport = perms.complaintsExport;
+    
+    console.log('🔍 [Export Permission] Full permissions object:', perms);
+    console.log('🔍 [Export Permission] complaintsExport value:', canExport);
+    console.log('🔍 [Export Permission] Type of canExport:', typeof canExport);
+
+    const btnExcel = document.getElementById('btnExportExcel');
+    const btnPDF = document.getElementById('btnExportPDF');
+    const exportArea = document.querySelector('.flex.flex-wrap.gap-3.items-end.mb-4.p-4.bg-gray-50');
+
+    if (!canExport) {
+      console.log('❌ [Export Permission] No export permission - hiding buttons');
+      if (btnExcel) btnExcel.style.display = 'none';
+      if (btnPDF) btnPDF.style.display = 'none';
+      // إخفاء منطقة التصدير بالكامل إذا لم تكن هناك صلاحية
+      if (exportArea) exportArea.style.display = 'none';
+    } else {
+      console.log('✅ [Export Permission] Has export permission - showing buttons');
+      if (btnExcel) btnExcel.style.display = 'inline-flex';
+      if (btnPDF) btnPDF.style.display = 'inline-flex';
+      if (exportArea) exportArea.style.display = 'flex';
+    }
+  } catch (err) {
+    console.error('❌ فشل التحقق من صلاحيات التصدير:', err);
+    // في حالة الخطأ، نخفي الأزرار للسلامة (إلا إذا كان مدير تجمع)
+    const token = localStorage.getItem('token');
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const userMode = getUserMode(user);
+        isClusterManager = userMode === 'cluster' || userMode === 'central';
+      } catch (error) {
+        // في حالة الخطأ، نخفي الأزرار
+      }
+    }
+
+    const btnExcel = document.getElementById('btnExportExcel');
+    const btnPDF = document.getElementById('btnExportPDF');
+    const exportArea = document.querySelector('.flex.flex-wrap.gap-3.items-end.mb-4.p-4.bg-gray-50');
+    
+    if (isClusterManager) {
+      // مدير التجمع - نعرض الأزرار حتى في حالة الخطأ
+      if (btnExcel) btnExcel.style.display = 'inline-flex';
+      if (btnPDF) btnPDF.style.display = 'inline-flex';
+      if (exportArea) exportArea.style.display = 'flex';
+    } else {
+      // مستخدم عادي - نخفي الأزرار
+      if (btnExcel) btnExcel.style.display = 'none';
+      if (btnPDF) btnPDF.style.display = 'none';
+      if (exportArea) exportArea.style.display = 'none';
+    }
+  }
+}
+
+// دالة جلب بيانات البلاغات للتصدير
+async function fetchComplaintsForExport({ from, to, tickets, hospitalId, token }) {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  if (tickets) params.set('tickets', tickets);
+  if (!from && !to && !tickets) params.set('all', '1');
+  if (hospitalId && hospitalId !== 'ALL') params.set('hospitalId', hospitalId);
+  params.set('page', '1');
+  params.set('pageSize', '10000'); // جلب كل البيانات
+
+  const headers = { 'Accept': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const url = `${API_BASE}/api/complaints/history?${params.toString()}`;
+  const res = await fetch(url, { headers });
+  
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!data.ok) {
+    throw new Error(data.message || 'خطأ في البيانات');
+  }
+
+  return data.items || [];
+}
+
+// دالة ملء جدول التصدير
+function renderExportTable(complaints) {
+  const tbody = document.getElementById('exportTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  complaints.forEach((c, idx) => {
+    const row = document.createElement('tr');
+    row.className = 'border-b';
+    
+    // جلب آخر رد (يمكن أن يكون reply, replyMessage, lastReply)
+    const reply = c.reply || c.replyMessage || c.lastReply || '';
+    let replyText = '-';
+    if (reply && reply.trim()) {
+      // تقصير النص إلى 80 حرف مع إضافة ...
+      replyText = reply.trim().length > 80 
+        ? reply.trim().substring(0, 80) + '...' 
+        : reply.trim();
+    }
+    
+    row.innerHTML = `
+      <td class="px-3 py-2 text-center border">${idx + 1}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.ticket || '-')}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.fullName || '-')}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.mobile || '-')}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.department || c.departmentName || '-')}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.status || '-')}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.priority || '-')}</td>
+      <td class="px-3 py-2 text-center border">${escapeHTML(c.createdAt || c.created || '-')}</td>
+      <td class="px-3 py-2 text-right border" style="max-width: 250px; word-wrap: break-word; white-space: normal;">${escapeHTML(replyText)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// دالة تصدير البلاغات (Excel أو PDF)
+async function exportComplaints(format = 'excel') {
+  try {
+    const from = document.getElementById('exportFrom')?.value || '';
+    const to = document.getElementById('exportTo')?.value || '';
+    const tickets = (document.getElementById('exportTickets')?.value || '').trim();
+    
+    // تحديد hospitalId
+    const token = localStorage.getItem('token');
+    let hospitalId = '';
+    
+    // محاولة الحصول على hospitalId من المستخدم
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        isClusterManager = getUserMode(user) === 'cluster' || getUserMode(user) === 'central';
+        hospitalId = user.HospitalID || localStorage.getItem('hospitalId') || '';
+      } catch (error) {
+        console.error('❌ خطأ في قراءة التوكن:', error);
+        hospitalId = localStorage.getItem('hospitalId') || '';
+      }
+    }
+    
+    const hospitalSelect = document.getElementById('hospitalSelect');
+    const selectedHospitalId = hospitalSelect?.value;
+    
+    if (isClusterManager && selectedHospitalId) {
+      hospitalId = selectedHospitalId;
+    } else if (!hospitalId) {
+      hospitalId = localStorage.getItem('hospitalId') || '';
+    }
+
+    // ✅ حالة خاصة لـ PDF: استخدام html2canvas
+    if (format === 'pdf') {
+      console.log('[Export] ✅ تقرير PDF - استخدام html2canvas');
+
+      // جلب بيانات البلاغات
+      const complaints = await fetchComplaintsForExport({ from, to, tickets, hospitalId, token });
+
+      if (complaints.length === 0) {
+        alert('لا توجد بيانات للتصدير. تأكد من اختيار الفلاتر الصحيحة.');
+        return;
+      }
+
+      // ملء جدول التصدير
+      renderExportTable(complaints);
+
+      // تحديث معلومات الهيدر والفوتر
+      const exportHeaderInfo = document.getElementById('exportHeaderInfo');
+      const exportExportDate = document.getElementById('exportExportDate');
+      
+      if (exportHeaderInfo) {
+        let infoText = `تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}`;
+        if (from || to) {
+          infoText += ` | الفترة: ${from || 'بداية'} - ${to || 'نهاية'}`;
+        }
+        if (tickets) {
+          infoText += ` | أرقام محددة: ${tickets}`;
+        }
+        exportHeaderInfo.textContent = infoText;
+      }
+
+      if (exportExportDate) {
+        exportExportDate.textContent = `تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')} | إجمالي: ${complaints.length} بلاغ`;
+      }
+
+      // الحصول على حاوية التصدير
+      const container = document.getElementById('exportCombinedArea');
+      if (!container) {
+        throw new Error('لم يتم العثور على عنصر exportCombinedArea');
+      }
+
+      // إظهار الحاوية (خارج viewport)
+      container.classList.remove('hidden');
+      container.style.display = 'block';
+
+      // انتظار تطبيق CSS
+      await new Promise(r => setTimeout(r, 300));
+
+      // تصوير الحاوية باستخدام html2canvas
+      const canvas = await html2canvas(container, {
+        scale: 1.5,
+        useCORS: true,
+        scrollY: 0,
+        backgroundColor: '#ffffff',
+        logging: false,
+        allowTaint: true,
+        windowWidth: container.scrollWidth,
+        windowHeight: container.scrollHeight
+      });
+
+      // إخفاء الحاوية مرة أخرى
+      container.classList.add('hidden');
+      container.style.display = 'none';
+
+      // تحويل Canvas إلى base64
+      const imageData = canvas.toDataURL('image/jpeg', 0.85);
+      console.log('[Export] ✅ تم إنشاء صورة التقرير، حجم:', (imageData.length / 1024 / 1024).toFixed(2), 'MB');
+
+      if (imageData.length < 100) {
+        throw new Error('الصورة المُنشأة فارغة. تأكد من وجود بيانات في الجدول.');
+      }
+
+      // إرسال الصورة إلى backend
+      const url = `${API_BASE}/api/complaints/export-pdf`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from,
+          to,
+          tickets,
+          hospitalId,
+          complaintsImage: imageData
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${res.status}`);
+      }
+
+      // تحميل الملف
+      const blob = await res.blob();
+      const urlObj = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlObj;
+      a.download = `complaints_${from || 'all'}_${to || 'all'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(urlObj);
+
+      console.log('✅ تم تصدير PDF بنجاح');
+      return;
+    }
+
+    // ✅ Excel: استخدام الطريقة القديمة (API مباشر)
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (tickets) params.set('tickets', tickets);
+    if (!from && !to && !tickets) params.set('all', '1');
+    if (hospitalId && hospitalId !== 'ALL') params.set('hospitalId', hospitalId);
+
+    const headers = { 'Accept': 'application/octet-stream' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = `${API_BASE}/api/complaints/export-excel?${params.toString()}`;
+    console.log('🔗 تصدير Excel:', url);
+
+    const res = await fetch(url, { headers });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const urlObj = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = urlObj;
+    a.download = `complaints_${from || 'all'}_${to || 'all'}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(urlObj);
+
+    console.log('✅ تم تصدير Excel بنجاح');
+  } catch (err) {
+    console.error(`❌ خطأ في تصدير ${format.toUpperCase()}:`, err);
+    alert(`حدث خطأ أثناء التصدير: ${err.message}`);
+  }
+}
 
 async function runSearch() {
   els.results.innerHTML = loaderHTML();

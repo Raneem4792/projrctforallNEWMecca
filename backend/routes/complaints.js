@@ -8,6 +8,7 @@ import { addToTrash } from '../controllers/trashController.js';
 import { requireAuth, optionalAuth, hospitalScopeSQL } from '../middleware/auth.js';
 import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
 import { getHospitalsMap, getHospitalInfo } from '../helpers/hospitals.js';
+import { exportComplaintsExcel, exportComplaintsPDF } from '../controllers/complaints.export.controller.js';
 
 const router = express.Router();
 
@@ -229,7 +230,7 @@ router.get('/track', optionalAuth, async (req, res) => {
             const hospitalPool = mysql.createPool({
               host: process.env.CENTRAL_DB_HOST || 'localhost',
               user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
+              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -427,6 +428,19 @@ router.get('/track', optionalAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/complaints/export-excel
+ * تصدير البلاغات إلى Excel مع الفلاتر
+ * ⚠️ يجب أن يكون قبل /history لتجنب تعارض المسارات
+ */
+router.get('/export-excel', requireAuth, exportComplaintsExcel);
+
+/**
+ * POST /api/complaints/export-pdf
+ * تصدير البلاغات إلى PDF (يستقبل صورة من html2canvas)
+ */
+router.post('/export-pdf', requireAuth, exportComplaintsPDF);
+
+/**
  * GET /api/complaints/history
  * سجل البلاغات مع الفلاتر والترقيم
  * يستخدم نفس منطق /track: مركزية أولاً + fallback لقاعدة المستشفى
@@ -557,7 +571,14 @@ router.get('/history', requireAuth, async (req, res) => {
         c.ComplaintTypeID     AS type,
         t.TypeName            AS typeName,
         DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
-        DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate
+        DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
+        COALESCE((
+          SELECT r.Message
+          FROM complaint_responses r
+          WHERE r.ComplaintID = c.ComplaintID
+          ORDER BY r.CreatedAt DESC
+          LIMIT 1
+        ), '') AS reply
       FROM complaints c
       LEFT JOIN hospitals h ON h.HospitalID = c.HospitalID
       LEFT JOIN complaint_types t ON c.ComplaintTypeID = t.ComplaintTypeID
@@ -591,7 +612,14 @@ router.get('/history', requireAuth, async (req, res) => {
         c.ComplaintTypeID     AS type,
         t.TypeName            AS typeName,
         DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
-        DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate
+        DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
+        COALESCE((
+          SELECT r.Message
+          FROM complaint_responses r
+          WHERE r.ComplaintID = c.ComplaintID
+          ORDER BY r.CreatedAt DESC
+          LIMIT 1
+        ), '') AS reply
       FROM complaints c
       LEFT JOIN complaint_types t ON c.ComplaintTypeID = t.ComplaintTypeID
       /* آخر إسناد */
@@ -745,7 +773,7 @@ router.get('/history', requireAuth, async (req, res) => {
             const hospitalPool = mysql.createPool({
               host: process.env.CENTRAL_DB_HOST || 'localhost',
               user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
+              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5

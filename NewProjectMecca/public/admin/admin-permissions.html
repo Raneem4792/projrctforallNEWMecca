@@ -124,6 +124,12 @@
                   <input type="checkbox" id="p_submit" class="w-4 h-4">
                   <span>تقديم بلاغ</span>
                 </label>
+
+                <!-- تصدير البلاغات -->
+                <label class="flex items-center gap-3">
+                  <input type="checkbox" id="p_complaints_export" class="w-4 h-4">
+                  <span>تصدير البلاغات (PDF / Excel)</span>
+                </label>
               </section>
 
               <!-- إجراءات على البلاغ -->
@@ -821,6 +827,7 @@ async function loadUserPerms(hid, userId){
     $('#p_submit').checked  = !!p.submit;
     $('#p_view').checked    = !!p.view;
     $('#p_reply').checked   = !!p.reply;
+    $('#p_complaints_export').checked = !!p.complaintsExport;
     $('#p_transfer_dept').checked = !!p.transferDept;
     $('#p_transfer_user').checked = !!p.transferUser;
     $('#p_complaint_transfer_hospital').checked = !!p.complaintTransferHospital;
@@ -951,6 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
       view:    $('#p_view').checked,
       historyScope: $('#p_view').checked ? ($('#p_scope').value || null) : null,
       reply:   $('#p_reply').checked,
+      complaintsExport: $('#p_complaints_export').checked,
       transferDept: $('#p_transfer_dept').checked,
       transferUser: $('#p_transfer_user').checked,
       complaintTransferHospital: $('#p_complaint_transfer_hospital').checked,

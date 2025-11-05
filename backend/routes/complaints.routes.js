@@ -8,6 +8,7 @@ import config from '../config/multi-tenant.js';
 import { requireAuth } from '../middleware/auth.js';
 import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
 import { attachHospitalPool } from '../middleware/hospitalPool.js';
+import { exportComplaintsExcel, exportComplaintsPDF } from '../controllers/complaints.export.controller.js';
 
 const router = express.Router();
 
@@ -437,6 +438,18 @@ router.get('/repeat-check', requireAuth, resolveHospitalId, attachHospitalPool, 
     res.status(500).json({ error: 'Failed to check repeat complaints' });
   }
 });
+
+/**
+ * GET /api/complaints/export-excel
+ * تصدير البلاغات إلى Excel مع الفلاتر
+ */
+router.get('/export-excel', requireAuth, exportComplaintsExcel);
+
+/**
+ * POST /api/complaints/export-pdf
+ * تصدير البلاغات إلى PDF (يستقبل صورة من html2canvas)
+ */
+router.post('/export-pdf', requireAuth, exportComplaintsPDF);
 
 export default router;
 

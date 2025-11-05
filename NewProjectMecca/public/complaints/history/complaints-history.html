@@ -7,6 +7,9 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- مكتبة html2canvas لتصدير PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <!-- نعيد استخدام نفس التنسيق -->
   <link rel="stylesheet" href="../submit/submit-complaint.css">
@@ -195,9 +198,41 @@
 
     <!-- النتائج (كروت) -->
     <section class="card">
-      <div class="section-title">
-        <span class="icon">📋</span><h2 id="results-title">النتائج</h2>
+      <div class="section-title flex items-center justify-between mb-3">
+        <div class="flex items-center">
+          <span class="icon">📋</span><h2 id="results-title">النتائج</h2>
+        </div>
       </div>
+      
+      <!-- منطقة التصدير -->
+      <div class="flex flex-wrap gap-3 items-end mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700">من تاريخ</label>
+          <input type="date" id="exportFrom" class="border rounded-lg px-3 py-2 w-44">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700">إلى تاريخ</label>
+          <input type="date" id="exportTo" class="border rounded-lg px-3 py-2 w-44">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700">أرقام البلاغات (اختياري)</label>
+          <input type="text" id="exportTickets" placeholder="C-2025-000001, C-2025-000002"
+                 class="border rounded-lg px-3 py-2 w-80">
+        </div>
+
+        <button id="btnExportExcel"
+                class="h-10 px-4 rounded-xl bg-emerald-600 text-white text-sm hover:bg-emerald-700 transition">
+          📊 تصدير Excel
+        </button>
+
+        <button id="btnExportPDF"
+                class="h-10 px-4 rounded-xl bg-red-600 text-white text-sm hover:bg-red-700 transition">
+          📄 تصدير PDF
+        </button>
+      </div>
+      
       <div id="results" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 
       <div id="noResults" class="hidden text-center py-10 text-gray-600">
@@ -211,6 +246,49 @@
         <button id="pNext" class="btn-secondary" type="button">التالي</button>
       </div>
     </section>
+
+    <!-- حاوية مخفية للتصدير PDF (نستخدم html2canvas لتصويرها) -->
+    <div id="exportCombinedArea" class="hidden bg-white" style="position: absolute; left: -9999px; top: 0; width: 210mm; min-height: 297mm; padding: 40px 50px; font-family: 'Tajawal', sans-serif;">
+      <!-- رأس التقرير -->
+      <div id="exportHeader" class="flex items-center justify-between mb-4">
+        <div id="exportHeaderTitle" class="font-bold text-gray-800 text-2xl">
+          تقرير البلاغات
+        </div>
+        <div id="exportHeaderInfo" class="text-xs text-gray-500"></div>
+      </div>
+
+      <hr class="mb-4 border-gray-200" />
+
+      <!-- جسم التقرير (جدول البلاغات) -->
+      <div id="exportBody">
+        <div id="exportTableArea" class="mt-2">
+          <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-200 text-sm" id="exportTable">
+              <thead class="bg-blue-600 text-white">
+                <tr>
+                  <th class="px-3 py-2 text-center border">#</th>
+                  <th class="px-3 py-2 text-center border">رقم البلاغ</th>
+                  <th class="px-3 py-2 text-center border">اسم المراجع</th>
+                  <th class="px-3 py-2 text-center border">رقم الجوال</th>
+                  <th class="px-3 py-2 text-center border">القسم</th>
+                  <th class="px-3 py-2 text-center border">الحالة</th>
+                  <th class="px-3 py-2 text-center border">الأولوية</th>
+                  <th class="px-3 py-2 text-center border">تاريخ الإنشاء</th>
+                  <th class="px-3 py-2 text-center border">الرد</th>
+                </tr>
+              </thead>
+              <tbody id="exportTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- الفوتر -->
+      <div id="exportFooter" class="mt-4 pt-2 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+        <div id="exportExportDate"></div>
+        <div>صفحة 1 من 1</div>
+      </div>
+    </div>
   </main>
 
   <!-- Footer - التذييل -->

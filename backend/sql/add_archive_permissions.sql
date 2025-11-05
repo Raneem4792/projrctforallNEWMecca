@@ -1,5 +1,5 @@
 -- إضافة صلاحيات الأرشيف
--- يتم تنفيذها في قاعدة البيانات المركزية (hospitals_mecca3)
+-- يتم تنفيذها في قاعدة البيانات المركزية (hospitals_mecca4)
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('ARCHIVE_VIEW',   'عرض الأرشيف',       'archive'),

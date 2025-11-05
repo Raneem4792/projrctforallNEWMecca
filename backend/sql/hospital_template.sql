@@ -1268,3 +1268,8 @@ ADD COLUMN SourceHospitalID INT NULL AFTER HospitalID;
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
 VALUES ('COMPLAINT_TRANSFER_HOSPITAL', 'تحويل البلاغ بين المستشفيات', 'complaints');
+
+
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
+VALUES ('COMPLAINTS_EXPORT', 'تصدير بلاغات', 'complaints');
