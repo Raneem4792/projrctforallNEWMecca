@@ -129,10 +129,42 @@
         </div>
         <div class="grid md:grid-cols-2 gap-4">
           <div class="field">
-            <label id="main-category-label">التصنيف الرئيسي (937)</label>
+            <div class="flex items-center justify-between mb-1">
+              <label id="main-category-label" class="mb-0">التصنيف الرئيسي (937)</label>
+              
+              <!-- زر إضافة تصنيف جديد -->
+              <button type="button" id="btnAddType"
+                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
+                + إضافة تصنيف جديد
+              </button>
+            </div>
+            
             <select id="complaintType">
               <option value="" id="main-category-placeholder">اختر التصنيف الرئيسي</option>
+              <!-- باقي الخيارات تجي من الـ API -->
             </select>
+            
+            <!-- فورم التصنيف الجديد (يظهر فقط عند الحاجة) -->
+            <div id="newTypeBox" class="mt-2 space-y-2 hidden">
+              <input type="text" id="newTypeNameAr"
+                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                     placeholder="اسم التصنيف بالعربي (مثال: الإجازات المرضية)">
+              
+              <input type="text" id="newTypeNameEn"
+                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                     placeholder="اسم التصنيف بالإنجليزي (اختياري)">
+              
+              <div class="flex justify-end gap-2">
+                <button type="button" id="saveNewType"
+                        class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white hover:bg-blue-700">
+                  حفظ التصنيف
+                </button>
+                <button type="button" id="cancelNewType"
+                        class="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700 hover:bg-gray-300">
+                  إلغاء
+                </button>
+              </div>
+            </div>
           </div>
           <div class="field">
             <label id="sub-category-label">التصنيف الفرعي</label>

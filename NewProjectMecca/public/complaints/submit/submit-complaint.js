@@ -25,6 +25,47 @@ const els = {
   excelDropzone: document.getElementById('excelDropzone'),
 };
 
+// عناصر التصنيف الجديد
+const newTypeEls = {
+  box: document.getElementById('newTypeBox'),
+  btn: document.getElementById('btnAddType'),
+  nameAr: document.getElementById('newTypeNameAr'),
+  nameEn: document.getElementById('newTypeNameEn'),
+  save: document.getElementById('saveNewType'),
+  cancel: document.getElementById('cancelNewType'),
+};
+
+// دالة تجيب hospitalId الحالي
+function getCurrentHospitalId() {
+  const hospitalSelect = document.getElementById('hospitalSelect');     // مدير التجمع
+  const hospitalIdHidden = document.getElementById('hospitalIdHidden'); // موظف مستشفى
+  const hospitalId = document.getElementById('hospitalId');             // بديل آخر
+  
+  if (hospitalSelect && hospitalSelect.offsetParent !== null && hospitalSelect.value) {
+    return hospitalSelect.value;
+  }
+  if (hospitalIdHidden && hospitalIdHidden.value) {
+    return hospitalIdHidden.value;
+  }
+  if (hospitalId && hospitalId.value) {
+    return hospitalId.value;
+  }
+  if (els.hospitalId && els.hospitalId.value) {
+    return els.hospitalId.value;
+  }
+  return null;
+}
+
+// دالة إظهار/إخفاء فورم التصنيف الجديد
+function toggleNewTypeBox(show) {
+  if (!newTypeEls.box) return;
+  if (show) {
+    newTypeEls.box.classList.remove('hidden');
+  } else {
+    newTypeEls.box.classList.add('hidden');
+  }
+}
+
 // رفع المرفقات
 let uploaded = [];     // {id, file, name, size}
 let excelFile = null;  // {file, name}
@@ -409,10 +450,32 @@ async function loadTypesAndGenders() {
     window._types = types;
     fillSelectComplex(els.complaintType, types.map(t => ({ value: t.id, label: t.nameAr })), true);
 
-    // عند تغيير التصنيف الرئيسي، تحميل الفرعي
+    // 👈 نضيف خيار "تصنيف جديد"
+    if (els.complaintType) {
+      const newOpt = document.createElement('option');
+      newOpt.value = '__NEW__';
+      newOpt.textContent = '+ تصنيف جديد...';
+      els.complaintType.appendChild(newOpt);
+    }
+
+    // عند تغيير التصنيف الرئيسي، تحميل الفرعي أو فتح إضافة جديد
     if (els.complaintType) {
       els.complaintType.addEventListener('change', async () => {
-        const typeId = Number(els.complaintType.value || 0);
+        const val = els.complaintType.value;
+
+        // 👈 لو اختار "تصنيف جديد" نعرض الفورم ونوقف
+        if (val === '__NEW__') {
+          toggleNewTypeBox(true);
+          // نفرّغ اختيار التصنيف عشان ما ينحسب في الفاليديشن قبل الحفظ
+          els.complaintType.value = '';
+          // ما نحمل تصنيفات فرعية هنا
+          return;
+        } else {
+          // إخفاء فورم التصنيف الجديد لو كان ظاهر
+          toggleNewTypeBox(false);
+        }
+
+        const typeId = Number(val || 0);
         if (!typeId) {
           if (els.subType) {
             els.subType.disabled = true;
@@ -433,6 +496,89 @@ async function loadTypesAndGenders() {
   } catch (err) {
     console.error('خطأ في تحميل البيانات:', err);
     alert('تعذر تحميل البيانات المرجعية. تأكد من أن الـ API يعمل.');
+  }
+}
+
+// دالة حفظ التصنيف الجديد واستعماله مباشرة
+async function saveNewComplaintType() {
+  const nameAr = (newTypeEls.nameAr?.value || '').trim();
+  const nameEn = (newTypeEls.nameEn?.value || '').trim() || null;
+
+  if (!nameAr) {
+    alert('اكتبي اسم التصنيف بالعربي');
+    return;
+  }
+
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    alert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى');
+    window.location.href = '../../auth/login.html';
+    return;
+  }
+
+  // ✅ نفس منطق onSubmit في استخراج hospitalId
+  const hospitalSelect = document.getElementById('hospitalSelect');
+  const hospitalIdHidden = document.getElementById('hospitalIdHidden');
+
+  const hospitalId =
+    (hospitalSelect && hospitalSelect.value) ||
+    (hospitalIdHidden && hospitalIdHidden.value) || '';
+
+  if (!hospitalId) {
+    alert('يرجى اختيار المستشفى أولاً');
+    return;
+  }
+
+  try {
+    // ✅ نستخدم نفس API_BASE = http://localhost:3001/api
+    const res = await fetch(API_BASE + '/complaint-types/custom', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Hospital-Id': hospitalId   // 👈 مهم: يحدد قاعدة بيانات المستشفى المستهدف
+      },
+      body: JSON.stringify({
+        nameAr,
+        nameEn
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    }
+
+    const newId = data.id;        // ID التصنيف في قاعدة بيانات هذا المستشفى فقط
+    const select = els.complaintType;
+    if (!select) return;
+
+    // ننشئ option جديد قبل خيار "__NEW__" إن وجد
+    const opt = document.createElement('option');
+    opt.value = String(newId);
+    opt.textContent = nameAr;
+
+    const newPlaceholder = select.querySelector('option[value="__NEW__"]');
+    if (newPlaceholder) {
+      select.insertBefore(opt, newPlaceholder);
+    } else {
+      select.appendChild(opt);
+    }
+
+    // نختار التصنيف الجديد مباشرة
+    select.value = String(newId);
+
+    // تنظيف وإخفاء الفورم
+    if (newTypeEls.nameAr) newTypeEls.nameAr.value = '';
+    if (newTypeEls.nameEn) newTypeEls.nameEn.value = '';
+    toggleNewTypeBox(false);
+
+    alert('✅ تم إضافة التصنيف الجديد في مستشفى واحد (المختار) وتم اختياره في البلاغ.');
+
+  } catch (err) {
+    console.error('❌ خطأ في إضافة التصنيف الجديد:', err);
+    alert('فشل إضافة التصنيف الجديد: ' + err.message);
   }
 }
 
@@ -1078,6 +1224,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (els.form) els.form.addEventListener('submit', onSubmit);
     if (els.resetBtn) els.resetBtn.addEventListener('click', resetForm);
+    
+    // ربط أزرار التصنيف الجديد
+    if (newTypeEls.btn) {
+      newTypeEls.btn.addEventListener('click', () => toggleNewTypeBox(true));
+    }
+    if (newTypeEls.cancel) {
+      newTypeEls.cancel.addEventListener('click', () => {
+        toggleNewTypeBox(false);
+        // تنظيف الحقول
+        if (newTypeEls.nameAr) newTypeEls.nameAr.value = '';
+        if (newTypeEls.nameEn) newTypeEls.nameEn.value = '';
+      });
+    }
+    if (newTypeEls.save) {
+      newTypeEls.save.addEventListener('click', saveNewComplaintType);
+    }
     
     // معاينة الأولوية المباشرة
     setupPriorityPreview();

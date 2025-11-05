@@ -1,6 +1,8 @@
 // backend/routes/meta.js
 import express from 'express';
 import { pool } from '../config/db.js';
+import { getHospitalPool } from '../config/db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -85,6 +87,84 @@ router.get('/complaint-subtypes', async (req, res) => {
   } catch (error) {
     console.error('خطأ في جلب التصنيفات الفرعية:', error);
     res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+// دالة بسيطة لتوليد TypeCode من الاسم
+function makeTypeCode(nameAr, nameEn) {
+  const base = (nameEn && nameEn.trim()) || nameAr.trim();
+  let code = base
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w]+/g, '_')
+    .toUpperCase()
+    .slice(0, 50);
+  if (!code) code = 'TYPE_' + Date.now();
+  return code;
+}
+
+// POST /api/complaint-types/custom
+router.post('/complaint-types/custom', requireAuth, async (req, res, next) => {
+  try {
+    const { nameAr, nameEn } = req.body || {};
+
+    if (!nameAr) {
+      return res.status(400).json({ success: false, message: 'الاسم العربي مطلوب' });
+    }
+
+    // ✅ نستخدم getHospitalPool حتى يختار DB المستشفى من X-Hospital-Id
+    const hospitalId = Number(
+      req.headers['x-hospital-id'] || 
+      req.query.hospitalId || 
+      req.body.hospitalId ||
+      req.user?.HospitalID ||
+      0
+    );
+
+    if (!hospitalId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد hospitalId في header X-Hospital-Id' 
+      });
+    }
+
+    const pool = await getHospitalPool(hospitalId);
+
+    const typeCode = makeTypeCode(nameAr, nameEn);
+
+    const [result] = await pool.query(
+      `INSERT IGNORE INTO complaint_types (TypeName, TypeCode, TypeNameEn)
+       VALUES (?,?,?)`,
+      [nameAr, typeCode, nameEn || null]
+    );
+
+    let id = result.insertId;
+
+    // لو كان موجود مسبقاً بنفس TypeCode نجيب الـ ID
+    if (!id) {
+      const [rows] = await pool.query(
+        'SELECT ComplaintTypeID FROM complaint_types WHERE TypeCode = ? LIMIT 1',
+        [typeCode]
+      );
+      id = rows[0]?.ComplaintTypeID;
+    }
+
+    if (!id) {
+      return res.status(500).json({
+        success: false,
+        message: 'لم يتم إنشاء التصنيف'
+      });
+    }
+
+    res.json({
+      success: true,
+      id,
+      nameAr,
+      nameEn,
+      typeCode
+    });
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء التصنيف الجديد:', err);
+    next(err);
   }
 });
 
