@@ -233,7 +233,17 @@
         const data = await res.json();
 
         if (!res.ok) {
-          alert(data.message || 'فشل تسجيل الدخول');
+          // معالجة خاصة لرسالة تسجيل الدخول من جهاز آخر
+          if (res.status === 403 && data.message && data.message.includes('جهاز آخر')) {
+            showToast({
+              title: 'تسجيل الدخول مرفوض',
+              message: data.message,
+              type: 'warning',
+              duration: 5000
+            });
+          } else {
+            alert(data.message || 'فشل تسجيل الدخول');
+          }
           return;
         }
 
