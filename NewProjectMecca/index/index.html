@@ -920,5 +920,360 @@
 
   <!-- ملف JavaScript لإخفاء البطاقات والروابط بناءً على الصلاحيات -->
   <script src="../public/assets/js/navbar-permissions.js"></script>
+
+  <!-- نظام التنبيهات الفورية للبلاغات الحرجة -->
+  <style>
+    /* Pop-up للبلاغات الحرجة */
+    #urgentAlertPopup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(220, 38, 38, 0.5);
+      z-index: 10000;
+      max-width: 800px;
+      width: 90%;
+      animation: slideIn 0.3s ease-out;
+      direction: rtl;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+    }
+
+    #urgentAlertPopup.fadeOut {
+      animation: fadeOut 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+      to {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+      }
+    }
+
+    #urgentAlertPopup .alert-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    #urgentAlertPopup .alert-icon {
+      font-size: 2rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+
+    #urgentAlertPopup .alert-content {
+      line-height: 1.8;
+    }
+
+    #urgentAlertPopup .alert-item {
+      margin-bottom: 0.75rem;
+      padding: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+    }
+
+    #urgentAlertPopup .alert-label {
+      font-weight: bold;
+      margin-left: 0.5rem;
+    }
+
+    #urgentAlertPopup .alert-description {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      border-right: 4px solid white;
+    }
+
+    #urgentAlertPopup .alert-close {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    #urgentAlertPopup .alert-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    #urgentAlertOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+
+  <script>
+    // نظام التنبيهات الفورية للبلاغات الحرجة
+    (function() {
+      const API_BASE = window.API_BASE || 'http://localhost:3001';
+      let lastCheckedTime = null;
+      let currentPopup = null;
+      let checkInterval = null;
+
+      // ✅ عرض نافذة فيها جميع البلاغات الحرجة
+      function showAllUrgentPopup(complaints) {
+        // إزالة أي Pop-up موجود مسبقاً
+        if (currentPopup) {
+          hideUrgentPopup();
+        }
+
+        // إنشاء Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'urgentAlertOverlay';
+        overlay.onclick = hideUrgentPopup;
+
+        // إنشاء Pop-up
+        const popup = document.createElement('div');
+        popup.id = 'urgentAlertPopup';
+        popup.style.maxWidth = '800px';
+        popup.style.maxHeight = '80vh';
+        popup.style.overflowY = 'auto';
+
+        let html = `
+          <button class="alert-close" onclick="hideUrgentPopup()" aria-label="إغلاق">×</button>
+          <div class="alert-header">
+            <span class="alert-icon">🚨</span>
+            <span>بلاغات حرِجة حالياً (${complaints.length})</span>
+          </div>
+          <div class="alert-content" style="margin-top: 1rem;">
+            <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
+              <thead>
+                <tr style="border-bottom:2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1);">
+                  <th style="padding: 0.75rem; text-align: right; font-weight: bold;">المستشفى</th>
+                  <th style="padding: 0.75rem; text-align: right; font-weight: bold;">القسم</th>
+                  <th style="padding: 0.75rem; text-align: right; font-weight: bold;">رقم التذكرة</th>
+                  <th style="padding: 0.75rem; text-align: right; font-weight: bold;">الوصف</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        for (const c of complaints) {
+          const description = (c.Description || '').substring(0, 80);
+          html += `
+            <tr 
+              style="border-bottom:1px solid rgba(255,255,255,0.1); cursor:pointer; transition: background 0.2s;"
+              onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+              onmouseout="this.style.background='transparent'"
+              onclick="openComplaintDetails('${c.TicketNumber || ''}', ${c.HospitalID || 'null'})"
+            >
+              <td style="padding: 0.75rem; text-align: right;">${c.HospitalNameAr || c.HospitalNameEn || 'غير محدد'}</td>
+              <td style="padding: 0.75rem; text-align: right;">${c.DepartmentNameAr || c.DepartmentNameEn || 'غير محدد'}</td>
+              <td style="padding: 0.75rem; text-align: right; font-weight: bold;">${c.TicketNumber || 'غير محدد'}</td>
+              <td style="padding: 0.75rem; text-align: right;">${description || 'لا يوجد وصف'}${c.Description && c.Description.length > 80 ? '...' : ''}</td>
+            </tr>
+          `;
+        }
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        popup.innerHTML = html;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(popup);
+        currentPopup = { overlay, popup };
+
+        // إخفاء تلقائي بعد 8 ثوانٍ
+        setTimeout(() => {
+          hideUrgentPopup();
+        }, 8000);
+      }
+
+      // دالة إخفاء Pop-up
+      function hideUrgentPopup() {
+        if (currentPopup) {
+          if (currentPopup.popup) {
+            currentPopup.popup.classList.add('fadeOut');
+            setTimeout(() => {
+              if (currentPopup.popup && currentPopup.popup.parentNode) {
+                currentPopup.popup.parentNode.removeChild(currentPopup.popup);
+              }
+            }, 300);
+          }
+          if (currentPopup.overlay && currentPopup.overlay.parentNode) {
+            currentPopup.overlay.parentNode.removeChild(currentPopup.overlay);
+          }
+          currentPopup = null;
+        }
+      }
+
+      // جعل الدالة متاحة عالمياً
+      window.hideUrgentPopup = hideUrgentPopup;
+
+      // ✅ دالة فتح صفحة تفاصيل البلاغ
+      function openComplaintDetails(ticketNumber, hospitalId) {
+        if (!ticketNumber) {
+          console.error('❌ رقم التذكرة مفقود');
+          return;
+        }
+
+        // بناء المسار مع رقم التذكرة و HospitalID (إن وجد)
+        let url = `../public/complaints/history/complaint-details.html?ticket=${encodeURIComponent(ticketNumber)}`;
+        
+        if (hospitalId) {
+          url += `&hid=${hospitalId}`;
+        }
+
+        console.log('🔗 فتح تفاصيل البلاغ:', { ticket: ticketNumber, hospitalId, url });
+        
+        // الانتقال إلى صفحة التفاصيل
+        window.location.href = url;
+      }
+
+      // جعل الدالة متاحة عالمياً
+      window.openComplaintDetails = openComplaintDetails;
+
+      // ✅ جلب كل البلاغات الحرجة من جميع المستشفيات
+      async function checkUrgentAll() {
+        try {
+          const response = await fetch(`${API_BASE}/api/public/complaints/urgent-all`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.hasUrgent && data.complaints && data.complaints.length > 0) {
+            showAllUrgentPopup(data.complaints);
+            // تحديث وقت آخر فحص بأحدث بلاغ
+            if (data.complaints.length > 0) {
+              const latestComplaint = data.complaints.sort((a, b) => 
+                new Date(b.CreatedAt) - new Date(a.CreatedAt)
+              )[0];
+              lastCheckedTime = new Date(latestComplaint.CreatedAt);
+            }
+          }
+        } catch (error) {
+          console.error('❌ خطأ في جلب البلاغات الحرجة:', error);
+        }
+      }
+
+      // دالة فحص البلاغات الحرجة الجديدة
+      async function checkUrgentNew() {
+        try {
+          const response = await fetch(`${API_BASE}/api/public/complaints/urgent-all`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.hasUrgent && data.complaints && data.complaints.length > 0) {
+            // فلترة البلاغات الجديدة فقط (بعد lastCheckedTime)
+            let newComplaints = data.complaints;
+            if (lastCheckedTime) {
+              newComplaints = data.complaints.filter(c => 
+                new Date(c.CreatedAt) > lastCheckedTime
+              );
+            }
+
+            // إذا كان هناك بلاغات جديدة، اعرضها
+            if (newComplaints.length > 0) {
+              // اجلب كل البلاغات لعرضها (ليس فقط الجديدة)
+              showAllUrgentPopup(data.complaints);
+              
+              // تحديث وقت آخر فحص بأحدث بلاغ
+              const latestComplaint = data.complaints.sort((a, b) => 
+                new Date(b.CreatedAt) - new Date(a.CreatedAt)
+              )[0];
+              lastCheckedTime = new Date(latestComplaint.CreatedAt);
+            }
+          }
+        } catch (error) {
+          console.error('❌ خطأ في فحص البلاغات الحرجة الجديدة:', error);
+        }
+      }
+
+      // تهيئة النظام عند تحميل الصفحة
+      document.addEventListener('DOMContentLoaded', function() {
+        // جلب كل البلاغات الحرجة عند تحميل الصفحة
+        checkUrgentAll();
+
+        // فحص مستمر كل 10 ثوانٍ
+        checkInterval = setInterval(() => {
+          checkUrgentNew();
+        }, 10000); // 10 ثوانٍ
+      });
+
+      // تنظيف عند إغلاق الصفحة
+      window.addEventListener('beforeunload', function() {
+        if (checkInterval) {
+          clearInterval(checkInterval);
+        }
+        hideUrgentPopup();
+      });
+    })();
+  </script>
 </body>
 </html>

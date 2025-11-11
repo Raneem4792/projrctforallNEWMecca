@@ -3,11 +3,12 @@
 import express from 'express';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
+import mysql from 'mysql2/promise';
 import { getCentralPool } from '../db/centralPool.js';
 import config from '../config/multi-tenant.js';
 import { requireAuth } from '../middleware/auth.js';
 import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
-import { attachHospitalPool } from '../middleware/hospitalPool.js';
+import { attachHospitalPool, getActiveHospitals } from '../middleware/hospitalPool.js';
 import { exportComplaintsExcel, exportComplaintsPDF } from '../controllers/complaints.export.controller.js';
 
 const router = express.Router();
