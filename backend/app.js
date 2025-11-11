@@ -67,6 +67,7 @@ import archiveRoutes from './routes/archiveRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import clusterReportsRoutes from './routes/clusterReports.js';
 import reportsRoutes from './routes/reports.routes.js';
+import pressganeyRoutes from './routes/pressganeyRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -253,6 +254,7 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/improvements', improvementsRoutes); // مشاريع التحسين
 app.use('/api/archive', archiveRoutes); // ركن الأرشيف ✅
 app.use('/api/cluster-reports', clusterReportsRoutes); // بلاغات إدارة التجمع ✅
+app.use('/api/pressganey', pressganeyRoutes); // Press Ganey ✅
 
 // ✅ تقارير PDF/Excel - مع logging للتأكد
 console.log('📦 [app.js] جاري تركيب reports routes على /api/reports...');

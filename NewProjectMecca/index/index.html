@@ -209,6 +209,24 @@
           </div>
         </div>
 
+        <!-- Service 11 - تقارير برسجيني -->
+        <div id="cardPressGaney" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
+             tabindex="0" role="button" aria-label="تقارير برسجيني"
+             onclick="window.location.href='../dashboard/pressganey/list.html'" style="display:none">
+          <div class="service-icon w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <!-- أيقونة إحصاءات -->
+            <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6h16M4 10h16M4 14h10M4 18h6"/>
+            </svg>
+          </div>
+          <h3 id="service11-title" class="text-xl font-bold text-gray-900 mb-2 text-center">برسجيني (Press Ganey)</h3>
+          <p id="service11-desc" class="text-gray-600 text-center">تحليل نتائج تجربة المريض</p>
+          <div class="text-center mt-3">
+            <span id="service11-action" class="text-indigo-600 text-sm font-medium">افتح لوحة برسجيني ↗</span>
+          </div>
+        </div>
+
         <!-- Service 8 - أرشيف المرفقات -->
         <div id="cardArchive" class="card-hover bg-white rounded-xl p-7 shadow-lg border border-gray-100"
              tabindex="0" role="button" aria-label="أرشيف المرفقات"
@@ -481,6 +499,9 @@
         'service10-title': 'بلاغات إدارة التجمع',
         'service10-desc': 'عرض وفلترة البلاغات',
         'service10-action': 'افتح الصفحة ↗',
+        'service11-title': 'برسجيني (Press Ganey)',
+        'service11-desc': 'تحليل نتائج تجربة المريض',
+        'service11-action': 'افتح لوحة برسجيني ↗',
         
         // المميزات
         'why-choose-title': 'لماذا تختار نظام البلاغات؟',
@@ -563,6 +584,9 @@
         'service10-title': 'Cluster Management Complaints',
         'service10-desc': 'View and filter complaints',
         'service10-action': 'Open page ↗',
+        'service11-title': 'Press Ganey',
+        'service11-desc': 'Patient experience results analysis',
+        'service11-action': 'Open Press Ganey Dashboard ↗',
         
         // المميزات
         'why-choose-title': 'Why Choose Our Complaint System?',
@@ -673,6 +697,7 @@
     const cardImprovements = $('#cardImprovements');
     const cardImports = $('#cardImports');
     const cardMystery = $('#cardMystery');
+    const cardPressGaney = $('#cardPressGaney');
     const cardArchive = $('#cardArchive');
     const cardClusterCreate = $('#cardClusterCreate');
     const cardClusterList = $('#cardClusterList');
@@ -704,7 +729,7 @@
 
         if (isClusterAdmin) {
           // أظهر كل شيء (ما عدا الأرشيف - يعتمد على الصلاحيات)
-          [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardClusterCreate, cardClusterList]
+          [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardPressGaney, cardClusterCreate, cardClusterList]
             .forEach(el => el && (el.style.display = ''));
           if (cardAdmin) cardAdmin.classList.remove('hidden');
           
@@ -744,6 +769,11 @@
             console.log('🔒 تم إخفاء بطاقة الزائر السري (لا توجد صلاحية MYSTERY_MODULE)');
           }
         }
+
+        // 🔒 التحكم في ظهور بطاقة برسجيني حسب الصلاحيات
+        const pressGaney = payload.pressganey || {};
+        const canSeePressGaney = pressGaney.view || pressGaney.module || isClusterAdmin || adminPanel;
+        if (cardPressGaney) cardPressGaney.style.display = canSeePressGaney ? '' : 'none';
 
         // تقديم بلاغ / متابعة / السجل
         if (payload.canSubmit && cardSubmit) cardSubmit.style.display = '';
@@ -836,7 +866,7 @@
           const isClusterAdmin = (userData.RoleID === 1) || (userData.scope === 'central') || (userData.HospitalID == null);
           if (isClusterAdmin) {
             // مدير التجمع: أظهر كل شيء (ما عدا الأرشيف - يعتمد على الصلاحيات)
-            [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardClusterCreate, cardClusterList]
+            [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardPressGaney, cardClusterCreate, cardClusterList]
               .forEach(el => el && (el.style.display = ''));
             if (cardAdmin) cardAdmin.classList.remove('hidden');
             

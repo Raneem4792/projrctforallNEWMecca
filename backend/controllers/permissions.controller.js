@@ -166,8 +166,22 @@ export async function getUserPermissions(req, res) {
         // ===== صلاحيات الأرشيف =====
         archiveView:   has('ARCHIVE_VIEW'),
         archiveUpload: has('ARCHIVE_UPLOAD'),
+        // ===== صلاحيات Press Ganey =====
+        pressganey: {
+          view: has('PRESSGANEY_VIEW'),
+          module: has('PRESSGANEY_MODULE'),
+          import: has('PRESSGANEY_IMPORT')
+        },
         // ===== صلاحيات تصدير البلاغات =====
-        complaintsExport: has('COMPLAINTS_EXPORT')
+        complaintsExport: has('COMPLAINTS_EXPORT'),
+        // ===== صلاحيات إدارة تصنيفات البلاغات الرئيسية =====
+        complaintTypeCreate: has('COMPLAINT_TYPE_CREATE'),
+        complaintTypeEdit: has('COMPLAINT_TYPE_EDIT'),
+        complaintTypeDelete: has('COMPLAINT_TYPE_DELETE'),
+        // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
+        complaintSubtypeCreate: has('COMPLAINT_SUBTYPE_CREATE'),
+        complaintSubtypeEdit: has('COMPLAINT_SUBTYPE_EDIT'),
+        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE')
       }
     });
   } catch (e) {
@@ -177,6 +191,7 @@ export async function getUserPermissions(req, res) {
 
 // حفظ صلاحيات مستخدم معيّن
 export async function saveUserPermissions(req, res) {
+  let conn = null;
   try {
     const hid = resolveHid(req);
     const targetUserId = Number(req.params.userId);
@@ -197,8 +212,18 @@ export async function saveUserPermissions(req, res) {
       clusterSubmit, clusterView, clusterDetails, clusterReply, clusterStatus,
       // صلاحيات الأرشيف
       archiveView, archiveUpload,
+      // صلاحيات Press Ganey
+      pressganeyView, pressganeyModule, pressganeyImport,
       // صلاحيات تصدير البلاغات
-      complaintsExport
+      complaintsExport,
+      // صلاحيات إدارة تصنيفات البلاغات الرئيسية
+      complaintTypeCreate,
+      complaintTypeEdit,
+      complaintTypeDelete,
+      // صلاحيات إدارة تصنيفات البلاغات الفرعية
+      complaintSubtypeCreate,
+      complaintSubtypeEdit,
+      complaintSubtypeDelete
     } = req.body;
     
     console.log('📥 Received archive permissions:', {
@@ -209,7 +234,38 @@ export async function saveUserPermissions(req, res) {
     });
 
     const tenant = await getTenantPoolByHospitalId(hid);
-    const conn = await tenant.getConnection();
+    conn = await tenant.getConnection();
+
+    // دالة إنشاء الصلاحية إذا لم تكن موجودة
+    const ensurePermission = async (key, nameAr, category = 'complaints') => {
+      try {
+        const [existing] = await conn.query(
+          'SELECT PermissionKey FROM permissions WHERE PermissionKey = ?',
+          [key]
+        );
+        if (existing.length === 0) {
+          await conn.query(
+            'INSERT INTO permissions (PermissionKey, NameAr, Category) VALUES (?, ?, ?)',
+            [key, nameAr, category]
+          );
+          console.log(`✅ تم إنشاء الصلاحية: ${key} (${nameAr})`);
+        }
+      } catch (err) {
+        console.warn(`⚠️ تحذير: فشل إنشاء الصلاحية ${key}:`, err.message);
+      }
+    };
+
+    // التأكد من وجود جميع الصلاحيات الجديدة (قبل بدء المعاملة)
+    await ensurePermission('COMPLAINTS_EXPORT', 'تصدير بلاغات', 'complaints');
+    await ensurePermission('COMPLAINT_TYPE_CREATE', 'إضافة تصنيف بلاغ جديد', 'complaints');
+    await ensurePermission('COMPLAINT_TYPE_EDIT', 'تعديل تصنيف بلاغ', 'complaints');
+    await ensurePermission('COMPLAINT_TYPE_DELETE', 'حذف تصنيف بلاغ', 'complaints');
+    await ensurePermission('COMPLAINT_SUBTYPE_CREATE', 'إضافة تصنيف فرعي جديد', 'complaints');
+    await ensurePermission('COMPLAINT_SUBTYPE_EDIT', 'تعديل تصنيف فرعي', 'complaints');
+    await ensurePermission('COMPLAINT_SUBTYPE_DELETE', 'حذف تصنيف فرعي', 'complaints');
+
+    // بدء المعاملة بعد التأكد من وجود الصلاحيات
+    await conn.beginTransaction();
 
     const upsert = async (key, scope=null) => {
       await conn.query(`
@@ -224,8 +280,6 @@ export async function saveUserPermissions(req, res) {
         WHERE UserID=? AND HospitalID=? AND PermissionKey=?
       `, [targetUserId, hid, key]);
     };
-
-    await conn.beginTransaction();
 
     // مفاتيح بدون نطاق
     submit ? await upsert('COMPLAINT_SUBMIT')      : await drop('COMPLAINT_SUBMIT');
@@ -325,8 +379,23 @@ export async function saveUserPermissions(req, res) {
     archiveUpload ? await upsert('ARCHIVE_UPLOAD') : await drop('ARCHIVE_UPLOAD');
     console.log('✅ Archive permissions saved successfully');
     
+    // صلاحيات Press Ganey
+    pressganeyView   ? await upsert('PRESSGANEY_VIEW')   : await drop('PRESSGANEY_VIEW');
+    pressganeyModule ? await upsert('PRESSGANEY_MODULE') : await drop('PRESSGANEY_MODULE');
+    pressganeyImport ? await upsert('PRESSGANEY_IMPORT') : await drop('PRESSGANEY_IMPORT');
+    
     // صلاحيات تصدير البلاغات
     complaintsExport ? await upsert('COMPLAINTS_EXPORT') : await drop('COMPLAINTS_EXPORT');
+    
+    // صلاحيات إدارة تصنيفات البلاغات الرئيسية
+    complaintTypeCreate ? await upsert('COMPLAINT_TYPE_CREATE') : await drop('COMPLAINT_TYPE_CREATE');
+    complaintTypeEdit ? await upsert('COMPLAINT_TYPE_EDIT') : await drop('COMPLAINT_TYPE_EDIT');
+    complaintTypeDelete ? await upsert('COMPLAINT_TYPE_DELETE') : await drop('COMPLAINT_TYPE_DELETE');
+    
+    // صلاحيات إدارة تصنيفات البلاغات الفرعية
+    complaintSubtypeCreate ? await upsert('COMPLAINT_SUBTYPE_CREATE') : await drop('COMPLAINT_SUBTYPE_CREATE');
+    complaintSubtypeEdit ? await upsert('COMPLAINT_SUBTYPE_EDIT') : await drop('COMPLAINT_SUBTYPE_EDIT');
+    complaintSubtypeDelete ? await upsert('COMPLAINT_SUBTYPE_DELETE') : await drop('COMPLAINT_SUBTYPE_DELETE');
 
     // نطاق السجل
     if (historyScope) {
@@ -444,7 +513,15 @@ export async function getMyPermissions(req, res) {
             archiveView:   true,
             archiveUpload: true,
             // ===== صلاحيات تصدير البلاغات =====
-            complaintsExport: true
+            complaintsExport: true,
+            // ===== صلاحيات إدارة تصنيفات البلاغات الرئيسية =====
+            complaintTypeCreate: true,
+            complaintTypeEdit: true,
+            complaintTypeDelete: true,
+            // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
+            complaintSubtypeCreate: true,
+            complaintSubtypeEdit: true,
+            complaintSubtypeDelete: true
           }
         });
         return;
@@ -543,7 +620,15 @@ export async function getMyPermissions(req, res) {
         archiveView:   has('ARCHIVE_VIEW'),
         archiveUpload: has('ARCHIVE_UPLOAD'),
         // ===== صلاحيات تصدير البلاغات =====
-        complaintsExport: has('COMPLAINTS_EXPORT')
+        complaintsExport: has('COMPLAINTS_EXPORT'),
+        // ===== صلاحيات إدارة تصنيفات البلاغات الرئيسية =====
+        complaintTypeCreate: has('COMPLAINT_TYPE_CREATE'),
+        complaintTypeEdit: has('COMPLAINT_TYPE_EDIT'),
+        complaintTypeDelete: has('COMPLAINT_TYPE_DELETE'),
+        // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
+        complaintSubtypeCreate: has('COMPLAINT_SUBTYPE_CREATE'),
+        complaintSubtypeEdit: has('COMPLAINT_SUBTYPE_EDIT'),
+        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE')
       };
 
       // لوج للتشخيص - قبل إرسال الرد
@@ -659,7 +744,15 @@ export async function getMyPermissions(req, res) {
         archiveView:   has('ARCHIVE_VIEW'),
         archiveUpload: has('ARCHIVE_UPLOAD'),
         // ===== صلاحيات تصدير البلاغات =====
-        complaintsExport: has('COMPLAINTS_EXPORT')
+        complaintsExport: has('COMPLAINTS_EXPORT'),
+        // ===== صلاحيات إدارة تصنيفات البلاغات الرئيسية =====
+        complaintTypeCreate: has('COMPLAINT_TYPE_CREATE'),
+        complaintTypeEdit: has('COMPLAINT_TYPE_EDIT'),
+        complaintTypeDelete: has('COMPLAINT_TYPE_DELETE'),
+        // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
+        complaintSubtypeCreate: has('COMPLAINT_SUBTYPE_CREATE'),
+        complaintSubtypeEdit: has('COMPLAINT_SUBTYPE_EDIT'),
+        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE')
       };
 
       // لوج للتشخيص - قبل إرسال الرد

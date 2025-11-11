@@ -476,13 +476,15 @@ async function loadTypesAndGenders() {
     window._types = types;
     fillSelectComplex(els.complaintType, types.map(t => ({ value: t.id, label: t.nameAr })), true);
 
-    // 👈 نضيف خيار "تصنيف جديد"
-    if (els.complaintType) {
-      const newOpt = document.createElement('option');
-      newOpt.value = '__NEW__';
-      newOpt.textContent = '+ تصنيف جديد...';
-      els.complaintType.appendChild(newOpt);
-    }
+    // 👈 نضيف خيار "تصنيف جديد" فقط إذا كانت الصلاحية موجودة
+    // سنتحقق من الصلاحية بعد تحميل الصفحة
+    await checkNewTypePermission();
+    
+    // التحقق من صلاحيات التعديل والحذف للتصنيف الرئيسيimage.png
+    await checkEditDeletePermissions();
+    
+    // التحقق من صلاحيات التعديل والحذف للتصنيف الفرعي
+    await checkEditDeleteSubtypePermissions();
 
     // عند تغيير التصنيف الرئيسي، تحميل الفرعي أو فتح إضافة جديد
     if (els.complaintType) {
@@ -537,11 +539,8 @@ async function loadTypesAndGenders() {
           if (els.subType) {
             els.subType.disabled = false;
 
-            // 👉 نضيف خيار "تصنيف فرعي جديد"
-            const newOpt = document.createElement('option');
-            newOpt.value = '__NEW_SUB__';
-            newOpt.textContent = '+ تصنيف فرعي جديد...';
-            els.subType.appendChild(newOpt);
+            // 👉 نضيف خيار "تصنيف فرعي جديد" فقط إذا كانت الصلاحية موجودة
+            await checkNewSubtypePermission();
           }
 
           toggleNewSubTypeBox(false);
@@ -1593,6 +1592,431 @@ async function loadDepartmentsForHospital(hospitalId) {
   }
 }
 
+// دالة التحقق من صلاحية إضافة تصنيف جديد
+async function checkNewTypePermission() {
+  try {
+    const token = localStorage.getItem('token');
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+
+    // التحقق من كون المستخدم مدير تجمع أولاً
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        // التحقق من كون المستخدم مدير تجمع
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        console.error('❌ خطأ في قراءة التوكن:', error);
+      }
+    }
+
+    // إذا كان مدير تجمع، نعرض الخيار مباشرة
+    if (isClusterManager) {
+      if (els.complaintType) {
+        const newOpt = document.createElement('option');
+        newOpt.value = '__NEW__';
+        newOpt.textContent = '+ تصنيف جديد...';
+        els.complaintType.appendChild(newOpt);
+      }
+      console.log('✅ مدير التجمع - عرض خيار إضافة تصنيف جديد');
+      return;
+    }
+
+    // للمستخدمين الآخرين، نتحقق من الصلاحية
+    const res = await fetch(`${API_BASE}/api/permissions/me`, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+
+    const json = await res.json();
+    
+    if (!json.ok) {
+      console.warn('⚠️ [New Type Permission] API response not ok:', json);
+      return; // نخفي الخيار
+    }
+
+    const perms = json.data || {};
+    const canCreateType = perms.complaintTypeCreate;
+    
+    console.log('🔍 [New Type Permission] complaintTypeCreate value:', canCreateType);
+
+    if (canCreateType && els.complaintType) {
+      const newOpt = document.createElement('option');
+      newOpt.value = '__NEW__';
+      newOpt.textContent = '+ تصنيف جديد...';
+      els.complaintType.appendChild(newOpt);
+      console.log('✅ [New Type Permission] Has permission - showing option');
+    } else {
+      console.log('❌ [New Type Permission] No permission - hiding option');
+    }
+  } catch (err) {
+    console.error('❌ فشل التحقق من صلاحيات إضافة تصنيف جديد:', err);
+    // في حالة الخطأ، نخفي الخيار للسلامة (إلا إذا كان مدير تجمع)
+    const token = localStorage.getItem('token');
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        // في حالة الخطأ، نخفي الخيار
+      }
+    }
+
+    if (isClusterManager && els.complaintType) {
+      // مدير التجمع - نعرض الخيار حتى في حالة الخطأ
+      const newOpt = document.createElement('option');
+      newOpt.value = '__NEW__';
+      newOpt.textContent = '+ تصنيف جديد...';
+      els.complaintType.appendChild(newOpt);
+    }
+  }
+}
+
+// دالة التحقق من صلاحيات التعديل والحذف
+async function checkEditDeletePermissions() {
+  try {
+    const token = localStorage.getItem('token');
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+
+    // التحقق من كون المستخدم مدير تجمع أولاً
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        console.error('❌ خطأ في قراءة التوكن:', error);
+      }
+    }
+
+    // إذا كان مدير تجمع، نعرض الأزرار مباشرة
+    if (isClusterManager) {
+      if (manageTypeEls.editType) manageTypeEls.editType.style.display = 'inline';
+      if (manageTypeEls.deleteType) manageTypeEls.deleteType.style.display = 'inline';
+      console.log('✅ مدير التجمع - عرض أزرار التعديل والحذف');
+      return;
+    }
+
+    // للمستخدمين الآخرين، نتحقق من الصلاحية
+    const res = await fetch(`${API_BASE}/api/permissions/me`, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+
+    const json = await res.json();
+    
+    if (!json.ok) {
+      console.warn('⚠️ [Edit/Delete Permission] API response not ok:', json);
+      // نخفي الأزرار
+      if (manageTypeEls.editType) manageTypeEls.editType.style.display = 'none';
+      if (manageTypeEls.deleteType) manageTypeEls.deleteType.style.display = 'none';
+      return;
+    }
+
+    const perms = json.data || {};
+    const canEdit = perms.complaintTypeEdit;
+    const canDelete = perms.complaintTypeDelete;
+    
+    console.log('🔍 [Edit/Delete Permission] complaintTypeEdit:', canEdit, 'complaintTypeDelete:', canDelete);
+
+    // إظهار/إخفاء زر التعديل
+    if (manageTypeEls.editType) {
+      manageTypeEls.editType.style.display = canEdit ? 'inline' : 'none';
+    }
+    
+    // إظهار/إخفاء زر الحذف
+    if (manageTypeEls.deleteType) {
+      manageTypeEls.deleteType.style.display = canDelete ? 'inline' : 'none';
+    }
+
+    if (canEdit || canDelete) {
+      console.log('✅ [Edit/Delete Permission] Has permissions - showing buttons');
+    } else {
+      console.log('❌ [Edit/Delete Permission] No permissions - hiding buttons');
+    }
+  } catch (err) {
+    console.error('❌ فشل التحقق من صلاحيات التعديل والحذف:', err);
+    // في حالة الخطأ، نخفي الأزرار للسلامة (إلا إذا كان مدير تجمع)
+    const token = localStorage.getItem('token');
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        // في حالة الخطأ، نخفي الأزرار
+      }
+    }
+
+    if (isClusterManager) {
+      // مدير التجمع - نعرض الأزرار حتى في حالة الخطأ
+      if (manageTypeEls.editType) manageTypeEls.editType.style.display = 'inline';
+      if (manageTypeEls.deleteType) manageTypeEls.deleteType.style.display = 'inline';
+    } else {
+      // مستخدم عادي - نخفي الأزرار
+      if (manageTypeEls.editType) manageTypeEls.editType.style.display = 'none';
+      if (manageTypeEls.deleteType) manageTypeEls.deleteType.style.display = 'none';
+    }
+  }
+}
+
+// دالة التحقق من صلاحية إضافة تصنيف فرعي جديد
+async function checkNewSubtypePermission() {
+  try {
+    const token = localStorage.getItem('token');
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+
+    // التحقق من كون المستخدم مدير تجمع أولاً
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        console.error('❌ خطأ في قراءة التوكن:', error);
+      }
+    }
+
+    // إذا كان مدير تجمع، نعرض الخيار مباشرة
+    if (isClusterManager) {
+      if (els.subType) {
+        const newOpt = document.createElement('option');
+        newOpt.value = '__NEW_SUB__';
+        newOpt.textContent = '+ تصنيف فرعي جديد...';
+        els.subType.appendChild(newOpt);
+      }
+      console.log('✅ مدير التجمع - عرض خيار إضافة تصنيف فرعي جديد');
+      return;
+    }
+
+    // للمستخدمين الآخرين، نتحقق من الصلاحية
+    const res = await fetch(`${API_BASE}/api/permissions/me`, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+
+    const json = await res.json();
+    
+    if (!json.ok) {
+      console.warn('⚠️ [New Subtype Permission] API response not ok:', json);
+      return; // نخفي الخيار
+    }
+
+    const perms = json.data || {};
+    const canCreateSubtype = perms.complaintSubtypeCreate;
+    
+    console.log('🔍 [New Subtype Permission] complaintSubtypeCreate value:', canCreateSubtype);
+
+    if (canCreateSubtype && els.subType) {
+      const newOpt = document.createElement('option');
+      newOpt.value = '__NEW_SUB__';
+      newOpt.textContent = '+ تصنيف فرعي جديد...';
+      els.subType.appendChild(newOpt);
+      console.log('✅ [New Subtype Permission] Has permission - showing option');
+    } else {
+      console.log('❌ [New Subtype Permission] No permission - hiding option');
+    }
+  } catch (err) {
+    console.error('❌ فشل التحقق من صلاحيات إضافة تصنيف فرعي جديد:', err);
+    // في حالة الخطأ، نخفي الخيار للسلامة (إلا إذا كان مدير تجمع)
+    const token = localStorage.getItem('token');
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        // في حالة الخطأ، نخفي الخيار
+      }
+    }
+
+    if (isClusterManager && els.subType) {
+      // مدير التجمع - نعرض الخيار حتى في حالة الخطأ
+      const newOpt = document.createElement('option');
+      newOpt.value = '__NEW_SUB__';
+      newOpt.textContent = '+ تصنيف فرعي جديد...';
+      els.subType.appendChild(newOpt);
+    }
+  }
+}
+
+// دالة التحقق من صلاحيات التعديل والحذف للتصنيف الفرعي
+async function checkEditDeleteSubtypePermissions() {
+  try {
+    const token = localStorage.getItem('token');
+    const API_BASE = window.API_BASE || 'http://localhost:3001';
+
+    // التحقق من كون المستخدم مدير تجمع أولاً
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        console.error('❌ خطأ في قراءة التوكن:', error);
+      }
+    }
+
+    // إذا كان مدير تجمع، نعرض الأزرار مباشرة
+    if (isClusterManager) {
+      if (manageTypeEls.editSubType) manageTypeEls.editSubType.style.display = 'inline';
+      if (manageTypeEls.deleteSubType) manageTypeEls.deleteSubType.style.display = 'inline';
+      console.log('✅ مدير التجمع - عرض أزرار التعديل والحذف للتصنيف الفرعي');
+      return;
+    }
+
+    // للمستخدمين الآخرين، نتحقق من الصلاحية
+    const res = await fetch(`${API_BASE}/api/permissions/me`, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+
+    const json = await res.json();
+    
+    if (!json.ok) {
+      console.warn('⚠️ [Edit/Delete Subtype Permission] API response not ok:', json);
+      // نخفي الأزرار
+      if (manageTypeEls.editSubType) manageTypeEls.editSubType.style.display = 'none';
+      if (manageTypeEls.deleteSubType) manageTypeEls.deleteSubType.style.display = 'none';
+      return;
+    }
+
+    const perms = json.data || {};
+    const canEdit = perms.complaintSubtypeEdit;
+    const canDelete = perms.complaintSubtypeDelete;
+    
+    console.log('🔍 [Edit/Delete Subtype Permission] complaintSubtypeEdit:', canEdit, 'complaintSubtypeDelete:', canDelete);
+
+    // إظهار/إخفاء زر التعديل
+    if (manageTypeEls.editSubType) {
+      manageTypeEls.editSubType.style.display = canEdit ? 'inline' : 'none';
+    }
+    
+    // إظهار/إخفاء زر الحذف
+    if (manageTypeEls.deleteSubType) {
+      manageTypeEls.deleteSubType.style.display = canDelete ? 'inline' : 'none';
+    }
+
+    if (canEdit || canDelete) {
+      console.log('✅ [Edit/Delete Subtype Permission] Has permissions - showing buttons');
+    } else {
+      console.log('❌ [Edit/Delete Subtype Permission] No permissions - hiding buttons');
+    }
+  } catch (err) {
+    console.error('❌ فشل التحقق من صلاحيات التعديل والحذف للتصنيف الفرعي:', err);
+    // في حالة الخطأ، نخفي الأزرار للسلامة (إلا إذا كان مدير تجمع)
+    const token = localStorage.getItem('token');
+    let isClusterManager = false;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          UserID: payload.uid || payload.userId,
+          RoleID: payload.roleId || payload.role,
+          HospitalID: payload.hospitalId || payload.hosp,
+          Permissions: payload.permissions || []
+        };
+        const isCluster = user.RoleID === 1 || 
+                          user.Scope === 'central' || 
+                          user.Scope === 'cluster' ||
+                          (user.Permissions || []).includes('VIEW_ALL_HOSPITALS');
+        isClusterManager = isCluster;
+      } catch (error) {
+        // في حالة الخطأ، نخفي الأزرار
+      }
+    }
+
+    if (isClusterManager) {
+      // مدير التجمع - نعرض الأزرار حتى في حالة الخطأ
+      if (manageTypeEls.editSubType) manageTypeEls.editSubType.style.display = 'inline';
+      if (manageTypeEls.deleteSubType) manageTypeEls.deleteSubType.style.display = 'inline';
+    } else {
+      // مستخدم عادي - نخفي الأزرار
+      if (manageTypeEls.editSubType) manageTypeEls.editSubType.style.display = 'none';
+      if (manageTypeEls.deleteSubType) manageTypeEls.deleteSubType.style.display = 'none';
+    }
+  }
+}
+
 // ====== بدء التشغيل ======
 document.addEventListener('DOMContentLoaded', async () => {
   try {
@@ -1663,6 +2087,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (manageTypeEls.deleteSubType) {
       manageTypeEls.deleteSubType.addEventListener('click', deleteComplaintSubType);
     }
+    
+    // التحقق من صلاحيات التعديل والحذف
+    await checkEditDeletePermissions();
     
     // معاينة الأولوية المباشرة
     setupPriorityPreview();

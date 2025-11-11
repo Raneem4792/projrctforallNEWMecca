@@ -1273,3 +1273,51 @@ VALUES ('COMPLAINT_TRANSFER_HOSPITAL', 'تحويل البلاغ بين المس�
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
 VALUES ('COMPLAINTS_EXPORT', 'تصدير بلاغات', 'complaints');
+
+
+
+
+-- إضافة صلاحية إنشاء تصنيف جديد للبلاغات
+-- قم بتشغيل هذا السكريبت في قاعدة بيانات كل مستشفى
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
+VALUES ('COMPLAINT_TYPE_CREATE', 'إضافة تصنيف بلاغ جديد', 'complaints');
+
+-- إضافة صلاحيات تعديل وحذف تصنيفات البلاغات
+-- قم بتشغيل هذا السكريبت في قاعدة بيانات كل مستشفى
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
+VALUES 
+('COMPLAINT_TYPE_EDIT', 'تعديل تصنيف بلاغ', 'complaints'),
+('COMPLAINT_TYPE_DELETE', 'حذف تصنيف بلاغ', 'complaints');
+
+
+
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category)
+VALUES 
+('COMPLAINT_SUBTYPE_CREATE', 'إضافة تصنيف فرعي جديد', 'complaints'),
+('COMPLAINT_SUBTYPE_EDIT', 'تعديل تصنيف فرعي', 'complaints'),
+('COMPLAINT_SUBTYPE_DELETE', 'حذف تصنيف فرعي', 'complaints');
+
+CREATE TABLE pressganey_data (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  department_key VARCHAR(100),
+  department_name_ar VARCHAR(255),
+  department_name_en VARCHAR(255),
+  question_code VARCHAR(100),
+  question_text_en VARCHAR(500),
+  question_text_ar VARCHAR(500),
+  satisfied_count INT,
+  not_satisfied_count INT,
+  mean_score DECIMAL(6,2),
+  diff DECIMAL(6,2),
+  quarter VARCHAR(10),
+  year INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NULL
+);
+
+ALTER TABLE pressganey_data
+ADD COLUMN HospitalID INT NULL AFTER id;
+

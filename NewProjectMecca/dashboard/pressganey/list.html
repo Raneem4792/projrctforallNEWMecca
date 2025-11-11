@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مؤشر برسجيني - تجربة المريض</title>
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme:{ extend:{ colors:{ primary:'#002B5B' } } } }
+  </script>
+
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+
+  <!-- أيقونات -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+  <!-- مكتبات التقارير -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    // جعل XLSX متاحاً كمتغير عام
+    window.XLSX = XLSX;
+  </script>
+
+  <!-- هوية مشروعك -->
+  <link rel="stylesheet" href="../../public/assets/css/styles.css" />
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header - شريط التنقل العلوي -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo - الشعار -->
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        
+        <!-- Navigation - قائمة التنقل -->
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" id="nav-dashboard" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="../../public/profile.html" id="nav-profile" class="text-white hover:text-blue-200 transition-colors hidden">ملفي الشخصي</a>
+          <a href="../../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
+          <a href="../../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
+          <a href="../../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
+        </nav>
+        
+        <!-- Mobile menu button - زر القائمة للموبايل -->
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-20 max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-blue-900"> مؤشر PressGaney</h1>
+      <div class="flex gap-3">
+        <button id="importExcelBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+          <i class="fas fa-file-excel"></i> استيراد إكسل
+        </button>
+        <button id="saveToDBBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+          <i class="fas fa-save"></i> حفظ في قاعدة البيانات
+        </button>
+      </div>
+    </div>
+
+    <!-- 🔹 ملخص -->
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white shadow rounded-lg p-6 text-center">
+        <p class="text-gray-500 mb-2">متوسط نتيجة الرضا العام</p>
+        <p id="avgScore" class="text-4xl text-green-600 font-bold">0%</p>
+      </div>
+      <div class="bg-white shadow rounded-lg p-6 text-center">
+        <p class="text-gray-500 mb-2">إجمالي الأقسام المشمولة</p>
+        <p id="totalDepartments" class="text-4xl text-blue-600 font-bold">0</p>
+      </div>
+    </div>
+
+    <!-- 🔹 رسم بياني دائري - نسبة الرضا العام -->
+    <section class="bg-white shadow rounded-lg p-6 mb-8">
+      <h2 class="text-lg font-semibold mb-4 text-center text-gray-700">نسبة الرضا العام للمستشفى</h2>
+      <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-green-500"></div>
+            <span class="text-gray-700">راضي</span>
+            <span id="satisfiedPercent" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-red-500"></div>
+            <span class="text-gray-700">غير راضي</span>
+            <span id="notSatisfiedPercent" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+        <div class="w-64 h-64">
+          <canvas id="pressganeyChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🔹 بطاقات الأقسام -->
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+      <!-- بطاقة العيادات الخارجية -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">العيادات الخارجية</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="outpatientSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="outpatientNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة الأشعة -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">الأشعة</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="radiologySatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="radiologyNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة الطب المنزلي -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">الطب المنزلي</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="homeMedicineSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="homeMedicineNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔹 بطاقات الأقسام الإضافية -->
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+      <!-- بطاقة أقسام التنويم -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">أقسام التنويم</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="inpatientSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="inpatientNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة الطوارئ مع رسم بياني -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">الطوارئ</h3>
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700 text-sm">راضي</span>
+              <span id="emergencySatisfied" class="font-bold text-gray-800 text-sm">0%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700 text-sm">غير راضي</span>
+              <span id="emergencyNotSatisfied" class="font-bold text-gray-800 text-sm">0%</span>
+            </div>
+          </div>
+          <div class="w-32 h-32">
+            <canvas id="emergencyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة الأسنان -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">الأسنان</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="dentistrySatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="dentistryNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة إضافة قسم جديد -->
+      <div class="bg-blue-50 border-2 border-dashed border-blue-400 shadow rounded-lg p-6 cursor-pointer hover:bg-blue-100 transition-colors flex flex-col items-center justify-center min-h-[180px]">
+        <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mb-3">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-blue-600 mb-1">إضافة قسم جديد</h3>
+        <p class="text-sm text-blue-500 text-center">اضغط لإضافة قسم جديد</p>
+      </div>
+
+      <!-- بطاقة بنك الدم -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">بنك الدم</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="bloodBankSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="bloodBankNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بطاقة الوفيات -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">الوفيات</h3>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              <span class="text-gray-700">راضي</span>
+            </div>
+            <span id="mortalitySatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div>
+              <span class="text-gray-700">غير راضي</span>
+            </div>
+            <span id="mortalityNotSatisfied" class="font-bold text-gray-800">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔹 جدول مقارنة الأرباع -->
+    <section class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-xl font-bold mb-2 text-center text-gray-800">مقارنة إحصائيات مؤشر الرضا بين أرباع السنة</h2>
+      <p class="text-sm text-gray-600 mb-4 text-center">يُظهر الجدول الفروقات بين نتائج الأرباع لكل قسم، مع إبراز الأقسام التي تحتاج إلى خطة تحسينية.</p>
+      <div class="overflow-x-auto">
+        <table class="min-w-full border text-sm text-center" id="pressganeyTable">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="border p-2 font-semibold">القسم</th>
+              <th class="border p-2 font-semibold">السؤال</th>
+              <th class="border p-2 font-semibold">الربع الأول</th>
+              <th class="border p-2 font-semibold">الربع الثاني</th>
+              <th class="border p-2 font-semibold">الربع الثالث</th>
+              <th class="border p-2 font-semibold">الربع الرابع</th>
+              <th class="border p-2 font-semibold">نسبة التغير في آخر ربع</th>
+              <th class="border p-2 font-semibold">المطلوب</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="8" class="p-3">لا توجد بيانات بعد</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+    <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <!-- نظام حماية الصفحات -->
+  <script src="../../public/assets/js/auth-check.js"></script>
+
+  <script src="../../public/assets/js/pressganey.js"></script>
+</body>
+</html>
+
