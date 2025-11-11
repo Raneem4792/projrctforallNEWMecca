@@ -84,29 +84,56 @@ async function fetchLandingStats() {
     const data = await res.json();
     console.log('[LandingStats] Loaded:', data);
 
-    // 1) عدد البلاغات المعالَجة
-    const stat1 = document.querySelector('.counter[data-stat="complaints-processed"]');
-    if (stat1 && data.totalComplaintsProcessed != null) {
-      const value = Number(data.totalComplaintsProcessed) || 0;
-      stat1.setAttribute('data-target', value);
-      stat1.textContent = '0';
-    }
+    const setCounterValue = ({ selector, value: rawValue, suffix = '', descSelector, descTemplate }) => {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      const numeric = Number(rawValue);
+      const value = Number.isFinite(numeric) ? numeric : 0;
+      el.setAttribute('data-target', value);
+      el.dataset.animate = 'false';
+      el.dataset.suffix = suffix;
+      const formatted = `${value.toLocaleString('ar-SA')}${suffix}`;
+      el.textContent = formatted;
 
-    // 2) عدد المستفيدين النشطين
-    const stat2 = document.querySelector('.counter[data-stat="active-beneficiaries"]');
-    if (stat2 && data.activeBeneficiaries != null) {
-      const value = Number(data.activeBeneficiaries) || 0;
-      stat2.setAttribute('data-target', value);
-      stat2.textContent = '0';
-    }
+      if (descSelector) {
+        const descEl = document.querySelector(descSelector);
+        if (descEl) {
+          descEl.textContent = typeof descTemplate === 'function'
+            ? descTemplate(formatted, value)
+            : descTemplate || formatted;
+        }
+      }
+    };
 
-    // 3) نسبة تغطية المستشفيات
-    const stat3 = document.querySelector('.counter[data-stat="hospital-coverage"]');
-    if (stat3 && data.hospitalCoveragePercent != null) {
-      const value = Number(data.hospitalCoveragePercent) || 0;
-      stat3.setAttribute('data-target', value);
-      stat3.textContent = '0';
-    }
+    const results = {
+      totalComplaintsProcessed: data.totalComplaintsProcessed,
+      activeBeneficiaries: data.activeBeneficiaries,
+      hospitalCoveragePercent: data.hospitalCoveragePercent
+    };
+
+    console.log('[LandingStats] Parsed values:', results);
+
+    setCounterValue({
+      selector: '.counter[data-stat="complaints-processed"]',
+      value: results.totalComplaintsProcessed,
+      descSelector: '#stat1-desc',
+      descTemplate: (formatted) => `تم معالجة ${formatted} بلاغ`
+    });
+
+    setCounterValue({
+      selector: '.counter[data-stat="active-beneficiaries"]',
+      value: results.activeBeneficiaries,
+      descSelector: '#stat2-desc',
+      descTemplate: (formatted) => `${formatted} مستفيد نشط`
+    });
+
+    setCounterValue({
+      selector: '.counter[data-stat="hospital-coverage"]',
+      value: results.hospitalCoveragePercent,
+      suffix: '%',
+      descSelector: '#stat3-desc',
+      descTemplate: (formatted) => `تغطية ${formatted} للمستشفيات`
+    });
   } catch (err) {
     console.error('[LandingStats] فشل جلب الإحصائيات:', err);
     // في حالة الخطأ نترك القيم الافتراضية الموجودة في الـ HTML
@@ -159,7 +186,8 @@ function initializeCounterObserver() {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const target = parseInt(entry.target.getAttribute('data-target'));
-        if (target && !entry.target.classList.contains('animated')) {
+        const shouldAnimate = entry.target.dataset.animate !== 'false';
+        if (target && shouldAnimate && !entry.target.classList.contains('animated')) {
           entry.target.classList.add('animated');
           animateCounter(entry.target, target);
         }

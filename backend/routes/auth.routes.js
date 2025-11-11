@@ -500,6 +500,11 @@ router.get('/me-permissions', async (req, res) => {
         create: false,
         edit: false,
         delete: false
+      },
+      pressganey: {
+        module: false,
+        view: false,
+        import: false
       }
     };
 
@@ -581,6 +586,12 @@ router.get('/me-permissions', async (req, res) => {
           importDepartments: true,
           importMystery: true,
           import937: true,
+          // صلاحيات منصة برسجيني - مدير التجمع له الكل
+          pressganey: {
+            module: true,
+            view: true,
+            import: true
+          },
           // صلاحيات بلاغات إدارة التجمع - مدير التجمع له الكل
           clusterSubmit: true,
           clusterView: true,
@@ -679,6 +690,12 @@ router.get('/me-permissions', async (req, res) => {
           importDepartments: hasPermission('IMPORTS_DEPARTMENTS'),
           importMystery: hasPermission('IMPORTS_MYSTERY'),
           import937: hasPermission('IMPORTS_937'),
+          // صلاحيات منصة برسجيني
+          pressganey: {
+            module: hasPermission('PRESSGANEY_MODULE'),
+            view: hasPermission('PRESSGANEY_VIEW'),
+            import: hasPermission('PRESSGANEY_IMPORT')
+          },
           // صلاحيات بلاغات إدارة التجمع
           clusterSubmit: hasPermission('CLUSTER_REPORT_CREATE'),
           clusterView: hasPermission('CLUSTER_REPORT_VIEW'),
@@ -769,6 +786,12 @@ router.get('/me-permissions', async (req, res) => {
       // صلاحيات الأرشيف
       archiveView: permissions.archiveView || false,
       archiveUpload: permissions.archiveUpload || false,
+      // صلاحيات منصة برسجيني
+      pressganey: {
+        module: permissions.pressganey?.module || false,
+        view: permissions.pressganey?.view || false,
+        import: permissions.pressganey?.import || false
+      },
       user: userInfo
     });
   } catch (err) {
