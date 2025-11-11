@@ -57,11 +57,12 @@
     <!-- العنوان + زر إضافة -->
     <div class="flex items-center justify-between gap-4 mb-6">
       <div>
-        <h1 class="text-3xl md:text-4xl font-extrabold text-primary">المشاريع التحسينية</h1>
-        <p class="text-gray-500 mt-1">استعرض، صفِّ، وعدِّل مشاريع التحسين لكل مستشفى.</p>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-primary" data-i18n="page-title">المشاريع التحسينية</h1>
+        <p class="text-gray-500 mt-1" data-i18n="page-subtitle">استعرض، صفِّ، وعدِّل مشاريع التحسين لكل مستشفى.</p>
       </div>
       <button id="btnAdd"
-              class="rounded-full bg-blue-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-blue-700 shadow-sm">
+              class="rounded-full bg-blue-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-blue-700 shadow-sm"
+              data-i18n="btn-add">
         + مشروع تحسيني
       </button>
     </div>
@@ -71,35 +72,35 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3" id="filtersContainer">
         <!-- فلتر المستشفى (للمدير فقط) -->
         <div id="hospitalFilterContainer" class="hidden">
-          <label class="block text-sm text-gray-600 mb-1">المستشفى</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n="filter-hospital">المستشفى</label>
           <select id="fltHospital" class="w-full border rounded-xl p-2.5 bg-white">
-            <option value="">جميع المستشفيات</option>
+            <option value="" data-i18n="filter-hospital-all">جميع المستشفيات</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">الحالة</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n="filter-status-label">الحالة</label>
           <select id="fltStatus" class="w-full border rounded-xl p-2.5 bg-white">
-            <option value="">الكل</option>
-            <option value="PROPOSED">مقترح</option>
-            <option value="APPROVED">معتمد</option>
-            <option value="IN_PROGRESS">قيد التنفيذ</option>
-            <option value="COMPLETED">مكتمل</option>
-            <option value="CANCELLED">ملغي</option>
-            <option value="DRAFT">مسودة</option>
+            <option value="" data-i18n="filter-option-all">الكل</option>
+            <option value="PROPOSED" data-i18n="filter-option-proposed">مقترح</option>
+            <option value="APPROVED" data-i18n="filter-option-approved">معتمد</option>
+            <option value="IN_PROGRESS" data-i18n="filter-option-in-progress">قيد التنفيذ</option>
+            <option value="COMPLETED" data-i18n="filter-option-completed">مكتمل</option>
+            <option value="CANCELLED" data-i18n="filter-option-cancelled">ملغي</option>
+            <option value="DRAFT" data-i18n="filter-option-draft">مسودة</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">القسم</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n="filter-dept-label">القسم</label>
           <select id="fltDept" class="w-full border rounded-xl p-2.5 bg-white">
-            <option value="">الكل</option>
+            <option value="" data-i18n="filter-option-all">الكل</option>
           </select>
         </div>
         <div class="md:col-span-2" id="searchContainer">
-          <label class="block text-sm text-gray-600 mb-1">بحث</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n="filter-search-label">بحث</label>
           <div class="flex gap-2">
-            <input id="fltQ" class="w-full border rounded-xl p-2.5" placeholder="عنوان / وصف المشكلة / الهدف">
-            <button id="btnApply" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-[#00366f]">تطبيق</button>
-            <button id="btnReset" class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50">إعادة</button>
+            <input id="fltQ" class="w-full border rounded-xl p-2.5" placeholder="عنوان / وصف المشكلة / الهدف" data-i18n-placeholder="filter-search-placeholder">
+            <button id="btnApply" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-[#00366f]" data-i18n="filter-apply">تطبيق</button>
+            <button id="btnReset" class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50" data-i18n="filter-reset">إعادة</button>
           </div>
         </div>
       </div>
@@ -108,15 +109,15 @@
     <!-- KPIs -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
       <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
-        <div class="text-gray-500 text-sm">مشاريع قيد التنفيذ</div>
+        <div class="text-gray-500 text-sm" data-i18n="kpi-in-progress">مشاريع قيد التنفيذ</div>
         <div id="kpiInProgress" class="text-3xl font-bold mt-1">0</div>
       </div>
       <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
-        <div class="text-gray-500 text-sm">مشاريع مكتملة (آخر 90 يوم)</div>
+        <div class="text-gray-500 text-sm" data-i18n="kpi-completed-90">مشاريع مكتملة (آخر 90 يوم)</div>
         <div id="kpiCompleted" class="text-3xl font-bold mt-1">0</div>
       </div>
       <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
-        <div class="text-gray-500 text-sm">مقترحة/قيد الاعتماد</div>
+        <div class="text-gray-500 text-sm" data-i18n="kpi-proposed">مقترحة/قيد الاعتماد</div>
         <div id="kpiProposed" class="text-3xl font-bold mt-1">0</div>
       </div>
     </div>
@@ -127,15 +128,15 @@
         <table class="min-w-full text-sm">
           <thead class="bg-gray-50 text-gray-600">
             <tr>
-              <th class="px-4 py-3 text-right" id="hospitalHeader" style="display: none;">المستشفى</th>
-              <th class="px-4 py-3 text-right">العنوان</th>
-              <th class="px-4 py-3 text-right">القسم</th>
-              <th class="px-4 py-3 text-right">الأولوية</th>
-              <th class="px-4 py-3 text-right">الحالة</th>
-              <th class="px-4 py-3 text-right">البدء</th>
-              <th class="px-4 py-3 text-right">الانتهاء المتوقع</th>
-              <th class="px-4 py-3 text-right">آخر تحديث</th>
-              <th class="px-4 py-3 text-right">إجراءات</th>
+              <th class="px-4 py-3 text-right" id="hospitalHeader" style="display: none;" data-i18n="th-hospital">المستشفى</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-title">العنوان</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-dept">القسم</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-priority">الأولوية</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-status">الحالة</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-start">البدء</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-due">الانتهاء المتوقع</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-updated">آخر تحديث</th>
+              <th class="px-4 py-3 text-right" data-i18n="th-actions">إجراءات</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -143,7 +144,7 @@
       </div>
 
       <!-- لا توجد بيانات -->
-      <div id="emptyState" class="hidden py-16 text-center text-gray-500">
+      <div id="emptyState" class="hidden py-16 text-center text-gray-500" data-i18n="empty-state">
         لا توجد مشاريع مطابقة للبحث الحالي.
       </div>
     </div>
@@ -219,6 +220,7 @@
   <script>
     const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
     const token    = localStorage.getItem('token') || '';
+    let currentLanguage = localStorage.getItem('selectedLanguage') || 'ar';
 
     // ✅ دالة للتحقق من مدير التجمع
     function isClusterManager() {
@@ -257,6 +259,128 @@
     
     // متغير لتخزين حالة المدير
     let isCentralAdmin = false;
+    let lastProjects = [];
+    let projectsLoaded = false;
+
+    const I18N = {
+      ar: {
+        'page-title': 'المشاريع التحسينية',
+        'page-subtitle': 'استعرض، صفِّ، وعدِّل مشاريع التحسين لكل مستشفى.',
+        'btn-add': '+ مشروع تحسيني',
+        'filter-hospital': 'المستشفى',
+        'filter-hospital-all': 'جميع المستشفيات',
+        'filter-status-label': 'الحالة',
+        'filter-option-all': 'الكل',
+        'filter-option-proposed': 'مقترح',
+        'filter-option-approved': 'معتمد',
+        'filter-option-in-progress': 'قيد التنفيذ',
+        'filter-option-completed': 'مكتمل',
+        'filter-option-cancelled': 'ملغي',
+        'filter-option-draft': 'مسودة',
+        'filter-dept-label': 'القسم',
+        'filter-search-label': 'بحث',
+        'filter-search-placeholder': 'عنوان / وصف المشكلة / الهدف',
+        'filter-apply': 'تطبيق',
+        'filter-reset': 'إعادة',
+        'kpi-in-progress': 'مشاريع قيد التنفيذ',
+        'kpi-completed-90': 'مشاريع مكتملة (آخر 90 يوم)',
+        'kpi-proposed': 'مقترحة/قيد الاعتماد',
+        'th-hospital': 'المستشفى',
+        'th-title': 'العنوان',
+        'th-dept': 'القسم',
+        'th-priority': 'الأولوية',
+        'th-status': 'الحالة',
+        'th-start': 'البدء',
+        'th-due': 'الانتهاء المتوقع',
+        'th-updated': 'آخر تحديث',
+        'th-actions': 'إجراءات',
+        'empty-state': 'لا توجد مشاريع مطابقة للبحث الحالي.',
+        'dept-select-hospital-first': 'اختر مستشفى أولاً',
+        'nav-home': 'الرئيسية',
+        'nav-dashboard': 'لوحة التحكم',
+        'nav-profile': 'ملفي الشخصي',
+        'nav-about': 'حول النظام',
+        'nav-help': 'المساعدة',
+        'nav-contact': 'اتصل بنا',
+        'language-button': '🌐 English'
+      },
+      en: {
+        'page-title': 'Improvement Projects',
+        'page-subtitle': 'Review, filter, and edit improvement projects per hospital.',
+        'btn-add': '+ Improvement Project',
+        'filter-hospital': 'Hospital',
+        'filter-hospital-all': 'All hospitals',
+        'filter-status-label': 'Status',
+        'filter-option-all': 'All',
+        'filter-option-proposed': 'Proposed',
+        'filter-option-approved': 'Approved',
+        'filter-option-in-progress': 'In Progress',
+        'filter-option-completed': 'Completed',
+        'filter-option-cancelled': 'Cancelled',
+        'filter-option-draft': 'Draft',
+        'filter-dept-label': 'Department',
+        'filter-search-label': 'Search',
+        'filter-search-placeholder': 'Title / Problem / Aim',
+        'filter-apply': 'Apply',
+        'filter-reset': 'Reset',
+        'kpi-in-progress': 'Projects In Progress',
+        'kpi-completed-90': 'Completed Projects (last 90 days)',
+        'kpi-proposed': 'Proposed / Pending approval',
+        'th-hospital': 'Hospital',
+        'th-title': 'Title',
+        'th-dept': 'Department',
+        'th-priority': 'Priority',
+        'th-status': 'Status',
+        'th-start': 'Start',
+        'th-due': 'Expected finish',
+        'th-updated': 'Last update',
+        'th-actions': 'Actions',
+        'empty-state': 'No projects match the current filters.',
+        'dept-select-hospital-first': 'Select a hospital first',
+        'nav-home': 'Home',
+        'nav-dashboard': 'Dashboard',
+        'nav-profile': 'My Profile',
+        'nav-about': 'About System',
+        'nav-help': 'Help',
+        'nav-contact': 'Contact Us',
+        'language-button': '🌐 العربية'
+      }
+    };
+
+    function t(key, fallback='') {
+      const lang = currentLanguage === 'en' ? 'en' : 'ar';
+      return (I18N[lang] && I18N[lang][key]) || (I18N.ar && I18N.ar[key]) || fallback || key || '';
+    }
+
+    function updateFilterStatics(){
+      if (fltHospital) {
+        const defaultHospital = fltHospital.querySelector('option[value=""]');
+        if (defaultHospital) {
+          defaultHospital.dataset.i18n = 'filter-hospital-all';
+          defaultHospital.textContent = t('filter-hospital-all', 'جميع المستشفيات');
+        }
+      }
+      if (fltStatus) {
+        const statusAll = fltStatus.querySelector('option[value=""]');
+        if (statusAll) {
+          statusAll.dataset.i18n = 'filter-option-all';
+          statusAll.textContent = t('filter-option-all', 'الكل');
+        }
+      }
+      if (fltDept) {
+        const deptAll = fltDept.querySelector('option[value=""]');
+        if (deptAll) {
+          deptAll.dataset.i18n = 'filter-option-all';
+          deptAll.textContent = t('filter-option-all', 'الكل');
+        }
+      }
+      if (fltQ) {
+        const placeholderKey = fltQ.dataset.i18nPlaceholder;
+        if (placeholderKey) {
+          fltQ.placeholder = t(placeholderKey, fltQ.placeholder);
+        }
+      }
+    }
 
     const toast = (msg, type='info')=>{
       const el = $('#toast'), box = $('#toastInner');
@@ -289,7 +413,13 @@
         if(!res.ok) throw new Error('HTTP '+res.status);
         
         const hospitals = await res.json();
-        fltHospital.innerHTML = '<option value="">جميع المستشفيات</option>';
+        fltHospital.innerHTML = '';
+
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.dataset.i18n = 'filter-hospital-all';
+        defaultOption.textContent = t('filter-hospital-all', 'جميع المستشفيات');
+        fltHospital.appendChild(defaultOption);
         
         hospitals.forEach(h => {
           const option = document.createElement('option');
@@ -304,6 +434,7 @@
         if (preHospitalId) {
           fltHospital.value = preHospitalId;
         }
+        updateFilterStatics();
       }catch(e){ 
         console.error('❌ [loadHospitals] Error:', e);
         toast('تعذّر تحميل المستشفيات', 'error'); 
@@ -326,7 +457,13 @@
         
         // إذا كان مدير ولم يختر مستشفى، لا تحمل الأقسام
         if (isCentralAdmin && !hid) {
-          fltDept.innerHTML = '<option value="">اختر مستشفى أولاً</option>';
+          fltDept.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.dataset.i18n = 'dept-select-hospital-first';
+          opt.textContent = t('dept-select-hospital-first', 'اختر مستشفى أولاً');
+          fltDept.appendChild(opt);
+          updateFilterStatics();
           return;
         }
         
@@ -342,13 +479,19 @@
         const list = response.data || response; // دعم كلا التنسيقين
         console.log('📋 [loadDepartments] Departments count:', list?.length || 0);
         
-        fltDept.innerHTML = '<option value="">الكل</option>';
+        fltDept.innerHTML = '';
+        const defaultDeptOption = document.createElement('option');
+        defaultDeptOption.value = '';
+        defaultDeptOption.dataset.i18n = 'filter-option-all';
+        defaultDeptOption.textContent = t('filter-option-all', 'الكل');
+        fltDept.appendChild(defaultDeptOption);
         (list||[]).forEach(d=>{
           const o=document.createElement('option');
           o.value=d.DepartmentID; 
           o.textContent=d.NameAr || d.DepartmentName; // استخدام NameAr أو DepartmentName
           fltDept.appendChild(o);
         });
+        updateFilterStatics();
       }catch(e){ 
         console.error('❌ [loadDepartments] Error:', e);
         toast('تعذّر تحميل الأقسام', 'error'); 
@@ -499,11 +642,14 @@
         
         console.log('📋 [loadProjects] Projects count:', list?.length || 0);
         
-        if(!list || list.length===0){
+        lastProjects = Array.isArray(list) ? list : [];
+        projectsLoaded = true;
+
+        if(!lastProjects || lastProjects.length===0){
           emptyEl.classList.remove('hidden');
           return;
         }
-        renderRows(list);
+        renderRows(lastProjects);
       }catch(e){
         console.error('❌ [loadProjects] Exception:', e);
         emptyEl.classList.remove('hidden');
@@ -511,41 +657,73 @@
       }
     }
 
+    const PRIORITY_CLASSES = {
+      LOW : 'bg-gray-100 text-gray-700',
+      MEDIUM:'bg-blue-100 text-blue-700',
+      HIGH:'bg-amber-100 text-amber-700',
+      CRITICAL:'bg-red-100 text-red-700'
+    };
+    const PRIORITY_LABELS = {
+      ar: { LOW:'منخفضة', MEDIUM:'متوسطة', HIGH:'عالية', CRITICAL:'حرجة' },
+      en: { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
+    };
+    const STATUS_CLASSES = {
+      DRAFT:'bg-gray-100 text-gray-700',
+      PROPOSED:'bg-sky-100 text-sky-700',
+      APPROVED:'bg-emerald-100 text-emerald-700',
+      IN_PROGRESS:'bg-indigo-100 text-indigo-700',
+      COMPLETED:'bg-green-100 text-green-700',
+      CANCELLED:'bg-rose-100 text-rose-700'
+    };
+    const STATUS_LABELS = {
+      ar: {
+        DRAFT:'مسودة',
+        PROPOSED:'مقترح',
+        APPROVED:'معتمد',
+        IN_PROGRESS:'قيد التنفيذ',
+        COMPLETED:'مكتمل',
+        CANCELLED:'ملغي'
+      },
+      en: {
+        DRAFT:'Draft',
+        PROPOSED:'Proposed',
+        APPROVED:'Approved',
+        IN_PROGRESS:'In Progress',
+        COMPLETED:'Completed',
+        CANCELLED:'Cancelled'
+      }
+    };
+    const ACTION_LABELS = {
+      ar: { view:'عرض', edit:'تعديل', report:'تقرير', approve:'اعتماد' },
+      en: { view:'View', edit:'Edit', report:'Report', approve:'Approve' }
+    };
+    function getPriorityLabel(code){
+      const lang = currentLanguage === 'en' ? 'en' : 'ar';
+      return PRIORITY_LABELS[lang][code] || PRIORITY_LABELS.ar[code] || code || '-';
+    }
+    function getStatusLabel(code){
+      const lang = currentLanguage === 'en' ? 'en' : 'ar';
+      return STATUS_LABELS[lang][code] || STATUS_LABELS.ar[code] || code || '-';
+    }
+    function getActionLabel(key){
+      const lang = currentLanguage === 'en' ? 'en' : 'ar';
+      return ACTION_LABELS[lang][key] || ACTION_LABELS.ar[key] || key;
+    }
     function badgePriority(p){
-      const map = {
-        LOW : 'bg-gray-100 text-gray-700',
-        MEDIUM:'bg-blue-100 text-blue-700',
-        HIGH:'bg-amber-100 text-amber-700',
-        CRITICAL:'bg-red-100 text-red-700'
-      };
-      const textMap = {
-        LOW: 'منخفضة',
-        MEDIUM: 'متوسطة',
-        HIGH: 'عالية',
-        CRITICAL: 'حرجة'
-      };
-      return `<span class="px-2.5 py-1 rounded-full text-xs ${map[p]||'bg-gray-100 text-gray-700'}">${textMap[p] || p || '-'}</span>`;
+      return `<span class="px-2.5 py-1 rounded-full text-xs ${PRIORITY_CLASSES[p]||'bg-gray-100 text-gray-700'}">${getPriorityLabel(p)}</span>`;
     }
     function badgeStatus(s){
-      const map = {
-        DRAFT:'bg-gray-100 text-gray-700',
-        PROPOSED:'bg-sky-100 text-sky-700',
-        APPROVED:'bg-emerald-100 text-emerald-700',
-        IN_PROGRESS:'bg-indigo-100 text-indigo-700',
-        COMPLETED:'bg-green-100 text-green-700',
-        CANCELLED:'bg-rose-100 text-rose-700'
-      };
-      const textMap = {
-        DRAFT: 'مسودة',
-        PROPOSED: 'مقترح',
-        APPROVED: 'معتمد',
-        IN_PROGRESS: 'قيد التنفيذ',
-        COMPLETED: 'مكتمل',
-        CANCELLED: 'ملغي'
-      };
-      return `<span class="px-2.5 py-1 rounded-full text-xs ${map[s]||'bg-gray-100 text-gray-700'}">${textMap[s] || s || '-'}</span>`;
+      return `<span class="px-2.5 py-1 rounded-full text-xs ${STATUS_CLASSES[s]||'bg-gray-100 text-gray-700'}">${getStatusLabel(s)}</span>`;
     }
-    const fmt = (d)=> d ? new Date(d).toLocaleDateString('ar-SA') : '—';
+    const fmt = (d)=> {
+      if(!d) return '—';
+      const locale = currentLanguage === 'en' ? 'en-GB' : 'ar-SA';
+      try{
+        return new Date(d).toLocaleDateString(locale);
+      }catch{
+        return new Date(d).toLocaleDateString('ar-SA');
+      }
+    };
 
     // متغيرات الصلاحيات
     let userPermissions = {};
@@ -559,16 +737,16 @@
         // بناء أزرار الإجراءات حسب الصلاحيات
         let actionButtons = '';
         if (userPermissions.improvementView) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">عرض</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('view')}</button>`;
         }
         if (userPermissions.improvementEdit) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">تعديل</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('edit')}</button>`;
         }
         if (userPermissions.improvementReportView) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">تقرير</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('report')}</button>`;
         }
         if (userPermissions.improvementApprove && item.Status === 'PROPOSED') {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs" data-act="approve" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">اعتماد</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs" data-act="approve" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('approve')}</button>`;
         }
         
         // عمود المستشفى (للمدير فقط عند عرض جميع المستشفيات)
@@ -597,6 +775,59 @@
         frag.appendChild(tr);
       });
       rowsEl.appendChild(frag);
+    }
+
+    function applyTranslation(lang){
+      const effectiveLang = I18N[lang] ? lang : 'ar';
+      const map = I18N[effectiveLang] || I18N.ar;
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (key && map[key] !== undefined) {
+          el.textContent = map[key];
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        if (key && map[key] !== undefined) {
+          el.placeholder = map[key];
+        }
+      });
+
+      ['nav-home','nav-dashboard','nav-profile','nav-about','nav-help','nav-contact'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && map[id] !== undefined) {
+          el.textContent = map[id];
+        }
+      });
+
+      const toggleBtn = document.getElementById('languageToggle');
+      if (toggleBtn && map['language-button']) {
+        toggleBtn.textContent = map['language-button'];
+      }
+
+      if (effectiveLang === 'en') {
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', 'en');
+      } else {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', 'ar');
+      }
+
+      currentLanguage = effectiveLang;
+      localStorage.setItem('selectedLanguage', effectiveLang);
+      updateFilterStatics();
+
+      if (projectsLoaded) {
+        rowsEl.innerHTML = '';
+        if (lastProjects && lastProjects.length) {
+          emptyEl.classList.add('hidden');
+          renderRows(lastProjects);
+        } else {
+          emptyEl.classList.remove('hidden');
+        }
+      }
     }
 
     function escapeHtml(str=''){
@@ -862,6 +1093,16 @@
       }
     });
 
+    const languageToggleBtn = document.getElementById('languageToggle');
+    if (languageToggleBtn) {
+      languageToggleBtn.addEventListener('click', () => {
+        const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+        applyTranslation(newLang);
+      });
+    }
+
+    applyTranslation(currentLanguage);
+
     // بدء
     (async function init(){
       await applyPermissions();
@@ -870,74 +1111,5 @@
     })();
   </script>
 
-  <!-- نظام الترجمة -->
-  <script>
-    // بيانات الترجمة
-    const translations = {
-      ar: {
-        'nav-home': 'الرئيسية',
-        'nav-dashboard': 'لوحة التحكم',
-        'nav-profile': 'ملفي الشخصي',
-        'nav-about': 'حول النظام',
-        'nav-help': 'المساعدة',
-        'nav-contact': 'اتصل بنا',
-        'language-button': '🌐 English'
-      },
-      en: {
-        'nav-home': 'Home',
-        'nav-dashboard': 'Dashboard',
-        'nav-profile': 'My Profile',
-        'nav-about': 'About System',
-        'nav-help': 'Help',
-        'nav-contact': 'Contact Us',
-        'language-button': '🌐 العربية'
-      }
-    };
-
-    // الحالة الحالية للغة
-    let currentLanguage = 'ar';
-
-    // دالة تطبيق الترجمة
-    function applyTranslation(lang) {
-      const elements = translations[lang];
-      if (!elements) return;
-
-      // تطبيق الترجمة على جميع العناصر
-      Object.keys(elements).forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.textContent = elements[id];
-        }
-      });
-
-      // تغيير اتجاه النص
-      if (lang === 'en') {
-        document.documentElement.setAttribute('dir', 'ltr');
-        document.documentElement.setAttribute('lang', 'en');
-      } else {
-        document.documentElement.setAttribute('dir', 'rtl');
-        document.documentElement.setAttribute('lang', 'ar');
-      }
-
-      currentLanguage = lang;
-    }
-
-    // تهيئة النظام عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', function() {
-      // تطبيق اللغة المحفوظة أو الافتراضية
-      const savedLanguage = localStorage.getItem('selectedLanguage') || 'ar';
-      applyTranslation(savedLanguage);
-      
-      // ربط زر اللغة
-      const languageToggle = document.getElementById('languageToggle');
-      if (languageToggle) {
-        languageToggle.addEventListener('click', function() {
-          const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
-          applyTranslation(newLang);
-          localStorage.setItem('selectedLanguage', newLang);
-        });
-      }
-    });
-  </script>
 </body>
 </html>

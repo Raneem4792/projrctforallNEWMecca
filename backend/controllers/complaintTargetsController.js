@@ -1,7 +1,7 @@
 // controllers/complaintTargetsController.js
 // Controller للتعامل مع البلاغات الموجهة للموظفين
 
-import { getContextualPool } from '../config/db.js';
+import { getContextualPool, getHospitalPool } from '../config/db.js';
 
 /**
  * البحث عن موظفين
@@ -10,7 +10,7 @@ import { getContextualPool } from '../config/db.js';
 export async function searchEmployees(req, res) {
   try {
     const user = req.user;
-    const hospitalId = Number(user?.HospitalID || user?.hospitalId);
+    const hospitalId = Number(req.hospitalId || user?.HospitalID || user?.hospitalId);
     const query = (req.query.q || '').trim();
 
     if (!hospitalId) {
@@ -24,7 +24,7 @@ export async function searchEmployees(req, res) {
       return res.json({ success: true, data: [] });
     }
 
-    const hospitalPool = await getContextualPool(user);
+    const hospitalPool = req.hospitalPool || await getContextualPool(user, req);
 
     // البحث عن الموظفين في قاعدة المستشفى
     const [rows] = await hospitalPool.query(
@@ -55,54 +55,258 @@ export async function searchEmployees(req, res) {
 export async function createComplaintTarget(req, res) {
   let conn;
   try {
-    const user = req.user;
-    const hospitalId = Number(user?.HospitalID || user?.hospitalId);
-    const { complaintId, targetEmployeeId, targetEmployeeName, targetDepartmentId, targetDepartmentName } = req.body;
+    console.log('📥 [createComplaintTarget] ====== بدء معالجة طلب إنشاء بلاغ على موظف ======');
+    console.log('📥 [createComplaintTarget] Headers:', {
+      'x-hospital-id': req.headers['x-hospital-id'],
+      'X-Hospital-Id': req.headers['X-Hospital-Id'],
+      'authorization': req.headers['authorization'] ? 'موجود' : 'غير موجود'
+    });
+    console.log('📥 [createComplaintTarget] Body:', req.body);
+    console.log('📥 [createComplaintTarget] User:', {
+      UserID: req.user?.UserID,
+      HospitalID: req.user?.HospitalID,
+      hospitalId: req.user?.hospitalId
+    });
+    console.log('📥 [createComplaintTarget] req.hospitalId:', req.hospitalId);
+
+    const user = req.user || {};
+    const headers = req.headers || {};
+    
+    // ✅ استخراج hospitalId من جميع المصادر المحتملة
+    let hospitalId =
+      req.hospitalId ||
+      headers['x-hospital-id'] ||
+      headers['X-Hospital-Id'] ||
+      headers['X-hospital-id'] ||
+      req.body?.hospitalId ||
+      req.body?.HospitalID ||
+      user.HospitalID ||
+      user.hospitalId ||
+      null;
+
+    if (typeof hospitalId === 'string') hospitalId = hospitalId.trim();
+    if (hospitalId && !isNaN(hospitalId)) hospitalId = Number(hospitalId);
+    else hospitalId = null;
+
+    console.log(`🏥 [createComplaintTarget] hospitalId المستخرج: ${hospitalId}`);
 
     if (!hospitalId) {
+      console.error('❌ [createComplaintTarget] لم يتم تحديد hospitalId');
+      console.error('❌ [createComplaintTarget] المصادر المتاحة:', {
+        reqHospitalId: req.hospitalId,
+        headerXHospitalId: headers['x-hospital-id'],
+        headerXHospitalIdCapital: headers['X-Hospital-Id'],
+        userHospitalID: user.HospitalID,
+        userHospitalId: user.hospitalId
+      });
       return res.status(400).json({
         success: false,
-        message: 'Hospital ID مفقود في التوكن'
+        message: 'لم يتم تحديد معرف المستشفى (X-Hospital-Id)'
       });
     }
 
-    if (!complaintId || !targetEmployeeName) {
-      return res.status(400).json({
+    let hospitalPool = req.hospitalPool;
+    if (!hospitalPool) {
+      console.warn('⚠️ [createComplaintTarget] لا يوجد hospitalPool مرفق، سيتم إنشاؤه يدوياً');
+      try {
+        hospitalPool = await getHospitalPool(hospitalId);
+        req.hospitalPool = hospitalPool;
+      } catch (poolErr) {
+        console.error(`❌ لا يوجد اتصال لقاعدة بيانات المستشفى رقم ${hospitalId}:`, poolErr.message);
+        return res.status(500).json({
+          success: false,
+          message: `فشل الاتصال بقاعدة بيانات المستشفى رقم ${hospitalId}`
+        });
+      }
+    }
+
+    if (!hospitalPool) {
+      console.error(`❌ لم يتم العثور على hospitalPool للمستشفى ${hospitalId}`);
+      return res.status(500).json({
         success: false,
-        message: 'ComplaintID و TargetEmployeeName مطلوبان'
+        message: `تعذر الوصول لقاعدة بيانات المستشفى رقم ${hospitalId}`
       });
     }
 
-    const hospitalPool = await getContextualPool(user);
+    const { complaintId, targetEmployeeId, targetEmployeeName, targetDepartmentId, targetDepartmentName } = req.body;
+
+    console.log('📋 [createComplaintTarget] البيانات المستلمة:', {
+      complaintId,
+      targetEmployeeId,
+      targetEmployeeName,
+      targetDepartmentId,
+      targetDepartmentName
+    });
+
+    if (!complaintId) {
+      console.error('❌ [createComplaintTarget] بيانات ناقصة:', {
+        hasComplaintId: !!complaintId
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'ComplaintID مطلوب'
+      });
+    }
+
+    // ✅ اسم الموظف: نستخدم الاسم أو اسم القسم أو قيمة افتراضية
+    let finalEmployeeName = (targetEmployeeName || '').trim();
+    if (!finalEmployeeName && targetDepartmentName) {
+      finalEmployeeName = `موظف في ${targetDepartmentName}`;
+    } else if (!finalEmployeeName) {
+      finalEmployeeName = 'موظف غير محدد';
+    }
+    
+    console.log('📋 [createComplaintTarget] البيانات النهائية:', {
+      complaintId,
+      targetEmployeeId,
+      targetEmployeeName: finalEmployeeName,
+      targetDepartmentId,
+      targetDepartmentName
+    });
+
+    console.log('🔌 [createComplaintTarget] الحصول على اتصال قاعدة البيانات...');
     conn = await hospitalPool.getConnection();
     await conn.beginTransaction();
+    console.log('✅ [createComplaintTarget] تم بدء المعاملة');
+
+    // حاول إيجاد البلاغ مع إعادة المحاولة في حال تأخر الكوميت السابق
+    const findComplaintWithRetry = async (connection) => {
+      let foundComplaint = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const [[row]] = await connection.query(
+          `SELECT ComplaintID FROM complaints WHERE ComplaintID = ? LIMIT 1`,
+          [complaintId]
+        );
+        if (row) {
+          foundComplaint = row;
+          break;
+        }
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+      }
+      return foundComplaint;
+    };
+
+    let existingComplaint = await findComplaintWithRetry(conn);
+
+    if (!existingComplaint) {
+      await conn.rollback();
+      conn.release(); conn = null;
+
+      // ⚙️ البحث في القاعدة المركزية عند عدم العثور في قاعدة المستشفى الحالية
+      const centralPool = await getContextualPool(null, req);
+      const [[centralComplaint]] = await centralPool.query(
+        `SELECT ComplaintID, HospitalID FROM complaints WHERE ComplaintID = ? LIMIT 1`,
+        [complaintId]
+      );
+
+      if (!centralComplaint) {
+        return res.status(404).json({
+          success: false,
+          message: 'البلاغ غير موجود في أي قاعدة بيانات'
+        });
+      }
+
+      const targetHospitalId = Number(centralComplaint.HospitalID);
+      if (!targetHospitalId) {
+        return res.status(500).json({
+          success: false,
+          message: 'تعذر تحديد المستشفى المرتبط بالبلاغ'
+        });
+      }
+
+      // ✅ تحديث معرّف المستشفى والـ pool حسب نتيجة القاعدة المركزية
+      req.hospitalId = targetHospitalId;
+      hospitalPool = await getHospitalPool(targetHospitalId);
+      req.hospitalPool = hospitalPool;
+
+      conn = await hospitalPool.getConnection();
+      await conn.beginTransaction();
+
+      existingComplaint = await findComplaintWithRetry(conn);
+
+      if (!existingComplaint) {
+        await conn.rollback();
+        conn.release(); conn = null;
+        return res.status(404).json({
+          success: false,
+          message: 'البلاغ موجود مركزياً لكن غير متوفر في قاعدة المستشفى الهدف'
+        });
+      }
+    }
 
     // إدراج البلاغ على الموظف
+    console.log('💾 [createComplaintTarget] بدء إدراج السجل في complaint_targets...');
+    const insertValues = [
+      Number(complaintId),
+      targetEmployeeId ? Number(targetEmployeeId) : null,
+      finalEmployeeName,
+      targetDepartmentId ? Number(targetDepartmentId) : null,
+      targetDepartmentName || null
+    ];
+    
+    console.log('💾 [createComplaintTarget] القيم المراد إدراجها:', insertValues);
+    
     const [result] = await conn.query(
-      `INSERT INTO complaint_targets (ComplaintID, TargetEmployeeID, TargetEmployeeName, TargetDepartmentID, TargetDepartmentName)
-       VALUES (?, ?, ?, ?, ?)`,
-      [complaintId, targetEmployeeId || null, targetEmployeeName, targetDepartmentId || null, targetDepartmentName || null]
+      `INSERT INTO complaint_targets 
+       (ComplaintID, TargetEmployeeID, TargetEmployeeName, TargetDepartmentID, TargetDepartmentName, CreatedAt)
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      insertValues
     );
 
+    console.log('✅ [createComplaintTarget] تم إدراج السجل بنجاح:', {
+      insertId: result.insertId,
+      affectedRows: result.affectedRows
+    });
+
     await conn.commit();
+    console.log('✅ [createComplaintTarget] تم commit المعاملة بنجاح');
     conn.release(); conn = null;
 
     res.status(201).json({
       success: true,
       message: 'تم إنشاء بلاغ على موظف بنجاح',
-      data: { targetId: result.insertId, complaintId }
+      data: { 
+        targetId: result.insertId, 
+        complaintId: Number(complaintId),
+        targetEmployeeName: finalEmployeeName
+      }
     });
+    
+    console.log('✅ [createComplaintTarget] ====== اكتمل بنجاح ======');
 
   } catch (error) {
-    if (conn) { try { await conn.rollback(); } catch(e){} }
-    console.error('خطأ في إنشاء بلاغ على موظف:', error);
+    console.error('❌ [createComplaintTarget] ====== خطأ في إنشاء بلاغ على موظف ======');
+    console.error('❌ [createComplaintTarget] نوع الخطأ:', error.name);
+    console.error('❌ [createComplaintTarget] رسالة الخطأ:', error.message);
+    console.error('❌ [createComplaintTarget] Stack:', error.stack);
+    
+    if (conn) { 
+      try { 
+        await conn.rollback(); 
+        console.log('🔄 [createComplaintTarget] تم rollback المعاملة');
+      } catch(rollbackErr) {
+        console.error('❌ [createComplaintTarget] فشل rollback:', rollbackErr.message);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       message: 'حدث خطأ أثناء إنشاء بلاغ على موظف',
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   } finally {
-    if (conn) conn.release?.();
+    if (conn) {
+      try {
+        conn.release?.();
+        console.log('🔌 [createComplaintTarget] تم إغلاق الاتصال');
+      } catch(releaseErr) {
+        console.error('❌ [createComplaintTarget] فشل إغلاق الاتصال:', releaseErr.message);
+      }
+    }
+    console.log('🏁 [createComplaintTarget] ====== انتهت المعالجة ======');
   }
 }
 
@@ -113,7 +317,7 @@ export async function createComplaintTarget(req, res) {
 export async function getAllComplaintTargets(req, res) {
   try {
     const user = req.user;
-    const hospitalId = Number(user?.HospitalID || user?.hospitalId);
+    const hospitalId = Number(req.hospitalId || user?.HospitalID || user?.hospitalId);
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '20', 10)));
     const offset = (page - 1) * pageSize;
@@ -130,7 +334,7 @@ export async function getAllComplaintTargets(req, res) {
       });
     }
 
-    const hospitalPool = await getContextualPool(user);
+    const hospitalPool = req.hospitalPool || await getContextualPool(user, req);
     
     // بناء شروط البحث
     const whereConditions = ['c.HospitalID = ?'];
@@ -219,7 +423,7 @@ export async function getAllComplaintTargets(req, res) {
 export async function deleteComplaintTarget(req, res) {
   try {
     const user = req.user;
-    const hospitalId = Number(user?.HospitalID || user?.hospitalId);
+    const hospitalId = Number(req.hospitalId || user?.HospitalID || user?.hospitalId);
     const targetId = parseInt(req.params.targetId, 10);
 
     if (!hospitalId) {
@@ -236,7 +440,7 @@ export async function deleteComplaintTarget(req, res) {
       });
     }
 
-    const hospitalPool = await getContextualPool(user);
+    const hospitalPool = req.hospitalPool || await getContextualPool(user, req);
 
     // التحقق من وجود البلاغ
     const [existing] = await hospitalPool.query(

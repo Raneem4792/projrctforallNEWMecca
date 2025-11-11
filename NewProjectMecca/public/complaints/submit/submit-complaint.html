@@ -144,10 +144,18 @@
               </div>
             </div>
 
-            <select id="complaintType">
-              <option value="" id="main-category-placeholder">اختر التصنيف الرئيسي</option>
-              <!-- باقي الخيارات تجي من الـ API -->
-            </select>
+            <div class="relative">
+              <!-- 🔍 مربع البحث عن التصنيف -->
+              <input type="text" id="typeSearch" 
+                     placeholder="بحث عن تصنيف..."
+                     class="w-full mb-2 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400" />
+
+              <!-- قائمة التصنيفات -->
+              <select id="complaintType" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
+                <option value="" id="main-category-placeholder">اختر التصنيف الرئيسي</option>
+                <!-- باقي الخيارات تجي من الـ API -->
+              </select>
+            </div>
             
             <!-- فورم التصنيف الجديد (يظهر فقط عند الحاجة) -->
             <div id="newTypeBox" class="mt-2 space-y-2 hidden">

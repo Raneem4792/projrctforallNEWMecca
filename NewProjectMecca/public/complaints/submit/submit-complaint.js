@@ -107,40 +107,89 @@ const API_BASE = 'http://localhost:3001/api';
 // ====== دالة إنشاء بلاغ على موظف ======
 async function createComplaintTarget(complaintId, targetData) {
   const token = localStorage.getItem('token') || '';
-  
-  if (!token) {
-    throw new Error('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى');
+
+  // ✅ استخراج hospitalId الحقيقي من المستخدم أو الحقول
+  let hospitalId = getCurrentHospitalId();
+  if (!hospitalId && window.currentUser?.HospitalID) {
+    hospitalId = window.currentUser.HospitalID;
   }
-  
+  // محاولة أخيرة من localStorage
+  if (!hospitalId) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      hospitalId = user.HospitalID || user.hospitalId || null;
+    } catch (e) {}
+  }
+
+  console.log('📡 [createComplaintTarget] إرسال بلاغ الموظف:', {
+    complaintId,
+    hospitalId,
+    targetEmployeeName: targetData.targetEmployeeName
+  });
+
+  if (!token) throw new Error('انتهت جلستك. يرجى تسجيل الدخول مجدداً');
+  if (!complaintId) throw new Error('رقم البلاغ مفقود');
+
+  const requestBody = {
+    complaintId: Number(complaintId),
+    targetEmployeeId: targetData.targetEmployeeId ? Number(targetData.targetEmployeeId) : null,
+    targetEmployeeName: targetData.targetEmployeeName || null,
+    targetDepartmentId: targetData.targetDepartmentId ? Number(targetData.targetDepartmentId) : null,
+    targetDepartmentName: targetData.targetDepartmentName || null
+  };
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+
+  // ✅ إرسال hospitalId دائماً (حتى لو null، الباك-إند سيتعامل معه)
+  if (hospitalId) {
+    headers['X-Hospital-Id'] = String(hospitalId);
+  } else {
+    // محاولة أخيرة من currentUser
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.HospitalID || user.hospitalId) {
+      headers['X-Hospital-Id'] = String(user.HospitalID || user.hospitalId);
+    }
+  }
+
+  console.log('📤 [createComplaintTarget] Headers:', headers);
+  console.log('📤 [createComplaintTarget] Body:', requestBody);
+
   const response = await fetch(`${API_BASE}/complaint-targets`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      complaintId: complaintId,
-      targetEmployeeId: targetData.targetEmployeeId,
-      targetEmployeeName: targetData.targetEmployeeName,
-      targetDepartmentId: targetData.targetDepartmentId,
-      targetDepartmentName: targetData.targetDepartmentName
-    })
+    headers,
+    body: JSON.stringify(requestBody)
   });
+
+  const result = await response.json().catch(() => ({}));
   
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || errorData.error || 'HTTP ' + response.status);
+  console.log('📥 [createComplaintTarget] Response Status:', response.status);
+  console.log('📥 [createComplaintTarget] Response Body:', result);
+
+  if (!response.ok || !result.success) {
+    console.error('❌ فشل إنشاء بلاغ على موظف:', {
+      status: response.status,
+      result
+    });
+    throw new Error(result.message || result.error || 'خطأ غير معروف في إنشاء البلاغ على الموظف');
   }
-  
-  return await response.json();
+
+  console.log('✅ تم إنشاء بلاغ على موظف بنجاح:', result);
+  return result;
 }
 
 async function apiGet(url, { auth = true } = {}) {
   const headers = { 'Accept': 'application/json' };
   const token = localStorage.getItem('token') || '';
+  const hospitalId = getCurrentHospitalId();
 
   if (auth && token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (hospitalId) {
+    headers['X-Hospital-Id'] = hospitalId;
   }
 
   const res = await fetch(API_BASE + url, {
@@ -475,6 +524,31 @@ async function loadTypesAndGenders() {
     const types = await apiGet(typesUrl);
     window._types = types;
     fillSelectComplex(els.complaintType, types.map(t => ({ value: t.id, label: t.nameAr })), true);
+
+    // ✅ تفعيل البحث داخل التصنيفات
+    const typeSearch = document.getElementById('typeSearch');
+    if (typeSearch) {
+      typeSearch.addEventListener('input', () => {
+        const q = typeSearch.value.trim().toLowerCase();
+        const select = els.complaintType;
+        if (!select) return;
+
+        // لو ما في نص، نعرض كل التصنيفات
+        if (!q) {
+          [...select.options].forEach(opt => (opt.hidden = false));
+          return;
+        }
+
+        [...select.options].forEach(opt => {
+          const text = opt.textContent.toLowerCase();
+          opt.hidden = !text.includes(q);
+        });
+
+        // إعادة التحديد لأول خيار متاح
+        const firstVisible = [...select.options].find(opt => !opt.hidden && opt.value);
+        if (firstVisible) select.value = firstVisible.value;
+      });
+    }
 
     // 👈 نضيف خيار "تصنيف جديد" فقط إذا كانت الصلاحية موجودة
     // سنتحقق من الصلاحية بعد تحميل الصفحة
@@ -1320,23 +1394,191 @@ async function onSubmit(e) {
     const priority = data.PriorityCode || data.data?.PriorityCode || 'MEDIUM';
     const complaintId = data.ComplaintID || data.data?.ComplaintID;
     
+    // ✅ حفظ حالة بلاغ الموظف قبل المتابعة
+    let employeeTargetSuccess = false;
+    
     // إنشاء بلاغ على موظف إذا تم تحديده
-    if (complaintId && empEls?.toggle?.checked && empEls?.name?.value) {
-      try {
-        await createComplaintTarget(complaintId, {
-          targetEmployeeId: empEls.id.value || null,
-          targetEmployeeName: empEls.name.value,
-          targetDepartmentId: empEls.deptId.value || null,
-          targetDepartmentName: empEls.deptName.value || null
+    if (complaintId && empEls?.toggle?.checked) {
+      // ✅ إعادة تهيئة العناصر قبل القراءة (للتأكد من وجودها)
+      const nameInput = document.getElementById('TargetEmployeeName');
+      const idInput = document.getElementById('TargetEmployeeID');
+      const deptNameInput = document.getElementById('TargetDepartmentName');
+      const deptIdInput = document.getElementById('TargetDepartmentID');
+      
+      // ✅ تسجيلات تشخيصية مفصلة جداً
+      console.log('🔍 [onSubmit] فحص العناصر من DOM:', {
+        nameInput: {
+          exists: !!nameInput,
+          value: nameInput?.value,
+          type: nameInput?.type,
+          id: nameInput?.id,
+          disabled: nameInput?.disabled,
+          readOnly: nameInput?.readOnly,
+          display: nameInput ? window.getComputedStyle(nameInput).display : null,
+          visibility: nameInput ? window.getComputedStyle(nameInput).visibility : null
+        },
+        empElsName: {
+          exists: !!empEls?.name,
+          value: empEls?.name?.value,
+          sameAsNameInput: empEls?.name === nameInput
+        },
+        toggleChecked: empEls?.toggle?.checked,
+        boxDisplay: empEls?.box?.style?.display
+      });
+      
+      // ✅ قراءة القيم مباشرة من DOM (أكثر موثوقية)
+      let employeeName = '';
+      
+      // محاولة 1: قراءة مباشرة من nameInput
+      if (nameInput) {
+        const rawValue = nameInput.value;
+        console.log('🔍 [onSubmit] محاولة 1 - قراءة من nameInput:', {
+          rawValue,
+          type: typeof rawValue,
+          length: rawValue?.length
         });
-        console.log('✅ تم إنشاء البلاغ على الموظف بنجاح');
-      } catch (error) {
-        console.error('❌ خطأ في إنشاء البلاغ على الموظف:', error);
-        // لا نوقف العملية، فقط نعرض تحذير
+        if (rawValue) {
+          employeeName = String(rawValue).trim();
+        }
       }
+      
+      // محاولة 2: إذا فشلت، نقرأ من empEls.name
+      if (!employeeName && empEls?.name) {
+        const rawValue = empEls.name.value;
+        console.log('🔍 [onSubmit] محاولة 2 - قراءة من empEls.name:', {
+          rawValue,
+          type: typeof rawValue,
+          length: rawValue?.length
+        });
+        if (rawValue) {
+          employeeName = String(rawValue).trim();
+        }
+      }
+      
+      // محاولة 3: قراءة من حقل البحث (إذا استخدم المستخدم البحث)
+      if (!employeeName && empEls?.search) {
+        const searchValue = empEls.search.value;
+        console.log('🔍 [onSubmit] محاولة 3 - قراءة من حقل البحث:', {
+          searchValue,
+          type: typeof searchValue,
+          length: searchValue?.length
+        });
+        if (searchValue) {
+          employeeName = String(searchValue).trim();
+        }
+      }
+      
+      // محاولة 4: قراءة من getAttribute (fallback نهائي)
+      if (!employeeName && nameInput) {
+        const attrValue = nameInput.getAttribute('value');
+        console.log('🔍 [onSubmit] محاولة 4 - قراءة من getAttribute:', {
+          attrValue,
+          type: typeof attrValue
+        });
+        if (attrValue) {
+          employeeName = String(attrValue).trim();
+        }
+      }
+      
+      console.log('🔍 [onSubmit] النتيجة النهائية لاسم الموظف:', employeeName);
+      
+      let employeeId = '';
+      if (idInput && idInput.value) {
+        employeeId = String(idInput.value).trim();
+      } else if (empEls?.id?.value) {
+        employeeId = String(empEls.id.value).trim();
+      }
+      
+      let deptName = '';
+      if (deptNameInput && deptNameInput.value) {
+        deptName = String(deptNameInput.value).trim();
+      } else if (empEls?.deptName?.value) {
+        deptName = String(empEls.deptName.value).trim();
+      }
+      
+      let deptId = '';
+      if (deptIdInput && deptIdInput.value) {
+        deptId = String(deptIdInput.value).trim();
+      } else if (empEls?.deptId?.value) {
+        deptId = String(empEls.deptId.value).trim();
+      }
+      
+      console.log('🔍 [onSubmit] القيم المستخرجة:', {
+        employeeName,
+        employeeNameLength: employeeName.length,
+        employeeId,
+        deptName,
+        deptId,
+        nameInputValue: nameInput?.value,
+        nameInputType: typeof nameInput?.value
+      });
+      
+      // ✅ إذا كان التفعيل موجود والاسم موجود، نحفظ البلاغ
+      if (employeeName && employeeName.length > 0) {
+        try {
+          console.log('🔄 [onSubmit] بدء إنشاء بلاغ على موظف...', {
+            complaintId,
+            employeeName: employeeName,
+            employeeId: employeeId || '(غير محدد)',
+            deptName: deptName || '(غير محدد)',
+            hospitalId: getCurrentHospitalId() || window.currentUser?.HospitalID
+          });
+          
+          // انتظار قصير لضمان اكتمال commit البلاغ الرئيسي
+          await new Promise(r => setTimeout(r, 300));
+          
+          await createComplaintTarget(complaintId, {
+            targetEmployeeId: employeeId || null,
+            targetEmployeeName: employeeName,
+            targetDepartmentId: deptId || null,
+            targetDepartmentName: deptName || null
+          });
+          
+          console.log('✅ [onSubmit] تم إنشاء البلاغ على الموظف بنجاح');
+          employeeTargetSuccess = true;
+        } catch (error) {
+          console.error('❌ [onSubmit] خطأ في إنشاء البلاغ على الموظف:', error);
+          console.error('❌ [onSubmit] تفاصيل الخطأ:', {
+            message: error.message,
+            stack: error.stack
+          });
+          // لا نوقف العملية، فقط نعرض تحذير
+          alert(`⚠️ تم إنشاء البلاغ الرئيسي بنجاح، لكن فشل حفظ بيانات الموظف المستهدف.\n\nالخطأ: ${error.message}`);
+        }
+      } else {
+        console.warn('⚠️ [onSubmit] تم تفعيل بلاغ على موظف لكن لم يتم تحديد اسم الموظف', {
+          complaintId,
+          toggleChecked: empEls?.toggle?.checked,
+          employeeName: employeeName,
+          employeeNameLength: employeeName?.length || 0,
+          nameElementValue: empEls?.name?.value,
+          nameElementExists: !!empEls?.name,
+          nameInputValue: nameInput?.value,
+          nameInputExists: !!nameInput,
+          allInputs: {
+            name: nameInput?.value,
+            id: idInput?.value,
+            deptName: deptNameInput?.value,
+            deptId: deptIdInput?.value
+          }
+        });
+        alert('⚠️ تم تفعيل بلاغ على موظف لكن لم يتم تحديد اسم الموظف.\n\nيرجى إدخال اسم الموظف على الأقل.');
+      }
+    } else {
+      console.log('ℹ️ [onSubmit] لم يتم تفعيل بلاغ على موظف', {
+        complaintId: !!complaintId,
+        toggleChecked: empEls?.toggle?.checked
+      });
     }
     
-    alert(`✅ تم إنشاء البلاغ بنجاح!\n\nرقم التذكرة: ${ticketNum}\nالأولوية: ${priority}\n\nسيتم التواصل معك قريباً.`);
+    // ✅ عرض رسالة النجاح وإعادة تعيين النموذج بعد اكتمال جميع العمليات
+    let successMessage = `✅ تم إنشاء البلاغ بنجاح!\n\nرقم التذكرة: ${ticketNum}\nالأولوية: ${priority}`;
+    if (employeeTargetSuccess) {
+      successMessage += '\n\n✅ تم حفظ بيانات الموظف المستهدف بنجاح';
+    }
+    successMessage += '\n\nسيتم التواصل معك قريباً.';
+    
+    alert(successMessage);
     resetForm();
     
     // توجيه للوحة التحكم أو سجل البلاغات

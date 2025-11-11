@@ -1,59 +1,39 @@
 // middleware/resolveHospitalId.js
 export function resolveHospitalId(req, res, next) {
-  // أسماء المسارات العامة (بدون /api)
-  const PUBLIC_SEGMENTS = [
-    'genders',
-    'complaint-types',
-    'complaint-subtypes',
-    'health'
-  ];
+  try {
+    let hospitalId =
+      req.hospitalId ??
+      req.headers['x-hospital-id'] ??
+      req.headers['X-Hospital-Id'] ??
+      req.headers['X-hospital-id'] ??
+      req.body?.HospitalID ??
+      req.body?.hospitalId ??
+      req.query?.hospitalId ??
+      req.user?.HospitalID ??
+      req.user?.hospitalId ??
+      null;
 
-  // طبّقي تطبيع للمسار
-  const normalized = (req.baseUrl || '') + (req.path || ''); // مثال: '/api' + '/genders' => '/api/genders'
-  const original = req.originalUrl || '';
+    if (typeof hospitalId === 'string') hospitalId = hospitalId.trim();
+    if (hospitalId && !isNaN(hospitalId)) {
+      hospitalId = Number(hospitalId);
+    } else {
+      hospitalId = null;
+    }
 
-  const isPublic = PUBLIC_SEGMENTS.some(seg =>
-    normalized.includes(`/${seg}`) || original.includes(`/${seg}`)
-  );
+    if (!hospitalId) {
+      console.warn('⚠️ [resolveHospitalId] لم يتم تمرير hospitalId — سيتم السماح بالمتابعة بدون إرفاق المستشفى');
+      req.hospitalId = null;
+      return next();
+    }
 
-  if (isPublic) {
-    console.log('✅ [resolveHospitalId] مسار عام - تخطي تحديد المستشفى:', { normalized, original, path: req.path });
+    req.hospitalId = hospitalId;
     return next();
-  }
-  console.log('🔍 [resolveHospitalId] تحديد المستشفى:', {
-    queryHospitalId: req.query.hospitalId,
-    bodyHospitalId: req.body?.hospitalId,
-    headerHospitalId: req.headers['x-hospital-id'],
-    userHospitalId: req.user?.HospitalID,
-    userHospitalIdAlt: req.user?.hospitalId,
-    user: req.user?.UserID || req.user?.username,
-    method: req.method,
-    path: req.path,
-    originalUrl: req.originalUrl
-  });
-
-  // 1) من الكويري (الأولوية الأولى - حتى للمستخدمين المركزيين)
-  let hospitalId = Number(req.query.hospitalId || 0);
-  
-  // 2) من الهيدر (للمشكلة multipart/form-data)
-  if (!hospitalId) hospitalId = Number(req.headers['x-hospital-id'] || 0);
-  
-  // 3) من البودي
-  if (!hospitalId) hospitalId = Number(req.body?.hospitalId || req.body?.HospitalID || 0);
-  
-  // 4) من المستخدم (للموظف المصادق عليه) - فقط إذا لم يتم تحديده من query
-  if (!hospitalId) hospitalId = Number(req.user?.HospitalID || req.user?.hospitalId || 0);
-
-  console.log('🎯 [resolveHospitalId] المستشفى المحدد:', hospitalId);
-
-  if (!hospitalId || isNaN(hospitalId)) {
-    console.error('❌ [resolveHospitalId] لم يتم تحديد المستشفى');
-    return res.status(400).json({ 
-      ok: false, 
-      message: 'hospitalId غير محدد - يجب تحديد المستشفى في query/body أو تسجيل الدخول كموظف مستشفى' 
+  } catch (err) {
+    console.error('❌ [resolveHospitalId] فشل:', err);
+    return res.status(400).json({
+      success: false,
+      message: 'فشل استخراج hospitalId من الطلب',
+      error: err.message
     });
   }
-
-  req.hospitalId = hospitalId;
-  next();
 }
