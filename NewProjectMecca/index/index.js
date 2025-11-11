@@ -72,17 +72,30 @@ async function fetchLandingStats() {
   );
 
   try {
-    const res = await fetch(`${apiBase}/api/public/landing-stats`, {
+    // ✅ استخدام API الجديد الذي يجلب البيانات من قاعدة البيانات
+    const res = await fetch(`${apiBase}/api/dashboard/total/home-stats`, {
       headers: { 'Accept': 'application/json' },
       credentials: 'include'
     });
 
     if (!res.ok) {
-      throw new Error('HTTP ' + res.status);
+      console.warn('[LandingStats] API error:', res.status);
+      // استخدام قيم افتراضية في حالة الخطأ
+      updateStatsWithDefaults();
+      return;
     }
 
-    const data = await res.json();
-    console.log('[LandingStats] Loaded:', data);
+    const response = await res.json();
+    console.log('[LandingStats] Loaded:', response);
+    
+    // التحقق من البيانات
+    if (!response.success || !response.data) {
+      console.warn('[LandingStats] Invalid data format');
+      updateStatsWithDefaults();
+      return;
+    }
+    
+    const data = response.data;
 
     const setCounterValue = ({ selector, value: rawValue, suffix = '', descSelector, descTemplate }) => {
       const el = document.querySelector(selector);
@@ -105,10 +118,11 @@ async function fetchLandingStats() {
       }
     };
 
+    // ✅ تحديث: استخدام أسماء المفاتيح من API الجديد
     const results = {
-      totalComplaintsProcessed: data.totalComplaintsProcessed,
-      activeBeneficiaries: data.activeBeneficiaries,
-      hospitalCoveragePercent: data.hospitalCoveragePercent
+      totalComplaintsProcessed: data.complaintsProcessed || 0,
+      activeBeneficiaries: data.activeBeneficiaries || 0,
+      hospitalCoverage: data.activeHospitals || 0
     };
 
     console.log('[LandingStats] Parsed values:', results);
@@ -117,30 +131,39 @@ async function fetchLandingStats() {
       selector: '.counter[data-stat="complaints-processed"]',
       value: results.totalComplaintsProcessed,
       descSelector: '#stat1-desc',
-      descTemplate: (formatted) => `تم معالجة ${formatted} بلاغ`
+      descTemplate: (formatted) => `+${formatted} بلاغ مُعالج`
     });
 
     setCounterValue({
       selector: '.counter[data-stat="active-beneficiaries"]',
       value: results.activeBeneficiaries,
       descSelector: '#stat2-desc',
-      descTemplate: (formatted) => `${formatted} مستفيد نشط`
+      descTemplate: (formatted) => `+${formatted} مستفيد نشط`
     });
 
     setCounterValue({
       selector: '.counter[data-stat="hospital-coverage"]',
-      value: results.hospitalCoveragePercent,
-      suffix: '%',
+      value: results.hospitalCoverage,
       descSelector: '#stat3-desc',
-      descTemplate: (formatted) => `تغطية ${formatted} للمستشفيات`
+      descTemplate: (formatted) => `${formatted} مستشفى نشط`
     });
   } catch (err) {
     console.error('[LandingStats] فشل جلب الإحصائيات:', err);
-    // في حالة الخطأ نترك القيم الافتراضية الموجودة في الـ HTML
+    // في حالة الخطأ نستخدم القيم الافتراضية
+    updateStatsWithDefaults();
   } finally {
     // بعد ما نحدد القيم (أو نفشل)، نشغّل مراقب العدادات
     initializeCounterObserver();
   }
+}
+
+/**
+ * تحديث الإحصائيات بقيم افتراضية (في حالة فشل API)
+ */
+function updateStatsWithDefaults() {
+  console.warn('[LandingStats] استخدام القيم الافتراضية من HTML');
+  // القيم الافتراضية موجودة مسبقاً في HTML (data-target attributes)
+  // لذلك لا حاجة للتعديل - فقط نتركها كما هي
 }
 
 // ========================================

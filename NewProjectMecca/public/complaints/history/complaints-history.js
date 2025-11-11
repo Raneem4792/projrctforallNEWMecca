@@ -437,8 +437,9 @@ async function exportComplaints(format = 'excel') {
     const hospitalSelect = document.getElementById('hospitalSelect');
     const selectedHospitalId = hospitalSelect?.value;
     
-    if (isClusterManager && selectedHospitalId) {
-      hospitalId = selectedHospitalId;
+    // ✅ لمدير التجمع: استخدم القيمة من القائمة المنسدلة (حتى لو كانت فارغة للـ "الكل")
+    if (isClusterManager && hospitalSelect) {
+      hospitalId = selectedHospitalId || 'ALL'; // إذا كانت فارغة، استخدم 'ALL'
     } else if (!hospitalId) {
       hospitalId = localStorage.getItem('hospitalId') || '';
     }
@@ -557,7 +558,19 @@ async function exportComplaints(format = 'excel') {
     if (to) params.set('to', to);
     if (tickets) params.set('tickets', tickets);
     if (!from && !to && !tickets) params.set('all', '1');
-    if (hospitalId && hospitalId !== 'ALL') params.set('hospitalId', hospitalId);
+    
+    // ✅ إرسال hospitalId حتى لو كان فارغاً (للخيار "الكل")
+    if (hospitalId !== undefined && hospitalId !== null) {
+      params.set('hospitalId', hospitalId);
+    }
+    
+    console.log('📤 [EXPORT] إرسال طلب Excel:', {
+      from,
+      to,
+      tickets,
+      hospitalId,
+      isAllHospitals: hospitalId === '' || hospitalId === 'ALL'
+    });
 
     const headers = { 'Accept': 'application/octet-stream' };
     if (token) {

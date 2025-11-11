@@ -1790,4 +1790,68 @@ router.get('/critical-reports',
   }
 });
 
+// ========== GET /api/dashboard/total/home-stats ==========
+// 📊 إحصائيات الصفحة الرئيسية (index.html)
+router.get('/home-stats', async (req, res) => {
+  try {
+    // جلب جميع المستشفيات النشطة
+    const [hospitals] = await pool.query(`
+      SELECT HospitalID, NameAr 
+      FROM hospitals 
+      WHERE IsActive = 1
+    `);
+
+    const { getHospitalPool } = await import('../config/db.js');
+    
+    let totalComplaints = 0;
+    let totalUsers = 0;
+    
+    // جلب البلاغات من كل مستشفى
+    for (const hospital of hospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // عدد البلاغات المُعالجة
+        const [[complaintStats]] = await hospitalPool.query(`
+          SELECT COUNT(*) as total
+          FROM complaints 
+          WHERE (IsDeleted = 0 OR IsDeleted IS NULL)
+        `);
+        
+        totalComplaints += Number(complaintStats?.total || 0);
+        
+        // عدد المستخدمين النشطين
+        const [[userStats]] = await hospitalPool.query(`
+          SELECT COUNT(DISTINCT UserID) as total
+          FROM users 
+          WHERE (IsActive = 1 OR IsActive IS NULL)
+        `);
+        
+        totalUsers += Number(userStats?.total || 0);
+        
+      } catch (err) {
+        console.warn(`⚠️ خطأ في جلب بيانات مستشفى ${hospital.NameAr}:`, err.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        complaintsProcessed: totalComplaints,
+        activeBeneficiaries: totalUsers,
+        hospitalCoverage: hospitals.length,
+        activeHospitals: hospitals.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('GET /dashboard/total/home-stats', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Database error',
+      message: error.message 
+    });
+  }
+});
+
 export default router;

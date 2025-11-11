@@ -439,6 +439,7 @@ async function loadDetails() {
     const subTypeText = c.SubTypeNameAr || c.subTypeName || c.SubTypeID || c.subType || '';
     const typeText = [typeNameAr, subTypeText].filter(Boolean).join(' — ');
     qs('dType').textContent = typeText || '—';
+    qs('dVisitDate').textContent = formatDateLocal(c.VisitDate || c.visitDate || '—');
     qs('dCreated').textContent = formatDateLocal(c.CreatedAt || c.createdAt);
     qs('dUpdated').textContent = formatDateLocal(c.UpdatedAt || c.lastUpdate);
     

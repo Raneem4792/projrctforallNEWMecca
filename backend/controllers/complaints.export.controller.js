@@ -11,18 +11,33 @@ export const exportComplaintsExcel = async (req, res) => {
   try {
     const { from, to, all, name, mobile, file, ticket, status, priority, assigned, type, tickets } = req.query;
 
-    // تحديد hospitalId
-    const hospitalId = req.user?.HospitalID || req.query.hospitalId;
+    // تحديد hospitalId - يمكن أن يكون 'ALL' أو فارغاً لمدير التجمع
+    let hospitalIdParam = req.query.hospitalId;
     
-    if (!hospitalId) {
+    // إذا لم يتم إرسال hospitalId، نستخدم المستشفى من التوكن
+    if (hospitalIdParam === undefined || hospitalIdParam === null) {
+      hospitalIdParam = req.user?.HospitalID;
+    }
+    
+    // إذا كان 'ALL' أو فارغ، نصدّر من جميع المستشفيات (لمدير التجمع)
+    const isAllHospitals = hospitalIdParam === 'ALL' || hospitalIdParam === '';
+    
+    console.log('📊 [EXPORT] معلومات الطلب:', {
+      hospitalIdParam,
+      isAllHospitals,
+      userHospitalId: req.user?.HospitalID
+    });
+    
+    // التحقق: يجب أن يكون لدينا hospitalId أو أن يكون مدير تجمع يريد الكل
+    if (!isAllHospitals && !hospitalIdParam) {
       return res.status(400).json({ 
         ok: false, 
         message: 'يجب تحديد hospitalId' 
       });
     }
-
+    
     // استخدام pool من hospitalId
-    const pool = await getHospitalPool(Number(hospitalId));
+    const pool = isAllHospitals ? null : await getHospitalPool(Number(hospitalIdParam));
 
     // بناء شروط WHERE
     let where = 'WHERE (c.IsDeleted=0 OR c.IsDeleted IS NULL)';
@@ -87,34 +102,108 @@ export const exportComplaintsExcel = async (req, res) => {
       }
     }
 
-    // بناء SQL query
-    const sql = `
-      SELECT 
-        c.ComplaintID,
-        c.TicketNumber,
-        c.PatientFullName,
-        c.PatientMobile,
-        c.FileNumber,
-        c.Description,
-        c.PriorityCode,
-        c.StatusCode,
-        c.CreatedAt,
-        c.UpdatedAt,
-        d.NameAr AS DepartmentName,
-        COALESCE((SELECT r.Message 
-         FROM complaint_responses r 
-         WHERE r.ComplaintID = c.ComplaintID 
-         ORDER BY r.CreatedAt DESC 
-         LIMIT 1), '') AS ReplyMessage
-      FROM complaints c
-      LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
-      ${where}
-      ORDER BY c.CreatedAt DESC
-    `;
+    let rows = [];
 
-    console.log('📊 [EXPORT] جلب البلاغات:', { sql: sql.substring(0, 200), paramsCount: params.length });
+    // إذا كان تصدير من جميع المستشفيات (لمدير التجمع)
+    if (isAllHospitals) {
+      console.log('📊 [EXPORT] تصدير من جميع المستشفيات');
+      
+      // جلب قائمة المستشفيات النشطة
+      const { getCentralPool } = await import('../db/centralPool.js');
+      const centralPool = await getCentralPool();
+      const [hospitals] = await centralPool.query(
+        'SELECT HospitalID, NameAr FROM hospitals WHERE IsActive=1'
+      );
+      
+      console.log(`📋 [EXPORT] عدد المستشفيات النشطة: ${hospitals.length}`);
+      
+      // جلب البيانات من كل مستشفى
+      for (const hospital of hospitals) {
+        try {
+          console.log(`🏥 [EXPORT] جلب بيانات من: ${hospital.NameAr} (ID: ${hospital.HospitalID})`);
+          
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          
+          const sql = `
+            SELECT 
+              c.ComplaintID,
+              c.TicketNumber,
+              c.PatientFullName,
+              c.PatientMobile,
+              c.FileNumber,
+              c.Description,
+              c.PriorityCode,
+              c.StatusCode,
+              c.CreatedAt,
+              c.UpdatedAt,
+              '${hospital.NameAr}' AS HospitalName,
+              d.NameAr AS DepartmentName,
+              COALESCE((SELECT r.Message 
+               FROM complaint_responses r 
+               WHERE r.ComplaintID = c.ComplaintID 
+               ORDER BY r.CreatedAt DESC 
+               LIMIT 1), '') AS ReplyMessage
+            FROM complaints c
+            LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+            ${where}
+            ORDER BY c.CreatedAt DESC
+          `;
+          
+          const [hospitalRows] = await hospitalPool.query(sql, params);
+          console.log(`✅ [EXPORT] ${hospital.NameAr}: ${hospitalRows.length} بلاغ`);
+          rows.push(...hospitalRows);
+        } catch (err) {
+          console.error(`❌ [EXPORT] خطأ في جلب بيانات مستشفى ${hospital.NameAr}:`, err.message);
+        }
+      }
+      
+      // ترتيب النتائج حسب التاريخ
+      rows.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+      
+      console.log(`📊 [EXPORT] إجمالي البلاغات من جميع المستشفيات: ${rows.length}`);
+      
+    } else {
+      // تصدير من مستشفى واحد
+      console.log('📊 [EXPORT] تصدير من مستشفى واحد:', hospitalIdParam);
+      
+      // جلب اسم المستشفى
+      const { getCentralPool } = await import('../db/centralPool.js');
+      const centralPool = await getCentralPool();
+      const [[hospitalInfo]] = await centralPool.query(
+        'SELECT NameAr FROM hospitals WHERE HospitalID=? LIMIT 1',
+        [hospitalIdParam]
+      );
+      const hospitalName = hospitalInfo?.NameAr || 'غير محدد';
+      
+      const sql = `
+        SELECT 
+          c.ComplaintID,
+          c.TicketNumber,
+          c.PatientFullName,
+          c.PatientMobile,
+          c.FileNumber,
+          c.Description,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          c.UpdatedAt,
+          '${hospitalName}' AS HospitalName,
+          d.NameAr AS DepartmentName,
+          COALESCE((SELECT r.Message 
+           FROM complaint_responses r 
+           WHERE r.ComplaintID = c.ComplaintID 
+           ORDER BY r.CreatedAt DESC 
+           LIMIT 1), '') AS ReplyMessage
+        FROM complaints c
+        LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+        ${where}
+        ORDER BY c.CreatedAt DESC
+      `;
 
-    const [rows] = await pool.query(sql, params);
+      console.log('📊 [EXPORT] جلب البلاغات:', { sql: sql.substring(0, 200), paramsCount: params.length });
+
+      [rows] = await pool.query(sql, params);
+    }
 
     console.log(`✅ [EXPORT] تم جلب ${rows.length} بلاغ للتصدير`);
 
@@ -125,6 +214,7 @@ export const exportComplaintsExcel = async (req, res) => {
     // تحديد الأعمدة
     sheet.columns = [
       { header: 'رقم البلاغ', key: 'TicketNumber', width: 20 },
+      { header: 'المستشفى', key: 'HospitalName', width: 25 },
       { header: 'اسم المراجع', key: 'PatientFullName', width: 25 },
       { header: 'رقم الجوال', key: 'PatientMobile', width: 15 },
       { header: 'رقم الملف', key: 'FileNumber', width: 15 },
@@ -149,6 +239,7 @@ export const exportComplaintsExcel = async (req, res) => {
     rows.forEach(r => {
       sheet.addRow({
         TicketNumber: r.TicketNumber || '',
+        HospitalName: r.HospitalName || '',
         PatientFullName: r.PatientFullName || '',
         PatientMobile: r.PatientMobile || '',
         FileNumber: r.FileNumber || '',

@@ -115,6 +115,7 @@ router.get('/track', optionalAuth, async (req, res) => {
         c.PatientMobile,
         c.FileNumber,
         c.Description,
+        c.VisitDate,
         c.StatusCode,
         c.PriorityCode,
         c.HospitalID,
@@ -596,6 +597,7 @@ router.get('/history', requireAuth, async (req, res) => {
         COALESCE(h.NameAr, 'غير محدد') AS hospital,
         c.ComplaintTypeID     AS type,
         t.TypeName            AS typeName,
+        c.VisitDate           AS visitDate,
         DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
         DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
         COALESCE((
@@ -637,6 +639,7 @@ router.get('/history', requireAuth, async (req, res) => {
         c.DepartmentID        AS departmentId,
         c.ComplaintTypeID     AS type,
         t.TypeName            AS typeName,
+        c.VisitDate           AS visitDate,
         DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
         DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
         COALESCE((
@@ -970,7 +973,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
         COALESCE(NULLIF(c.TicketNumber,''), CONCAT('C-', c.ComplaintID)) AS TicketNo,
         c.HospitalID, c.DepartmentID, c.CreatedByUserID,
         c.SubmissionType, c.StatusCode, c.PriorityCode,
-        c.Description, c.CreatedAt, c.UpdatedAt,
+        c.Description, c.VisitDate, c.CreatedAt, c.UpdatedAt,
         d.NameAr AS DepartmentNameAr,
         d.NameEn AS DepartmentNameEn,
         u.FullName AS CreatedByFullName,
