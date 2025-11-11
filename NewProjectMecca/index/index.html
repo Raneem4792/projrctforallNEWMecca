@@ -1140,20 +1140,34 @@
 
       // دالة إخفاء Pop-up
       function hideUrgentPopup() {
-        if (currentPopup) {
-          if (currentPopup.popup) {
-            currentPopup.popup.classList.add('fadeOut');
-            setTimeout(() => {
-              if (currentPopup.popup && currentPopup.popup.parentNode) {
-                currentPopup.popup.parentNode.removeChild(currentPopup.popup);
-              }
-            }, 300);
-          }
-          if (currentPopup.overlay && currentPopup.overlay.parentNode) {
-            currentPopup.overlay.parentNode.removeChild(currentPopup.overlay);
-          }
-          currentPopup = null;
+        // إزالة النافذة مباشرة من DOM
+        const popup = document.getElementById('urgentAlertPopup');
+        const overlay = document.getElementById('urgentAlertOverlay');
+        
+        if (popup) {
+          popup.classList.add('fadeOut');
+          setTimeout(() => {
+            if (popup.parentNode) {
+              popup.parentNode.removeChild(popup);
+            }
+          }, 300);
+        } else if (popup && popup.parentNode) {
+          // إزالة مباشرة إذا لم تكن هناك حركة
+          popup.parentNode.removeChild(popup);
         }
+        
+        if (overlay) {
+          if (overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
+        }
+        
+        // تنظيف المرجع
+        currentPopup = null;
+        
+        // ✅ إزالة دالة openComplaintDetails من window بعد إخفاء النافذة
+        // (لكن نتركها لأنها قد تُستدعى من داخل النافذة قبل الإخفاء)
+        // بدلاً من ذلك، سنضيف تحقق في الدالة نفسها
       }
 
       // جعل الدالة متاحة عالمياً
@@ -1161,25 +1175,37 @@
 
       // ✅ دالة فتح صفحة تفاصيل البلاغ
       function openComplaintDetails(ticketNumber, hospitalId) {
-        if (!ticketNumber) {
-          console.error('❌ رقم التذكرة مفقود');
+        // ✅ التحقق من وجود النافذة قبل الانتقال
+        const popup = document.getElementById('urgentAlertPopup');
+        if (!popup || !popup.parentNode) {
+          console.warn('⚠️ النافذة غير موجودة - تم إلغاء الانتقال');
+          return;
+        }
+
+        if (!ticketNumber || ticketNumber === '—' || ticketNumber === 'غير محدد') {
+          console.error('❌ رقم التذكرة مفقود أو غير صالح');
           return;
         }
 
         // بناء المسار مع رقم التذكرة و HospitalID (إن وجد)
         let url = `../public/complaints/history/complaint-details.html?ticket=${encodeURIComponent(ticketNumber)}`;
         
-        if (hospitalId) {
+        if (hospitalId && hospitalId !== 'null' && hospitalId !== null) {
           url += `&hid=${hospitalId}`;
         }
 
         console.log('🔗 فتح تفاصيل البلاغ:', { ticket: ticketNumber, hospitalId, url });
         
-        // الانتقال إلى صفحة التفاصيل
-        window.location.href = url;
+        // إخفاء النافذة أولاً
+        hideUrgentPopup();
+        
+        // الانتقال إلى صفحة التفاصيل بعد تأخير بسيط
+        setTimeout(() => {
+          window.location.href = url;
+        }, 100);
       }
 
-      // جعل الدالة متاحة عالمياً
+      // جعل الدالة متاحة عالمياً فقط عند وجود النافذة
       window.openComplaintDetails = openComplaintDetails;
 
       // ✅ جلب كل البلاغات الحرجة من جميع المستشفيات

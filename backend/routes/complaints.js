@@ -31,42 +31,68 @@ const CATEGORY_SQL = `
 `;
 
 /**
- * GET /api/complaints/track?name=XXX
+ * GET /api/complaints/track?name=XXX&mobile=XXX&ticket=XXX&file=XXX&nid=XXX
  * تفاصيل البلاغ بواسطة رقم التذكرة (للواجهة العامة)
  * يستخدم القاعدة المركزية للبحث (تحتوي على جميع البلاغات)
  */
 router.get('/track', optionalAuth, async (req, res) => {
   try {
-    const term = (req.query.name || '').trim().replace(/\s+/g,' ');
-    if (!term) return res.status(400).json({ ok:false, message:'أدخل قيمة للبحث' });
+    // قراءة جميع معاملات البحث حسب الأولوية
+    const ticket = (req.query.ticket || '').trim();
+    const mobile = (req.query.mobile || '').trim();
+    const file = (req.query.file || '').trim();
+    const nid = (req.query.nid || '').trim();
+    const name = (req.query.name || '').trim().replace(/\s+/g,' ');
+    
+    // تحديد قيمة البحث ونوعها حسب الأولوية
+    let term = '';
+    let searchBy = '';
+    
+    if (ticket) {
+      term = ticket;
+      searchBy = 'TicketNumber';
+    } else if (mobile) {
+      term = mobile;
+      searchBy = 'PatientMobile';
+    } else if (file) {
+      term = file;
+      searchBy = 'FileNumber';
+    } else if (nid) {
+      term = nid;
+      searchBy = 'PatientIDNumber';
+    } else if (name) {
+      term = name;
+      // التعرّف على نوع البحث من النمط (للتوافق مع الكود القديم)
+      if (/^05\d{8}$/.test(term)) {
+        searchBy = 'PatientMobile'; // رقم جوال (يبدأ بـ 05)
+      } else if (/^\d{10}$/.test(term)) {
+        searchBy = 'PatientIDNumber'; // رقم هوية (10 أرقام)
+      } else if (/^(B|C)[0-9\-]+$/i.test(term)) {
+        searchBy = 'TicketNumber';
+      } else if (/^[A-Z]-\d{4,7}$/i.test(term)) {
+        searchBy = 'TicketNumber';
+      } else if (/^[A-Za-z0-9\-_/]{6,20}$/.test(term)) {
+        searchBy = 'FileNumber';
+      } else {
+        searchBy = 'PatientFullName'; // البحث بالاسم
+      }
+    }
+    
+    if (!term) {
+      return res.status(400).json({ ok:false, message:'أدخل قيمة للبحث' });
+    }
 
     // لوج تشخيصي
-    console.log(`🔍 [TRACK] البحث عن: "${term}" | hasUser: ${!!req.user} | hospitalId: ${req.user?.HospitalID || req.user?.hospitalId || 'none'}`);
+    console.log(`🔍 [TRACK] البحث عن: "${term}" | نوع البحث: ${searchBy} | hasUser: ${!!req.user} | hospitalId: ${req.user?.HospitalID || req.user?.hospitalId || 'none'}`);
 
     const scope = hospitalScopeSQL(req.user, 'c', req);
 
-    // --- التعرّف على نوع البحث ---
-    let searchBy = 'TicketNumber'; // القيمة الافتراضية
-    
-    if (/^05\d{8}$/.test(term)) {
-      searchBy = 'PatientMobile'; // رقم جوال (يبدأ بـ 05)
-    } else if (/^\d{10}$/.test(term)) {
-      searchBy = 'PatientIDNumber'; // رقم هوية (10 أرقام)
-    } else if (/^(B|C)[0-9\-]+$/i.test(term)) {
-      // 👈 إذا بدأ بحرف B أو C يعتبَر رقم بلاغ (يدعم الشرطات)
-      searchBy = 'TicketNumber';
-    } else if (/^[A-Z]-\d{4,7}$/i.test(term)) {
-      // أرقام بلاغات بنمط مثل C-2025-0001
-      searchBy = 'TicketNumber';
-    } else if (/^[A-Za-z0-9\-_/]{6,20}$/.test(term)) {
-      // رقم ملف أو كود آخر
-      searchBy = 'FileNumber';
-    }
-    
+    // تحديد نوع البحث
     const isTicket     = searchBy === 'TicketNumber';
     const isMobile     = searchBy === 'PatientMobile';
     const isNationalId = searchBy === 'PatientIDNumber';
     const isFileNo     = searchBy === 'FileNumber';
+    const isName       = searchBy === 'PatientFullName';
     
     console.log(`🔍 [TRACK] تحليل النص:`, {
       term,
@@ -74,7 +100,8 @@ router.get('/track', optionalAuth, async (req, res) => {
       isTicket,
       isMobile,
       isNationalId,
-      isFileNo
+      isFileNo,
+      isName
     });
     
     console.log(`🔎 [TRACK] نوع البحث المحدد: ${searchBy}`);
@@ -119,19 +146,18 @@ router.get('/track', optionalAuth, async (req, res) => {
           ${isMobile     ? 'c.PatientMobile = ?' : '0'} OR
           ${isNationalId ? 'c.PatientIDNumber = ?' : '0'} OR
           ${isFileNo     ? 'c.FileNumber = ?' : '0'} OR
-          c.PatientFullName COLLATE utf8mb4_0900_ai_ci LIKE ?
+          ${isName       ? 'c.PatientFullName COLLATE utf8mb4_0900_ai_ci LIKE ?' : '0'}
         )
       ORDER BY c.CreatedAt DESC
       LIMIT 50
     `;
 
-    const params = [...scope.params,
-      ...(isTicket ? [term] : []),
-      ...(isMobile ? [term] : []),
-      ...(isNationalId ? [term] : []),
-      ...(isFileNo ? [term] : []),
-      `%${term}%`
-    ];
+    const params = [...scope.params];
+    if (isTicket) params.push(term);
+    if (isMobile) params.push(term);
+    if (isNationalId) params.push(term);
+    if (isFileNo) params.push(term);
+    if (isName) params.push(`%${term}%`);
 
     // تحديد نوع المستخدم
     const roleId = Number(req.user?.RoleID ?? req.user?.roleId ?? 0);
@@ -1215,7 +1241,14 @@ router.post('/', requireAuth, upload.array('attachments', 10), resolveHospitalId
     const FileNumber       = req.body.FileNumber || req.body.fileNumber || null;
     const ComplaintTypeID  = Number(req.body.ComplaintTypeID || req.body.complaintTypeId || 0) || null;
     const SubTypeID        = Number(req.body.SubTypeID || req.body.subTypeId || 0) || null;
-    const PriorityCode     = (req.body.PriorityCode || req.body.priorityCode || 'MEDIUM').toUpperCase();
+    
+    // ✅ تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
+    let PriorityCode = (req.body.PriorityCode || req.body.priorityCode || 'MEDIUM').toUpperCase();
+    if (ComplaintTypeID === 17) {
+      PriorityCode = 'URGENT';
+      console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
+    }
+    
     const SubmissionType   = req.body.SubmissionType || req.body.submissionType || '937';
     
     // ✅ تأكيد StatusCode بحروف كبيرة

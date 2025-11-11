@@ -451,21 +451,27 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
           const ComplaintTypeID = complaintTypeName ? await findTypeIdByName(conn, complaintTypeName) : null;
           const SubTypeID = subTypeName ? await findSubTypeIdByName(conn, subTypeName) : null;
 
-          // --- تحديد الأولوية من جدول priority_keywords ---
+          // --- تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
           let PriorityCode = 'MEDIUM';
-          try {
-            if (Description || complaintTypeName || subTypeName) {
-              const text = `${Description || ''} ${complaintTypeName || ''} ${subTypeName || ''}`;
-              const [keywords] = await conn.query('SELECT Keyword, PriorityCode FROM priority_keywords');
-              for (const k of keywords) {
-                if (text.includes(k.Keyword)) {
-                  PriorityCode = k.PriorityCode;
-                  break;
+          if (ComplaintTypeID === 17) {
+            PriorityCode = 'URGENT';
+            console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
+          } else {
+            // --- تحديد الأولوية من جدول priority_keywords ---
+            try {
+              if (Description || complaintTypeName || subTypeName) {
+                const text = `${Description || ''} ${complaintTypeName || ''} ${subTypeName || ''}`;
+                const [keywords] = await conn.query('SELECT Keyword, PriorityCode FROM priority_keywords');
+                for (const k of keywords) {
+                  if (text.includes(k.Keyword)) {
+                    PriorityCode = k.PriorityCode;
+                    break;
+                  }
                 }
               }
+            } catch {
+              PriorityCode = 'MEDIUM';
             }
-          } catch {
-            PriorityCode = 'MEDIUM';
           }
 
           const StatusCode = (get('status') || '').toString().trim() || 'OPEN';

@@ -80,16 +80,24 @@ router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.arra
     const FileNumber       = req.body.FileNumber || req.body.fileNumber || null;
     const ComplaintTypeID  = Number(req.body.ComplaintTypeID || req.body.complaintTypeId || 0) || null;
     const SubTypeID        = Number(req.body.SubTypeID || req.body.subTypeId || 0) || null;
-    // 🔍 استنتاج الأولوية من الكلمات المفتاحية
-    const { detectPriorityByKeywords } = await import('../utils/priorityDetect.js');
-    const detection = await detectPriorityByKeywords(req.hospitalPool, Description);
-    const PriorityCode = (detection.priority || 'MEDIUM').toUpperCase();
     
-    console.log('🎯 تحديد الأولوية التلقائي:', {
-      description: Description?.substring(0, 50) + '...',
-      detectedPriority: PriorityCode,
-      matchedKeywords: detection.matched?.map(m => m.keyword) || []
-    });
+    // ✅ تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
+    let PriorityCode;
+    if (ComplaintTypeID === 17) {
+      PriorityCode = 'URGENT';
+      console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
+    } else {
+      // 🔍 استنتاج الأولوية من الكلمات المفتاحية
+      const { detectPriorityByKeywords } = await import('../utils/priorityDetect.js');
+      const detection = await detectPriorityByKeywords(req.hospitalPool, Description);
+      PriorityCode = (detection.priority || 'MEDIUM').toUpperCase();
+      
+      console.log('🎯 تحديد الأولوية التلقائي:', {
+        description: Description?.substring(0, 50) + '...',
+        detectedPriority: PriorityCode,
+        matchedKeywords: detection.matched?.map(m => m.keyword) || []
+      });
+    }
     const SubmissionType   = req.body.SubmissionType || req.body.submissionType || '937';
     
     // ✅ تأكيد StatusCode بحروف كبيرة
