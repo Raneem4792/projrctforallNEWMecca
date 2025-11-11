@@ -80,9 +80,13 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
       if (!hid) {
         // رسالة توجيهية
         const wrap = canvas.parentElement;
-        wrap.innerHTML = `<div class="text-center py-10 text-gray-600">
+        if (wrap) {
+          wrap.innerHTML = `<div class="text-center py-10 text-gray-600">
           اختر مستشفى من القائمة لعرض بيانات الزائر السري.
         </div>`;
+        } else {
+          console.warn('Mystery canvas is missing a wrapper element.');
+        }
         return;
       }
       params.set('hospitalId', hid);
@@ -97,18 +101,28 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
 
     if (!res.ok) {
       console.warn('Mystery API failed', res.status, url);
-      canvas.parentElement.innerHTML =
-        `<div class="text-center py-8">
-           <div class="text-red-600 text-lg mb-2">تعذّر تحميل بيانات الزائر السري</div>
-           <div class="text-gray-600">تحقّق من الصلاحيات/المسار</div>
-         </div>`;
+      const wrap = canvas.parentElement;
+      if (wrap) {
+        wrap.innerHTML =
+          `<div class="text-center py-8">
+             <div class="text-red-600 text-lg mb-2">تعذّر تحميل بيانات الزائر السري</div>
+             <div class="text-gray-600">تحقّق من الصلاحيات/المسار</div>
+           </div>`;
+      } else {
+        console.warn('Mystery canvas is missing a wrapper element.');
+      }
       return;
     }
 
     const js = await res.json();
     const rows = js?.data || [];
     if (!rows.length) {
-      canvas.parentElement.innerHTML = `<div class="text-center py-8 text-gray-600">لا توجد بيانات</div>`;
+      const wrap = canvas.parentElement;
+      if (wrap) {
+        wrap.innerHTML = `<div class="text-center py-8 text-gray-600">لا توجد بيانات</div>`;
+      } else {
+        console.warn('Mystery canvas is missing a wrapper element.');
+      }
       return;
     }
 
