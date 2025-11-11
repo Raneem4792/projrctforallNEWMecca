@@ -772,7 +772,9 @@
 
         // 🔒 التحكم في ظهور بطاقة برسجيني حسب الصلاحيات
         const pressGaney = payload.pressganey || {};
-        const canSeePressGaney = pressGaney.view || pressGaney.module || isClusterAdmin || adminPanel;
+        const pressGaneyModule = pressGaney.module ?? payload.pressganeyModule ?? false;
+        const pressGaneyView = pressGaney.view ?? payload.pressganeyView ?? false;
+        const canSeePressGaney = pressGaneyModule || pressGaneyView || isClusterAdmin;
         if (cardPressGaney) cardPressGaney.style.display = canSeePressGaney ? '' : 'none';
 
         // تقديم بلاغ / متابعة / السجل

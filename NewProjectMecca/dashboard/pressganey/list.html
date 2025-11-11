@@ -67,9 +67,18 @@
   </header>
 
   <main class="pt-20 max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-blue-900"> مؤشر PressGaney</h1>
-      <div class="flex gap-3">
+    <div class="flex justify-between items-center mb-6 flex-col md:flex-row gap-4">
+      <div class="flex flex-col gap-2">
+        <h1 class="text-2xl font-bold text-blue-900"> مؤشر PressGaney</h1>
+        <div id="pressganey-hospital-info" class="text-sm text-gray-600 hidden"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="pressganey-hospital-wrap" class="hidden">
+          <label for="pressganey-hospital-select" class="sr-only">اختر المستشفى</label>
+          <select id="pressganey-hospital-select" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-200">
+            <option value="">اختر المستشفى</option>
+          </select>
+        </div>
         <button id="importExcelBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
           <i class="fas fa-file-excel"></i> استيراد إكسل
         </button>
@@ -334,6 +343,112 @@
   <script src="../../public/assets/js/auth-check.js"></script>
 
   <script src="../../public/assets/js/pressganey.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const wrap = document.getElementById('pressganey-hospital-wrap');
+      const select = document.getElementById('pressganey-hospital-select');
+      const info = document.getElementById('pressganey-hospital-info');
+      const importBtn = document.getElementById('importExcelBtn');
+
+      const user = window.AuthSystem?.getCurrentUser?.() || {};
+      const isClusterManager = user?.RoleID === 1 || user?.IsClusterManager === true;
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+      const apiBase = typeof API_BASE !== 'undefined'
+        ? API_BASE
+        : (localStorage.getItem('apiBase') || (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3001' : ''));
+
+      if (importBtn) {
+        importBtn.style.display = 'none';
+      }
+
+      try {
+        const permRes = await fetch(`${apiBase}/api/auth/me-permissions`, {
+          headers: {
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        });
+        if (permRes.ok) {
+          const permJson = await permRes.json();
+          const pressganeyPerms = permJson?.pressganey || {};
+          if (importBtn && pressganeyPerms.import) {
+            importBtn.style.display = '';
+          }
+        } else {
+          console.warn('Failed to load PressGaney permissions', permRes.status);
+        }
+      } catch (err) {
+        console.error('فشل التحقق من صلاحية PressGaney:', err);
+      }
+
+      const setHospitalId = (hid) => {
+        if (hid) {
+          localStorage.setItem('selectedHospitalId', String(hid));
+        } else {
+          localStorage.removeItem('selectedHospitalId');
+        }
+        if (typeof loadData === 'function') {
+          loadData();
+        }
+      };
+
+      if (isClusterManager) {
+        wrap?.classList.remove('hidden');
+        info?.classList.remove('hidden');
+        info.textContent = 'اختر المستشفى لعرض بيانات مؤشر الرضا.';
+
+        try {
+          const res = await fetch(`${apiBase}/api/central/hospitals?active=1`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const list = await res.json();
+          if (Array.isArray(list)) {
+            const saved = localStorage.getItem('selectedHospitalId') || '';
+            list
+              .sort((a, b) => (a.SortOrder ?? 999) - (b.SortOrder ?? 999) || String(a.NameAr || '').localeCompare(String(b.NameAr || ''), 'ar'))
+              .forEach(h => {
+                const option = document.createElement('option');
+                option.value = h.HospitalID;
+                option.textContent = `${h.NameAr || h.NameEn || 'بدون اسم'}${h.Code ? ` (${h.Code})` : ''}`;
+                select?.appendChild(option);
+              });
+            if (select) {
+              select.value = saved || '';
+              select.addEventListener('change', () => {
+                const val = select.value;
+                info.textContent = val ? `المستشفى المختار: ${select.options[select.selectedIndex]?.textContent || ''}` : 'اختر المستشفى لعرض بيانات مؤشر الرضا.';
+                setHospitalId(val);
+              });
+              if (saved) {
+                info.textContent = `المستشفى المختار: ${select.options[select.selectedIndex]?.textContent || ''}`;
+                setHospitalId(saved);
+              } else if (list.length) {
+                const firstId = list[0]?.HospitalID;
+                select.value = firstId || '';
+                info.textContent = `المستشفى المختار: ${select.options[select.selectedIndex]?.textContent || ''}`;
+                setHospitalId(firstId);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load hospitals:', err);
+          info.textContent = 'تعذّر تحميل قائمة المستشفيات.';
+        }
+      } else {
+        const hid = user?.HospitalID || user?.hospitalId || user?.hid;
+        if (hid) {
+          info?.classList.remove('hidden');
+          info.textContent = user?.HospitalNameAr || user?.HospitalNameEn || 'المستشفى الخاص بك';
+          setHospitalId(hid);
+        } else {
+          info?.classList.remove('hidden');
+          info.textContent = 'لا يوجد مستشفى مرتبط بحسابك.';
+          setHospitalId(null);
+        }
+      }
+    });
+  </script>
 </body>
 </html>
 
