@@ -1321,3 +1321,10 @@ CREATE TABLE pressganey_data (
 ALTER TABLE pressganey_data
 ADD COLUMN HospitalID INT NULL AFTER id;
 
+  
+INSERT INTO permissions (PermissionKey, NameAr, Category) VALUES
+('PRESSGANEY_VIEW',   'عرض لوحة برسجيني',        'pressganey'),
+('PRESSGANEY_MODULE', 'الدخول لمنصة برسجيني',     'pressganey'),
+('PRESSGANEY_IMPORT', 'استيراد ملفات Excel برسجيني', 'pressganey');
+
+
