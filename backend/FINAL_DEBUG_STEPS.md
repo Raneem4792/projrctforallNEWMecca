@@ -4,17 +4,17 @@
 
 من رسائل الخطأ:
 ```
-Error: Table 'hospitals_mecca4.user_permissions' doesn't exist
+Error: Table 'hospitals_mecca3.user_permissions' doesn't exist
 ```
 
-هذا يعني أن النظام **يستخدم القاعدة المركزية `hospitals_mecca4`** بدلاً من `hosp_aaaa`.
+هذا يعني أن النظام **يستخدم القاعدة المركزية `hospitals_mecca3`** بدلاً من `hosp_aaaa`.
 
 ## ✅ التشخيص المضاف
 
 ### **1. في `config/db.js`:**
 ```javascript
 // القاعدة المركزية
-centralDb._dbName = 'hospitals_mecca4';
+centralDb._dbName = 'hospitals_mecca3';
 centralDb._hospitalId = 'CENTRAL';
 
 // قاعدة المستشفى
@@ -49,7 +49,7 @@ npm start
 // أو
 🔍 [getContextualPool] مدير بدون مستشفى محدد -> القاعدة المركزية   ❌
 
-🔍 [HISTORY] قاعدة البيانات: hospitals_mecca4   ❌
+🔍 [HISTORY] قاعدة البيانات: hospitals_mecca3   ❌
 🔍 [HISTORY] معرف المستشفى: CENTRAL   ❌
 ```
 
@@ -103,7 +103,7 @@ hospitalPools.clear();
 - [ ] رسالة "مستخدم عادي" تظهر؟
 - [ ] رسالة "إنشاء اتصال للمستشفى" تظهر؟
 - [ ] `قاعدة البيانات: hosp_aaaa` تظهر؟
-- [ ] الخطأ لا يزال `hospitals_mecca4`؟
+- [ ] الخطأ لا يزال `hospitals_mecca3`؟
 
 ## 🚀 النتيجة المتوقعة
 

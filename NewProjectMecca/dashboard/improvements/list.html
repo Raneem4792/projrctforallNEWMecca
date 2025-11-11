@@ -668,6 +668,7 @@
               improvementCreate: true,
               improvementEdit: true,
               improvementDelete: true,
+              improvementApprove: true,
               improvementReportView: true
             };
             return;
@@ -682,8 +683,9 @@
         // حفظ الصلاحيات في متغير عام
         userPermissions = p;
 
-        // مدير التجمع (RoleID = 1) يرى كل شيء بدون قيود
-        isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
+        // تحديد ما إذا كان المستخدم مدير تجمع
+        const detectedCentral = Boolean(p.isCentralAdmin);
+        isCentralAdmin = detectedCentral || isClusterManager();
         
         if (isCentralAdmin) {
           console.log('✅ [applyPermissions] Central Admin detected - Full permissions');

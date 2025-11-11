@@ -110,7 +110,9 @@ export async function getUserPermissions(req, res) {
         improvementEdit: has('IMPROVEMENT_EDIT'),
         improvementDelete: has('IMPROVEMENT_DELETE'),
         improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
+        improvementApprove: has('IMPROVEMENT_APPROVE'),
         improvementsModule: has('IMPROVEMENTS_MODULE'),
+        isCentralAdmin: req.user?.RoleID === 1 || req.user?.HospitalID == null,
         // صلاحيات الزائر السري
         mysteryModule: has('MYSTERY_MODULE'),
         mysteryView: has('MYSTERY_VIEW'),
@@ -199,7 +201,7 @@ export async function saveUserPermissions(req, res) {
       submit, view, historyScope, reply, transfer, transferDept, transferUser, complaintTransferHospital, statusUpdate, remove, adminPanel,
       adminDepartments, adminHospital, adminClusters, hospitalCreate,
       hospitalTrash, hospitalLogs, hospitalPermissions, hospitalUsers, hospitalUserCreate, hospitalUserEdit, hospitalUserDelete,
-      improvementCreate, improvementView, improvementEdit, improvementDelete, improvementReportView, improvementsModule,
+      improvementCreate, improvementView, improvementEdit, improvementDelete, improvementReportView, improvementApprove, improvementsModule,
       mysteryModule, mysteryView, mysteryReplyAdd, mysteryStatusUpdate, mysteryTransferDept, mysteryTransferEmp, mysteryDelete,
       importsPage, importDepartments, importMystery, import937,
       // Dashboard permissions
@@ -263,6 +265,7 @@ export async function saveUserPermissions(req, res) {
     await ensurePermission('COMPLAINT_SUBTYPE_CREATE', 'إضافة تصنيف فرعي جديد', 'complaints');
     await ensurePermission('COMPLAINT_SUBTYPE_EDIT', 'تعديل تصنيف فرعي', 'complaints');
     await ensurePermission('COMPLAINT_SUBTYPE_DELETE', 'حذف تصنيف فرعي', 'complaints');
+    await ensurePermission('IMPROVEMENT_APPROVE', 'اعتماد مشروع تحسيني', 'improvements');
 
     // بدء المعاملة بعد التأكد من وجود الصلاحيات
     await conn.beginTransaction();
@@ -309,6 +312,7 @@ export async function saveUserPermissions(req, res) {
     improvementEdit ? await upsert('IMPROVEMENT_EDIT') : await drop('IMPROVEMENT_EDIT');
     improvementDelete ? await upsert('IMPROVEMENT_DELETE') : await drop('IMPROVEMENT_DELETE');
     improvementReportView ? await upsert('IMPROVEMENT_REPORT_VIEW') : await drop('IMPROVEMENT_REPORT_VIEW');
+    improvementApprove ? await upsert('IMPROVEMENT_APPROVE') : await drop('IMPROVEMENT_APPROVE');
     improvementsModule ? await upsert('IMPROVEMENTS_MODULE') : await drop('IMPROVEMENTS_MODULE');
     // صلاحيات الزائر السري
     mysteryModule ? await upsert('MYSTERY_MODULE') : await drop('MYSTERY_MODULE');
@@ -458,6 +462,7 @@ export async function getMyPermissions(req, res) {
             improvementEdit: true,
             improvementDelete: true,
             improvementReportView: true,
+            improvementApprove: true,
             improvementsModule: true,
             // صلاحيات الزائر السري
             mysteryModule: true,
@@ -568,7 +573,9 @@ export async function getMyPermissions(req, res) {
         improvementEdit: has('IMPROVEMENT_EDIT'),
         improvementDelete: has('IMPROVEMENT_DELETE'),
         improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
+        improvementApprove: has('IMPROVEMENT_APPROVE'),
         improvementsModule: has('IMPROVEMENTS_MODULE'),
+        isCentralAdmin: req.user?.HospitalID == null,
         // صلاحيات الزائر السري
         mysteryModule: has('MYSTERY_MODULE'),
         mysteryView: has('MYSTERY_VIEW'),
@@ -692,6 +699,7 @@ export async function getMyPermissions(req, res) {
         improvementEdit: has('IMPROVEMENT_EDIT'),
         improvementDelete: has('IMPROVEMENT_DELETE'),
         improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
+        improvementApprove: has('IMPROVEMENT_APPROVE'),
         improvementsModule: has('IMPROVEMENTS_MODULE'),
         // صلاحيات الزائر السري
         mysteryModule: has('MYSTERY_MODULE'),

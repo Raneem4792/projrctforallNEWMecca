@@ -1060,6 +1060,24 @@
   <script>
     // نظام التنبيهات الفورية للبلاغات الحرجة
     (function() {
+      const isCentralAdmin = (() => {
+        try {
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          if (!userData || typeof userData !== 'object') return false;
+          if (userData.RoleID === 1) return true;
+          if (userData.IsClusterManager === true) return true;
+          if (userData.HospitalID == null) return true;
+        } catch (err) {
+          console.warn('Failed to parse userData for urgent alerts:', err);
+        }
+        return false;
+      })();
+
+      if (!isCentralAdmin) {
+        console.log('🚫 إخفاء تنبيه البلاغات الحرجة للمستخدم غير المركزي');
+        return;
+      }
+
       const API_BASE = window.API_BASE || 'http://localhost:3001';
       let lastCheckedTime = null;
       let currentPopup = null;

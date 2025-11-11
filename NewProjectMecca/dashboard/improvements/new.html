@@ -371,11 +371,38 @@
       const res = await fetch(url, { headers: token? {Authorization:`Bearer ${token}`, ...(hid ? {'x-hospital-id': String(hid)} : {})} : {}, credentials:'include' });
       const p = res.ok ? (await res.json()).data || {} : {};
       
-      // مدير التجمع (RoleID = 1) يرى كل شيء بدون قيود
-      window.isCentralAdmin = p.adminPanel && !p.hospitalCreate; // مدير التجمع المركزي
+      // تحديد ما إذا كان المستخدم مدير تجمع مركزي
+      const detectedCentral = Boolean(p.isCentralAdmin);
+      window.isCentralAdmin = detectedCentral;
+
+      if (!window.isCentralAdmin) {
+        // fallback باستخدام بيانات المستخدم المخزنة محلياً
+        try {
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          if (userData.RoleID === 1 || userData.IsClusterManager === true) {
+            window.isCentralAdmin = true;
+          }
+        } catch (err) {
+          console.warn('Failed to parse userData for central admin check:', err);
+        }
+      }
       
       // إظهار/إخفاء قائمة اختيار المستشفى
       const hospitalSelectContainer = document.getElementById('hospitalSelectContainer');
+      const hospitalSelectEl = document.getElementById('HospitalID');
+      if (hospitalSelectEl) {
+        if (window.isCentralAdmin) {
+          hospitalSelectEl.required = true;
+          hospitalSelectEl.setAttribute('required', 'required');
+        } else {
+          hospitalSelectEl.required = false;
+          hospitalSelectEl.removeAttribute('required');
+          const autoHid = effectiveHospitalId();
+          if (autoHid) {
+            hospitalSelectEl.value = String(autoHid);
+          }
+        }
+      }
       if (window.isCentralAdmin && hospitalSelectContainer) {
         hospitalSelectContainer.classList.remove('hidden');
         // تحميل قائمة المستشفيات

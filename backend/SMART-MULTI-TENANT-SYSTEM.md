@@ -6,7 +6,7 @@
 ## 🏗️ البنية
 
 ### 🏛️ القاعدة المركزية
-- **الاسم**: `hospitals_mecca4`
+- **الاسم**: `hospitals_mecca3`
 - **المحتوى**: جميع البلاغات من جميع المستشفيات
 - **المستخدمون**: مديرو التجمع، المسؤولون الكبار، البحث العام
 
@@ -23,7 +23,7 @@
 const DB_CONFIG = {
   host: process.env.CENTRAL_DB_HOST || 'localhost',
   user: process.env.CENTRAL_DB_USER || 'root',
-  password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+  password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
   waitForConnections: true,
   connectionLimit: 10,
   charset: 'utf8mb4_general_ci'
@@ -190,7 +190,7 @@ router.post('/', requireAuth, async (req, res) => {
 ### 1. زائر عادي يبحث عن بلاغ
 ```
 GET /api/complaints/track?name=رنيم
-→ القاعدة المركزية (hospitals_mecca4)
+→ القاعدة المركزية (hospitals_mecca3)
 → يجد البلاغ من أي مستشفى
 ```
 
@@ -204,7 +204,7 @@ POST /api/complaints (مع توكن)
 ### 3. مدير تجمع يشاهد البلاغات
 ```
 GET /api/complaints/history (مع توكن مدير)
-→ القاعدة المركزية (hospitals_mecca4)
+→ القاعدة المركزية (hospitals_mecca3)
 → يرى جميع البلاغات من جميع المستشفيات
 ```
 

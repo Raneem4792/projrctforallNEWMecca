@@ -396,6 +396,10 @@
                     <input type="checkbox" id="p_impr_report" class="w-4 h-4">
                     <span>عرض التقرير</span>
                   </label>
+                  <label class="flex items-center gap-3">
+                    <input type="checkbox" id="p_impr_approve" class="w-4 h-4">
+                    <span>اعتماد مشروع</span>
+                  </label>
                 </div>
               </section>
 
@@ -929,6 +933,7 @@ async function loadUserPerms(hid, userId){
     $('#p_impr_edit').checked = !!p.improvementEdit;
     $('#p_impr_delete').checked = !!p.improvementDelete;
     $('#p_impr_report').checked = !!p.improvementReportView;
+    $('#p_impr_approve').checked = !!p.improvementApprove;
     
     // صلاحيات الزائر السري
     $('#p_mys_module').checked = !!p.mysteryModule;
@@ -1070,6 +1075,7 @@ document.addEventListener("DOMContentLoaded", () => {
       improvementEdit: $('#p_impr_edit').checked,
       improvementDelete: $('#p_impr_delete').checked,
       improvementReportView: $('#p_impr_report').checked,
+      improvementApprove: $('#p_impr_approve').checked,
       // صلاحيات منصة برسجيني
       pressganeyModule: $('#p_pressganey_module').checked,
       pressganeyView: $('#p_pressganey_view').checked,

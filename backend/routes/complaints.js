@@ -256,7 +256,7 @@ router.get('/track', optionalAuth, async (req, res) => {
             const hospitalPool = mysql.createPool({
               host: process.env.CENTRAL_DB_HOST || 'localhost',
               user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+              password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -799,7 +799,7 @@ router.get('/history', requireAuth, async (req, res) => {
             const hospitalPool = mysql.createPool({
               host: process.env.CENTRAL_DB_HOST || 'localhost',
               user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+              password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5

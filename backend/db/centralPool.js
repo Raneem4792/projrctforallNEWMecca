@@ -7,8 +7,8 @@ async function getCentralPool() {
   if (!centralPool) {
     const host = process.env.CENTRAL_DB_HOST || process.env.DB_HOST || '127.0.0.1';
     const user = process.env.CENTRAL_DB_USER || process.env.DB_USER || 'root';
-    const password = process.env.CENTRAL_DB_PASS || process.env.DB_PASS || 'Raneem11';
-    const database = process.env.CENTRAL_DB_NAME || process.env.DB_NAME || 'hospitals_mecca4';
+    const password = process.env.CENTRAL_DB_PASS || process.env.DB_PASS || 'SamarAmer12345@';
+    const database = process.env.CENTRAL_DB_NAME || process.env.DB_NAME || 'hospitals_mecca3';
 
     console.log('🔗 محاولة الاتصال بالقاعدة المركزية:', {
       host,

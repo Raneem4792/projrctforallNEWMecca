@@ -851,7 +851,8 @@ INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('HOSPITAL_USERS',      'إدارة المستخدمين',      'hospital');
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
-('IMPROVEMENT_CREATE', 'إنشاء مشاريع تحسينية', 'improvement');
+('IMPROVEMENT_CREATE', 'إنشاء مشاريع تحسينية', 'improvement'),
+('IMPROVEMENT_APPROVE', 'اعتماد مشاريع تحسينية', 'improvement');
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr,  Category)
 VALUES (
@@ -903,7 +904,8 @@ INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('IMPROVEMENT_VIEW',        'عرض مشروع تحسيني',                   'improvements'),
 ('IMPROVEMENT_EDIT',        'تعديل مشروع تحسيني',                 'improvements'),
 ('IMPROVEMENT_DELETE',      'حذف مشروع تحسيني',                   'improvements'),
-('IMPROVEMENT_REPORT_VIEW', 'عرض تقرير المشروع التحسيني',         'improvements');
+('IMPROVEMENT_REPORT_VIEW', 'عرض تقرير المشروع التحسيني',         'improvements'),
+('IMPROVEMENT_APPROVE',     'اعتماد مشروع تحسيني',                'improvements');
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('MYSTERY_MODULE',              'الزائر السري - الدخول للصفحة',   'mystery'),
 ('MYSTERY_VIEW',                'عرض تقييم الزائر السري',         'mystery'),
@@ -1110,6 +1112,7 @@ VALUES
 (2, 'IMPROVEMENT_EDIT', 'HOSPITAL'),
 (2, 'IMPROVEMENT_DELETE', 'HOSPITAL'),
 (2, 'IMPROVEMENT_REPORT_VIEW', 'HOSPITAL'),
+(2, 'IMPROVEMENT_APPROVE', 'HOSPITAL'),
 (2, 'MYSTERY_MODULE', 'HOSPITAL'),
 (2, 'MYSTERY_VIEW', 'HOSPITAL'),
 (2, 'MYSTERY_REPLY_ADD', 'HOSPITAL'),

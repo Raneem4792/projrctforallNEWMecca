@@ -12,7 +12,7 @@ PORT=3001
 CENTRAL_DB_HOST=127.0.0.1
 CENTRAL_DB_USER=root
 CENTRAL_DB_PASS=@
-CENTRAL_DB_NAME=hospitals_mecca4
+CENTRAL_DB_NAME=hospitals_mecca3
 
 # إعدادات JWT
 JWT_SECRET=superscret_jwt_key

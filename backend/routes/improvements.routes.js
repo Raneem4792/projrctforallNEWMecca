@@ -302,11 +302,20 @@ router.post('/', requireAuth, requirePermission('IMPROVEMENT_CREATE'), resolveHo
     const hid = req.hospitalId;
 
     const {
-      Title, ProblemStatement, AimStatement,
-      DepartmentID, Priority = 'MEDIUM',
-      StartDate = null, DueDate = null, BudgetEstimate = null,
-      SmartSpecific = false, SmartMeasurable = false, SmartAchievable = false,
-      SmartRealistic = false, SmartTimebound = false
+      Title,
+      ProblemStatement,
+      AimStatement,
+      DepartmentID,
+      Priority = 'MEDIUM',
+      StartDate = null,
+      DueDate = null,
+      BudgetEstimate = null,
+      SmartSpecific = false,
+      SmartMeasurable = false,
+      SmartAchievable = false,
+      SmartRealistic = false,
+      SmartTimebound = false,
+      TeamMembers = null
     } = req.body || {};
 
     // تحقق الحقول الأساسية
@@ -316,21 +325,28 @@ router.post('/', requireAuth, requirePermission('IMPROVEMENT_CREATE'), resolveHo
     if (!DepartmentID) missing.push('DepartmentID');
     if (missing.length) return res.status(400).json({ error: 'حقول ناقصة', missing });
 
-    // إدخال
-    const [ins] = await pool.query(`
-      INSERT INTO improvement_projects
-      (HospitalID, Title, ProblemStatement, AimStatement, DepartmentID, Priority, Status,
-       StartDate, DueDate, BudgetEstimate, OwnerUserID, CreatedByUserID,
-       SmartSpecific, SmartMeasurable, SmartAchievable, SmartRealistic, SmartTimebound)
-      VALUES (?,?,?,?,?,?, 'PROPOSED', ?,?,?, ?,?, ?,?,?,?)
-    `, [
-      hid, Title, ProblemStatement || null, AimStatement || null,
-      Number(DepartmentID) || null, Priority,
-      StartDate || null, DueDate || null, BudgetEstimate || null,
-      req.user.UserID, req.user.UserID,
-      SmartSpecific ? 1 : 0, SmartMeasurable ? 1 : 0, SmartAchievable ? 1 : 0,
-      SmartRealistic ? 1 : 0, SmartTimebound ? 1 : 0
-    ]);
+    const insertPayload = {
+      HospitalID: hid,
+      Title,
+      ProblemStatement: ProblemStatement || null,
+      AimStatement: AimStatement || null,
+      DepartmentID: Number(DepartmentID) || null,
+      Priority,
+      Status: 'PROPOSED',
+      StartDate: StartDate || null,
+      DueDate: DueDate || null,
+      BudgetEstimate: BudgetEstimate || null,
+      OwnerUserID: req.user.UserID,
+      CreatedByUserID: req.user.UserID,
+      SmartSpecific: SmartSpecific ? 1 : 0,
+      SmartMeasurable: SmartMeasurable ? 1 : 0,
+      SmartAchievable: SmartAchievable ? 1 : 0,
+      SmartRealistic: SmartRealistic ? 1 : 0,
+      SmartTimebound: SmartTimebound ? 1 : 0,
+      TeamMembers: TeamMembers || null
+    };
+
+    const [ins] = await pool.query('INSERT INTO improvement_projects SET ?', insertPayload);
 
     res.status(201).json({ 
       ok: true,
