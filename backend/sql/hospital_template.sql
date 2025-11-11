@@ -1328,3 +1328,11 @@ INSERT INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('PRESSGANEY_IMPORT', 'استيراد ملفات Excel برسجيني', 'pressganey');
 
 
+
+
+
+ALTER TABLE improvement_projects
+ADD COLUMN ApprovedBy INT NULL AFTER UpdatedAt,
+ADD COLUMN ApprovedAt DATETIME NULL AFTER ApprovedBy;
+
+

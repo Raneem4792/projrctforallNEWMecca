@@ -322,7 +322,7 @@ router.post('/', requireAuth, requirePermission('IMPROVEMENT_CREATE'), resolveHo
       (HospitalID, Title, ProblemStatement, AimStatement, DepartmentID, Priority, Status,
        StartDate, DueDate, BudgetEstimate, OwnerUserID, CreatedByUserID,
        SmartSpecific, SmartMeasurable, SmartAchievable, SmartRealistic, SmartTimebound)
-      VALUES (?,?,?,?,?,?, 'PROPOSED', ?,?,?, ?,?, ?,?,?,?,?)
+      VALUES (?,?,?,?,?,?, 'PROPOSED', ?,?,?, ?,?, ?,?,?,?)
     `, [
       hid, Title, ProblemStatement || null, AimStatement || null,
       Number(DepartmentID) || null, Priority,
@@ -538,5 +538,50 @@ router.post('/:id/progress', requireAuth, requirePermission('IMPROVEMENT_EDIT'),
     next(err);
   }
 });
+
+// ✅ اعتماد المشروع عبر تغيير الحالة إلى "APPROVED"
+router.put(
+  '/approve/:id',
+  requireAuth,
+  requirePermission('IMPROVEMENT_APPROVE'),
+  resolveHospitalId,
+  attachHospitalPool,
+  async (req, res) => {
+    try {
+      const pool = req.hospitalPool;
+      const hid = req.hospitalId;
+      const projectId = req.params.id;
+      const approverId = req.user?.UserID || null;
+
+      const [rows] = await pool.query(`
+        SELECT Status
+        FROM improvement_projects
+        WHERE ProjectID = ? AND HospitalID = ? AND IsDeleted = 0
+      `, [projectId, hid]);
+
+      if (!rows.length) {
+        return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+      }
+
+      if (rows[0].Status === 'APPROVED') {
+        return res.json({ success: false, message: 'المشروع معتمد مسبقًا' });
+      }
+
+      await pool.query(`
+        UPDATE improvement_projects
+        SET Status = 'APPROVED',
+            ApprovedBy = ?,
+            ApprovedAt = NOW(),
+            UpdatedAt = CURRENT_TIMESTAMP
+        WHERE ProjectID = ? AND HospitalID = ? AND IsDeleted = 0
+      `, [approverId, projectId, hid]);
+
+      return res.json({ success: true, message: '✅ تم اعتماد المشروع وتغيير حالته إلى "معتمد"' });
+    } catch (err) {
+      console.error('PUT /api/improvements/approve/:id error:', err);
+      return res.status(500).json({ success: false, message: 'خطأ في عملية الاعتماد' });
+    }
+  }
+);
 
 export default router;

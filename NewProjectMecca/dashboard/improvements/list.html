@@ -567,6 +567,9 @@
         if (userPermissions.improvementReportView) {
           actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">تقرير</button>`;
         }
+        if (userPermissions.improvementApprove && item.Status === 'PROPOSED') {
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs" data-act="approve" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">اعتماد</button>`;
+        }
         
         // عمود المستشفى (للمدير فقط عند عرض جميع المستشفيات)
         const hospitalCell = isCentralAdmin && (!fltHospital || !fltHospital.value) 
@@ -617,6 +620,7 @@
             improvementCreate: true,
             improvementEdit: true,
             improvementDelete: true,
+            improvementApprove: true,
             improvementReportView: true
           };
           
@@ -688,6 +692,7 @@
             improvementCreate: true,
             improvementEdit: true,
             improvementDelete: true,
+            improvementApprove: true,
             improvementReportView: true
           };
           
@@ -746,6 +751,7 @@
             improvementCreate: true,
             improvementEdit: true,
             improvementDelete: true,
+            improvementApprove: true,
             improvementReportView: true
           };
           
@@ -811,6 +817,39 @@
         url = `./edit.html?id=${id}`;
       } else if (act === 'report'){
         url = `./report.html?id=${id}`;
+      } else if (act === 'approve') {
+        if (!confirm("هل تريد اعتماد هذا المشروع؟")) return;
+
+        const selectedHospital = hospitalId || (isCentralAdmin ? (fltHospital?.value || effectiveHospitalId()) : effectiveHospitalId());
+        let requestUrl = `${API_BASE}/api/improvements/approve/${id}`;
+
+        if (isCentralAdmin && selectedHospital) {
+          requestUrl += `?hospitalId=${selectedHospital}`;
+        }
+
+        const headers = { ...authHeaders() };
+        if (isCentralAdmin && selectedHospital) {
+          headers['x-hospital-id'] = String(selectedHospital);
+        }
+
+        fetch(requestUrl, {
+          method: 'PUT',
+          headers
+        })
+        .then(res => res.json().catch(() => ({ success: false, message: 'استجابة غير صالحة' })))
+        .then(data => {
+          if (data.success) {
+            toast('✅ ' + (data.message || 'تم اعتماد المشروع بنجاح'), 'success');
+            loadProjects();
+          } else {
+            toast('⚠️ ' + (data.message || 'المشروع لم يتم اعتماده'), 'warn');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          toast('❌ خطأ أثناء الاعتماد', 'error');
+        });
+        return;
       }
       
       if (url) {
