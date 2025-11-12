@@ -68,6 +68,7 @@ import { notFound, errorHandler } from './middleware/errorHandler.js';
 import clusterReportsRoutes from './routes/clusterReports.js';
 import reportsRoutes from './routes/reports.routes.js';
 import pressganeyRoutes from './routes/pressganeyRoutes.js';
+import hospitalTripsRoutes from './routes/hospitalTrips.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -244,6 +245,7 @@ app.use('/api/trash', trashRoutes);
 app.use('/api/dashboard/total', dashboardTotalRouter);
 app.use('/api/departments', departmentsNewRoutes);
 app.use('/api/complaints-list', complaintsListRoutes);
+app.use('/api', hospitalTripsRoutes);
 app.use('/api', imports937Routes); // استيراد 937
 app.use('/api', mysteryComplaintsRoutes); // بلاغات الزائر السري
 app.use('/api', mysteryDashboardRoutes); // لوحة تحكم الزائر السري

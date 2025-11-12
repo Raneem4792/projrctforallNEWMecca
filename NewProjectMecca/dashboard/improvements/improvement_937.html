@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>مشروع تحسيني - 937</title>
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme:{ extend:{ colors:{ primary:'#002B5B' } } } }
+  </script>
+
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .custom-select{
+      background-color:#f8fafc;
+      border-radius:0.75rem;
+      border:1px solid #d1d5db;
+      padding:0.75rem;
+      transition:border-color .2s ease, box-shadow .2s ease;
+      appearance:none;
+      -webkit-appearance:none;
+      -moz-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23002B5B' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;
+      background-position:left 1rem center;
+      padding-left:2.5rem;
+      direction:rtl;
+    }
+    .custom-select:focus{
+      border-color:#2563eb;
+      box-shadow:0 0 0 3px rgba(37,99,235,.15);
+      outline:none;
+    }
+    .custom-select option{
+      background-color:#fff;
+      color:#1f2937;
+    }
+  </style>
+
+  <!-- هوية مشروعك -->
+  <link rel="stylesheet" href="../hospital/hospital.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="./list.html" class="text-white hover:text-blue-200 transition-colors">المشاريع التحسينية</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="pt-24 min-h-screen pb-12">
+    <div class="max-w-4xl mx-auto px-4 md:px-6 lg:px-8">
+
+      <!-- العنوان مع Badge -->
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">مشروع 937</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-primary mb-2">
+          مشروع تحسيني من مركز 937
+        </h1>
+        <p class="text-gray-600">
+          املأ البيانات التالية لإضافة مشروع تحسيني مبني على بلاغ من مركز الاتصال 937
+        </p>
+      </div>
+
+      <!-- النموذج -->
+      <form id="projectForm" class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+
+        <!-- معلومات المشروع التحسيني -->
+        <div class="border-b border-gray-200 pb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 ml-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            معلومات المشروع التحسيني
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <!-- المستشفى -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                المستشفى <span class="text-red-500">*</span>
+              </label>
+              <select id="hospitalSelect" required
+                      class="custom-select w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">اختر المستشفى</option>
+              </select>
+            </div>
+
+            <!-- نوع المشروع -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                نوع المشروع <span class="text-red-500">*</span>
+              </label>
+              <select id="projectCategory" required
+                      class="custom-select w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">اختر نوع المشروع</option>
+                <option value="وزاري">مشروع وزاري</option>
+                <option value="القابضة">مشروع للصحة القابضة</option>
+                <option value="20/80">مشروع 20/80</option>
+                <option value="20/25">مشروع 20/25</option>
+                <option value="أخرى">مشروع أخرى</option>
+              </select>
+            </div>
+
+            <!-- التصنيفات -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                التصنيف الأساسي <span class="text-red-500">*</span>
+              </label>
+              <select id="mainType" required
+                      class="custom-select w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">اختر التصنيف الأساسي</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                التصنيف الفرعي <span class="text-red-500">*</span>
+              </label>
+              <select id="subType" required
+                      class="custom-select w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">اختر التصنيف الفرعي</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- نوع المشروع - أخرى -->
+          <div id="projectCategoryOtherContainer" class="mt-4 hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              اذكر نوع المشروع (في حال اختيار أخرى) <span class="text-red-500">*</span>
+            </label>
+            <input type="text" id="projectCategoryOther"
+                   class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   placeholder="أدخل نوع المشروع هنا">
+          </div>
+
+          <!-- وصف المشكلة -->
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              وصف المشكلة <span class="text-red-500">*</span>
+            </label>
+            <textarea id="problemStatement" required rows="3"
+                      class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="اكتب وصف المشكلة بناءً على التصنيف المختار"></textarea>
+          </div>
+
+          <!-- الحل المقترح -->
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              الحل المقترح <span class="text-red-500">*</span>
+            </label>
+            <textarea id="proposedSolution" required rows="4"
+                      class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="اشرح الحل التحسيني المقترح"></textarea>
+          </div>
+
+          <!-- الهدف -->
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              الهدف من المشروع <span class="text-red-500">*</span>
+            </label>
+            <textarea id="aimStatement" required rows="3"
+                      class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="ما الهدف الأساسي من تنفيذ هذا المشروع التحسيني؟"></textarea>
+          </div>
+
+          <!-- معايير SMART -->
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm mt-8">
+            <div class="px-6 py-5 border-b border-gray-200">
+              <h3 class="text-xl font-bold text-primary mb-2">معايير SMART للهدف التحسيني</h3>
+              <p class="text-gray-600 text-sm">
+                حددي المعايير المتوفرة في الهدف الخاص بالمشروع التحسيني.
+              </p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm text-right">
+                <thead class="bg-gray-50 text-gray-700">
+                  <tr>
+                    <th class="px-6 py-3 font-semibold">المعيار</th>
+                    <th class="px-6 py-3 font-semibold">الوصف</th>
+                    <th class="px-6 py-3 font-semibold text-center">متوفر في الهدف؟</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr>
+                    <td class="px-6 py-4 font-semibold text-gray-800">محدد (Specific)</td>
+                    <td class="px-6 py-4 text-gray-600">وصف الهدف بوضوح وبشكل محدد.</td>
+                    <td class="px-6 py-4 text-center">
+                      <input id="smartSpecific" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 font-semibold text-gray-800">قابل للقياس (Measurable)</td>
+                    <td class="px-6 py-4 text-gray-600">حدد كيفية قياس التقدم أو النجاح بالأرقام أو النسب.</td>
+                    <td class="px-6 py-4 text-center">
+                      <input id="smartMeasurable" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 font-semibold text-gray-800">قابل للتحقق (Achievable)</td>
+                    <td class="px-6 py-4 text-gray-600">هل يمكن تحقيق الهدف فعلاً بالإمكانات الحالية؟</td>
+                    <td class="px-6 py-4 text-center">
+                      <input id="smartAchievable" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 font-semibold text-gray-800">واقعي (Realistic)</td>
+                    <td class="px-6 py-4 text-gray-600">هل الهدف مناسب للواقع الحالي والإمكانات؟</td>
+                    <td class="px-6 py-4 text-center">
+                      <input id="smartRealistic" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 font-semibold text-gray-800">بزمن محدد (Time-bound)</td>
+                    <td class="px-6 py-4 text-gray-600">حدد الإطار الزمني لتحقيق الهدف.</td>
+                    <td class="px-6 py-4 text-center">
+                      <input id="smartTimeBound" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary">
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- التفاصيل الإدارية -->
+        <div class="border-b border-gray-200 pb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 ml-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            التفاصيل الإدارية
+          </h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                عنوان المشروع <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="projectTitle" required
+                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     placeholder="عنوان واضح ومختصر للمشروع التحسيني">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  القسم المسؤول <span class="text-red-500">*</span>
+                </label>
+                <select id="department" required
+                        class="custom-select w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="">اختر القسم</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  الأولوية <span class="text-red-500">*</span>
+                </label>
+                <select id="priority" required
+                        class="custom-select w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="">اختر الأولوية</option>
+                  <option value="LOW">منخفضة</option>
+                  <option value="MEDIUM">متوسطة</option>
+                  <option value="HIGH">عالية</option>
+                  <option value="CRITICAL">حرجة</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  تاريخ البدء المتوقع
+                </label>
+                <input type="date" id="startDate"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  تاريخ الانتهاء المتوقع
+                </label>
+                <input type="date" id="dueDate"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- الأزرار -->
+        <div class="flex gap-3 pt-4">
+          <button type="submit"
+                  class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 font-semibold transition-colors">
+            حفظ المشروع
+          </button>
+          <button type="button" id="draftBtn"
+                  class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors">
+            حفظ كمسودة
+          </button>
+          <a href="./select-type.html"
+             class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors text-center">
+            إلغاء
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Toast للرسائل -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+    <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <script>
+    const API_BASE_RAW = (localStorage.getItem('apiBase') || 'http://localhost:3001').replace(/\/$/, '');
+    const API_BASE = API_BASE_RAW.endsWith('/api') ? API_BASE_RAW : `${API_BASE_RAW}/api`;
+    const token = localStorage.getItem('token') || '';
+
+    // Helper functions
+    const toast = (msg, type='info') => {
+      const el = document.getElementById('toast');
+      const box = document.getElementById('toastInner');
+      const cls = {
+        success:'bg-green-600 text-white',
+        error:'bg-red-600 text-white',
+        info:'bg-gray-800 text-white',
+        warn:'bg-amber-500 text-white'
+      }[type] || 'bg-gray-800 text-white';
+      box.className = 'rounded-xl shadow-lg px-4 py-3 text-sm ' + cls;
+      box.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    };
+
+    function effectiveHospitalId() {
+      const u = JSON.parse(localStorage.getItem('userData') || '{}');
+      const q = new URLSearchParams(location.search);
+      const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
+      const fromLS1 = Number(localStorage.getItem('selectedHospitalId') || 0);
+      const fromLS2 = Number(localStorage.getItem('hospitalId') || 0);
+      const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
+      return fromUrl || fromLS1 || fromLS2 || fromUser || null;
+    }
+
+    const authHeaders = () => {
+      const h = token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+      const hid = effectiveHospitalId();
+      if (hid) h['x-hospital-id'] = String(hid);
+      return h;
+    };
+
+    async function loadDepartments() {
+      try {
+        const token = localStorage.getItem('token') || '';
+        const deptSelect = document.getElementById('department');
+        const hospitalSelect = document.getElementById('hospitalSelect');
+        const currentUser = JSON.parse(localStorage.getItem('userData') || '{}');
+
+        let hospitalId = null;
+
+        if (hospitalSelect && hospitalSelect.value) {
+          hospitalId = hospitalSelect.value;
+        } else if (currentUser && currentUser.HospitalID) {
+          hospitalId = currentUser.HospitalID;
+        } else if (effectiveHospitalId()) {
+          hospitalId = effectiveHospitalId();
+        }
+
+        if (!hospitalId) {
+          if (deptSelect) deptSelect.innerHTML = '<option value="">اختر مستشفى أولاً</option>';
+          return;
+        }
+
+        const headers = { Accept: 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        headers['x-hospital-id'] = String(hospitalId);
+
+        const res = await fetch(`${API_BASE}/departments?hospitalId=${hospitalId}`, { headers });
+
+        if (!res.ok) {
+          console.warn('⚠️ [loadDepartments] departments endpoint failed with status', res.status);
+          const fallbackRes = await fetch(`${API_BASE}/lookups/departments?hospitalId=${hospitalId}`, { headers });
+          if (!fallbackRes.ok) {
+            const errText = await fallbackRes.text().catch(() => '');
+            throw new Error(`HTTP ${fallbackRes.status} ${errText}`);
+          }
+          const fallbackJson = await fallbackRes.json();
+          populateDepartments(deptSelect, fallbackJson);
+          return;
+        }
+
+        const result = await res.json();
+        populateDepartments(deptSelect, result);
+
+      } catch (err) {
+        console.error('❌ Error loading departments:', err);
+        toast('تعذر تحميل الأقسام', 'error');
+      }
+    }
+
+    function populateDepartments(selectEl, response) {
+      if (!selectEl) return;
+
+      let data = [];
+
+      if (response && response.success && Array.isArray(response.data)) {
+        data = response.data;
+      } else if (response && response.ok && Array.isArray(response.data)) {
+        data = response.data;
+      } else if (Array.isArray(response)) {
+        data = response;
+      } else if (response && Array.isArray(response.items)) {
+        data = response.items;
+      } else {
+        console.warn('⚠️ [populateDepartments] Unexpected response format:', response);
+      }
+
+      selectEl.innerHTML = '<option value="">اختر القسم</option>';
+
+      data.forEach(d => {
+        const o = document.createElement('option');
+        const deptId = d.DepartmentID || d.id || d.DepartmentId || d.ID;
+        const deptName = d.NameAr || d.DepartmentName || d.nameAr || d.Name || d.name;
+        if (deptId && deptName) {
+          o.value = deptId;
+          o.textContent = deptName;
+          selectEl.appendChild(o);
+        }
+      });
+    }
+
+    // تحميل التصنيفات الأساسية والفرعية
+    async function loadCategories() {
+      try {
+        // الحصول على المستشفى من القائمة المنسدلة أولاً
+        const hospitalSelect = document.getElementById('hospitalSelect');
+        const selectedHospitalId = hospitalSelect && hospitalSelect.value;
+        const hid = selectedHospitalId || effectiveHospitalId();
+        
+        const headers = authHeaders();
+        if (hid) headers['x-hospital-id'] = String(hid);
+
+        // تحميل التصنيفات الأساسية بناءً على المستشفى المختار
+        const mainQuery = new URLSearchParams();
+        if (hid) mainQuery.set('hospitalId', hid);
+        const mainRes = await fetch(`${API_BASE}/complaint-types${mainQuery.toString() ? '?' + mainQuery.toString() : ''}`, { headers });
+        const mainData = await mainRes.json();
+        
+        // معالجة الرد بشكل آمن - دعم أشكال مختلفة من الردود
+        const mainList = Array.isArray(mainData.data)
+          ? mainData.data
+          : Array.isArray(mainData)
+            ? mainData
+            : Array.isArray(mainData.data?.types)
+              ? mainData.data.types
+              : [];
+        
+        const mainSelect = document.getElementById('mainType');
+        mainSelect.innerHTML = '<option value="">اختر التصنيف الأساسي</option>';
+        mainList.forEach(t => {
+          const opt = document.createElement('option');
+          const typeId = t.ComplaintTypeID || t.TypeID || t.id || t.ID;
+          const typeName = t.TypeName || t.NameAr || t.nameAr || t.TypeNameAr || t.TypeNameEn;
+          opt.value = typeId || '';
+          opt.textContent = typeName || 'تصنيف غير معروف';
+          mainSelect.appendChild(opt);
+        });
+
+        // عند تغيير التصنيف الأساسي، تحميل التصنيفات الفرعية
+        mainSelect.onchange = async () => {
+          const subSelect = document.getElementById('subType');
+          subSelect.innerHTML = '<option value="">جارِ التحميل...</option>';
+          
+          if (!mainSelect.value) {
+            subSelect.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+            return;
+          }
+          
+          const subHeaders = { ...authHeaders() };
+          const selectedHospital = document.getElementById('hospitalSelect')?.value || hid;
+          if (selectedHospital) subHeaders['x-hospital-id'] = String(selectedHospital);
+
+          const query = new URLSearchParams({ typeId: mainSelect.value });
+          if (selectedHospital) query.set('hospitalId', selectedHospital);
+
+          const subRes = await fetch(`${API_BASE}/complaint-subtypes?${query.toString()}`, { headers: subHeaders });
+          const subData = await subRes.json();
+          
+          // معالجة الرد بشكل آمن
+          const subs = Array.isArray(subData.data)
+            ? subData.data
+            : Array.isArray(subData)
+              ? subData
+              : Array.isArray(subData.data?.subtypes)
+                ? subData.data.subtypes
+                : [];
+          
+          subSelect.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+          subs.forEach(s => {
+            const o = document.createElement('option');
+            const subId = s.SubTypeID || s.SubtypeID || s.id || s.ID;
+            const subName = s.SubTypeName || s.NameAr || s.nameAr || s.SubTypeNameAr || s.SubTypeNameEn;
+            o.value = subId || '';
+            o.textContent = subName || 'تصنيف فرعي غير معروف';
+            subSelect.appendChild(o);
+          });
+        };
+      } catch (e) {
+        console.error('Error loading categories:', e);
+        toast('تعذر تحميل التصنيفات', 'error');
+      }
+    }
+
+    // تحميل قائمة المستشفيات
+    async function loadHospitals() {
+      try {
+        const res = await fetch(`${API_BASE}/lookups/hospitals`, { headers: authHeaders() });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        const response = await res.json();
+        
+        // معالجة الرد بشكل آمن
+        const list = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response)
+            ? response
+            : [];
+        
+        const select = document.getElementById('hospitalSelect');
+        select.innerHTML = '<option value="">اختر المستشفى</option>';
+        
+        list.forEach(h => {
+          const opt = document.createElement('option');
+          opt.value = h.HospitalID;
+          opt.textContent = h.HospitalNameAr || h.NameAr;
+          select.appendChild(opt);
+        });
+
+        // ✅ عند تغيير المستشفى، إعادة تحميل التصنيفات والأقسام
+        select.addEventListener('change', async () => {
+          const hospitalId = select.value;
+          console.log('🏥 تم تغيير المستشفى:', hospitalId);
+          
+          if (hospitalId) {
+            // إعادة تحميل التصنيفات بناءً على المستشفى المختار
+            await loadCategories();
+            
+            // إعادة تحميل الأقسام بناءً على المستشفى المختار
+            await loadDepartments();
+          } else {
+            // مسح التصنيفات والأقسام
+            const mainSelect = document.getElementById('mainType');
+            const subSelect = document.getElementById('subType');
+            const deptSelect = document.getElementById('department');
+            
+            if (mainSelect) mainSelect.innerHTML = '<option value="">اختر التصنيف الأساسي</option>';
+            if (subSelect) subSelect.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+            if (deptSelect) deptSelect.innerHTML = '<option value="">اختر القسم</option>';
+          }
+        });
+      } catch (e) {
+        console.error('Error loading hospitals:', e);
+        toast('تعذر تحميل قائمة المستشفيات', 'error');
+      }
+    }
+
+    // معالجة النموذج
+    document.getElementById('projectForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await submitProject('PROPOSED');
+    });
+
+    document.getElementById('draftBtn').addEventListener('click', async () => {
+      await submitProject('DRAFT');
+    });
+
+    async function submitProject(status) {
+      try {
+        const hid = effectiveHospitalId();
+        const selectedHospitalId = document.getElementById('hospitalSelect').value;
+        
+        if (!selectedHospitalId && !hid) {
+          toast('يجب تحديد المستشفى', 'warn');
+          return;
+        }
+
+        const projectCategorySelect = document.getElementById('projectCategory');
+        const projectCategoryOtherInput = document.getElementById('projectCategoryOther');
+        const projectCategoryValue = projectCategorySelect.value;
+        const otherCategoryValue = (projectCategoryOtherInput?.value || '').trim();
+        const isOtherCategory = projectCategoryValue === 'أخرى';
+
+        if (isOtherCategory && !otherCategoryValue) {
+          toast('يرجى إدخال نوع المشروع عند اختيار "مشروع أخرى"', 'warn');
+          projectCategoryOtherInput?.focus();
+          return;
+        }
+
+        const smartSpecific = document.getElementById('smartSpecific')?.checked || false;
+        const smartMeasurable = document.getElementById('smartMeasurable')?.checked || false;
+        const smartAchievable = document.getElementById('smartAchievable')?.checked || false;
+        const smartRealistic = document.getElementById('smartRealistic')?.checked || false;
+        const smartTimeBound = document.getElementById('smartTimeBound')?.checked || false;
+
+        const data = {
+          hospitalId: selectedHospitalId || hid,
+          projectType: '937',
+          projectCategory: isOtherCategory ? otherCategoryValue : projectCategoryValue,
+          projectCategoryOriginal: projectCategoryValue,
+          projectCategoryOther: isOtherCategory ? otherCategoryValue : null,
+          title: document.getElementById('projectTitle').value,
+          mainTypeId: document.getElementById('mainType').value,
+          subTypeId: document.getElementById('subType').value,
+          problemStatement: document.getElementById('problemStatement').value,
+          proposedSolution: document.getElementById('proposedSolution').value,
+          aimStatement: document.getElementById('aimStatement').value,
+          departmentId: document.getElementById('department').value,
+          priority: document.getElementById('priority').value || 'MEDIUM',
+          status: status,
+          startDate: document.getElementById('startDate').value || null,
+          dueDate: document.getElementById('dueDate').value || null,
+          smartChecklist: {
+            specific: smartSpecific,
+            measurable: smartMeasurable,
+            achievable: smartAchievable,
+            realistic: smartRealistic,
+            timeBound: smartTimeBound
+          }
+        };
+
+        const res = await fetch(`${API_BASE}/improvements`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+          toast(status === 'DRAFT' ? 'تم حفظ المسودة بنجاح' : 'تم إضافة المشروع بنجاح', 'success');
+          setTimeout(() => window.location.href = './list.html', 1500);
+        } else {
+          toast(result.message || 'حدث خطأ أثناء الحفظ', 'error');
+        }
+      } catch(err) {
+        console.error('Error:', err);
+        toast('حدث خطأ أثناء الحفظ', 'error');
+      }
+    }
+
+    // التحميل الأولي
+    loadDepartments();
+    loadCategories();
+    loadHospitals();
+
+    // إظهار حقل "أخرى" عند الحاجة
+    (function initProjectCategoryOtherField() {
+      const select = document.getElementById('projectCategory');
+      const container = document.getElementById('projectCategoryOtherContainer');
+      const input = document.getElementById('projectCategoryOther');
+
+      if (!select || !container) return;
+
+      const toggleOtherField = () => {
+        if (select.value === 'أخرى') {
+          container.classList.remove('hidden');
+          setTimeout(() => input?.focus(), 100);
+        } else {
+          container.classList.add('hidden');
+          if (input) input.value = '';
+        }
+      };
+
+      select.addEventListener('change', toggleOtherField);
+      toggleOtherField();
+    })();
+  </script>
+
+</body>
+</html>
+

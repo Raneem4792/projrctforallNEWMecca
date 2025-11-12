@@ -1338,4 +1338,36 @@ ALTER TABLE improvement_projects
 ADD COLUMN ApprovedBy INT NULL AFTER UpdatedAt,
 ADD COLUMN ApprovedAt DATETIME NULL AFTER ApprovedBy;
 
+CREATE TABLE IF NOT EXISTS treatment_trips (
+  TripID INT AUTO_INCREMENT PRIMARY KEY,
+  TripName VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS zones (
+  ZoneID INT AUTO_INCREMENT PRIMARY KEY,
+  ZoneName VARCHAR(255) NOT NULL
+);
+
+
+-- تعبئة الرحلات العلاجية (مرة واحدة)
+INSERT IGNORE INTO treatment_trips (TripName) VALUES
+  ('التنويم'),('الطوارئ'),('العيادات'),('الرعاية المنزلية'),('خدمات الأشعة'),
+  ('مراكز القلب التنويم'),('مراكز القلب العيادات'),('مراكز الأورام التنويم'),
+  ('مراكز الأورام العيادات'),('فحص ما قبل الزواج'),('خدمات الأسنان'),
+  ('مراكز الكلى القطاع الحكومي'),('مراكز الرعاية الأولية'),('التأهيل الطبي العيادات'),
+  ('جراحة اليوم الواحد'),('بنوك الدم'),('مراكز علاج السكري');
+
+-- تعبئة النطاقات (مرة واحدة)
+INSERT IGNORE INTO zones (ZoneName) VALUES
+  ('التقييم العام'),('الوجبات'),('الطبيب'),('فريق التمريض'),('الوصول'),
+  ('الغرفة'),('التسجيل'),('الزوار والعائلة'),('المرافق'),('الصيدلة'),
+  ('المختبر'),('المسائل الشخصية'),('الرعاية المقدمة'),('ذوي الإعاقة'),
+  ('بلاغات 937'),('غسيل الكلى'),('المواعيد والتسجيل'),('الانتقال خلال الزيارة'),
+  ('التوعية والمعلومات'),('ترتيب الرعاية المنزلية');
+
+ALTER TABLE treatment_trips
+ADD COLUMN IsAvailable TINYINT(1) DEFAULT 0;
+ALTER TABLE zones
+ADD COLUMN IsAvailable TINYINT(1) DEFAULT 0;
+
 

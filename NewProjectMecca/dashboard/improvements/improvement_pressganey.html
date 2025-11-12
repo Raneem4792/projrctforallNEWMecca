@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>مشروع تحسيني - PressGaney</title>
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme:{ extend:{ colors:{ primary:'#002B5B' } } } }
+  </script>
+
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+
+  <!-- هوية مشروعك -->
+  <link rel="stylesheet" href="../hospital/hospital.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="./list.html" class="text-white hover:text-blue-200 transition-colors">المشاريع التحسينية</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="pt-24 min-h-screen pb-12">
+    <div class="max-w-4xl mx-auto px-4 md:px-6 lg:px-8">
+
+      <!-- العنوان مع Badge -->
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold">مشروع PressGaney</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-primary mb-2">
+          مشروع تحسيني - PressGaney (برسجيني)
+        </h1>
+        <p class="text-gray-600">
+          املأ البيانات التالية لإضافة مشروع تحسيني مبني على نتائج استبيان PressGaney
+        </p>
+      </div>
+
+      <!-- النموذج -->
+      <form id="projectForm" class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+
+        <!-- معلومات الاستبيان -->
+        <div class="border-b border-gray-200 pb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 ml-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+            </svg>
+            معلومات الاستبيان
+          </h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                القسم المستهدف <span class="text-red-500">*</span>
+              </label>
+              <select id="department" required
+                      class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                <option value="">اختر القسم</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                السؤال أو البند في الاستبيان <span class="text-red-500">*</span>
+              </label>
+              <textarea id="surveyQuestion" required rows="3"
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="مثال: هل كانت الممرضات يستمعون لك بعناية؟"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  النسبة السابقة (%)
+                </label>
+                <input type="number" id="previousScore" min="0" max="100" step="0.1"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       placeholder="مثال: 75.5">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  النسبة المستهدفة (%) <span class="text-red-500">*</span>
+                </label>
+                <input type="number" id="targetScore" required min="0" max="100" step="0.1"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       placeholder="مثال: 85.0">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  المعيار الوطني (%)
+                </label>
+                <input type="number" id="nationalBenchmark" min="0" max="100" step="0.1"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       placeholder="مثال: 82.0">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                الفترة الزمنية للقياس <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="measurementPeriod" required
+                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                     placeholder="مثال: الربع الأول 2025 أو يناير - مارس 2025">
+            </div>
+          </div>
+        </div>
+
+        <!-- التحليل والخطة التحسينية -->
+        <div class="border-b border-gray-200 pb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 ml-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            التحليل والخطة التحسينية
+          </h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                عنوان المشروع <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="projectTitle" required
+                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                     placeholder="عنوان واضح ومختصر للمشروع التحسيني">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                تحليل الوضع الحالي <span class="text-red-500">*</span>
+              </label>
+              <textarea id="currentAnalysis" required rows="4"
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="ما هي الأسباب الجذرية للنسبة المنخفضة؟ ما هي الفجوات المكتشفة؟"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                الهدف التحسيني (AIM Statement) <span class="text-red-500">*</span>
+              </label>
+              <textarea id="aimStatement" required rows="3"
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="مثال: رفع نسبة رضا المرضى عن الاستماع للممرضات من 75% إلى 85% خلال 6 أشهر"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                الإجراءات التحسينية المقترحة <span class="text-red-500">*</span>
+              </label>
+              <textarea id="proposedActions" required rows="5"
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="اذكر الإجراءات والتدخلات المقترحة لتحسين النسبة"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  الأولوية <span class="text-red-500">*</span>
+                </label>
+                <select id="priority" required
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option value="">اختر الأولوية</option>
+                  <option value="LOW">منخفضة</option>
+                  <option value="MEDIUM">متوسطة</option>
+                  <option value="HIGH">عالية</option>
+                  <option value="CRITICAL">حرجة</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  مسؤول المشروع
+                </label>
+                <input type="text" id="projectOwner"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       placeholder="اسم المسؤول عن المشروع">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  تاريخ البدء المتوقع
+                </label>
+                <input type="date" id="startDate"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  تاريخ الانتهاء المتوقع
+                </label>
+                <input type="date" id="dueDate"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- الأزرار -->
+        <div class="flex gap-3 pt-4">
+          <button type="submit"
+                  class="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 font-semibold transition-colors">
+            حفظ المشروع
+          </button>
+          <button type="button" id="draftBtn"
+                  class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors">
+            حفظ كمسودة
+          </button>
+          <a href="./select-type.html"
+             class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors text-center">
+            إلغاء
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Toast للرسائل -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+    <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <script>
+    const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
+    const token = localStorage.getItem('token') || '';
+
+    // Helper functions
+    const toast = (msg, type='info') => {
+      const el = document.getElementById('toast');
+      const box = document.getElementById('toastInner');
+      const cls = {
+        success:'bg-green-600 text-white',
+        error:'bg-red-600 text-white',
+        info:'bg-gray-800 text-white',
+        warn:'bg-amber-500 text-white'
+      }[type] || 'bg-gray-800 text-white';
+      box.className = 'rounded-xl shadow-lg px-4 py-3 text-sm ' + cls;
+      box.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    };
+
+    function effectiveHospitalId() {
+      const u = JSON.parse(localStorage.getItem('userData') || '{}');
+      const q = new URLSearchParams(location.search);
+      const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
+      const fromLS1 = Number(localStorage.getItem('selectedHospitalId') || 0);
+      const fromLS2 = Number(localStorage.getItem('hospitalId') || 0);
+      const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
+      return fromUrl || fromLS1 || fromLS2 || fromUser || null;
+    }
+
+    const authHeaders = () => {
+      const h = token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+      const hid = effectiveHospitalId();
+      if (hid) h['x-hospital-id'] = String(hid);
+      return h;
+    };
+
+    // تحميل الأقسام
+    async function loadDepartments() {
+      try {
+        const params = new URLSearchParams();
+        const hid = effectiveHospitalId();
+        if (hid) params.set('hospitalId', hid);
+        
+        const url = `${API_BASE}/api/lookups/departments${params.toString() ? '?' + params.toString() : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        
+        const response = await res.json();
+        const list = response.data || response;
+        
+        const deptSelect = document.getElementById('department');
+        deptSelect.innerHTML = '<option value="">اختر القسم</option>';
+        
+        (list || []).forEach(d => {
+          const o = document.createElement('option');
+          o.value = d.DepartmentID;
+          o.textContent = d.NameAr || d.DepartmentName;
+          deptSelect.appendChild(o);
+        });
+      } catch(e) {
+        console.error('Error loading departments:', e);
+        toast('تعذر تحميل الأقسام', 'error');
+      }
+    }
+
+    // معالجة النموذج
+    document.getElementById('projectForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await submitProject('PROPOSED');
+    });
+
+    document.getElementById('draftBtn').addEventListener('click', async () => {
+      await submitProject('DRAFT');
+    });
+
+    async function submitProject(status) {
+      try {
+        const hid = effectiveHospitalId();
+        if (!hid) {
+          toast('يجب تحديد المستشفى', 'warn');
+          return;
+        }
+
+        const data = {
+          hospitalId: hid,
+          projectType: 'PRESSGANEY',
+          title: document.getElementById('projectTitle').value,
+          departmentId: document.getElementById('department').value,
+          surveyQuestion: document.getElementById('surveyQuestion').value,
+          previousScore: parseFloat(document.getElementById('previousScore').value) || null,
+          targetScore: parseFloat(document.getElementById('targetScore').value) || null,
+          nationalBenchmark: parseFloat(document.getElementById('nationalBenchmark').value) || null,
+          measurementPeriod: document.getElementById('measurementPeriod').value,
+          problemStatement: document.getElementById('currentAnalysis').value,
+          aimStatement: document.getElementById('aimStatement').value,
+          proposedSolution: document.getElementById('proposedActions').value,
+          projectOwner: document.getElementById('projectOwner').value || null,
+          priority: document.getElementById('priority').value || 'MEDIUM',
+          status: status,
+          startDate: document.getElementById('startDate').value || null,
+          dueDate: document.getElementById('dueDate').value || null
+        };
+
+        const res = await fetch(`${API_BASE}/api/improvements`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+          toast(status === 'DRAFT' ? 'تم حفظ المسودة بنجاح' : 'تم إضافة المشروع بنجاح', 'success');
+          setTimeout(() => window.location.href = './list.html', 1500);
+        } else {
+          toast(result.message || 'حدث خطأ أثناء الحفظ', 'error');
+        }
+      } catch(err) {
+        console.error('Error:', err);
+        toast('حدث خطأ أثناء الحفظ', 'error');
+      }
+    }
+
+    // التحميل الأولي
+    loadDepartments();
+  </script>
+
+</body>
+</html>
+
