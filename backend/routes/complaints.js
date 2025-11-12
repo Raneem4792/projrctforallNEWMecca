@@ -12,6 +12,10 @@ import { exportComplaintsExcel, exportComplaintsPDF } from '../controllers/compl
 
 const router = express.Router();
 
+const CENTRAL_DB_HOST = process.env.CENTRAL_DB_HOST || 'localhost';
+const CENTRAL_DB_USER = process.env.CENTRAL_DB_USER || 'root';
+const CENTRAL_DB_PASS = process.env.CENTRAL_DB_PASS || 'SamarAmer12345@';
+
 // ✅ إعداد multer لقراءة FormData والمرفقات
 const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB لكل ملف
@@ -262,9 +266,9 @@ router.get('/track', optionalAuth, async (req, res) => {
           if (hospitalInfo && hospitalInfo.DbName) {
             // إنشاء اتصال بقاعدة المستشفى
             const hospitalPool = mysql.createPool({
-              host: process.env.CENTRAL_DB_HOST || 'localhost',
-              user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+              host: CENTRAL_DB_HOST,
+              user: CENTRAL_DB_USER,
+              password: CENTRAL_DB_PASS,
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -807,9 +811,9 @@ router.get('/history', requireAuth, async (req, res) => {
           if (hospitalInfo && hospitalInfo.DbName) {
             // إنشاء اتصال بقاعدة المستشفى
             const hospitalPool = mysql.createPool({
-              host: process.env.CENTRAL_DB_HOST || 'localhost',
-              user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+              host: CENTRAL_DB_HOST,
+              user: CENTRAL_DB_USER,
+              password: CENTRAL_DB_PASS,
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5

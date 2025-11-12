@@ -179,6 +179,7 @@ async function applyActionPermissions(hospitalId) {
     toggle('#btnReply',         canReply);
     toggle('#btnTransfer',      canTransfer);
     toggle('#btnChangeStatus',  canStatusUpdate);
+    toggle('#btnChangeDuration', canStatusUpdate);
     toggle('#btnDeleteComplaint', canDelete);
 
     // خزّن كـ global لاستخدامها عند فتح المودال
@@ -236,6 +237,7 @@ function hideAllActions() {
   toggle('#btnReply', false);
   toggle('#btnTransfer', false);
   toggle('#btnChangeStatus', false);
+  toggle('#btnChangeDuration', false);
   toggle('#btnDeleteComplaint', false);
   const actionsBar = document.getElementById('actionsBar');
   if (actionsBar) {
@@ -1552,6 +1554,84 @@ async function applyStatusChange() {
   }
 }
 
+// ====== إدارة تغيير مدة المعالجة ======
+async function applyDurationChange() {
+  const complaintId = window.currentComplaintId || document.body.dataset.complaintId;
+  const hid = document.body.dataset.hospitalId || getParam('hospitalId') || getParam('hid') || '';
+  const durationSelect = document.getElementById('newDuration');
+  const noteInput = document.getElementById('durationNote');
+  const applyBtn = document.getElementById('applyDurationBtn');
+
+  if (!complaintId) {
+    console.error('❌ لا يمكن تحديد معرف البلاغ لتغيير المدة');
+    showToast('لا يمكن تحديد البلاغ. يرجى إعادة تحميل الصفحة.', 'error');
+    return;
+  }
+
+  if (!durationSelect || !applyBtn) {
+    console.error('❌ عناصر تغيير المدة غير متوفرة في الصفحة');
+    alert('خطأ: عناصر تغيير المدة غير موجودة');
+    return;
+  }
+
+  const newHours = durationSelect.value;
+  const note = noteInput?.value?.trim() || '';
+
+  if (!newHours) {
+    alert('يرجى اختيار مدة جديدة');
+    return;
+  }
+
+  applyBtn.disabled = true;
+  applyBtn.textContent = 'جاري التحديث...';
+
+  try {
+    const url = `${API_BASE_URL}/api/complaints/${complaintId}/duration${hid ? `?hospitalId=${encodeURIComponent(hid)}` : ''}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...authHeaders()
+    };
+
+    if (!headers.Authorization) {
+      throw new Error('مطلوب تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى.');
+    }
+
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({
+        ProcessingDurationHours: Number(newHours),
+        Note: note || null
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.ok) {
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
+
+    showToast('✅ تم تحديث مدة المعالجة بنجاح', 'success');
+
+    const modal = document.getElementById('changeDurationModal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+
+    if (durationSelect) durationSelect.value = '';
+    if (noteInput) noteInput.value = '';
+
+    await loadDetails();
+  } catch (err) {
+    console.error('❌ خطأ في تحديث المدة:', err);
+    showToast('حدث خطأ أثناء تغيير المدة: ' + err.message, 'error');
+  } finally {
+    applyBtn.disabled = false;
+    applyBtn.textContent = 'تطبيق';
+  }
+}
+
 // دالة صغيرة لعرض الشارة بالعربي
 function translateStatusAr(code) {
   // تحويل إلى lowercase للتعامل مع الحالات المختلفة (OPEN, open, Open)
@@ -1723,6 +1803,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ربط زر فتح مودال تغيير المدة
+  const btnChangeDuration = document.querySelector('#btnChangeDuration');
+  if (btnChangeDuration) {
+    btnChangeDuration.addEventListener('click', () => {
+      const modal = document.getElementById('changeDurationModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+    });
+  }
+
+  const applyDurationBtn = document.getElementById('applyDurationBtn');
+  if (applyDurationBtn) {
+    applyDurationBtn.addEventListener('click', applyDurationChange);
+  }
+
   // ربط أزرار اختيار الأولوية في المودال
   document.querySelectorAll('.priority-option').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1833,6 +1929,15 @@ document.addEventListener('DOMContentLoaded', () => {
     priorityModal.addEventListener('click', (e) => {
       if (e.target === priorityModal) {
         priorityModal.classList.add('hidden');
+      }
+    });
+  }
+
+  const durationModal = document.querySelector('#changeDurationModal');
+  if (durationModal) {
+    durationModal.addEventListener('click', (e) => {
+      if (e.target === durationModal) {
+        durationModal.classList.add('hidden');
       }
     });
   }

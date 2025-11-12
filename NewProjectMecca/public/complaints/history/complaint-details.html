@@ -82,6 +82,7 @@
           <button id="btnReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition">إضافة رد</button>
           <button id="btnChangeStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm hover:bg-amber-600 transition">تغيير الحالة</button>
           <button id="btnChangePriority" class="h-10 px-4 rounded-xl bg-orange-600 text-white text-sm hover:bg-orange-700 transition">🔺 تغيير الأولوية</button>
+          <button id="btnChangeDuration" class="h-10 px-4 rounded-xl bg-cyan-600 text-white text-sm hover:bg-cyan-700 transition">⏳ تغيير المدة</button>
           <button id="btnTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">تحويل</button>
           <button id="btnDeleteComplaint" class="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700 transition">🗑️ حذف البلاغ</button>
         </div>
@@ -518,6 +519,43 @@
       <div class="mt-6 flex justify-end gap-2">
         <button id="cancelDeleteBtn" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
         <button id="confirmDelete" class="h-10 px-5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700">حذف البلاغ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⏳ مودال تغيير المدة -->
+  <div id="changeDurationModal" class="modal hidden fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-[#002B5B]">⏳ تغيير مدة المعالجة</h3>
+        <button data-close-modal class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="space-y-4">
+        <div>
+          <label for="newDuration" class="block text-sm font-medium text-gray-700 mb-2">اختر المدة الجديدة</label>
+          <select id="newDuration" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-transparent">
+            <option value="">اختر المدة</option>
+            <option value="6">6 ساعات</option>
+            <option value="12">12 ساعة</option>
+            <option value="24">يوم واحد</option>
+            <option value="48">يومان</option>
+            <option value="72">3 أيام</option>
+            <option value="120">5 أيام</option>
+          </select>
+        </div>
+        <div>
+          <label for="durationNote" class="block text-sm font-medium text-gray-700 mb-2">ملاحظة (اختياري)</label>
+          <textarea id="durationNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-transparent" placeholder="أضف سبب تغيير المدة..."></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-6 flex justify-end gap-2">
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
+        <button id="applyDurationBtn" class="h-10 px-5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700">تطبيق</button>
       </div>
     </div>
   </div>

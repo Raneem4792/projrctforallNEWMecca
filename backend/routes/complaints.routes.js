@@ -478,6 +478,94 @@ router.get('/export-excel', requireAuth, exportComplaintsExcel);
 router.post('/export-pdf', requireAuth, exportComplaintsPDF);
 
 /**
+ * PUT /api/complaints/:id/duration
+ * تحديث مدة معالجة البلاغ
+ */
+router.put('/:id/duration', requireAuth, resolveHospitalId, attachHospitalPool, async (req, res) => {
+  const pool = req.hospitalPool;
+
+  try {
+    if (!pool) {
+      return res.status(500).json({ ok: false, message: 'فشل الاتصال بقاعدة بيانات المستشفى' });
+    }
+
+    const complaintId = Number(req.params.id);
+    if (!complaintId) {
+      return res.status(400).json({ ok: false, message: 'معرف البلاغ غير صالح' });
+    }
+
+    const rawHours =
+      req.body?.ProcessingDurationHours ??
+      req.body?.processingDurationHours ??
+      req.body?.duration ??
+      req.body?.hours;
+
+    const hours = Number(rawHours);
+    if (!Number.isFinite(hours) || hours <= 0) {
+      return res.status(400).json({ ok: false, message: 'مدة المعالجة غير صالحة' });
+    }
+
+    const note = typeof req.body?.Note === 'string' ? req.body.Note.trim() : '';
+
+    const [result] = await pool.query(
+      `UPDATE complaints
+         SET ProcessingDurationHours = ?, UpdatedAt = CURRENT_TIMESTAMP
+       WHERE ComplaintID = ?`,
+      [hours, complaintId]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ ok: false, message: 'البلاغ غير موجود' });
+    }
+
+    // إضافة رد داخلي للتوثيق
+    try {
+      const user = req.user || {};
+      const responderId = Number(user?.uid || user?.UserID || user?.userId) || null;
+      const actorName =
+        user?.FullName ||
+        user?.fullName ||
+        user?.Name ||
+        user?.name ||
+        user?.username ||
+        (responderId ? `المستخدم ${responderId}` : 'النظام');
+
+      const message = note
+        ? `[تغيير مدة المعالجة إلى ${hours} ساعة] ${note}`
+        : `🕓 تم تغيير مدة المعالجة إلى ${hours} ساعة بواسطة ${actorName}`;
+
+      await pool.query(
+        `INSERT INTO complaint_responses
+          (ComplaintID, ResponderUserID, ReplyTypeID, TargetStatusCode, Message, IsInternal)
+         VALUES (?,?,?,?,?,1)`,
+        [
+          complaintId,
+          responderId,
+          1,
+          null,
+          message
+        ]
+      );
+    } catch (logError) {
+      console.warn('⚠️ فشل تسجيل رد تغيير المدة:', logError.message);
+    }
+
+    return res.json({
+      ok: true,
+      message: 'تم تحديث مدة المعالجة بنجاح',
+      ProcessingDurationHours: hours
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحديث المدة:', error);
+    return res.status(500).json({
+      ok: false,
+      message: 'حدث خطأ أثناء تحديث مدة المعالجة',
+      error: error.message
+    });
+  }
+});
+
+/**
  * PUT /api/complaints/:id/priority
  * تغيير أولوية البلاغ
  */
