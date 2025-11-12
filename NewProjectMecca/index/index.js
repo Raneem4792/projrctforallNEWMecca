@@ -621,6 +621,59 @@ async function initializeProfileLink() {
 }
 
 // ========================================
+// وظائف Dark Mode
+// Dark Mode Functions
+// ========================================
+
+/**
+ * تهيئة Dark Mode
+ */
+function initializeDarkMode() {
+  const darkToggle = document.getElementById('darkToggle');
+  const darkToggleIcon = document.getElementById('darkToggleIcon');
+  const darkToggleText = document.getElementById('darkToggleText');
+  
+  if (!darkToggle) return;
+
+  // ✅ تطبيق الوضع المحفوظ عند تحميل الصفحة
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+    updateDarkModeUI(true);
+  } else {
+    document.documentElement.classList.remove('dark');
+    updateDarkModeUI(false);
+  }
+
+  // ✅ ربط زر التبديل
+  darkToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    
+    // حفظ الاختيار
+    if (isDark) {
+      localStorage.setItem('theme', 'dark');
+    } else {
+      localStorage.setItem('theme', 'light');
+    }
+    
+    // تحديث الأيقونة والنص
+    updateDarkModeUI(isDark);
+  });
+
+  /**
+   * تحديث واجهة زر Dark Mode
+   */
+  function updateDarkModeUI(isDark) {
+    if (darkToggleIcon) {
+      darkToggleIcon.textContent = isDark ? '☀️' : '🌙';
+    }
+    if (darkToggleText) {
+      darkToggleText.textContent = isDark ? 'الوضع الفاتح' : 'الوضع الداكن';
+    }
+  }
+}
+
+// ========================================
 // وظائف التهيئة الرئيسية
 // Main Initialization Functions
 // ========================================
@@ -629,6 +682,9 @@ async function initializeProfileLink() {
  * تهيئة التطبيق
  */
 function initializeApp() {
+  // ✅ تهيئة Dark Mode أولاً
+  initializeDarkMode();
+  
   // تهيئة شريط التنقل
   initializeNavigation();
   initializeMobileMenu();
