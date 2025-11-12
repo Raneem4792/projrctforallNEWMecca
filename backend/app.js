@@ -57,6 +57,7 @@ import { startComplaintTransferProcessor } from './services/complaintTransferPro
 import metaRoutesNew from './routes/meta.routes.js';
 import projectsRoutes from './routes/projects.routes.js';
 import improvementsRoutes from './routes/improvements.routes.js';
+import improvements937Routes from './routes/improvements937.routes.js';
 import imports937Routes from './routes/imports937.routes.js';
 import mysteryComplaintsRoutes from './routes/mystery-complaints.routes.js';
 import mysteryDashboardRoutes from './routes/mystery-dashboard.routes.js';
@@ -253,6 +254,7 @@ app.use('/api', centralRoutes); // القاعدة المركزية
 app.use('/api/complaints', complaintsRouterMultiTenant); // ✅ Multi-tenant (قواعد المستشفيات)
 app.use('/api/complaints', complaintsRouter); // Single-tenant (fallback)
 app.use('/api/projects', projectsRoutes);
+app.use('/api/improvements/937', improvements937Routes); // مشاريع 937 المتخصصة
 app.use('/api/improvements', improvementsRoutes); // مشاريع التحسين
 app.use('/api/archive', archiveRoutes); // ركن الأرشيف ✅
 app.use('/api/cluster-reports', clusterReportsRoutes); // بلاغات إدارة التجمع ✅

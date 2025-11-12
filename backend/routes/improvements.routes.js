@@ -1,4 +1,5 @@
 import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/permissionGuard.js';
 import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
@@ -299,7 +300,79 @@ router.delete('/:id', requireAuth, requirePermission('IMPROVEMENT_DELETE'), reso
 router.post('/', requireAuth, requirePermission('IMPROVEMENT_CREATE'), resolveHospitalId, attachHospitalPool, async (req, res, next) => {
   try {
     const pool = req.hospitalPool;
-    const hid = req.hospitalId;
+    const hid = Number(req.body?.hospitalId) || req.hospitalId;
+    const projectType = (req.body?.projectType || '').toString();
+
+    if (projectType === '937') {
+      const {
+        projectName,
+        impactReason,
+        projectDescription,
+        aimStatement,
+        departmentId,
+        mainTypeId,
+        subTypeId,
+        priority = 'MEDIUM',
+        startDate = null,
+        dueDate = null,
+        projectCategory,
+        projectCategoryOther,
+        smartChecklist = {}
+      } = req.body || {};
+
+      const missing = [];
+      if (!projectName) missing.push('projectName');
+      if (!impactReason) missing.push('impactReason');
+      if (!hid) missing.push('HospitalID');
+
+      if (missing.length) {
+        return res.status(400).json({
+          ok: false,
+          error: 'حقول ناقصة',
+          missing
+        });
+      }
+
+      const effectiveCategory =
+        (projectCategoryOther && projectCategoryOther.trim()) ||
+        (projectCategory && projectCategory.trim()) ||
+        null;
+
+      const insertPayload937 = {
+        GlobalID: uuidv4(),
+        HospitalID: hid,
+        DepartmentID: departmentId ? Number(departmentId) : null,
+        ProjectCategory: effectiveCategory,
+        ProjectName: projectName,
+        ImpactReason: impactReason || null,
+        ProjectDescription: projectDescription || null,
+        AimStatement: aimStatement || null,
+        MainTypeID: mainTypeId ? Number(mainTypeId) : null,
+        SubTypeID: subTypeId ? Number(subTypeId) : null,
+        PriorityCode: String(priority || 'MEDIUM').toUpperCase(),
+        StatusCode: 'UNDER_APPROVAL',
+        Smart_Specific: smartChecklist?.specific ? 1 : 0,
+        Smart_Measurable: smartChecklist?.measurable ? 1 : 0,
+        Smart_Achievable: smartChecklist?.achievable ? 1 : 0,
+        Smart_Realistic: smartChecklist?.realistic ? 1 : 0,
+        Smart_TimeBound: smartChecklist?.timeBound ? 1 : 0,
+        StartDate: startDate || null,
+        DueDate: dueDate || null,
+        CreatedByUserID: req.user?.UserID || null
+      };
+
+      const [ins937] = await pool.query(
+        'INSERT INTO improvement_projects_937 SET ?',
+        insertPayload937
+      );
+
+      return res.status(201).json({
+        ok: true,
+        success: true,
+        Project937ID: ins937.insertId,
+        message: 'تم إنشاء مشروع 937 بنجاح'
+      });
+    }
 
     const {
       Title,
@@ -318,7 +391,6 @@ router.post('/', requireAuth, requirePermission('IMPROVEMENT_CREATE'), resolveHo
       TeamMembers = null
     } = req.body || {};
 
-    // تحقق الحقول الأساسية
     const missing = [];
     if (!Title) missing.push('Title');
     if (!ProblemStatement) missing.push('ProblemStatement');
@@ -350,6 +422,7 @@ router.post('/', requireAuth, requirePermission('IMPROVEMENT_CREATE'), resolveHo
 
     res.status(201).json({ 
       ok: true,
+      success: true,
       ProjectID: ins.insertId,
       message: 'تم إنشاء المشروع بنجاح'
     });

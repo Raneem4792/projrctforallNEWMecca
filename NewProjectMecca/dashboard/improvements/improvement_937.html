@@ -152,24 +152,34 @@
                    placeholder="أدخل نوع المشروع هنا">
           </div>
 
-          <!-- وصف المشكلة -->
+          <!-- سبب تأثر المؤشر -->
           <div class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              وصف المشكلة <span class="text-red-500">*</span>
+              سبب تأثر المؤشر <span class="text-red-500">*</span>
             </label>
-            <textarea id="problemStatement" required rows="3"
+            <textarea id="impactReason" required rows="3"
                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="اكتب وصف المشكلة بناءً على التصنيف المختار"></textarea>
+                      placeholder="اشرح سبب تأثر المؤشر أو المشكلة التي أثرت على النتائج"></textarea>
           </div>
 
-          <!-- الحل المقترح -->
+          <!-- اسم المشروع -->
           <div class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              الحل المقترح <span class="text-red-500">*</span>
+              اسم المشروع <span class="text-red-500">*</span>
             </label>
-            <textarea id="proposedSolution" required rows="4"
+            <input type="text" id="projectName" required
+                   class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   placeholder="اكتب اسم المشروع التحسيني">
+          </div>
+
+          <!-- وصف المشروع -->
+          <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              وصف المشروع <span class="text-red-500">*</span>
+            </label>
+            <textarea id="projectDescription" required rows="4"
                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="اشرح الحل التحسيني المقترح"></textarea>
+                      placeholder="اشرح فكرة المشروع التحسيني والجهود المقترحة لتنفيذه"></textarea>
           </div>
 
           <!-- الهدف -->
@@ -251,15 +261,6 @@
           </h2>
 
           <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                عنوان المشروع <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="projectTitle" required
-                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                     placeholder="عنوان واضح ومختصر للمشروع التحسيني">
-            </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -629,11 +630,12 @@
           projectCategory: isOtherCategory ? otherCategoryValue : projectCategoryValue,
           projectCategoryOriginal: projectCategoryValue,
           projectCategoryOther: isOtherCategory ? otherCategoryValue : null,
-          title: document.getElementById('projectTitle').value,
+          title: document.getElementById('projectName').value,
           mainTypeId: document.getElementById('mainType').value,
           subTypeId: document.getElementById('subType').value,
-          problemStatement: document.getElementById('problemStatement').value,
-          proposedSolution: document.getElementById('proposedSolution').value,
+          impactReason: document.getElementById('impactReason').value,
+          projectName: document.getElementById('projectName').value,
+          projectDescription: document.getElementById('projectDescription').value,
           aimStatement: document.getElementById('aimStatement').value,
           departmentId: document.getElementById('department').value,
           priority: document.getElementById('priority').value || 'MEDIUM',
