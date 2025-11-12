@@ -36,6 +36,109 @@ function formatDateLocal(value, opts = {}) {
   return fmt.format(d);
 }
 
+// ✅ عداد مدة المعالجة
+let processingTimerInterval = null;
+
+function setupProcessingDurationTimer(complaint) {
+  // إيقاف أي عداد سابق
+  if (processingTimerInterval) {
+    clearInterval(processingTimerInterval);
+    processingTimerInterval = null;
+  }
+
+  const container = document.getElementById('processingDurationContainer');
+  const countdownEl = document.getElementById('processingCountdown');
+  const deadlineInfoEl = document.getElementById('processingDeadlineInfo');
+
+  if (!container || !countdownEl || !deadlineInfoEl) return;
+
+  // التحقق من وجود مدة معالجة
+  const deadline = complaint.ProcessingDeadline || complaint.processingDeadline;
+  const durationHours = complaint.ProcessingDurationHours || complaint.processingDurationHours;
+
+  if (!deadline || !durationHours) {
+    container.style.display = 'none';
+    return;
+  }
+
+  // عرض الحاوية
+  container.style.display = 'block';
+
+  // تحويل الموعد النهائي إلى Date
+  const deadlineDate = new Date(deadline);
+  
+  // التحقق من صحة التاريخ
+  if (isNaN(deadlineDate.getTime())) {
+    console.error('❌ تاريخ الموعد النهائي غير صحيح:', deadline);
+    container.style.display = 'none';
+    return;
+  }
+  
+  // عرض معلومات الموعد النهائي
+  const deadlineFormatted = deadlineDate.toLocaleString('ar-SA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  deadlineInfoEl.textContent = `ينتهي في: ${deadlineFormatted}`;
+
+  // دالة تحديث العداد
+  function updateCountdown() {
+    const now = new Date();
+    const diff = deadlineDate - now;
+
+    if (diff <= 0) {
+      // انتهت المدة
+      countdownEl.innerHTML = '<span class="text-red-600">⛔ انتهت المدة المحددة</span>';
+      deadlineInfoEl.innerHTML = '<span class="text-red-600">تم تجاوز الموعد النهائي</span>';
+      clearInterval(processingTimerInterval);
+      processingTimerInterval = null;
+      return;
+    }
+
+    // حساب الوقت المتبقي
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / (1000)) % 60);
+
+    // تنسيق النص
+    let timeText = '';
+    if (days > 0) {
+      timeText = `${days} يوم و ${hours} ساعة`;
+    } else if (hours > 0) {
+      timeText = `${hours} ساعة و ${minutes} دقيقة`;
+    } else if (minutes > 0) {
+      timeText = `${minutes} دقيقة و ${seconds} ثانية`;
+    } else {
+      timeText = `${seconds} ثانية`;
+    }
+
+    // تغيير اللون حسب الوقت المتبقي
+    if (days === 0 && hours < 6) {
+      // أقل من 6 ساعات - خطر
+      countdownEl.className = 'text-lg font-bold text-red-600';
+      countdownEl.innerHTML = `🔴 ${timeText}`;
+    } else if (days === 0 && hours < 24) {
+      // أقل من 24 ساعة - تحذير
+      countdownEl.className = 'text-lg font-bold text-orange-600';
+      countdownEl.innerHTML = `⏱️ ${timeText}`;
+    } else {
+      // طبيعي
+      countdownEl.className = 'text-lg font-bold text-blue-600';
+      countdownEl.innerHTML = `⏱️ ${timeText}`;
+    }
+  }
+
+  // تحديث فوري
+  updateCountdown();
+
+  // تحديث كل ثانية
+  processingTimerInterval = setInterval(updateCountdown, 1000);
+}
+
 // ===== إظهار/إخفاء أزرار الإجراءات حسب الصلاحيات =====
 async function applyActionPermissions(hospitalId) {
   try {
@@ -233,7 +336,7 @@ function translatePriority(priority) {
     case 'LOW':
       return 'منخفضة';
     case 'URGENT':
-      return 'عاجلة';
+      return 'حرجة';
     default:
       return priority || 'غير محددة';
   }
@@ -241,7 +344,7 @@ function translatePriority(priority) {
 
 function badgePriority(p){
   const map = {
-    URGENT:{ t:'عاجلة', bg:'#FEF2F2', ring:'#FECACA', dot:'#EF4444', klass:'bg-red-100 text-red-600' },
+    URGENT:{ t:'حرجة', bg:'#FEF2F2', ring:'#FECACA', dot:'#EF4444', klass:'bg-red-100 text-red-600' },
     HIGH:{ t:'عالية', bg:'#FFF7ED', ring:'#FFEDD5', dot:'#F97316', klass:'bg-red-100 text-red-600' },
     MEDIUM:{ t:'متوسطة', bg:'#FFFBEB', ring:'#FEF3C7', dot:'#F59E0B', klass:'bg-yellow-100 text-yellow-700' },
     MED:{ t:'متوسطة', bg:'#FFFBEB', ring:'#FEF3C7', dot:'#F59E0B', klass:'bg-yellow-100 text-yellow-700' },
@@ -251,6 +354,14 @@ function badgePriority(p){
   return `<span style="background:${map.bg};border:1px solid ${map.ring};"
            class="px-3 py-1 rounded-full text-sm font-semibold inline-flex items-center gap-2 ${map.klass}">
            <span class="dot" style="width:8px;height:8px;border-radius:9999px;background:${map.dot}"></span>${map.t}</span>`;
+}
+
+// ✅ دالة تحديث عرض الأولوية مباشرة
+function updatePriorityDisplay(priorityCode) {
+  const priorityBadge = qs('dPriorityBadge');
+  if (priorityBadge) {
+    priorityBadge.innerHTML = badgePriority(priorityCode.toUpperCase());
+  }
 }
 
 // ✅ تحميل البيانات من API حقيقي
@@ -391,6 +502,9 @@ async function loadDetails() {
     
     // تحديث الشارة بالعربي (استخدم النص من API إذا كان متوفراً)
     updateStatusBadge(statusCode, statusLabelAr);
+
+    // ✅ إعداد عداد مدة المعالجة
+    setupProcessingDurationTimer(c);
 
     // تعبئة بيانات المراجع
     qs('dName').textContent = c.PatientFullName || c.fullName || '';
@@ -1598,6 +1712,101 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('⚠️ لم يتم العثور على #btnChangeStatus');
   }
 
+  // ربط زر فتح مودال تغيير الأولوية
+  const btnChangePriority = document.querySelector('#btnChangePriority');
+  if (btnChangePriority) {
+    btnChangePriority.addEventListener('click', () => {
+      const modal = document.querySelector('#changePriorityModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+    });
+  }
+
+  // ربط أزرار اختيار الأولوية في المودال
+  document.querySelectorAll('.priority-option').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const priorityCode = btn.dataset.priority;
+      if (!priorityCode) return;
+
+      // تعطيل الأزرار أثناء التحميل
+      document.querySelectorAll('.priority-option').forEach(b => b.disabled = true);
+
+      try {
+        const complaintId = window.currentComplaintId || getParam('id');
+        if (!complaintId) {
+          throw new Error('معرف البلاغ غير موجود');
+        }
+
+        // ✅ جلب hospitalId من المتغيرات المتاحة
+        const hid = window.currentHospitalId || 
+                   document.body.dataset.hospitalId || 
+                   getParam('hospitalId') || 
+                   getParam('hid');
+        
+        if (!hid) {
+          throw new Error('لا يمكن تحديد المستشفى. يرجى إعادة تحميل الصفحة.');
+        }
+
+        // ✅ استخدام authHeaders() لإضافة Authorization header
+        const authHeadersObj = authHeaders();
+        const headers = {
+          'Content-Type': 'application/json',
+          'X-Hospital-Id': String(hid), // ✅ إضافة hospitalId كـ header أيضاً
+          ...authHeadersObj
+        };
+
+        // ✅ التحقق من وجود التوكن
+        if (!authHeadersObj.Authorization) {
+          throw new Error('مطلوب تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى.');
+        }
+
+        // ✅ إضافة hospitalId إلى URL و body
+        const url = `${API_BASE_URL}/api/complaints/${complaintId}/priority?hospitalId=${hid}`;
+        console.log('🔗 URL التحديث:', url);
+        console.log('🏥 HospitalID:', hid);
+
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: headers,
+          credentials: 'include',
+          body: JSON.stringify({ 
+            PriorityCode: priorityCode,
+            HospitalID: hid // ✅ إضافة hospitalId في body أيضاً كـ fallback
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'فشل تحديث الأولوية');
+        }
+
+        // تحديث العرض مباشرة
+        updatePriorityDisplay(priorityCode);
+
+        // إغلاق المودال
+        const modal = document.querySelector('#changePriorityModal');
+        if (modal) {
+          modal.classList.add('hidden');
+        }
+
+        // إعادة تحميل التفاصيل للتأكد من التحديث
+        await loadDetails();
+
+        // إظهار رسالة نجاح
+        showToast('تم تحديث الأولوية بنجاح ✅', 'success');
+
+      } catch (error) {
+        console.error('❌ خطأ في تحديث الأولوية:', error);
+        alert('فشل تحديث الأولوية: ' + error.message);
+      } finally {
+        // تفعيل الأزرار مرة أخرى
+        document.querySelectorAll('.priority-option').forEach(b => b.disabled = false);
+      }
+    });
+  });
+
   // ربط أزرار إغلاق المودال
   document.querySelectorAll('[data-close-modal]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -1614,6 +1823,16 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.add('hidden');
+      }
+    });
+  }
+
+  // إغلاق مودال الأولوية عند الضغط خارجه
+  const priorityModal = document.querySelector('#changePriorityModal');
+  if (priorityModal) {
+    priorityModal.addEventListener('click', (e) => {
+      if (e.target === priorityModal) {
+        priorityModal.classList.add('hidden');
       }
     });
   }

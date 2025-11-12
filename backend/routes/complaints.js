@@ -123,6 +123,10 @@ router.get('/track', optionalAuth, async (req, res) => {
         c.CreatedAt,
         c.AssignedToUserID,
         c.AssignedAt,
+        c.ProcessingDurationHours,
+        c.ProcessingDeadline,
+        c.ComplaintTypeID,
+        c.SubTypeID,
         d.NameAr  AS DepartmentNameAr,
         d.NameEn  AS DepartmentNameEn,
         dp.NameAr AS ParentDepartmentNameAr,
@@ -131,6 +135,8 @@ router.get('/track', optionalAuth, async (req, res) => {
         au.FullName AS AssignedToFullName,
         ct.TypeName  AS ComplaintTypeNameAr,
         ct.TypeNameEn AS ComplaintTypeNameEn,
+        st.SubTypeName AS SubTypeNameAr,
+        st.SubTypeNameEn AS SubTypeNameEn,
         cs.LabelAr AS StatusLabelAr,
         cs.LabelEn AS StatusLabelEn
       FROM complaints c
@@ -139,6 +145,7 @@ router.get('/track', optionalAuth, async (req, res) => {
       LEFT JOIN users u         ON u.UserID       = c.CreatedByUserID
       LEFT JOIN users au        ON au.UserID      = c.AssignedToUserID
       LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+      LEFT JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
       LEFT JOIN complaint_statuses cs ON cs.StatusCode = c.StatusCode
       WHERE 1=1
         ${scope.where}
@@ -257,7 +264,7 @@ router.get('/track', optionalAuth, async (req, res) => {
             const hospitalPool = mysql.createPool({
               host: process.env.CENTRAL_DB_HOST || 'localhost',
               user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
+              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -802,7 +809,7 @@ router.get('/history', requireAuth, async (req, res) => {
             const hospitalPool = mysql.createPool({
               host: process.env.CENTRAL_DB_HOST || 'localhost',
               user: process.env.CENTRAL_DB_USER || 'root',
-              password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
+              password: process.env.CENTRAL_DB_PASS || 'Raneem11',
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -974,14 +981,23 @@ router.get('/:id', optionalAuth, async (req, res) => {
         c.HospitalID, c.DepartmentID, c.CreatedByUserID,
         c.SubmissionType, c.StatusCode, c.PriorityCode,
         c.Description, c.VisitDate, c.CreatedAt, c.UpdatedAt,
+        c.ProcessingDurationHours,
+        c.ProcessingDeadline,
+        c.ComplaintTypeID,
+        c.SubTypeID,
         d.NameAr AS DepartmentNameAr,
         d.NameEn AS DepartmentNameEn,
         u.FullName AS CreatedByFullName,
+        ct.TypeName AS ComplaintTypeNameAr,
+        ct.TypeNameEn AS ComplaintTypeNameEn,
+        st.SubTypeName AS SubTypeNameAr,
+        st.SubTypeNameEn AS SubTypeNameEn,
         ${CATEGORY_SQL} AS Category
       FROM complaints c
       LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
       LEFT JOIN users       u ON u.UserID       = c.CreatedByUserID
       LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+      LEFT JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
       WHERE c.ComplaintID = ?
       LIMIT 1
     `, [id]);

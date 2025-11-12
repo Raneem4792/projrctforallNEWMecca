@@ -129,21 +129,7 @@
         </div>
         <div class="grid md:grid-cols-2 gap-4">
           <div class="field">
-            <div class="flex items-center justify-between mb-1">
-              <label id="main-category-label" class="mb-0">التصنيف الرئيسي (937)</label>
-
-              <div class="flex gap-2 text-xs">
-                <button type="button" id="btnEditType"
-                        class="text-blue-600 hover:text-blue-800 hover:underline">
-                  تعديل
-                </button>
-                <button type="button" id="btnDeleteType"
-                        class="text-red-600 hover:text-red-800 hover:underline">
-                  حذف
-                </button>
-              </div>
-            </div>
-
+            <label id="main-category-label" class="mb-1">التصنيف الرئيسي (937)</label>
             <div class="relative">
               <!-- 🔍 مربع البحث عن التصنيف -->
               <input type="text" id="typeSearch" 
@@ -156,76 +142,30 @@
                 <!-- باقي الخيارات تجي من الـ API -->
               </select>
             </div>
-            
-            <!-- فورم التصنيف الجديد (يظهر فقط عند الحاجة) -->
-            <div id="newTypeBox" class="mt-2 space-y-2 hidden">
-              <input type="text" id="newTypeNameAr"
-                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                     placeholder="اسم التصنيف بالعربي (مثال: الإجازات المرضية)">
-              
-              <input type="text" id="newTypeNameEn"
-                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                     placeholder="اسم التصنيف بالإنجليزي (اختياري)">
-              
-              <div class="flex justify-end gap-2">
-                <button type="button" id="saveNewType"
-                        class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white hover:bg-blue-700">
-                  حفظ التصنيف
-                </button>
-                <button type="button" id="cancelNewType"
-                        class="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700 hover:bg-gray-300">
-                  إلغاء
-                </button>
-              </div>
-            </div>
           </div>
           <div class="field">
-            <div class="flex items-center justify-between mb-1">
-              <label id="sub-category-label" class="mb-0">التصنيف الفرعي</label>
-
-              <div class="flex gap-2 text-xs">
-                <button type="button" id="btnEditSubType"
-                        class="text-blue-600 hover:text-blue-800 hover:underline">
-                  تعديل
-                </button>
-                <button type="button" id="btnDeleteSubType"
-                        class="text-red-600 hover:text-red-800 hover:underline">
-                  حذف
-                </button>
-              </div>
-            </div>
-
+            <label id="sub-category-label" class="mb-1">التصنيف الفرعي</label>
             <!-- قائمة التصنيفات الفرعية -->
             <select id="subType" disabled>
               <option value="" id="sub-category-placeholder">اختر التصنيف الفرعي</option>
             </select>
-
-            <!-- فورم التصنيف الفرعي الجديد (يظهر عند الحاجة) -->
-            <div id="newSubTypeBox" class="mt-2 space-y-2 hidden">
-              <input type="text" id="newSubTypeNameAr"
-                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                     placeholder="اسم التصنيف الفرعي بالعربي">
-
-              <input type="text" id="newSubTypeNameEn"
-                     class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                     placeholder="اسم التصنيف الفرعي بالإنجليزي (اختياري)">
-
-              <div class="flex justify-end gap-2">
-                <button type="button" id="saveNewSubType"
-                        class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white hover:bg-blue-700">
-                  حفظ التصنيف الفرعي
-                </button>
-                <button type="button" id="cancelNewSubType"
-                        class="px-3 py-1 rounded-full text-xs bg-gray-200 text-gray-700 hover:bg-gray-300">
-                  إلغاء
-                </button>
-              </div>
-            </div>
           </div>
           <div class="field md:col-span-2">
             <label id="complaint-description-label">وصف البلاغ</label>
             <textarea id="details" rows="5" placeholder="اكتب تفاصيل البلاغ بشكل واضح" data-placeholder-ar="اكتب تفاصيل البلاغ بشكل واضح" data-placeholder-en="Write complaint details clearly"></textarea>
             <small id="priorityPreview" class="text-sm text-gray-600 mt-2 block">الأولوية المتوقعة: —</small>
+          </div>
+          <div class="field">
+            <label id="processing-duration-label">⏳ مدة معالجة البلاغ</label>
+            <select id="processingDuration" name="ProcessingDuration" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
+              <option value="" id="processing-duration-placeholder">اختر المدة...</option>
+              <option value="24">24 ساعة</option>
+              <option value="48">48 ساعة</option>
+              <option value="72">3 أيام</option>
+              <option value="168">أسبوع</option>
+              <option value="720">شهر</option>
+            </select>
+            <small class="text-xs text-gray-500 mt-1 block">المدة المتوقعة لمعالجة هذا البلاغ</small>
           </div>
         </div>
       </section>
@@ -530,6 +470,8 @@
         'sub-category-label': 'التصنيف الفرعي',
         'sub-category-placeholder': 'اختر التصنيف الفرعي',
         'complaint-description-label': 'وصف البلاغ',
+        'processing-duration-label': '⏳ مدة معالجة البلاغ',
+        'processing-duration-placeholder': 'اختر المدة...',
         
         // بلاغ على موظف
         'employee-target-title': 'بلاغ على موظف؟ (اختياري)',
@@ -595,6 +537,8 @@
         'sub-category-label': 'Sub Category',
         'sub-category-placeholder': 'Select Sub Category',
         'complaint-description-label': 'Complaint Description',
+        'processing-duration-label': '⏳ Processing Duration',
+        'processing-duration-placeholder': 'Select duration...',
         
         // بلاغ على موظف
         'employee-target-title': 'Complaint Against Employee? (Optional)',

@@ -63,6 +63,15 @@
           <span id="dPriorityBadge"></span>
         </div>
       </div>
+      
+      <!-- عداد مدة المعالجة -->
+      <div id="processingDurationContainer" class="mt-4 pt-4 border-t border-gray-200" style="display: none;">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-semibold text-gray-700">📅 المدة المتبقية لمعالجة البلاغ:</span>
+          <span id="processingCountdown" class="text-lg font-bold text-blue-600">-</span>
+        </div>
+        <div id="processingDeadlineInfo" class="text-xs text-gray-500 mt-1"></div>
+      </div>
     </section>
 
     <!-- شريط الإجراءات -->
@@ -72,6 +81,7 @@
         <div class="flex flex-wrap gap-2">
           <button id="btnReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition">إضافة رد</button>
           <button id="btnChangeStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm hover:bg-amber-600 transition">تغيير الحالة</button>
+          <button id="btnChangePriority" class="h-10 px-4 rounded-xl bg-orange-600 text-white text-sm hover:bg-orange-700 transition">🔺 تغيير الأولوية</button>
           <button id="btnTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">تحويل</button>
           <button id="btnDeleteComplaint" class="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700 transition">🗑️ حذف البلاغ</button>
         </div>
@@ -410,6 +420,74 @@
       <div class="mt-6 flex justify-end gap-2">
         <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
         <button id="applyStatusBtn" class="h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">تطبيق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔺 مودال تغيير الأولوية -->
+  <div id="changePriorityModal" class="modal hidden fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-[#002B5B]">🔺 تغيير الأولوية</h3>
+        <button data-close-modal class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+
+      <!-- Body -->
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600 mb-4">اختر الأولوية الجديدة للبلاغ:</p>
+        
+        <div class="grid gap-3">
+          <!-- حرجة -->
+          <button 
+            data-priority="URGENT" 
+            class="priority-option h-14 px-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-400 transition flex items-center justify-between group"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🔴</span>
+              <div class="text-right">
+                <div class="font-bold text-red-700">حرجة</div>
+                <div class="text-xs text-red-600">URGENT</div>
+              </div>
+            </div>
+            <span class="text-red-600 opacity-0 group-hover:opacity-100 transition">✓</span>
+          </button>
+
+          <!-- متوسطة -->
+          <button 
+            data-priority="MEDIUM" 
+            class="priority-option h-14 px-4 rounded-xl border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 hover:border-yellow-400 transition flex items-center justify-between group"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🟠</span>
+              <div class="text-right">
+                <div class="font-bold text-yellow-700">متوسطة</div>
+                <div class="text-xs text-yellow-600">MEDIUM</div>
+              </div>
+            </div>
+            <span class="text-yellow-600 opacity-0 group-hover:opacity-100 transition">✓</span>
+          </button>
+
+          <!-- منخفضة -->
+          <button 
+            data-priority="LOW" 
+            class="priority-option h-14 px-4 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-400 transition flex items-center justify-between group"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🟢</span>
+              <div class="text-right">
+                <div class="font-bold text-green-700">منخفضة</div>
+                <div class="text-xs text-green-600">LOW</div>
+              </div>
+            </div>
+            <span class="text-green-600 opacity-0 group-hover:opacity-100 transition">✓</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-6 flex justify-end gap-2">
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
       </div>
     </div>
   </div>

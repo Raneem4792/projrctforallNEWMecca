@@ -80,6 +80,7 @@ router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.arra
     const FileNumber       = req.body.FileNumber || req.body.fileNumber || null;
     const ComplaintTypeID  = Number(req.body.ComplaintTypeID || req.body.complaintTypeId || 0) || null;
     const SubTypeID        = Number(req.body.SubTypeID || req.body.subTypeId || 0) || null;
+    const ProcessingDurationHours = req.body.ProcessingDuration ? Number(req.body.ProcessingDuration) : null;
     
     // ✅ تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
     let PriorityCode;
@@ -139,6 +140,9 @@ router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.arra
     
     const ticketNumber = `C-${year}-${String(seq).padStart(6, '0')}`;
 
+    // ملاحظة: ProcessingDeadline سيتم حسابه بعد الحفظ باستخدام CreatedAt من DB
+    // نتركه NULL هنا وسنحدثه بعد INSERT
+
     // إدخال البلاغ في قاعدة المستشفى
     const [result] = await pool.query(`
       INSERT INTO complaints (
@@ -157,9 +161,11 @@ router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.arra
         Description,
         PriorityCode,
         StatusCode,
+        ProcessingDurationHours,
+        ProcessingDeadline,
         CreatedByUserID
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `, [
       ticketNumber,
@@ -177,10 +183,21 @@ router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.arra
       Description,
       PriorityCode,
       StatusCode,
+      ProcessingDurationHours,
+      null, // ProcessingDeadline سيتم حسابه بعد INSERT
       userId
     ]);
 
     const complaintId = result.insertId;
+
+    // ✅ تحديث ProcessingDeadline بعد الحفظ (لأن CreatedAt يتم تعيينه من DB)
+    if (ProcessingDurationHours && ProcessingDurationHours > 0) {
+      await pool.query(`
+        UPDATE complaints 
+        SET ProcessingDeadline = DATE_ADD(CreatedAt, INTERVAL ? HOUR)
+        WHERE ComplaintID = ?
+      `, [ProcessingDurationHours, complaintId]);
+    }
 
     // ✅ الـ trigger سيُدخل في outbox_events تلقائياً
 
@@ -459,6 +476,62 @@ router.get('/export-excel', requireAuth, exportComplaintsExcel);
  * تصدير البلاغات إلى PDF (يستقبل صورة من html2canvas)
  */
 router.post('/export-pdf', requireAuth, exportComplaintsPDF);
+
+/**
+ * PUT /api/complaints/:id/priority
+ * تغيير أولوية البلاغ
+ */
+router.put('/:id/priority', requireAuth, resolveHospitalId, attachHospitalPool, async (req, res) => {
+  const pool = req.hospitalPool;
+  try {
+    // التحقق من وجود pool
+    if (!pool) {
+      return res.status(500).json({ success: false, message: 'فشل الاتصال بقاعدة البيانات' });
+    }
+
+    const complaintId = Number(req.params.id);
+    const { PriorityCode } = req.body;
+    const userId = Number(req.user?.uid || req.user?.UserID || req.user?.userId);
+
+    if (!complaintId) {
+      return res.status(400).json({ success: false, message: 'معرف البلاغ مطلوب' });
+    }
+
+    if (!PriorityCode || !['URGENT', 'MEDIUM', 'LOW', 'HIGH'].includes(PriorityCode.toUpperCase())) {
+      return res.status(400).json({ success: false, message: 'أولوية غير صالحة. يجب أن تكون: URGENT, MEDIUM, LOW, أو HIGH' });
+    }
+
+    const priorityCode = PriorityCode.toUpperCase();
+
+    // التحقق من وجود البلاغ
+    const [[complaint]] = await pool.query(
+      `SELECT ComplaintID, PriorityCode FROM complaints WHERE ComplaintID = ?`,
+      [complaintId]
+    );
+
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'البلاغ غير موجود' });
+    }
+
+    // تحديث الأولوية
+    await pool.query(
+      `UPDATE complaints 
+       SET PriorityCode = ?, UpdatedAt = CURRENT_TIMESTAMP 
+       WHERE ComplaintID = ?`,
+      [priorityCode, complaintId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'تم تحديث الأولوية بنجاح',
+      priorityCode: priorityCode,
+      complaintId: complaintId
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الأولوية:', err);
+    res.status(500).json({ success: false, message: 'خطأ في قاعدة البيانات: ' + err.message });
+  }
+});
 
 export default router;
 

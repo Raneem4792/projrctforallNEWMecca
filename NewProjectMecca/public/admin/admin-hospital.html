@@ -92,6 +92,18 @@
         <div class="font-bold text-[#002B5B] mb-1">المحذوفات</div>
         <div class="text-sm text-gray-600">سلة المحذوفات</div>
       </a>
+
+      <!-- إدارة التصنيفات -->
+      <a id="card-categories" href="admin-categories.html" class="block bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition" style="display: none;">
+        <div class="w-14 h-14 mb-3 rounded-full bg-purple-50 flex items-center justify-center">
+          <svg class="w-7 h-7 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A1.994 1.994 0 0 1 3 12V7a4 4 0 0 1 4-4z"/>
+            <path stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A1.994 1.994 0 0 1 3 12V7a4 4 0 0 1 4-4z"/>
+          </svg>
+        </div>
+        <div class="font-bold text-[#002B5B] mb-1">إدارة التصنيفات</div>
+        <div class="text-sm text-gray-600">إضافة وتعديل التصنيفات الرئيسية والفرعية لكل مستشفى</div>
+      </a>
     </div>
   </main>
 
@@ -194,11 +206,15 @@
         
         const data = await res.json();
         
+        // التحقق من كون المستخدم مدير تجمع
+        const isCentral = data?.user?.scope === 'central' || data?.user?.HospitalID == null;
+        
         // إظهار/إخفاء كل أيقونة حسب الصلاحية
         toggleCard('#card-trash',       data?.hospitalTrash === true);
         toggleCard('#card-logs',        data?.hospitalLogs === true);
         toggleCard('#card-permissions', data?.hospitalPermissions === true);
         toggleCard('#card-users',       data?.hospitalUsers === true);
+        toggleCard('#card-categories',  data?.hospitalCategories === true || isCentral);
         
         console.log('✅ تم تحميل صلاحيات إدارة المستشفى');
       } catch (err) {
