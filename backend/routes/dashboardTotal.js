@@ -449,13 +449,29 @@ router.get('/departments',
 // ========== GET /api/dashboard/total/complaint-types ==========
 router.get('/complaint-types', async (req, res) => {
   try {
+    const hospitalId = req.query?.hospitalId ? Number(req.query.hospitalId) : null;
+
     // جلب جميع المستشفيات النشطة أولاً
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+
     const [allHospitals] = await pool.query(`
       SELECT HospitalID, NameAr AS HospitalName, SortOrder
-      FROM hospitals 
-      WHERE IsActive = 1
+      FROM hospitals
+      ${hospitalWhereClause}
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
-    `);
+    `, hospitalParams);
+
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        data: [],
+        total: 0,
+        hospitals: 0
+      });
+    }
 
     // جلب أنواع البلاغات من قواعد بيانات المستشفيات المنفصلة
     const { getHospitalPool } = await import('../config/db.js');
@@ -467,13 +483,19 @@ router.get('/complaint-types', async (req, res) => {
         
         // جلب أنواع البلاغات من قاعدة بيانات المستشفى
         const [complaintTypes] = await hospitalPool.query(`
-          SELECT 
-            ComplaintTypeID,
-            TypeName,
-            TypeCode,
-            TypeNameEn
-          FROM complaint_types 
-          ORDER BY TypeName ASC
+          SELECT
+            ct.ComplaintTypeID,
+            ct.TypeName,
+            ct.TypeCode,
+            ct.TypeNameEn,
+            COUNT(c.ComplaintID) AS TotalCount
+          FROM complaint_types ct
+          LEFT JOIN complaints c
+            ON c.ComplaintTypeID = ct.ComplaintTypeID
+           AND c.IsDeleted = 0
+          GROUP BY ct.ComplaintTypeID
+          HAVING TotalCount > 0
+          ORDER BY TotalCount DESC, ct.TypeName ASC
         `);
 
         // إضافة معلومات المستشفى لكل نوع بلاغ
@@ -484,7 +506,8 @@ router.get('/complaint-types', async (req, res) => {
             ComplaintTypeID: type.ComplaintTypeID,
             TypeName: type.TypeName,
             TypeCode: type.TypeCode,
-            TypeNameEn: type.TypeNameEn
+            TypeNameEn: type.TypeNameEn,
+            TotalCount: Number(type.TotalCount) || 0
           });
         });
 
@@ -514,6 +537,86 @@ router.get('/complaint-types', async (req, res) => {
       success: false,
       error: 'Database error',
       message: error.message 
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/complaint-types/by-hospital ==========
+router.get('/complaint-types/by-hospital', async (req, res) => {
+  try {
+    const typeParam = (req.query?.type || '').trim();
+    if (!typeParam) {
+      return res.status(400).json({
+        success: false,
+        message: 'type parameter is required'
+      });
+    }
+
+    const hospitalId = req.query?.hospitalId ? Number(req.query.hospitalId) : null;
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      FROM hospitals
+      ${hospitalWhereClause}
+      ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
+    `, hospitalParams);
+
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        type: typeParam,
+        data: [],
+        hospitals: 0
+      });
+    }
+
+    const { getHospitalPool } = await import('../config/db.js');
+    const results = [];
+
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        const [rows] = await hospitalPool.query(`
+          SELECT COUNT(*) AS TotalCount
+          FROM complaints c
+          JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+          WHERE c.IsDeleted = 0
+            AND (ct.TypeCode = ? OR ct.TypeName = ?)
+        `, [typeParam, typeParam]);
+
+        const total = Number(rows?.[0]?.TotalCount ?? 0);
+        results.push({
+          HospitalID: hospital.HospitalID,
+          HospitalName: hospital.HospitalName,
+          TotalCount: total
+        });
+      } catch (error) {
+        console.error(`خطأ في جلب البلاغات للتصنيف ${typeParam} من المستشفى ${hospital.HospitalID}:`, error.message);
+        results.push({
+          HospitalID: hospital.HospitalID,
+          HospitalName: hospital.HospitalName,
+          TotalCount: 0,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      type: typeParam,
+      hospitals: results.length,
+      data: results
+    });
+  } catch (error) {
+    console.error('GET /dashboard/total/complaint-types/by-hospital', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
     });
   }
 });

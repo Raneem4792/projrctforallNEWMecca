@@ -6,7 +6,7 @@
   <title>الرحلات العلاجية والنطاقات</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1B4wEXn0P4pX5nCkQJqk5GqlaNpIB5D0l9nX+Y73P6Z0Zqs6R0kB8d3j2dQ9C4Z1Bw==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
   <style>
     .styled-table {
       width: 100%;
@@ -287,22 +287,25 @@
           return;
         }
 
-        const headers = { 'X-Hospital-Id': currentHospitalId };
-        const query = `?hospitalId=${currentHospitalId}`;
-
         selectedTrips.clear();
         selectedZones.clear();
 
-        const [trips, zones, hospitalTrips, hospitalZones] = await Promise.all([
+        const hidSegment = encodeURIComponent(currentHospitalId);
+        const headers = { 'X-Hospital-Id': currentHospitalId };
+
+        const [trips, zones, hospitalTripsResp, hospitalZonesResp] = await Promise.all([
           fetchJSON(`${API_BASE}/api/trips/list`),
           fetchJSON(`${API_BASE}/api/zones/list`),
-          fetchJSON(`${API_BASE}/api/hospital/trips${query}`, { headers }),
-          fetchJSON(`${API_BASE}/api/hospital/zones${query}`, { headers })
+          fetchJSON(`${API_BASE}/api/hospital/${hidSegment}/trips`, { headers }),
+          fetchJSON(`${API_BASE}/api/hospital/${hidSegment}/zones`, { headers })
         ]);
+
+        const hospitalTrips = Array.isArray(hospitalTripsResp?.data) ? hospitalTripsResp.data : Array.isArray(hospitalTripsResp) ? hospitalTripsResp : [];
+        const hospitalZones = Array.isArray(hospitalZonesResp?.data) ? hospitalZonesResp.data : Array.isArray(hospitalZonesResp) ? hospitalZonesResp : [];
 
         const tripRows = trips.map(t => {
           const name = t.TripName || t.tripName || '';
-          const checked = hospitalTrips.some(x => (x.TripName || x.tripName) === name && (x.IsAvailable === 1 || x.IsAvailable === true));
+          const checked = hospitalTrips.some(x => (x.TripName || x.tripName) === name);
           selectedTrips.set(name, checked);
           return `
             <tr>
@@ -314,7 +317,7 @@
 
         const zoneRows = zones.map(z => {
           const name = z.ZoneName || z.zoneName || '';
-          const checked = hospitalZones.some(x => (x.ZoneName || x.zoneName) === name && (x.IsAvailable === 1 || x.IsAvailable === true));
+          const checked = hospitalZones.some(x => (x.ZoneName || x.zoneName) === name);
           selectedZones.set(name, checked);
           return `
             <tr>

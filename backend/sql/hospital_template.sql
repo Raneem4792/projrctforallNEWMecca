@@ -1371,3 +1371,55 @@ ALTER TABLE zones
 ADD COLUMN IsAvailable TINYINT(1) DEFAULT 0;
 
 
+CREATE TABLE improvement_projects_937 (
+    Project937ID BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    GlobalID CHAR(36) NOT NULL,
+    HospitalID INT UNSIGNED NOT NULL,
+    DepartmentID INT UNSIGNED NULL,
+    ProjectCategory VARCHAR(100) NULL, -- نوع المشروع (وزاري / القابضة / 20/80 / 20/25 / أخرى)
+    ProjectName VARCHAR(255) NOT NULL, -- اسم المشروع
+    ImpactReason TEXT NULL, -- سبب تأثر المؤشر
+    ProjectDescription TEXT NULL, -- وصف المشروع
+    AimStatement TEXT NULL, -- الهدف من المشروع
+    MainTypeID INT UNSIGNED NULL, -- التصنيف الأساسي
+    SubTypeID INT UNSIGNED NULL, -- التصنيف الفرعي
+    PriorityCode VARCHAR(20) DEFAULT 'MEDIUM',
+    
+    StatusCode ENUM('UNDER_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED') 
+        DEFAULT 'UNDER_APPROVAL',
+
+    -- SMART Criteria
+    Smart_Specific TINYINT(1) DEFAULT 0,
+    Smart_Measurable TINYINT(1) DEFAULT 0,
+    Smart_Achievable TINYINT(1) DEFAULT 0,
+    Smart_Realistic TINYINT(1) DEFAULT 0,
+    Smart_TimeBound TINYINT(1) DEFAULT 0,
+
+    StartDate DATE NULL,
+    DueDate DATE NULL,
+
+    -- معلومات الإنشاء والموافقة
+    CreatedByUserID INT UNSIGNED,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ApprovedByUserID INT UNSIGNED NULL,
+    ApprovedAt DATETIME NULL,
+
+    -- مرحلة التنفيذ والرد
+    ImplementationResponse TEXT NULL, -- الرد من منفذ المشروع بعد الاعتماد
+    ImplementationFilesCount INT DEFAULT 0,
+    ImplementationByUserID INT UNSIGNED NULL,
+    ImplementationDate DATETIME NULL,
+
+    -- الاعتماد النهائي للرد
+    ImplementationApprovalByUserID INT UNSIGNED NULL,
+    ImplementationApprovalAt DATETIME NULL,
+    ImplementationApprovalStatus ENUM('APPROVED', 'REJECTED') NULL,
+
+    -- الحذف المنطقي
+    IsDeleted TINYINT(1) DEFAULT 0,
+    DeletedAt DATETIME NULL,
+    DeletedByUserID INT UNSIGNED NULL,
+
+    INDEX idx_hospital (HospitalID),
+    INDEX idx_status (StatusCode)
+);

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاصيل التصنيف</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <style>
+    body { font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <header class="bg-[#002B5B] text-white">
+    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="dashboard.html" class="inline-flex items-center gap-2 text-white hover:text-blue-200 transition">
+          <span class="text-2xl font-bold">لوحة البلاغات</span>
+        </a>
+      </div>
+      <nav class="text-sm space-x-4 space-x-reverse">
+        <a href="dashboard.html" class="hover:text-blue-200">لوحة التحكم</a>
+        <a href="open.html" class="hover:text-blue-200">البلاغات المفتوحة</a>
+        <a href="../index/index.html" class="hover:text-blue-200">الرئيسية</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-10">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 id="pageTitle" class="text-3xl font-bold text-[#002B5B] mb-2">تفاصيل التصنيف</h1>
+        <p id="pageSubtitle" class="text-gray-600 text-sm"></p>
+      </div>
+      <a href="dashboard.html"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-[#002B5B] hover:bg-blue-50 transition">
+        ← العودة للوحة
+      </a>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow border border-gray-100 p-6 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-[#002B5B]">عدد البلاغات حسب المستشفى</h2>
+        <div id="chartMeta" class="text-sm text-gray-500"></div>
+      </div>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div id="chartWrapper" class="relative" style="min-height: 280px;">
+          <canvas id="hospitalTypeChart" class="w-full"></canvas>
+          <div id="chartEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
+            <div class="text-center text-gray-500">
+              <div class="text-lg font-semibold mb-1">لا توجد بيانات للعرض</div>
+              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف حتى الآن.</p>
+            </div>
+          </div>
+        </div>
+        <div id="pieWrapper" class="relative" style="min-height: 280px;">
+          <canvas id="hospitalTypePie" class="w-full"></canvas>
+          <div id="pieEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
+            <div class="text-center text-gray-500">
+              <div class="text-lg font-semibold mb-1">لا توجد بيانات للعرض</div>
+              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف حتى الآن.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-[#002B5B]">تفاصيل المستشفيات</h2>
+        <span id="tableMeta" class="text-sm text-gray-500"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-center border border-gray-100 rounded-xl overflow-hidden">
+          <thead class="bg-gray-100 text-gray-600 text-sm">
+            <tr>
+              <th class="py-3 px-4 border-b border-gray-200">المستشفى</th>
+              <th class="py-3 px-4 border-b border-gray-200">عدد البلاغات</th>
+            </tr>
+          </thead>
+          <tbody id="hospitalRows" class="text-sm"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const typeParam = (params.get('type') || '').trim();
+    const labelParam = (params.get('label') || typeParam || '').trim();
+
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const chartMeta = document.getElementById('chartMeta');
+    const tableMeta = document.getElementById('tableMeta');
+    const chartEmptyState = document.getElementById('chartEmptyState');
+    const hospitalsBody = document.getElementById('hospitalRows');
+    const chartCanvas = document.getElementById('hospitalTypeChart');
+    const pieCanvas = document.getElementById('hospitalTypePie');
+    const pieEmptyState = document.getElementById('pieEmptyState');
+
+    let hospitalChartInstance = null;
+    let hospitalPieInstance = null;
+
+    pageTitle.textContent = labelParam
+      ? `بلاغات تصنيف "${labelParam}"`
+      : 'تفاصيل التصنيف';
+
+    pageSubtitle.textContent = labelParam
+      ? `يعرض هذا التقرير توزيع بلاغات التصنيف "${labelParam}" على مستوى المستشفيات`
+      : 'اختر تصنيفاً من لوحة التحكم لعرض تفاصيله هنا.';
+
+    if (!typeParam) {
+      chartMeta.textContent = '';
+      chartEmptyState.classList.remove('hidden');
+      hospitalsBody.innerHTML = `
+        <tr>
+          <td colspan="2" class="py-6 text-gray-500">
+            يرجى العودة للوحة التحكم واختيار تصنيف لعرض تفاصيله.
+          </td>
+        </tr>`;
+    } else {
+      loadClassificationDetails();
+    }
+
+    async function loadClassificationDetails() {
+      try {
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+          ? 'http://localhost:3001'
+          : '';
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        chartMeta.textContent = 'جاري تحميل البيانات...';
+        tableMeta.textContent = '';
+        chartEmptyState.classList.add('hidden');
+        hospitalsBody.innerHTML = `
+          <tr>
+            <td colspan="2" class="py-6 text-gray-500">جاري تحميل البيانات...</td>
+          </tr>`;
+
+        const res = await fetch(`${API_BASE}/api/dashboard/total/complaint-types/by-hospital?type=${encodeURIComponent(typeParam)}`, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const payload = await res.json();
+        const list = Array.isArray(payload?.data) ? payload.data : [];
+        const sorted = list
+          .map(item => ({
+            hospitalId: item.HospitalID,
+            hospitalName: item.HospitalName || 'مستشفى غير معروف',
+            count: Number(item.TotalCount || 0)
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        renderChart(sorted);
+        renderPieChart(sorted);
+        renderTable(sorted);
+
+        const totalCount = sorted.reduce((sum, item) => sum + item.count, 0);
+        chartMeta.textContent = `إجمالي البلاغات: ${totalCount}`;
+        tableMeta.textContent = `عدد المستشفيات: ${sorted.length}`;
+      } catch (err) {
+        console.error('خطأ في تحميل تفاصيل التصنيف:', err);
+        chartEmptyState.classList.remove('hidden');
+        if (pieEmptyState) pieEmptyState.classList.remove('hidden');
+        chartMeta.textContent = 'تعذر تحميل البيانات';
+        hospitalsBody.innerHTML = `
+          <tr>
+            <td colspan="2" class="py-6 text-red-600">تعذر تحميل البيانات، حاول مجدداً لاحقاً.</td>
+          </tr>`;
+      }
+    }
+
+    function renderChart(data) {
+      if (!chartCanvas) return;
+
+      if (!data.length || data.every(item => item.count === 0)) {
+        chartEmptyState.classList.remove('hidden');
+        if (hospitalChartInstance) {
+          hospitalChartInstance.destroy();
+          hospitalChartInstance = null;
+        }
+        return;
+      }
+
+      if (hospitalChartInstance) {
+        hospitalChartInstance.destroy();
+      }
+
+      hospitalChartInstance = new Chart(chartCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: data.map(item => item.hospitalName),
+          datasets: [{
+            data: data.map(item => item.count),
+            backgroundColor: '#2d75c7',
+            borderRadius: 8,
+            barThickness: 28,
+            hospitals: data
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'x',
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#0f172a',
+              font: { size: 13, weight: 'bold' },
+              formatter: value => value
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.formattedValue}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                autoSkip: false,
+                color: '#1f2937',
+                font: { size: 12 }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(148, 163, 184, 0.15)' },
+              ticks: {
+                color: '#475569',
+                font: { size: 12 },
+                precision: 0
+              }
+            }
+          },
+          onClick: (evt, elements, chart) => {
+            if (!elements || !elements.length) return;
+            const { datasetIndex, index } = elements[0];
+            const dataset = chart.data.datasets?.[datasetIndex];
+            const selected = dataset?.hospitals?.[index];
+            if (!selected) return;
+            navigateToHospitalComplaints(selected);
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderPieChart(data) {
+      if (!pieCanvas) return;
+
+      if (!data.length || data.every(item => item.count === 0)) {
+        if (pieEmptyState) pieEmptyState.classList.remove('hidden');
+        if (hospitalPieInstance) {
+          hospitalPieInstance.destroy();
+          hospitalPieInstance = null;
+        }
+        return;
+      } else if (pieEmptyState) {
+        pieEmptyState.classList.add('hidden');
+      }
+
+      if (hospitalPieInstance) {
+        hospitalPieInstance.destroy();
+      }
+
+      const total = data.reduce((sum, item) => sum + item.count, 0) || 1;
+
+      const colors = data.map((item, idx) => {
+        const palette = [
+          '#2d75c7', '#7cb518', '#f59e0b', '#ef4444',
+          '#10b981', '#8b5cf6', '#ec4899', '#312e81',
+          '#f97316', '#22d3ee'
+        ];
+        return palette[idx % palette.length];
+      });
+
+      hospitalPieInstance = new Chart(pieCanvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: data.map(item => item.hospitalName),
+          datasets: [{
+            data: data.map(item => item.count),
+            backgroundColor: colors,
+            borderWidth: 1,
+            borderColor: '#ffffff',
+            hospitals: data
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { family: 'Tajawal', size: 12 } }
+            },
+            datalabels: {
+              color: '#0f172a',
+              font: { size: 13, weight: 'bold', family: 'Tajawal' },
+              formatter: (value) => {
+                const pct = ((value / total) * 100).toFixed(2);
+                return `${value};\n${pct}%`;
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const value = ctx.formattedValue;
+                  const pct = ((ctx.raw / total) * 100).toFixed(2);
+                  return `${ctx.label}: ${value} (${pct}%)`;
+                }
+              }
+            }
+          },
+          onClick: (evt, elements, chart) => {
+            if (!elements || !elements.length) return;
+            const { datasetIndex, index } = elements[0];
+            const dataset = chart.data.datasets?.[datasetIndex];
+            const selected = dataset?.hospitals?.[index];
+            if (!selected) return;
+            navigateToHospitalComplaints(selected);
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderTable(data) {
+      if (!data.length) {
+        hospitalsBody.innerHTML = `
+          <tr>
+            <td colspan="2" class="py-6 text-gray-500">
+              لا توجد بلاغات مسجلة لهذا التصنيف في الوقت الحالي.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      hospitalsBody.innerHTML = data.map(item => `
+        <tr class="border-b border-gray-100 hover:bg-blue-50 transition cursor-pointer"
+            data-hospital-id="${item.hospitalId}"
+            data-hospital-name="${item.hospitalName}">
+          <td class="py-3 px-4 font-medium text-[#002B5B]">${item.hospitalName}</td>
+          <td class="py-3 px-4 text-gray-700">${item.count}</td>
+        </tr>
+      `).join('');
+
+      hospitalsBody.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('click', () => {
+          const hospital = row.getAttribute('data-hospital-name');
+          const hospitalId = row.getAttribute('data-hospital-id');
+          navigateToHospitalComplaints({ hospitalName: hospital, hospitalId });
+        });
+      });
+    }
+
+    function navigateToHospitalComplaints(item) {
+      if (!item) return;
+      const hospitalId = item.hospitalId ? `&hospitalId=${encodeURIComponent(item.hospitalId)}` : '';
+      const url = `open.html?type=${encodeURIComponent(typeParam)}&label=${encodeURIComponent(labelParam)}${hospitalId}`;
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
+

@@ -107,32 +107,41 @@
                         placeholder="مثال: هل كانت الممرضات يستمعون لك بعناية؟"></textarea>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  النسبة السابقة (%)
+                  نسبة الربع الأول (%)
                 </label>
-                <input type="number" id="previousScore" min="0" max="100" step="0.1"
+                <input type="number" id="q1Percentage" min="0" max="100" step="0.1"
                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                       placeholder="مثال: 75.5">
+                       placeholder="مثال: 75.0">
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  النسبة المستهدفة (%) <span class="text-red-500">*</span>
+                  نسبة الربع الثاني (%)
                 </label>
-                <input type="number" id="targetScore" required min="0" max="100" step="0.1"
+                <input type="number" id="q2Percentage" min="0" max="100" step="0.1"
+                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                       placeholder="مثال: 80.0">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  نسبة الربع الثالث (%)
+                </label>
+                <input type="number" id="q3Percentage" min="0" max="100" step="0.1"
                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                        placeholder="مثال: 85.0">
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  المعيار الوطني (%)
+                  نسبة الربع الرابع (%)
                 </label>
-                <input type="number" id="nationalBenchmark" min="0" max="100" step="0.1"
+                <input type="number" id="q4Percentage" min="0" max="100" step="0.1"
                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                       placeholder="مثال: 82.0">
+                       placeholder="مثال: 90.0">
               </div>
             </div>
 
@@ -303,8 +312,9 @@
       return fromUrl || fromLS1 || fromLS2 || fromUser || null;
     }
 
-    const authHeaders = () => {
-      const h = token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+    const authHeaders = (includeJson = false) => {
+      const h = token ? { 'Authorization': 'Bearer ' + token } : {};
+      if (includeJson) h['Content-Type'] = 'application/json';
       const selectedHospital = document.getElementById('hospitalSelect')?.value;
       const hid = selectedHospital || effectiveHospitalId();
       if (hid) {
@@ -381,12 +391,12 @@
         if (!hid) return toast('لم يتم تحديد المستشفى', 'warn');
 
         const headers = authHeaders();
-        const hidQuery = `?hospitalId=${encodeURIComponent(hid)}`;
+        const hidSegment = encodeURIComponent(hid);
         localStorage.setItem('selectedHospitalId', String(hid));
 
         const [zonesRes, tripsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/hospital/zones${hidQuery}`, { headers }),
-          fetch(`${API_BASE}/api/hospital/trips${hidQuery}`, { headers })
+          fetch(`${API_BASE}/api/hospital/${hidSegment}/zones`, { headers }),
+          fetch(`${API_BASE}/api/hospital/${hidSegment}/trips`, { headers })
         ]);
 
         if (!zonesRes.ok) throw new Error('Zones HTTP ' + zonesRes.status);
@@ -419,6 +429,50 @@
       }
     }
 
+    function fillFormWithProject(project) {
+      if (!project) return;
+      const select = document.getElementById('hospitalSelect');
+      if (select && project.HospitalID) {
+        select.value = String(project.HospitalID);
+      }
+      document.getElementById('zone').value = project.ZoneID || '';
+      document.getElementById('trip').value = project.TripID || '';
+      document.getElementById('surveyQuestion').value = project.SurveyQuestion || '';
+      document.getElementById('q1Percentage').value = project.Q1_Percentage ?? '';
+      document.getElementById('q2Percentage').value = project.Q2_Percentage ?? '';
+      document.getElementById('q3Percentage').value = project.Q3_Percentage ?? '';
+      document.getElementById('q4Percentage').value = project.Q4_Percentage ?? '';
+      document.getElementById('measurementPeriod').value = project.MeasurementPeriod || '';
+      document.getElementById('projectTitle').value = project.ProjectTitle || '';
+      document.getElementById('currentAnalysis').value = project.ProblemStatement || '';
+      document.getElementById('aimStatement').value = project.AimStatement || '';
+      document.getElementById('proposedActions').value = project.ProposedSolution || '';
+      document.getElementById('projectOwner').value = project.ProjectOwner || '';
+      document.getElementById('priority').value = project.Priority || 'MEDIUM';
+      document.getElementById('startDate').value = project.StartDate ? project.StartDate.split('T')[0] : '';
+      document.getElementById('dueDate').value = project.DueDate ? project.DueDate.split('T')[0] : '';
+    }
+
+    async function loadExistingProject() {
+      if (!existingProjectId) return null;
+      try {
+        let url = `${API_BASE}/api/improvements/pressganey/${existingProjectId}`;
+        const qs = new URLSearchParams();
+        const hid = presetHospitalId || effectiveHospitalId();
+        if (hid) qs.set('hospitalId', hid);
+        if (qs.toString()) url += `?${qs.toString()}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const payload = await res.json();
+        if (!payload.success) throw new Error(payload.message || 'فشل في تحميل المشروع');
+        return payload.data;
+      } catch (err) {
+        console.error('loadExistingProject error:', err);
+        toast('تعذر تحميل بيانات المشروع', 'error');
+        return null;
+      }
+    }
+
     // معالجة النموذج
     document.getElementById('projectForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -432,22 +486,25 @@
     async function submitProject(status) {
       try {
         const selectedHospital = document.getElementById('hospitalSelect')?.value;
-        const hid = selectedHospital || effectiveHospitalId();
-        if (!hid) {
+        let hid = selectedHospital || effectiveHospitalId();
+        if (!hid || hid === '0' || hid === 0) {
           toast('يجب تحديد المستشفى', 'warn');
           return;
         }
+        const hidStr = String(hid);
+        localStorage.setItem('selectedHospitalId', hidStr);
+        localStorage.setItem('hospitalId', hidStr);
+        hid = hidStr;
 
-        const data = {
-          hospitalId: hid,
-          projectType: 'PRESSGANEY',
-          title: document.getElementById('projectTitle').value,
-          zoneId: document.getElementById('zone').value,
-          tripId: document.getElementById('trip').value,
+        const payload = {
+          projectTitle: document.getElementById('projectTitle').value,
+          zoneId: document.getElementById('zone').value || null,
+          tripId: document.getElementById('trip').value || null,
           surveyQuestion: document.getElementById('surveyQuestion').value,
-          previousScore: parseFloat(document.getElementById('previousScore').value) || null,
-          targetScore: parseFloat(document.getElementById('targetScore').value) || null,
-          nationalBenchmark: parseFloat(document.getElementById('nationalBenchmark').value) || null,
+          q1Percentage: parseFloat(document.getElementById('q1Percentage').value) || null,
+          q2Percentage: parseFloat(document.getElementById('q2Percentage').value) || null,
+          q3Percentage: parseFloat(document.getElementById('q3Percentage').value) || null,
+          q4Percentage: parseFloat(document.getElementById('q4Percentage').value) || null,
           measurementPeriod: document.getElementById('measurementPeriod').value,
           problemStatement: document.getElementById('currentAnalysis').value,
           aimStatement: document.getElementById('aimStatement').value,
@@ -459,16 +516,33 @@
           dueDate: document.getElementById('dueDate').value || null
         };
 
-        const res = await fetch(`${API_BASE}/api/improvements`, {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify(data)
+        const headers = authHeaders(true);
+        headers['x-hospital-id'] = hid;
+        headers['X-Hospital-Id'] = hid;
+        let url = `${API_BASE}/api/improvements/pressganey`;
+        let method = 'POST';
+        if (existingProjectId) {
+          method = 'PUT';
+          url += `/${existingProjectId}`;
+          const qs = new URLSearchParams();
+          qs.set('hospitalId', hid);
+          if (qs.toString()) url += `?${qs.toString()}`;
+        } else {
+          const qs = new URLSearchParams();
+          qs.set('hospitalId', hid);
+          url += `?${qs.toString()}`;
+        }
+
+        const res = await fetch(url, {
+          method,
+          headers,
+          body: JSON.stringify(payload)
         });
 
-        const result = await res.json();
+        const result = await res.json().catch(() => ({ success: false }));
 
         if (res.ok && result.success) {
-          toast(status === 'DRAFT' ? 'تم حفظ المسودة بنجاح' : 'تم إضافة المشروع بنجاح', 'success');
+          toast(status === 'DRAFT' ? 'تم حفظ المسودة بنجاح' : (existingProjectId ? 'تم تحديث المشروع بنجاح' : 'تم إضافة المشروع بنجاح'), 'success');
           setTimeout(() => window.location.href = './list.html', 1500);
         } else {
           toast(result.message || 'حدث خطأ أثناء الحفظ', 'error');
@@ -484,9 +558,32 @@
     });
 
     // التحميل الأولي
+    const urlParams = new URLSearchParams(location.search);
+    const existingProjectId = urlParams.get('id');
+    const presetHospitalId = urlParams.get('hospitalId');
+    if (presetHospitalId) {
+      localStorage.setItem('selectedHospitalId', presetHospitalId);
+    }
+
     (async function init() {
+      let existingData = null;
+      if (existingProjectId) {
+        existingData = await loadExistingProject();
+        if (existingData?.HospitalID) {
+          localStorage.setItem('selectedHospitalId', existingData.HospitalID);
+        }
+      }
       await loadHospitals();
+      if (existingData?.HospitalID) {
+        const select = document.getElementById('hospitalSelect');
+        if (select) select.value = String(existingData.HospitalID);
+      }
       await loadZonesAndTrips();
+      if (existingData) {
+        fillFormWithProject(existingData);
+        const heading = document.querySelector('h1');
+        if (heading) heading.textContent = 'تعديل مشروع PressGaney';
+      }
     })();
   </script>
 

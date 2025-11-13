@@ -912,16 +912,29 @@ async function updateComplaintTypesChart() {
 
     const result = await response.json();
     if (result.success && result.data) {
-      const typeCounts = {};
+      const typeMap = new Map();
       result.data.forEach(type => {
-        // استخدم العدّاد الحقيقي من API بدلاً من عد الصفوف
+        const key = (type.TypeCode || type.TypeName || '').trim();
+        const displayName = (type.TypeName || type.TypeCode || '').trim();
+        if (!key || !displayName) return;
+
         const inc = Number(type.TotalCount ?? type.Count ?? type.count ?? 1);
-        typeCounts[type.TypeName] = (typeCounts[type.TypeName] || 0) + inc;
+        if (!typeMap.has(key)) {
+          typeMap.set(key, {
+            key,
+            code: type.TypeCode || null,
+            name: displayName,
+            count: 0
+          });
+        }
+        const entry = typeMap.get(key);
+        entry.count += inc;
       });
-      const sortedTypes = Object.entries(typeCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a,b) => b.count - a.count)
+
+      const sortedTypes = Array.from(typeMap.values())
+        .sort((a, b) => b.count - a.count)
         .slice(0, 8);
+
       updateComplaintTypesChartCanvas(sortedTypes);
     }
   } catch (error) {
@@ -933,61 +946,82 @@ async function updateComplaintTypesChart() {
  * تحديث الرسم البياني لأنواع البلاغات
  */
 function updateComplaintTypesChartCanvas(complaintTypesData) {
-  const ctx = document.getElementById('wk-funnel');
+  const ctx = document.getElementById('categories-chart');
   if (!ctx) return;
-  
-  // البحث عن جميع الرسوم البيانية الموجودة على هذا Canvas وتدميرها
-  Chart.helpers.each(Chart.instances, function(instance) {
-    if (instance.canvas.id === 'wk-funnel') {
-      instance.destroy();
-    }
+
+  Chart.helpers.each(Chart.instances, function(ins) {
+    if (ins.canvas.id === 'categories-chart') ins.destroy();
   });
-  
-  // أيضاً تدمير المتغير المحلي إذا كان موجوداً
-  if (window.complaintTypesChart) {
-    window.complaintTypesChart.destroy();
-    window.complaintTypesChart = null;
-  }
-  
-  const labels = complaintTypesData.map(type => type.name);
-  const data = complaintTypesData.map(type => type.count);
-  
-  // إنشاء الرسم البياني الجديد
-  window.complaintTypesChart = new Chart(ctx.getContext('2d'), {
+
+  const labels = complaintTypesData.map(t => t.name);
+  const data = complaintTypesData.map(t => t.count);
+
+  new Chart(ctx.getContext('2d'), {
     type: 'bar',
     data: {
-      labels: labels,
+      labels,
       datasets: [{
-        label: 'عدد المستشفيات',
-        data: data,
-        backgroundColor: function(context) {
-          // الألوان الأولى حمراء، الباقي برتقالية
-          const index = context.dataIndex;
-          return index < 3 ? '#EF4444' : '#F59E0B';
-        },
+        data,
+        backgroundColor: (c) => (c.dataIndex < 2 ? '#b30000' : '#2d75c7'),
         borderRadius: 6,
-        barThickness: 12
+        barThickness: 28,
+        complaintTypes: complaintTypesData
       }]
     },
     options: {
-      indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { 
-        legend: { display: false }
+      indexAxis: 'x',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => `${c.label}: ${c.formattedValue}`
+          }
+        },
+        datalabels: {
+          anchor: 'end',
+          align: 'end',
+          color: '#000',
+          font: {
+            size: 14,
+            weight: 'bold'
+          },
+          formatter: value => value
+        }
       },
       scales: {
-        x: { 
+        x: {
           grid: { display: false },
-          beginAtZero: true,
-          ticks: { color: '#475569' }
+          ticks: {
+            color: '#333',
+            font: { size: 13 }
+          }
         },
-        y: { 
-          grid: { display: false }, 
-          ticks: { color: '#475569' }
+        y: {
+          beginAtZero: true,
+          grid: { display: false },
+          ticks: {
+            color: '#333',
+            font: { size: 12 }
+          }
         }
+      },
+      onClick: (evt, elements, chart) => {
+        if (!elements || !elements.length) return;
+        const { datasetIndex, index } = elements[0];
+        const dataset = chart.data.datasets?.[datasetIndex];
+        const meta = dataset?.complaintTypes || [];
+        const selected = meta[index];
+        if (!selected) return;
+        const typeKey = selected.code || selected.key || selected.name;
+        const label = selected.name;
+        if (!typeKey) return;
+        const url = `classification-details.html?type=${encodeURIComponent(typeKey)}&label=${encodeURIComponent(label)}`;
+        window.location.href = url;
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
@@ -1963,37 +1997,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
-  // 2) قمع الاعتراضات (محاكاة بفواصل أشرطة أفقية متناقصة)
-  const funnelCtx = document.getElementById('wk-funnel');
-  if (funnelCtx) {
-    const steps = ['عدم توفر مواعيد','مواعيد بعيدة','عدم وجود سعة','...ملاحظة مفقودة','حجز غير نافذة دقيقة','...','...','nan'];
-    const values = [484,302,216,117,38,11,5,1]; // تقريباً مثل الصورة
-    new Chart(funnelCtx.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: steps,
-        datasets: [{
-          data: values,
-          backgroundColor: values.map((v, i) => i < 3 ? cRed : cYellow),
-          borderRadius: 20,
-          barThickness: 22
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display:false } },
-        scales: {
-          x: { display:false, beginAtZero:true },
-          y: { grid:{ display:false }, ticks:{ color:cGrayTxt } }
-        }
-      }
-    });
-  }
-
-
 
   // 3) خط الاتجاه اليومي (سبتمبر/أكتوبر)
   const trendCtx = document.getElementById('wk-trend');

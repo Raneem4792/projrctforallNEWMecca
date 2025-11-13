@@ -13,6 +13,7 @@
 
   <!-- Chart.js للرسوم البيانية -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
   <!-- ملفات CSS و JS الخاصة بالداشبورد -->
   <link rel="stylesheet" href="../public/assets/css/styles.css" />
@@ -167,6 +168,23 @@
     </section>
 
     <!-- الزائر السري - حسب الأقسام -->
+<!-- ===============================
+     التصنيفات – كرت مستقل مثل الزائر السري
+     =============================== -->
+<section id="categories-section" class="py-10">
+  <div class="container mx-auto px-4">
+    <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-xl" style="color:#002B5B">التصنيفات</h3>
+      </div>
+
+      <div style="height:350px;">
+        <canvas id="categories-chart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
     <section id="mystery-section" data-perm="DASH_CHART_MYSTERY_BY_DEPT" class="py-10 hidden">
       <div class="container mx-auto px-4">
         <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
@@ -218,19 +236,11 @@
               </div>
             </div>
 
-            <!-- التصنيفات (يسار) + أعلى العيادات (يمين) -->
-            <div class="grid md:grid-cols-2 gap-6 mt-6">
-              <!-- التصنيفات -->
-              <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
-                <h3 class="font-bold mb-3 text-lg" style="color:#002B5B">التصنيفات</h3>
-                <div style="height:320px"><canvas id="wk-funnel"></canvas></div>
-              </div>
-
-              <!-- أعلى العيادات -->
-              <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
+            <div class="mt-6">
+              <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm w-full">
                 <h3 class="font-bold mb-3 text-lg" style="color:#002B5B">أعلى العيادات حسب المستشفى</h3>
 
-                <div id="hospitals-depts-container" class="space-y-8"></div>
+                <div id="hospitals-depts-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
               </div>
             </div>
           </div>

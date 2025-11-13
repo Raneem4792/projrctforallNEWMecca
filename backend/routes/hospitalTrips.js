@@ -56,7 +56,18 @@ function requireAuth(req, res, next) {
 }
 
 function resolveHospitalId(req) {
+  const paramHospitalId = req.params?.hospitalId || req.params?.hid;
+  let urlHospitalId = null;
+  if (!paramHospitalId) {
+    try {
+      const parsed = new URL(req.originalUrl || '', 'http://localhost');
+      urlHospitalId = parsed.searchParams.get('hospitalId') || parsed.searchParams.get('hid');
+    } catch (_) {
+      urlHospitalId = null;
+    }
+  }
   return Number(
+    paramHospitalId ||
     req.headers['x-hospital-id'] ||
     req.headers['X-Hospital-Id'] ||
     req.headers['X-hospital-id'] ||
@@ -64,7 +75,8 @@ function resolveHospitalId(req) {
     req.user?.hospitalId ||
     req.user?.hosp ||
     req.query?.hospitalId ||
-    req.query?.hid || 0
+    req.query?.hid ||
+    urlHospitalId || 0
   );
 }
 
@@ -84,10 +96,32 @@ async function ensureTables(pool) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 
   await Promise.all(
-    STATIC_TRIPS.map(t => pool.query('INSERT IGNORE INTO treatment_trips (TripName) VALUES (?)', [t.TripName]))
+    STATIC_TRIPS.map(t =>
+      pool.query(
+        `
+          INSERT INTO treatment_trips (TripName)
+          SELECT ? FROM DUAL
+          WHERE NOT EXISTS (
+            SELECT 1 FROM treatment_trips WHERE TRIM(TripName) = TRIM(?)
+          )
+        `,
+        [t.TripName, t.TripName]
+      )
+    )
   );
   await Promise.all(
-    STATIC_ZONES.map(z => pool.query('INSERT IGNORE INTO zones (ZoneName) VALUES (?)', [z.ZoneName]))
+    STATIC_ZONES.map(z =>
+      pool.query(
+        `
+          INSERT INTO zones (ZoneName)
+          SELECT ? FROM DUAL
+          WHERE NOT EXISTS (
+            SELECT 1 FROM zones WHERE TRIM(ZoneName) = TRIM(?)
+          )
+        `,
+        [z.ZoneName, z.ZoneName]
+      )
+    )
   );
 }
 
@@ -106,10 +140,15 @@ async function withHospitalPool(req, res, handler) {
   }
 }
 
-router.get('/hospital/trips', requireAuth, (req, res) => {
+router.get('/hospital/:hospitalId/trips', requireAuth, (req, res) => {
   withHospitalPool(req, res, async (pool) => {
-    const [rows] = await pool.query('SELECT TripName, IFNULL(IsAvailable,0) AS IsAvailable FROM treatment_trips ORDER BY TripID');
-    res.json(rows || []);
+    const [rows] = await pool.query(`
+      SELECT TripID, TripName
+      FROM treatment_trips
+      WHERE IFNULL(IsAvailable,0) = 1
+      ORDER BY TripID
+    `);
+    res.json({ data: rows || [] });
   });
 });
 
@@ -127,10 +166,15 @@ router.post('/hospital/trips/update', requireAuth, (req, res) => {
   });
 });
 
-router.get('/hospital/zones', requireAuth, (req, res) => {
+router.get('/hospital/:hospitalId/zones', requireAuth, (req, res) => {
   withHospitalPool(req, res, async (pool) => {
-    const [rows] = await pool.query('SELECT ZoneName, IFNULL(IsAvailable,0) AS IsAvailable FROM zones ORDER BY ZoneID');
-    res.json(rows || []);
+    const [rows] = await pool.query(`
+      SELECT ZoneID, ZoneName
+      FROM zones
+      WHERE IFNULL(IsAvailable,0) = 1
+      ORDER BY ZoneID
+    `);
+    res.json({ data: rows || [] });
   });
 });
 

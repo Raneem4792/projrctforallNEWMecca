@@ -1107,7 +1107,7 @@
     (async function init(){
       await applyPermissions();
       await loadDepartments();
-      await Promise.all([loadKPIs(), loadProjects()]);
+      await Promise.all([loadKPIs(), loadProjects(), loadPressGaneyProjects()]);
     })();
   </script>
 
