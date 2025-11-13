@@ -27,6 +27,20 @@ router.get('/zones/list', (_req, res) => {
   res.json(STATIC_ZONES);
 });
 
+router.get('/treatment-trips', requireAuth, (req, res) => {
+  withHospitalPool(req, res, async (pool) => {
+    const [rows] = await pool.query('SELECT TripID, TripName, IFNULL(IsAvailable,0) AS IsAvailable FROM treatment_trips ORDER BY TripName');
+    res.json({ data: rows || [] });
+  });
+});
+
+router.get('/zones', requireAuth, (req, res) => {
+  withHospitalPool(req, res, async (pool) => {
+    const [rows] = await pool.query('SELECT ZoneID, ZoneName, IFNULL(IsAvailable,0) AS IsAvailable FROM zones ORDER BY ZoneName');
+    res.json({ data: rows || [] });
+  });
+});
+
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -44,10 +58,13 @@ function requireAuth(req, res, next) {
 function resolveHospitalId(req) {
   return Number(
     req.headers['x-hospital-id'] ||
+    req.headers['X-Hospital-Id'] ||
+    req.headers['X-hospital-id'] ||
     req.user?.HospitalID ||
     req.user?.hospitalId ||
     req.user?.hosp ||
-    req.query?.hospitalId || 0
+    req.query?.hospitalId ||
+    req.query?.hid || 0
   );
 }
 

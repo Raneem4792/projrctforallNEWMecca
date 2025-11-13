@@ -68,12 +68,34 @@
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                القسم المستهدف <span class="text-red-500">*</span>
+                المستشفى <span class="text-red-500">*</span>
               </label>
-              <select id="department" required
+              <select id="hospitalSelect" required
                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                <option value="">اختر القسم</option>
+                <option value="">اختر المستشفى</option>
               </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  النطاق <span class="text-red-500">*</span>
+                </label>
+                <select id="zone" required
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option value="">اختر النطاق</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  الرحلة العلاجية <span class="text-red-500">*</span>
+                </label>
+                <select id="trip" required
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option value="">اختر الرحلة العلاجية</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -246,6 +268,15 @@
     const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
     const token = localStorage.getItem('token') || '';
 
+    function isClusterManager() {
+      try {
+        const u = JSON.parse(localStorage.getItem('userData') || '{}');
+        return u.RoleID === 1 || u.IsClusterManager === true;
+      } catch {
+        return false;
+      }
+    }
+
     // Helper functions
     const toast = (msg, type='info') => {
       const el = document.getElementById('toast');
@@ -274,38 +305,117 @@
 
     const authHeaders = () => {
       const h = token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
-      const hid = effectiveHospitalId();
-      if (hid) h['x-hospital-id'] = String(hid);
+      const selectedHospital = document.getElementById('hospitalSelect')?.value;
+      const hid = selectedHospital || effectiveHospitalId();
+      if (hid) {
+        const hidStr = String(hid);
+        h['x-hospital-id'] = hidStr;
+        h['X-Hospital-Id'] = hidStr;
+      }
       return h;
     };
 
-    // تحميل الأقسام
-    async function loadDepartments() {
+    async function loadHospitals() {
+      const select = document.getElementById('hospitalSelect');
+      if (!select) return;
+
+      select.innerHTML = '<option value="">اختر المستشفى</option>';
+      const currentHospitalId = effectiveHospitalId();
+      const central = isClusterManager();
+
       try {
-        const params = new URLSearchParams();
-        const hid = effectiveHospitalId();
-        if (hid) params.set('hospitalId', hid);
-        
-        const url = `${API_BASE}/api/lookups/departments${params.toString() ? '?' + params.toString() : ''}`;
-        const res = await fetch(url, { headers: authHeaders() });
-        
+        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+        const res = await fetch(`${API_BASE}/api/hospitals?active=1`, { headers });
+
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        
-        const response = await res.json();
-        const list = response.data || response;
-        
-        const deptSelect = document.getElementById('department');
-        deptSelect.innerHTML = '<option value="">اختر القسم</option>';
-        
-        (list || []).forEach(d => {
+
+        const hospitals = await res.json();
+        const list = Array.isArray(hospitals?.data) ? hospitals.data : Array.isArray(hospitals) ? hospitals : [];
+
+        list.forEach(h => {
+          const opt = document.createElement('option');
+          opt.value = h.HospitalID || h.id || '';
+          opt.textContent = h.NameAr || h.NameEn || h.HospitalNameAr || h.HospitalName || `مستشفى ${h.HospitalID || ''}`;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Error loading hospitals:', e);
+        toast('تعذر تحميل قائمة المستشفيات', 'error');
+      }
+
+      let targetHospitalId = currentHospitalId;
+      if (!targetHospitalId) {
+        const firstHospitalOption = Array.from(select.options).find(opt => opt.value);
+        if (firstHospitalOption) {
+          targetHospitalId = firstHospitalOption.value;
+        }
+      }
+
+      if (targetHospitalId) {
+        const targetHospitalIdStr = String(targetHospitalId);
+        const optionExists = Array.from(select.options).some(opt => opt.value === targetHospitalIdStr);
+        if (!optionExists) {
+          const opt = document.createElement('option');
+          opt.value = targetHospitalIdStr;
+          opt.textContent = 'المستشفى الحالي';
+          select.appendChild(opt);
+        }
+        select.value = targetHospitalIdStr;
+        localStorage.setItem('selectedHospitalId', targetHospitalIdStr);
+      }
+
+      if (!central && select.value) {
+        select.disabled = true;
+        select.classList.add('bg-gray-100', 'cursor-not-allowed');
+      } else {
+        select.disabled = false;
+        select.classList.remove('bg-gray-100', 'cursor-not-allowed');
+      }
+    }
+
+    // تحميل النطاقات والرحلات العلاجية
+    async function loadZonesAndTrips() {
+      try {
+        const selectedHospital = document.getElementById('hospitalSelect')?.value;
+        const hid = selectedHospital || effectiveHospitalId();
+        if (!hid) return toast('لم يتم تحديد المستشفى', 'warn');
+
+        const headers = authHeaders();
+        const hidQuery = `?hospitalId=${encodeURIComponent(hid)}`;
+        localStorage.setItem('selectedHospitalId', String(hid));
+
+        const [zonesRes, tripsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/hospital/zones${hidQuery}`, { headers }),
+          fetch(`${API_BASE}/api/hospital/trips${hidQuery}`, { headers })
+        ]);
+
+        if (!zonesRes.ok) throw new Error('Zones HTTP ' + zonesRes.status);
+        if (!tripsRes.ok) throw new Error('Trips HTTP ' + tripsRes.status);
+
+        const zones = (await zonesRes.json()).data || [];
+        const trips = (await tripsRes.json()).data || [];
+
+        const zoneSelect = document.getElementById('zone');
+        const tripSelect = document.getElementById('trip');
+
+        zoneSelect.innerHTML = '<option value="">اختر النطاق</option>';
+        zones.forEach(z => {
           const o = document.createElement('option');
-          o.value = d.DepartmentID;
-          o.textContent = d.NameAr || d.DepartmentName;
-          deptSelect.appendChild(o);
+          o.value = z.ZoneID;
+          o.textContent = z.ZoneName;
+          zoneSelect.appendChild(o);
+        });
+
+        tripSelect.innerHTML = '<option value="">اختر الرحلة العلاجية</option>';
+        trips.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t.TripID;
+          o.textContent = t.TripName;
+          tripSelect.appendChild(o);
         });
       } catch(e) {
-        console.error('Error loading departments:', e);
-        toast('تعذر تحميل الأقسام', 'error');
+        console.error('Error loading zones or trips:', e);
+        toast('تعذر تحميل النطاقات أو الرحلات', 'error');
       }
     }
 
@@ -321,7 +431,8 @@
 
     async function submitProject(status) {
       try {
-        const hid = effectiveHospitalId();
+        const selectedHospital = document.getElementById('hospitalSelect')?.value;
+        const hid = selectedHospital || effectiveHospitalId();
         if (!hid) {
           toast('يجب تحديد المستشفى', 'warn');
           return;
@@ -331,7 +442,8 @@
           hospitalId: hid,
           projectType: 'PRESSGANEY',
           title: document.getElementById('projectTitle').value,
-          departmentId: document.getElementById('department').value,
+          zoneId: document.getElementById('zone').value,
+          tripId: document.getElementById('trip').value,
           surveyQuestion: document.getElementById('surveyQuestion').value,
           previousScore: parseFloat(document.getElementById('previousScore').value) || null,
           targetScore: parseFloat(document.getElementById('targetScore').value) || null,
@@ -367,8 +479,15 @@
       }
     }
 
+    document.getElementById('hospitalSelect')?.addEventListener('change', async () => {
+      await loadZonesAndTrips();
+    });
+
     // التحميل الأولي
-    loadDepartments();
+    (async function init() {
+      await loadHospitals();
+      await loadZonesAndTrips();
+    })();
   </script>
 
 </body>
