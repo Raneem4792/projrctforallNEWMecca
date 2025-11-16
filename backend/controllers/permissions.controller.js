@@ -112,6 +112,10 @@ export async function getUserPermissions(req, res) {
         improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
         improvementApprove: has('IMPROVEMENT_APPROVE'),
         improvementsModule: has('IMPROVEMENTS_MODULE'),
+        // صلاحيات أنواع المشاريع التحسينية
+        improvement937: has('IMPROVEMENT_937'),
+        improvementPG: has('IMPROVEMENT_PG'),
+        improvementOpen: has('IMPROVEMENT_OPEN'),
         isCentralAdmin: req.user?.RoleID === 1 || req.user?.HospitalID == null,
         // صلاحيات الزائر السري
         mysteryModule: has('MYSTERY_MODULE'),
@@ -202,6 +206,7 @@ export async function saveUserPermissions(req, res) {
       adminDepartments, adminHospital, adminClusters, hospitalCreate,
       hospitalTrash, hospitalLogs, hospitalPermissions, hospitalUsers, hospitalUserCreate, hospitalUserEdit, hospitalUserDelete,
       improvementCreate, improvementView, improvementEdit, improvementDelete, improvementReportView, improvementApprove, improvementsModule,
+      improvement937, improvementPG, improvementOpen,
       mysteryModule, mysteryView, mysteryReplyAdd, mysteryStatusUpdate, mysteryTransferDept, mysteryTransferEmp, mysteryDelete,
       importsPage, importDepartments, importMystery, import937,
       // Dashboard permissions
@@ -266,6 +271,9 @@ export async function saveUserPermissions(req, res) {
     await ensurePermission('COMPLAINT_SUBTYPE_EDIT', 'تعديل تصنيف فرعي', 'complaints');
     await ensurePermission('COMPLAINT_SUBTYPE_DELETE', 'حذف تصنيف فرعي', 'complaints');
     await ensurePermission('IMPROVEMENT_APPROVE', 'اعتماد مشروع تحسيني', 'improvements');
+    await ensurePermission('IMPROVEMENT_937', 'مشروع 937', 'improvement');
+    await ensurePermission('IMPROVEMENT_PG', 'مشروع PressGaney', 'improvement');
+    await ensurePermission('IMPROVEMENT_OPEN', 'مشروع مفتوح / أخرى', 'improvement');
 
     // بدء المعاملة بعد التأكد من وجود الصلاحيات
     await conn.beginTransaction();
@@ -314,6 +322,10 @@ export async function saveUserPermissions(req, res) {
     improvementReportView ? await upsert('IMPROVEMENT_REPORT_VIEW') : await drop('IMPROVEMENT_REPORT_VIEW');
     improvementApprove ? await upsert('IMPROVEMENT_APPROVE') : await drop('IMPROVEMENT_APPROVE');
     improvementsModule ? await upsert('IMPROVEMENTS_MODULE') : await drop('IMPROVEMENTS_MODULE');
+    // صلاحيات أنواع المشاريع التحسينية
+    improvement937 ? await upsert('IMPROVEMENT_937') : await drop('IMPROVEMENT_937');
+    improvementPG ? await upsert('IMPROVEMENT_PG') : await drop('IMPROVEMENT_PG');
+    improvementOpen ? await upsert('IMPROVEMENT_OPEN') : await drop('IMPROVEMENT_OPEN');
     // صلاحيات الزائر السري
     mysteryModule ? await upsert('MYSTERY_MODULE') : await drop('MYSTERY_MODULE');
     mysteryView ? await upsert('MYSTERY_VIEW') : await drop('MYSTERY_VIEW');
@@ -464,6 +476,10 @@ export async function getMyPermissions(req, res) {
             improvementReportView: true,
             improvementApprove: true,
             improvementsModule: true,
+            // صلاحيات أنواع المشاريع التحسينية
+            improvement937: true,
+            improvementPG: true,
+            improvementOpen: true,
             // صلاحيات الزائر السري
             mysteryModule: true,
             mysteryView: true,
@@ -575,6 +591,10 @@ export async function getMyPermissions(req, res) {
         improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
         improvementApprove: has('IMPROVEMENT_APPROVE'),
         improvementsModule: has('IMPROVEMENTS_MODULE'),
+        // صلاحيات أنواع المشاريع التحسينية
+        improvement937: has('IMPROVEMENT_937'),
+        improvementPG: has('IMPROVEMENT_PG'),
+        improvementOpen: has('IMPROVEMENT_OPEN'),
         isCentralAdmin: req.user?.HospitalID == null,
         // صلاحيات الزائر السري
         mysteryModule: has('MYSTERY_MODULE'),
@@ -701,6 +721,10 @@ export async function getMyPermissions(req, res) {
         improvementReportView: has('IMPROVEMENT_REPORT_VIEW'),
         improvementApprove: has('IMPROVEMENT_APPROVE'),
         improvementsModule: has('IMPROVEMENTS_MODULE'),
+        // صلاحيات أنواع المشاريع التحسينية
+        improvement937: has('IMPROVEMENT_937'),
+        improvementPG: has('IMPROVEMENT_PG'),
+        improvementOpen: has('IMPROVEMENT_OPEN'),
         // صلاحيات الزائر السري
         mysteryModule: has('MYSTERY_MODULE'),
         mysteryView: has('MYSTERY_VIEW'),

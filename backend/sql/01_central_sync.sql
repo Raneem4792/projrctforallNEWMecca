@@ -5,7 +5,7 @@
    Purpose: إعداد القاعدة المركزية لاستقبال ومعالجة أحداث المزامنة
             من قواعد بيانات المستشفيات
    
-   Database: hospitals_mecca3 (المركزية)
+   Database: hospitals_mecca4 (المركزية)
    MySQL Version: 8.0+
    Charset: utf8mb4
    

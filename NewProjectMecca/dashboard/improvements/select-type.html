@@ -35,6 +35,9 @@
     .project-card-other {
       border-top: 4px solid #F59E0B;
     }
+    .hide {
+      display: none !important;
+    }
   </style>
 
   <!-- هوية مشروعك -->
@@ -89,7 +92,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         
         <!-- مشروع 937 -->
-        <a href="improvement_937.html" class="project-card project-card-937 bg-white rounded-2xl shadow-lg p-8 text-center text-decoration-none block">
+        <a id="card-937" href="improvement_937.html" class="project-card project-card-937 bg-white rounded-2xl shadow-lg p-8 text-center text-decoration-none block hide">
           <div class="mb-6">
             <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
               <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +115,7 @@
         </a>
 
         <!-- مشروع PressGaney -->
-        <a href="improvement_pressganey.html" class="project-card project-card-press bg-white rounded-2xl shadow-lg p-8 text-center text-decoration-none block">
+        <a id="card-pg" href="improvement_pressganey.html" class="project-card project-card-press bg-white rounded-2xl shadow-lg p-8 text-center text-decoration-none block hide">
           <div class="mb-6">
             <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
               <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,7 +138,7 @@
         </a>
 
         <!-- مشروع مفتوح / أخرى -->
-        <a href="improvement_other.html" class="project-card project-card-other bg-white rounded-2xl shadow-lg p-8 text-center text-decoration-none block">
+        <a id="card-open" href="improvement_other.html" class="project-card project-card-other bg-white rounded-2xl shadow-lg p-8 text-center text-decoration-none block hide">
           <div class="mb-6">
             <div class="w-20 h-20 mx-auto bg-amber-100 rounded-full flex items-center justify-center">
               <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,6 +228,79 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    // تطبيق الصلاحيات على الكروت
+    document.addEventListener('DOMContentLoaded', async () => {
+      const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') 
+        ? 'http://localhost:3001' 
+        : '';
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        console.warn('⚠️ لا يوجد token - إخفاء جميع الكروت');
+        return;
+      }
+
+      try {
+        // جلب صلاحيات المستخدم
+        const response = await fetch(`${API_BASE}/api/permissions/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          console.warn('⚠️ فشل جلب الصلاحيات:', response.status);
+          return;
+        }
+
+        const result = await response.json();
+        const userPerms = result?.data || {};
+        
+        console.log('📋 صلاحيات المستخدم:', userPerms);
+
+        // 🔵 مشروع 937
+        if (userPerms?.improvement937) {
+          const card937 = document.getElementById('card-937');
+          if (card937) {
+            card937.classList.remove('hide');
+            console.log('✅ عرض كرت مشروع 937');
+          }
+        }
+
+        // 🟢 مشروع PressGaney
+        if (userPerms?.improvementPG) {
+          const cardPG = document.getElementById('card-pg');
+          if (cardPG) {
+            cardPG.classList.remove('hide');
+            console.log('✅ عرض كرت مشروع PressGaney');
+          }
+        }
+
+        // 🟡 مشروع مفتوح
+        if (userPerms?.improvementOpen) {
+          const cardOpen = document.getElementById('card-open');
+          if (cardOpen) {
+            cardOpen.classList.remove('hide');
+            console.log('✅ عرض كرت مشروع مفتوح');
+          }
+        }
+
+        // التحقق من وجود أي كرت مرئي
+        const visibleCards = document.querySelectorAll('.project-card:not(.hide)');
+        if (visibleCards.length === 0) {
+          console.warn('⚠️ لا توجد صلاحيات لعرض أي نوع مشروع');
+          // يمكن إضافة رسالة للمستخدم هنا إذا لزم الأمر
+        }
+
+      } catch (error) {
+        console.error('❌ خطأ في جلب الصلاحيات:', error);
+      }
+    });
+  </script>
 
 </body>
 </html>
