@@ -62,6 +62,31 @@ if (typeof App.loadHospitalsSelectForMystery !== 'function') {
   };
 }
 
+// ===== Theme Helpers for Charts =====
+function isDarkTheme() {
+  return document.documentElement.classList.contains('dark');
+}
+
+function getChartAxisColor() {
+  return isDarkTheme() ? '#E2E8F0' : '#475569';
+}
+
+function getChartSecondaryTextColor() {
+  return isDarkTheme() ? '#E2E8F0' : '#333333';
+}
+
+function getChartGridColor() {
+  return isDarkTheme() ? 'rgba(148, 163, 184, 0.25)' : 'rgba(107, 114, 128, 0.1)';
+}
+
+function getChartLegendColor() {
+  return isDarkTheme() ? '#E2E8F0' : '#374151';
+}
+
+function getChartDataLabelColor() {
+  return isDarkTheme() ? '#F8FAFC' : '#111827';
+}
+
 if (typeof App.renderMysteryByDepartment !== 'function') {
   App.renderMysteryByDepartment = async function () {
     const canvas = document.getElementById('mystery-depts');
@@ -141,6 +166,8 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
       if (inst.canvas && inst.canvas.id === 'mystery-depts') inst.destroy();
     });
 
+    const axisColor = getChartAxisColor();
+
     new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
@@ -159,8 +186,8 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
           tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.formattedValue}` } }
         },
         scales: { 
-          x: { beginAtZero: true, grid: { display: false }, ticks: { color: '#475569' } }, 
-          y: { grid: { display: false }, ticks: { color: '#475569', font: { family: 'Tajawal' } } } 
+          x: { beginAtZero: true, grid: { display: false }, ticks: { color: axisColor } }, 
+          y: { grid: { display: false }, ticks: { color: axisColor, font: { family: 'Tajawal' } } } 
         },
         onHover: (evt, activeEls, chart) => {
           const pts = chart.getElementsAtEventForMode(evt, 'nearest', {intersect: true}, true);
@@ -818,6 +845,8 @@ function createMiniDeptsChart(canvasId, deptsSorted, hospitalName, criticalMap) 
     el.closest('.bg-white')?.classList.add('chart-bar-red');
   }
 
+  const axisColor = getChartAxisColor();
+
   const chart = new Chart(el.getContext('2d'), {
     type: 'bar',
     data: {
@@ -838,8 +867,8 @@ function createMiniDeptsChart(canvasId, deptsSorted, hospitalName, criticalMap) 
         tooltip: { callbacks: { label: c => `${c.label}: ${c.formattedValue} بلاغ` } }
       },
       scales: {
-        x: { beginAtZero: true, grid: { display: false }, ticks: { color: '#475569' } },
-        y: { grid: { display: false }, ticks: { color: '#475569', font: { family: 'Tajawal' } } }
+        x: { beginAtZero: true, grid: { display: false }, ticks: { color: axisColor } },
+        y: { grid: { display: false }, ticks: { color: axisColor, font: { family: 'Tajawal' } } }
       },
       // 🔎 خلي المؤشر "يد" فوق جميع الأعمدة
       onHover: (evt, activeEls, chart) => {
@@ -955,6 +984,8 @@ function updateComplaintTypesChartCanvas(complaintTypesData) {
 
   const labels = complaintTypesData.map(t => t.name);
   const data = complaintTypesData.map(t => t.count);
+  const axisColor = getChartSecondaryTextColor();
+  const dataLabelColor = getChartDataLabelColor();
 
   new Chart(ctx.getContext('2d'), {
     type: 'bar',
@@ -968,6 +999,9 @@ function updateComplaintTypesChartCanvas(complaintTypesData) {
         complaintTypes: complaintTypesData
       }]
     },
+    const axisColor = getChartSecondaryTextColor();
+    const gridColor = getChartGridColor();
+
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -982,7 +1016,7 @@ function updateComplaintTypesChartCanvas(complaintTypesData) {
         datalabels: {
           anchor: 'end',
           align: 'end',
-          color: '#000',
+          color: dataLabelColor,
           font: {
             size: 14,
             weight: 'bold'
@@ -994,7 +1028,7 @@ function updateComplaintTypesChartCanvas(complaintTypesData) {
         x: {
           grid: { display: false },
           ticks: {
-            color: '#333',
+            color: axisColor,
             font: { size: 13 }
           }
         },
@@ -1002,7 +1036,7 @@ function updateComplaintTypesChartCanvas(complaintTypesData) {
           beginAtZero: true,
           grid: { display: false },
           ticks: {
-            color: '#333',
+            color: axisColor,
             font: { size: 12 }
           }
         }
@@ -1143,7 +1177,7 @@ function updateDailyComplaintsChartCanvas(dailyData) {
             display: false
           },
           ticks: {
-            color: '#6B7280',
+            color: axisColor,
             font: {
               size: 12
             }
@@ -1153,10 +1187,10 @@ function updateDailyComplaintsChartCanvas(dailyData) {
           beginAtZero: true,
           suggestedMax: yMax,
           grid: {
-            color: 'rgba(107, 114, 128, 0.1)'
+            color: gridColor
           },
           ticks: {
-            color: '#6B7280',
+            color: axisColor,
             font: {
               size: 12
             }
@@ -1833,7 +1867,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cGreen   = '#0FA47A';
   const cYellow  = '#F59E0B';
   const cRed     = '#EF4444';
-  const cGrayTxt = '#475569';
+  const cGrayTxt = getChartAxisColor();
 
   // رسم المستشفيات - جلب البيانات الحقيقية من API
   const hospitalsCtx = document.getElementById('hospitals-chart');
@@ -1914,7 +1948,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 position: 'right',
                 labels: {
                   font: { family: 'Tajawal', size: 13 },
-                  color: '#374151'
+                  color: getChartLegendColor()
                 }
               },
               tooltip: {
@@ -1963,7 +1997,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cGreen   = '#0FA47A';
   const cYellow  = '#F59E0B';
   const cRed     = '#EF4444';
-  const cGrayTxt = '#475569';
+  const cGrayTxt = getChartAxisColor();
 
   // 1) أعلى العيادات (بار أفقي طويل)
   const deptsCtx = document.getElementById('wk-depts');
@@ -2031,5 +2065,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
-
