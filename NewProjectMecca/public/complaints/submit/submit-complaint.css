@@ -186,6 +186,16 @@ html.dark .file-pill .meta {
   color:#cbd5f5;
 }
 
+html.dark .file-pill button {
+  border-color:#f87171;
+  color:#fecaca;
+  background:rgba(248,113,113,0.15);
+}
+
+html.dark .file-pill button:hover {
+  background:rgba(248,113,113,0.25);
+}
+
 html.dark .btn-secondary {
   background:#1f2a3d;
   color:#f8fafc;

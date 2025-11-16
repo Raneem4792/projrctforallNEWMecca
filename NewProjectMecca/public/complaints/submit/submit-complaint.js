@@ -622,7 +622,7 @@ function renderFiles() {
   
   uploaded.forEach(item => {
     const row = document.createElement('div');
-    row.className = 'file-pill flex items-center justify-between p-2 bg-gray-100 rounded mb-2';
+    row.className = 'file-pill flex items-center justify-between p-2 rounded mb-2';
     row.innerHTML = `
       <div class="meta text-sm">${item.name} • ${(item.size / 1024 / 1024).toFixed(2)} MB</div>
       <button type="button" class="text-red-600 hover:text-red-800 text-sm" data-id="${item.id}">حذف</button>
@@ -690,7 +690,7 @@ function renderExcelFile() {
   if (!excelFile) return;
 
   const row = document.createElement('div');
-  row.className = 'file-pill flex items-center justify-between p-2 bg-gray-100 rounded mb-2';
+  row.className = 'file-pill flex items-center justify-between p-2 rounded mb-2';
   row.innerHTML = `
     <div class="meta text-sm">${excelFile.name} • ${(excelFile.size / 1024 / 1024).toFixed(2)} MB</div>
     <button type="button" class="text-red-600 hover:text-red-800 text-sm" id="removeExcel">حذف</button>
