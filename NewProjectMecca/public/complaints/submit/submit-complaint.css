@@ -2,10 +2,12 @@
   --primary:#002B5B;
   --secondary:#004A9F;
   --ring:#e5e7eb;
+  --card-bg:#F5F7FB;
+  --control-bg:#F9FBFF;
 }
 
 .card{
-  background:#fff;border:1px solid #eef2f7;border-radius:18px;
+  background:var(--card-bg);border:1px solid #dfe6f1;border-radius:18px;
   padding:22px;box-shadow:0 10px 25px rgba(0,0,0,.04);
 }
 .section-title{display:flex;align-items:center;gap:10px;margin-bottom:18px}
@@ -17,7 +19,7 @@
 
 .field label{display:block;font-size:.95rem;color:#0f2b59;margin-bottom:6px;font-weight:600}
 .field input,.field select,.field textarea{
-  width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+  width:100%;background:var(--control-bg);border:1px solid #e5e7eb;border-radius:12px;
   padding:12px 14px;outline:0;transition:border .2s,box-shadow .2s
 }
 .field input:focus,.field select:focus,.field textarea:focus{
@@ -27,7 +29,7 @@
 
 /* Dropzone */
 .dropzone{
-  border:2px dashed #d8e1ef;border-radius:16px;padding:26px;background:#fafbff;
+  border:2px dashed #d8e1ef;border-radius:16px;padding:26px;background:#eef3fb;
   transition:.2s;cursor:pointer
 }
 .dropzone.dragover{background:#f1f6ff;border-color:#a9c6ff}
@@ -38,7 +40,7 @@
 .files-list{margin-top:14px;display:grid;gap:10px}
 .file-pill{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 12px;border:1px solid #eef2f7;border-radius:12px;background:#fff;font-size:.9rem
+  padding:10px 12px;border:1px solid #dfe6f1;border-radius:12px;background:var(--card-bg);font-size:.9rem
 }
 .file-pill .meta{color:#475569}
 .file-pill button{padding:6px 10px;border-radius:10px;border:1px solid #ef4444;color:#b91c1c;background:#fee2e2}
@@ -50,7 +52,7 @@
 }
 .btn-primary:hover{filter:brightness(1.05)}
 .btn-secondary{
-  background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;
+  background:#e9edf5;border:1px solid #d5deed;border-radius:999px;
   padding:12px 24px;font-weight:700;color:#111827
 }
 .btn-secondary:hover{background:#eee}
@@ -60,7 +62,7 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  background: white;
+  background: var(--card-bg);
 }
 
 #hospitalDropdown .dropdown-item {
@@ -69,12 +71,12 @@
 }
 
 #hospitalDropdown .dropdown-item:hover {
-  background-color: #f8fafc;
+  background-color: #e7edf7;
   transform: translateX(-2px);
 }
 
 #hospitalDropdown .dropdown-item.selected {
-  background-color: #dbeafe;
+  background-color: #cfdcf3;
   border-left: 3px solid #3b82f6;
 }
 
