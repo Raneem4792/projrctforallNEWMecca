@@ -230,12 +230,6 @@ html.dark [style*="#f7fafc"] {
   background-color: #0F172A !important;
 }
 
-html.dark [style*="color:#002B5B"],
-html.dark [style*="color: #002B5B"],
-html.dark [style*="color:#002b5b"] {
-  color: #F8FAFC !important;
-}
-
 html.dark .faq-btn {
   background-color: #111827;
 }
