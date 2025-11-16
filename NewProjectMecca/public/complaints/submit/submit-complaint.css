@@ -174,12 +174,17 @@ html.dark .field textarea:focus {
 
 html.dark .dropzone {
   border-color:#2b3548;
+  background-color:#0f172a;
   color:#e2e8f0;
 }
 
 html.dark .dz-text,
 html.dark .dz-hint {
   color:#cbd5f5;
+}
+
+html.dark .dz-icon {
+  color:#93c5fd;
 }
 
 html.dark .file-pill .meta {
