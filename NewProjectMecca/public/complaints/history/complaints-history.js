@@ -815,9 +815,7 @@ function render(items, curPage, totalPages) {
     // لمسة إضافية: البلاغات العاجلة تظهر بحدود حمراء حتى لو الحالة ليست CRITICAL
     const isUrgent = (c.priority || '').toUpperCase() === 'URGENT';
     const baseClass = cardClassForStatus(c.status);
-    const classes = isUrgent 
-      ? `rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 ring-2 ring-red-300 bg-rose-50 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition`
-      : `rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 ${baseClass} cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition`;
+    const classes = `rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 ${baseClass} cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition`;
     
     card.className = classes;
 
@@ -828,7 +826,7 @@ function render(items, curPage, totalPages) {
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-[11px] md:text-xs text-gray-500">رقم البلاغ</div>
-          <div class="font-extrabold text-base md:text-lg ${c.status === 'CRITICAL' ? 'text-red-600' : 'text-[#002B5B]'}">
+          <div class="font-extrabold text-base md:text-lg text-[#002B5B] dark:text-white">
             ${escapeHTML(c.ticket)}
           </div>
         </div>
@@ -983,7 +981,7 @@ function cardClassForStatus(st) {
   
   switch (S) {
     case 'CRITICAL':
-      return 'ring-2 ring-red-200 bg-rose-50';
+      return 'ring-1 ring-gray-200 bg-white';
     case 'OPEN':
       return 'ring-1 ring-blue-100 bg-white';
     case 'IN_PROGRESS':
