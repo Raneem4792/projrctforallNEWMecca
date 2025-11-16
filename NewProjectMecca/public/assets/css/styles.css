@@ -15,6 +15,9 @@
 body {
   box-sizing: border-box;
   font-family: 'Tajawal', sans-serif;
+  background-color: #ffffff;
+  color: var(--text-dark);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Backgrounds */
@@ -120,4 +123,122 @@ textarea:focus {
   border-color: #0B5ED7;  /* أزرق من نفس الهوية */
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.15);
+}
+
+/* ========================================
+   Dark Mode Overrides
+   ======================================== */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #050a18;
+  color: #E2E8F0;
+}
+
+html.dark #navbar {
+  background-color: #0B1120 !important;
+  border-bottom: 1px solid #1F2937;
+}
+
+html.dark .hero-gradient {
+  background: linear-gradient(135deg, #0F172A 0%, #111827 100%) !important;
+}
+
+html.dark .bg-white,
+html.dark .bg-gray-50,
+html.dark .bg-gray-100,
+html.dark .bg-blue-50,
+html.dark .bg-green-50,
+html.dark .bg-sky-50,
+html.dark .bg-indigo-100 {
+  background-color: #111827 !important;
+  color: #E2E8F0;
+}
+
+html.dark .bg-blue-100,
+html.dark .bg-green-100,
+html.dark .bg-sky-100 {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  color: #F0F9FF;
+}
+
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4 {
+  color: #F8FAFC !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600,
+html.dark .text-gray-500,
+html.dark p,
+html.dark li {
+  color: #CBD5F5 !important;
+}
+
+html.dark .text-gray-400,
+html.dark .text-gray-300 {
+  color: #94A3B8 !important;
+}
+
+html.dark .text-blue-600,
+html.dark .text-blue-700,
+html.dark .text-blue-800,
+html.dark .text-blue-900 {
+  color: #93C5FD !important;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: #1F2937 !important;
+}
+
+html.dark .card-hover {
+  background-color: #111827;
+  border-color: #1F2937;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+}
+
+html.dark .service-icon {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #BFDBFE;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0F172A;
+  border-color: #1F2937;
+  color: #F8FAFC;
+  box-shadow: none;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #94A3B8;
+}
+
+html.dark [style*="#F7FAFC"],
+html.dark [style*="#f7fafc"] {
+  background-color: #0F172A !important;
+}
+
+html.dark .faq-btn {
+  background-color: #111827;
+}
+
+html.dark .faq-panel {
+  background-color: #0F172A;
+}
+
+html.dark .landing-card {
+  background-color: #111827;
+  border-color: #1F2937;
 }
