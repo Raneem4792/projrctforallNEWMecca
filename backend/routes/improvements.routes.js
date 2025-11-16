@@ -8,6 +8,156 @@ import { attachHospitalPool } from '../middleware/hospitalPool.js';
 const router = express.Router();
 
 /**
+ * إنشاء مشروع تحسيني من النوع OTHER (جدول مستقل)
+ * POST /api/improvements/other
+ */
+router.post(
+  '/other',
+  requireAuth,
+  requirePermission('IMPROVEMENTS_MODULE'),
+  requirePermission('IMPROVEMENT_CREATE'),
+  resolveHospitalId,
+  attachHospitalPool,
+  async (req, res, next) => {
+    try {
+      const pool = req.hospitalPool;
+      const hid = req.hospitalId;
+      if (!hid) {
+        return res.status(400).json({ success: false, message: 'Hospital ID missing' });
+      }
+
+      const {
+        title,
+        departmentId,
+        improvementArea,
+        projectCategory,
+        problemStatement,
+        aimStatement,
+        currentState,
+        proposedSolution,
+        kpis,
+        requiredResources,
+        priority = 'MEDIUM',
+        projectOwner,
+        startDate,
+        dueDate,
+        duration,
+        teamMembers,
+        notes,
+        status = 'DRAFT'
+      } = req.body || {};
+
+      // تحقق أساسي
+      const missing = [];
+      if (!title) missing.push('title');
+      if (!departmentId) missing.push('departmentId');
+      if (!improvementArea) missing.push('improvementArea');
+      if (!problemStatement) missing.push('problemStatement');
+      if (!aimStatement) missing.push('aimStatement');
+      if (!proposedSolution) missing.push('proposedSolution');
+      if (missing.length) {
+        return res.status(400).json({ success: false, message: 'Missing fields', missing });
+      }
+
+      const [result] = await pool.query(
+        `INSERT INTO improvement_projects_other 
+         (HospitalID, ProjectType, Title, DepartmentID, ImprovementArea, ProjectCategory,
+          ProblemStatement, AimStatement, CurrentState, ProposedSolution, KPIs,
+          RequiredResources, Priority, ProjectOwner, StartDate, DueDate, DurationMonths,
+          TeamMembers, Notes, Status, CreatedBy)
+         VALUES (?, 'OTHER', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          hid,
+          title,
+          Number(departmentId),
+          improvementArea,
+          projectCategory || null,
+          problemStatement,
+          aimStatement,
+          currentState || null,
+          proposedSolution,
+          kpis || null,
+          requiredResources || null,
+          String(priority || 'MEDIUM').toUpperCase(),
+          projectOwner || null,
+          startDate || null,
+          dueDate || null,
+          duration || null,
+          teamMembers || null,
+          notes || null,
+          status || 'DRAFT',
+          req.user?.UserID || null
+        ]
+      );
+
+      return res.json({ success: true, projectId: result.insertId });
+    } catch (err) {
+      console.error('POST /api/improvements/other error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
+ * عرض مشاريع OTHER
+ * GET /api/improvements/other
+ */
+router.get(
+  '/other',
+  requireAuth,
+  requirePermission('IMPROVEMENTS_MODULE'),
+  requirePermission('IMPROVEMENT_VIEW'),
+  resolveHospitalId,
+  attachHospitalPool,
+  async (req, res, next) => {
+    try {
+      const pool = req.hospitalPool;
+      const hid = req.hospitalId;
+      if (!hid) {
+        return res.status(400).json({ success: false, message: 'Hospital ID missing' });
+      }
+
+      const { status, dept, q } = req.query || {};
+
+      let sql = `
+        SELECT 
+          p.*,
+          d.NameAr AS DepartmentName
+        FROM improvement_projects_other p
+        LEFT JOIN departments d 
+          ON d.DepartmentID = p.DepartmentID
+         AND d.HospitalID  = p.HospitalID
+        WHERE p.HospitalID = ?
+      `;
+      const args = [hid];
+
+      if (status) {
+        sql += ' AND p.Status = ?';
+        args.push(String(status));
+      }
+      if (dept) {
+        sql += ' AND p.DepartmentID = ?';
+        args.push(Number(dept));
+      }
+      if (q) {
+        sql += ' AND (p.Title LIKE ? OR p.ProblemStatement LIKE ? OR p.AimStatement LIKE ?)';
+        const like = `%${q}%`;
+        args.push(like, like, like);
+      }
+
+      sql += ' ORDER BY p.CreatedAt DESC';
+
+      const [rows] = await pool.query(sql, args);
+
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error('GET /api/improvements/other error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
  * استرجاع قائمة المشاريع التحسينية مع الفلاتر
  * Query params: hospitalId, status, dept, q (search)
  */

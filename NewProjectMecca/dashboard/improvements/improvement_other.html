@@ -53,6 +53,17 @@
         </p>
       </div>
 
+      <!-- اختيار المستشفى (يظهر لمدير التجمع) -->
+      <div id="hospitalContainer" class="mb-6 hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          المستشفى
+        </label>
+        <select id="selectHospital"
+                class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+          <option value="">اختر المستشفى</option>
+        </select>
+      </div>
+
       <!-- النموذج -->
       <form id="projectForm" class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
 
@@ -333,7 +344,22 @@
       setTimeout(() => el.classList.add('hidden'), 3000);
     };
 
+    // التحقق من مدير التجمع
+    function isClusterManager() {
+      try {
+        const u = JSON.parse(localStorage.getItem('userData') || '{}');
+        return u.RoleID === 1 || u.IsClusterManager === true;
+      } catch { return false; }
+    }
+
     function effectiveHospitalId() {
+      // أولوية لاختيار المستخدم من القائمة (إن وُجدت)
+      const sel = document.getElementById('selectHospital');
+      if (sel && sel.value) {
+        const v = Number(sel.value);
+        if (!Number.isNaN(v) && v > 0) return v;
+      }
+
       const u = JSON.parse(localStorage.getItem('userData') || '{}');
       const q = new URLSearchParams(location.search);
       const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
@@ -350,6 +376,56 @@
       return h;
     };
 
+    // تحميل قائمة المستشفيات (للمدير فقط)
+    async function loadHospitalsIfNeeded() {
+      const container = document.getElementById('hospitalContainer');
+      const select = document.getElementById('selectHospital');
+
+      if (!isClusterManager()) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/hospitals?active=1`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!res.ok) throw new Error('Failed to load hospitals');
+
+        const hospitals = await res.json();
+        // تعبئة القائمة
+        select.innerHTML = '<option value="">اختر المستشفى</option>';
+        hospitals.forEach(h => {
+          const opt = document.createElement('option');
+          opt.value = h.HospitalID;
+          opt.textContent = h.NameAr || h.NameEn || `مستشفى ${h.Code}`;
+          select.appendChild(opt);
+        });
+
+        // تحديد قيمة مبدئية من URL/LS إن وُجدت
+        const preset = new URLSearchParams(location.search).get('hospitalId')
+          || new URLSearchParams(location.search).get('hid')
+          || localStorage.getItem('selectedHospitalId')
+          || localStorage.getItem('hospitalId');
+        if (preset) {
+          select.value = preset;
+        } else if (hospitals?.length) {
+          // في حال لا توجد قيمة مسبقة، حدّد أول مستشفى تلقائياً لتسهيل الاستخدام
+          select.value = String(hospitals[0].HospitalID);
+        }
+      } catch (e) {
+        console.error('Error loading hospitals:', e);
+        toast('تعذّر تحميل المستشفيات', 'error');
+      }
+
+      // عند تغيير المستشفى: إعادة تحميل الأقسام
+      select.addEventListener('change', () => {
+        loadDepartments();
+      });
+    }
+
     // تحميل الأقسام
     async function loadDepartments() {
       try {
@@ -357,13 +433,30 @@
         const hid = effectiveHospitalId();
         if (hid) params.set('hospitalId', hid);
         
-        const url = `${API_BASE}/api/lookups/departments${params.toString() ? '?' + params.toString() : ''}`;
-        const res = await fetch(url, { headers: authHeaders() });
+        // استخدام نفس مسار صفحة البلاغات
+        const url = `${API_BASE}/api/departments${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('🏥 [improvement_other] loadDepartments URL:', url);
+        const tokenLocal = localStorage.getItem('token') || '';
+        const headers = {
+          'Accept': 'application/json'
+        };
+        if (tokenLocal) headers['Authorization'] = `Bearer ${tokenLocal}`;
+        const res = await fetch(url, { headers });
+        console.log('🏥 [improvement_other] loadDepartments status:', res.status);
         
         if (!res.ok) throw new Error('HTTP ' + res.status);
         
         const response = await res.json();
-        const list = response.data || response;
+        // التعامل مع الصيغتين مثل صفحة البلاغات
+        let list = [];
+        if (response && response.success && Array.isArray(response.data)) {
+          list = response.data;
+        } else if (Array.isArray(response)) {
+          list = response;
+        } else if (response && Array.isArray(response.items)) {
+          list = response.items;
+        }
+        console.log('🏥 [improvement_other] departments count:', Array.isArray(list) ? list.length : 0);
         
         const deptSelect = document.getElementById('department');
         deptSelect.innerHTML = '<option value="">اختر القسم</option>';
@@ -374,6 +467,10 @@
           o.textContent = d.NameAr || d.DepartmentName;
           deptSelect.appendChild(o);
         });
+
+        if ((list || []).length === 0) {
+          toast('لا توجد أقسام متاحة لهذا المستشفى', 'warn');
+        }
       } catch(e) {
         console.error('Error loading departments:', e);
         toast('تعذر تحميل الأقسام', 'error');
@@ -421,7 +518,7 @@
           duration: parseInt(document.getElementById('duration').value) || null
         };
 
-        const res = await fetch(`${API_BASE}/api/improvements`, {
+        const res = await fetch(`${API_BASE}/api/improvements/other`, {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify(data)
@@ -442,7 +539,7 @@
     }
 
     // التحميل الأولي
-    loadDepartments();
+    loadHospitalsIfNeeded().then(loadDepartments);
   </script>
 
 </body>
