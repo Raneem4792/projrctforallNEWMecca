@@ -4,10 +4,12 @@
   --ring:#e5e7eb;
   --card-bg:#F5F7FB;
   --control-bg:#F9FBFF;
+  --card-border:#dfe6f1;
+  --pill-border:#dfe6f1;
 }
 
 .card{
-  background:var(--card-bg);border:1px solid #dfe6f1;border-radius:18px;
+  background:var(--card-bg);border:1px solid var(--card-border);border-radius:18px;
   padding:22px;box-shadow:0 10px 25px rgba(0,0,0,.04);
 }
 .section-title{display:flex;align-items:center;gap:10px;margin-bottom:18px}
@@ -40,7 +42,7 @@
 .files-list{margin-top:14px;display:grid;gap:10px}
 .file-pill{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 12px;border:1px solid #dfe6f1;border-radius:12px;background:var(--card-bg);font-size:.9rem
+  padding:10px 12px;border:1px solid var(--pill-border);border-radius:12px;background:var(--card-bg);font-size:.9rem
 }
 .file-pill .meta{color:#475569}
 .file-pill button{padding:6px 10px;border-radius:10px;border:1px solid #ef4444;color:#b91c1c;background:#fee2e2}
@@ -134,4 +136,71 @@
 #typeSearch::placeholder {
   color: #9ca3af;
   font-size: 0.9rem;
+}
+
+/* Dark mode adjustments */
+html.dark {
+  --card-bg:#111827;
+  --control-bg:#0f172a;
+  --card-border:#1f2937;
+  --pill-border:#1f2937;
+}
+
+html.dark .card {
+  box-shadow: 0 10px 35px rgba(0,0,0,0.45);
+}
+
+html.dark .section-title .icon {
+  background:rgba(59,130,246,0.15);
+  color:#bfdbfe;
+}
+
+html.dark .field label {
+  color:#e2e8f0;
+}
+
+html.dark .field input,
+html.dark .field select,
+html.dark .field textarea {
+  border-color:#293548;
+  color:#f8fafc;
+}
+
+html.dark .field input:focus,
+html.dark .field select:focus,
+html.dark .field textarea:focus {
+  box-shadow:0 0 0 3px rgba(59,130,246,0.2);
+}
+
+html.dark .dropzone {
+  border-color:#2b3548;
+  color:#e2e8f0;
+}
+
+html.dark .dz-text,
+html.dark .dz-hint {
+  color:#cbd5f5;
+}
+
+html.dark .file-pill .meta {
+  color:#cbd5f5;
+}
+
+html.dark .btn-secondary {
+  background:#1f2a3d;
+  color:#f8fafc;
+}
+
+html.dark #hospitalDropdown {
+  box-shadow:0 15px 35px rgba(0,0,0,0.45);
+  border-color:#27324a;
+}
+
+html.dark #hospitalDropdown .dropdown-item:hover {
+  background-color:#1b2435;
+}
+
+html.dark #hospitalDropdown .dropdown-item.selected {
+  background-color:#243149;
+  border-left-color:#60a5fa;
 }
