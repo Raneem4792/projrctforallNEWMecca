@@ -54,7 +54,14 @@ let lastImportedYear = null;
 // تحميل البيانات من API
 async function loadData() {
   try {
-    const res = await fetch(`${API_BASE}/api/pressganey/data`, {
+    const hid = effectiveHospitalId();
+    if (!hid) {
+      console.warn('⚠️ [PressGaney] لا يوجد hospitalId — أوقف التحميل.');
+      toast('يجب اختيار المستشفى أولاً', 'warn');
+      return;
+    }
+    const url = `${API_BASE}/api/pressganey/data?hospitalId=${encodeURIComponent(hid)}`;
+    const res = await fetch(url, {
       headers: authHeaders()
     });
     

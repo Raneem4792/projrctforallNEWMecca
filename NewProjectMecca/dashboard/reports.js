@@ -25,8 +25,10 @@ function destroyChart(chartInstance) {
 
 function destroyChartByCanvasId(canvasId) {
   try {
-    // استخدام Chart.getChart() للبحث عن المخطط
-    const existingChart = Chart.getChart(canvasId);
+    const el = typeof canvasId === 'string' ? document.getElementById(canvasId) : canvasId;
+    if (!el) return;
+    // Chart.js v3/v4: يفضل تمرير عنصر الـ canvas إلى getChart
+    const existingChart = Chart.getChart(el) || Chart.getChart(el?.id);
     if (existingChart) {
       existingChart.destroy();
     }
@@ -674,7 +676,8 @@ async function createStatusChart() {
 
   // تدمير المخطط السابق إذا كان موجوداً
   destroyChart(statusChart);
-  destroyChartByCanvasId('statusChart');
+  // استخدم عنصر الـ canvas مباشرة لضمان التدمير الصحيح
+  destroyChartByCanvasId(statusCtx);
 
   try {
     const API_BASE = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3001' : '';
