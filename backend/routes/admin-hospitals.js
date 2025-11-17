@@ -95,14 +95,19 @@ async function hasPermissionFor(userId, hospitalId, permissionKey) {
     adminUser: { fullName, username, email, mobile, passwordPlain }
   }
 */
-router.post('/', requireAuth, requireAdmin, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const central = await getCentralPool();
 
   // التحقق من صلاحية إضافة مستشفى
+  // مدير تجمع (RoleID = 1) أو مدير نظام (RoleID = 2) لديهم صلاحية تلقائية
+  const roleId = Number(req.user?.RoleID || req.user?.roleId || 0);
   const isCentral = req.user?.scope === 'central' || req.user?.HospitalID == null;
-  let allowed = isCentral;
+  const isSystemAdmin = roleId === 2; // مدير النظام
+  const isClusterAdmin = roleId === 1 || roleId === 4; // مدير تجمع أو مركزي
   
-  // إذا لم يكن مركزياً، تحقق من الصلاحية في قاعدة مستشفاه
+  let allowed = isCentral || isSystemAdmin || isClusterAdmin;
+  
+  // إذا لم يكن مدير تجمع أو مدير نظام، تحقق من الصلاحية في قاعدة مستشفاه
   if (!allowed && req.user?.HospitalID) {
     allowed = await hasPermissionFor(req.user.UserID, req.user.HospitalID, 'HOSPITAL_CREATE');
   }
@@ -138,7 +143,7 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
   // إعدادات الاتصال بقاعدة البيانات
   const dbHost = process.env.DB_HOST || '127.0.0.1';
   const dbUser = process.env.DB_USER || 'root';
-  const dbPass = process.env.DB_PASS || 'Raneem11';
+  const dbPass = process.env.DB_PASS || 'SamarAmer12345@';
 
   // 2) فحص عدم تكرار الكود/القاعدة في المركزي
   const [dup] = await central.query(
