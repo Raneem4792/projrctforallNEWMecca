@@ -79,13 +79,50 @@ router.get('/by-hospital',
   requirePermission('REPORTS_CHART_BY_HOSPITAL_TYPE'),
   async (req, res) => {
   try {
-    // جلب جميع المستشفيات النشطة أولاً
-    const [allHospitals] = await pool.query(`
+    // التحقق من صلاحيات المستخدم
+    const userRoleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+    const userHospitalId = Number(req.user?.HospitalID || req.user?.hospitalId || 0);
+    const isCluster = userRoleId === 1 || userRoleId === 4; // مدير تجمع أو مركزي
+    
+    // فلترة حسب hospitalId من query parameter أو من بيانات المستخدم
+    const requestedHospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    let targetHospitalId = null;
+    
+    if (isCluster) {
+      // مدير التجمع: يمكنه رؤية جميع المستشفيات أو مستشفى محدد
+      targetHospitalId = requestedHospitalId;
+    } else {
+      // موظف أو مدير نظام: فقط مستشفاه
+      targetHospitalId = userHospitalId || requestedHospitalId;
+    }
+    
+    // بناء SQL query مع فلترة
+    let hospitalQuery = `
       SELECT HospitalID, NameAr AS HospitalName, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
-      ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
-    `);
+    `;
+    const queryParams = [];
+    
+    if (targetHospitalId) {
+      hospitalQuery += ` AND HospitalID = ?`;
+      queryParams.push(targetHospitalId);
+    }
+    
+    hospitalQuery += ` ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC`;
+    
+    // جلب المستشفيات المفلترة
+    const [allHospitals] = await pool.query(hospitalQuery, queryParams);
+    
+    console.log('🔍 فلترة المستشفيات:', {
+      userRoleId,
+      userHospitalId,
+      isCluster,
+      requestedHospitalId,
+      targetHospitalId,
+      hospitalsCount: allHospitals.length,
+      hospitals: allHospitals.map(h => ({ id: h.HospitalID, name: h.HospitalName }))
+    });
 
     // جلب إحصائيات البلاغات من قواعد بيانات المستشفيات المنفصلة
     const { getHospitalPool } = await import('../config/db.js');
@@ -992,13 +1029,49 @@ router.get('/complaint-statuses',
   requirePermission('REPORTS_CHART_STATUS_DISTRIBUTION'),
   async (req, res) => {
   try {
-    // جلب جميع المستشفيات النشطة أولاً
-    const [allHospitals] = await pool.query(`
+    // التحقق من صلاحيات المستخدم
+    const userRoleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+    const userHospitalId = Number(req.user?.HospitalID || req.user?.hospitalId || 0);
+    const isCluster = userRoleId === 1 || userRoleId === 4; // مدير تجمع أو مركزي
+    
+    // فلترة حسب hospitalId من query parameter أو من بيانات المستخدم
+    const requestedHospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    let targetHospitalId = null;
+    
+    if (isCluster) {
+      // مدير التجمع: يمكنه رؤية جميع المستشفيات أو مستشفى محدد
+      targetHospitalId = requestedHospitalId;
+    } else {
+      // موظف أو مدير نظام: فقط مستشفاه
+      targetHospitalId = userHospitalId || requestedHospitalId;
+    }
+    
+    // بناء SQL query مع فلترة
+    let hospitalQuery = `
       SELECT HospitalID, NameAr AS HospitalName, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
-      ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
-    `);
+    `;
+    const queryParams = [];
+    
+    if (targetHospitalId) {
+      hospitalQuery += ` AND HospitalID = ?`;
+      queryParams.push(targetHospitalId);
+    }
+    
+    hospitalQuery += ` ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC`;
+    
+    // جلب المستشفيات المفلترة
+    const [allHospitals] = await pool.query(hospitalQuery, queryParams);
+    
+    console.log('🔍 فلترة المستشفيات في complaint-statuses:', {
+      userRoleId,
+      userHospitalId,
+      isCluster,
+      requestedHospitalId,
+      targetHospitalId,
+      hospitalsCount: allHospitals.length
+    });
 
     // جلب بيانات حالات البلاغات من قواعد بيانات المستشفيات المنفصلة
     const { getHospitalPool } = await import('../config/db.js');
@@ -1073,13 +1146,49 @@ router.get('/monthly-trends',
   requirePermission('REPORTS_CHART_TREND_6M'),
   async (req, res) => {
   try {
-    // جلب جميع المستشفيات النشطة أولاً
-    const [allHospitals] = await pool.query(`
+    // التحقق من صلاحيات المستخدم
+    const userRoleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+    const userHospitalId = Number(req.user?.HospitalID || req.user?.hospitalId || 0);
+    const isCluster = userRoleId === 1 || userRoleId === 4; // مدير تجمع أو مركزي
+    
+    // فلترة حسب hospitalId من query parameter أو من بيانات المستخدم
+    const requestedHospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    let targetHospitalId = null;
+    
+    if (isCluster) {
+      // مدير التجمع: يمكنه رؤية جميع المستشفيات أو مستشفى محدد
+      targetHospitalId = requestedHospitalId;
+    } else {
+      // موظف أو مدير نظام: فقط مستشفاه
+      targetHospitalId = userHospitalId || requestedHospitalId;
+    }
+    
+    // بناء SQL query مع فلترة
+    let hospitalQuery = `
       SELECT HospitalID, NameAr AS HospitalName, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
-      ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
-    `);
+    `;
+    const queryParams = [];
+    
+    if (targetHospitalId) {
+      hospitalQuery += ` AND HospitalID = ?`;
+      queryParams.push(targetHospitalId);
+    }
+    
+    hospitalQuery += ` ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC`;
+    
+    // جلب المستشفيات المفلترة
+    const [allHospitals] = await pool.query(hospitalQuery, queryParams);
+    
+    console.log('🔍 فلترة المستشفيات في monthly-trends:', {
+      userRoleId,
+      userHospitalId,
+      isCluster,
+      requestedHospitalId,
+      targetHospitalId,
+      hospitalsCount: allHospitals.length
+    });
 
     // جلب البيانات الشهرية من قواعد بيانات المستشفيات المنفصلة
     const { getHospitalPool } = await import('../config/db.js');

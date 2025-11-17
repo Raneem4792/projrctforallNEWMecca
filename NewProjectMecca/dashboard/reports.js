@@ -14,7 +14,7 @@ let userHospitalId = null;
 let hospitalsData = [];
 
 // ===== Chart Variables =====
-let reportsChart, statusChart, hospitalChart, hospitalFunnelChart, deptCountChart, topEmployeesChart;
+let reportsChart, statusChart, hospitalChart, hospitalFunnelChart, deptCountChart, topEmployeesChart, criticalRatioChart;
 
 // ===== Chart Helper Functions =====
 function destroyChart(chartInstance) {
@@ -34,6 +34,7 @@ function destroyChartByCanvasId(canvasId) {
     }
   } catch (error) {
     // تجاهل أخطاء التدمير
+    console.warn('Warning destroying chart:', error);
   }
 }
 
@@ -96,7 +97,9 @@ if (typeof App.getCurrentUser !== 'function') {
 if (typeof App.isClusterManager !== 'function') {
   App.isClusterManager = function () {
     const u = App.getCurrentUser();
-    return u?.RoleID === 1 || u?.IsClusterManager === true;
+    // مدير تجمع (RoleID === 1) أو مركزي (RoleID === 4) فقط
+    // مدير النظام (RoleID === 2) ليس مدير تجمع
+    return u?.RoleID === 1 || u?.RoleID === 4 || u?.IsClusterManager === true;
   };
 }
 
@@ -330,7 +333,17 @@ function renderSummaryTable() {
   let closedAll = 0;
   let criticalAll = 0;
 
-  hospitalsData.forEach((h, idx) => {
+  // فلترة البيانات حسب الدور: الموظفون ومديرو النظام يرون مستشفاهم فقط
+  let filteredData = hospitalsData;
+  if (!isClusterManager && userHospitalId) {
+    filteredData = hospitalsData.filter(h => 
+      Number(h.hospitalId) === Number(userHospitalId) || 
+      Number(h.HospitalID) === Number(userHospitalId)
+    );
+    console.log('🔍 تصفية بيانات الجدول للمستشفى:', userHospitalId, 'البيانات المفلترة:', filteredData);
+  }
+
+  filteredData.forEach((h, idx) => {
     const name = h.hospitalName || h.HospitalName || 'غير محدد';
     const total = Number(h.totalReports || h.counts?.total || 0);
     const open = Number(h.openReports || h.counts?.open || 0);
@@ -358,7 +371,7 @@ function renderSummaryTable() {
   });
 
   // صف الإجمالي
-  if (hospitalsData.length) {
+  if (filteredData.length) {
     const totalCriticalPct =
       totalAll > 0 ? ((criticalAll / totalAll) * 100).toFixed(1) + '%' : '0%';
 
@@ -550,6 +563,10 @@ async function createReportsTrendChart() {
     const result = await response.json();
     
     if (result.success && result.data) {
+      // تدمير الـ chart السابق إذا كان موجوداً
+      destroyChart(reportsChart);
+      destroyChartByCanvasId('reportsChart');
+      
       // تحضير البيانات للرسم البياني
       const trendData = result.data;
       const labels = trendData.map(item => item.monthName);
@@ -623,6 +640,10 @@ async function createReportsTrendChart() {
   } catch (error) {
     console.error('خطأ في تحميل بيانات اتجاه البلاغات:', error);
     console.log('استخدام بيانات وهمية كبديل...');
+    
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(reportsChart);
+    destroyChartByCanvasId('reportsChart');
     
     // في حالة الخطأ، استخدم بيانات وهمية كبديل
     reportsChart = new Chart(reportsCtx.getContext('2d'), {
@@ -702,6 +723,10 @@ async function createStatusChart() {
     const result = await response.json();
     
     if (result.success && result.data) {
+      // تدمير الـ chart السابق إذا كان موجوداً
+      destroyChart(statusChart);
+      destroyChartByCanvasId('statusChart');
+      
       // تحضير البيانات للرسم البياني
       const statusData = result.data;
       const labels = statusData.map(item => item.LabelAr);
@@ -753,6 +778,10 @@ async function createStatusChart() {
     console.error('خطأ في تحميل بيانات حالات البلاغات:', error);
     console.log('استخدام بيانات وهمية كبديل...');
     
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(statusChart);
+    destroyChartByCanvasId('statusChart');
+    
     // في حالة الخطأ، استخدم بيانات وهمية كبديل
     statusChart = new Chart(statusCtx.getContext('2d'), {
       type: 'doughnut',
@@ -798,8 +827,16 @@ async function createHospitalChart() {
       throw new Error('لا يوجد توكن للمصادقة');
     }
     
+    // إضافة فلتر المستشفى إذا لم يكن مدير تجمع
+    let url = `${API_BASE}/api/dashboard/total/reports-by-type`;
+    if (currentUser && !isClusterManager && userHospitalId) {
+      url += `?hospitalId=${userHospitalId}`;
+    }
+    
+    console.log('محاولة جلب بيانات البلاغات حسب النوع من:', url);
+    
     // جلب البيانات الحقيقية من API الجديد
-    const response = await fetch(`${API_BASE}/api/dashboard/total/reports-by-type`, {
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -821,6 +858,10 @@ async function createHospitalChart() {
     
     const hospitalsData = result.data;
     console.log('تم جلب بيانات البلاغات حسب النوع:', hospitalsData);
+    
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(hospitalChart);
+    destroyChartByCanvasId('hospitalChart');
     
     // تحضير البيانات للرسم البياني
     const labels = hospitalsData.map(hospital => hospital.hospitalName);
@@ -1012,7 +1053,11 @@ async function createCriticalRatioChart() {
       throw new Error('لا يوجد توكن للمصادقة');
     }
     
-    const url = `${API_BASE}/api/dashboard/total/critical-ratio`;
+    // إضافة فلتر المستشفى إذا لم يكن مدير تجمع
+    let url = `${API_BASE}/api/dashboard/total/critical-ratio`;
+    if (currentUser && !isClusterManager && userHospitalId) {
+      url += `?hospitalId=${userHospitalId}`;
+    }
     console.log('محاولة جلب بيانات نسبة البلاغات الحرجة من:', url);
     
     const response = await fetch(url, {
@@ -1035,6 +1080,10 @@ async function createCriticalRatioChart() {
     const result = await response.json();
     
     if (result.success && result.data) {
+      // تدمير الـ chart السابق إذا كان موجوداً
+      destroyChart(criticalRatioChart);
+      destroyChartByCanvasId('criticalRatioChart');
+      
       // تحضير البيانات للرسم البياني
       const criticalData = result.data;
       const labels = criticalData.map(item => item.hospitalName);
@@ -1047,7 +1096,7 @@ async function createCriticalRatioChart() {
         'rgba(16,185,129,0.8)'
       ];
       
-      new Chart(ctx.getContext('2d'), {
+      criticalRatioChart = new Chart(ctx.getContext('2d'), {
         type: 'bar',
         data: {
           labels: labels,
@@ -1122,8 +1171,12 @@ async function createCriticalRatioChart() {
     
     console.log('استخدام بيانات وهمية كبديل...');
     
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(criticalRatioChart);
+    destroyChartByCanvasId('criticalRatioChart');
+    
     // في حالة الخطأ، استخدم بيانات وهمية كبديل
-    new Chart(ctx.getContext('2d'), {
+    criticalRatioChart = new Chart(ctx.getContext('2d'), {
       type: 'bar',
       data: {
         labels: ['الملك عبدالعزيز', 'النور التخصصي', 'الهدى العام', 'العزيزية', 'الشرائع'],
@@ -1213,6 +1266,10 @@ async function createHospitalFunnelChart(initialHospital = 'مستشفى الم�
     const result = await response.json();
     
     if (result.success && result.data) {
+      // تدمير الـ chart السابق إذا كان موجوداً
+      destroyChart(hospitalFunnelChart);
+      destroyChartByCanvasId('complaintFunnelByHospital');
+      
       // تحضير البيانات للرسم البياني
       const funnelData = result.data;
       const data = [
@@ -1275,6 +1332,10 @@ async function createHospitalFunnelChart(initialHospital = 'مستشفى الم�
   } catch (error) {
     console.error('خطأ في تحميل بيانات قمع رحلة البلاغ:', error);
     console.log('استخدام بيانات وهمية كبديل...');
+    
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(hospitalFunnelChart);
+    destroyChartByCanvasId('complaintFunnelByHospital');
     
     // في حالة الخطأ، استخدم بيانات وهمية كبديل
     hospitalFunnelChart = new Chart(ctx, {
@@ -1414,7 +1475,13 @@ function buildSortedDeptData(hospitalName) {
   return { labels, values };
 }
 
-async function createDeptCountChart(hospitalId = 1) {
+async function createDeptCountChart(hospitalId = null) {
+  // إذا لم يتم تحديد hospitalId، استخدم userHospitalId للموظفين ومديري النظام
+  if (!hospitalId && !isClusterManager && userHospitalId) {
+    hospitalId = userHospitalId;
+  } else if (!hospitalId) {
+    hospitalId = 1; // قيمة افتراضية
+  }
   const el = document.getElementById('deptCountChart');
   if (!el) return;
 
@@ -1470,7 +1537,9 @@ async function createDeptCountChart(hospitalId = 1) {
       titleText = `عدد البلاغات لكل قسم — ${hospitalName}`;
     }
 
-    if (deptCountChart) deptCountChart.destroy();
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(deptCountChart);
+    destroyChartByCanvasId('deptCountChart');
 
     deptCountChart = new Chart(el.getContext('2d'), {
       type: 'bar',
@@ -1513,7 +1582,9 @@ async function createDeptCountChart(hospitalId = 1) {
     console.error('خطأ في إنشاء رسم عدد البلاغات لكل قسم:', error);
     // fallback السابق كما هو...
     const { labels, values } = buildSortedDeptData('مستشفى الملك عبدالعزيز');
-    if (deptCountChart) deptCountChart.destroy();
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(deptCountChart);
+    destroyChartByCanvasId('deptCountChart');
     deptCountChart = new Chart(el.getContext('2d'), {
       type: 'bar',
       data: { labels, datasets: [{ label:'عدد البلاغات', data: values, backgroundColor: labels.map((_, i) => barColors[i % barColors.length]), borderColor:'#fff', borderWidth:1, borderRadius:8, barThickness:24, maxBarThickness:28 }]},
@@ -1595,7 +1666,13 @@ function buildTopEmployees(hospitalName, topN = 8) {
   return { labels, values, pct };
 }
 
-async function createTopEmployeesChart(hospitalId = 1, topN = 8) {
+async function createTopEmployeesChart(hospitalId = null, topN = 8) {
+  // إذا لم يتم تحديد hospitalId، استخدم userHospitalId للموظفين ومديري النظام
+  if (!hospitalId && !isClusterManager && userHospitalId) {
+    hospitalId = userHospitalId;
+  } else if (!hospitalId) {
+    hospitalId = 1; // قيمة افتراضية
+  }
   const el = document.getElementById('topEmployeesChart');
   if (!el) return;
 
@@ -1659,7 +1736,9 @@ async function createTopEmployeesChart(hospitalId = 1, topN = 8) {
       titleText = `أكثر الموظفين تكرّرًا في البلاغات — ${hospitalName}`;
     }
 
-    if (topEmployeesChart) topEmployeesChart.destroy();
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(topEmployeesChart);
+    destroyChartByCanvasId('topEmployeesChart');
 
     topEmployeesChart = new Chart(el.getContext('2d'), {
       type: 'bar',
@@ -1703,7 +1782,9 @@ async function createTopEmployeesChart(hospitalId = 1, topN = 8) {
     console.error('خطأ في إنشاء رسم الموظفين الأكثر تكرّرًا:', error);
     // fallback السابق كما هو...
     const { labels, values } = buildTopEmployees('مستشفى الملك عبدالعزيز', topN);
-    if (topEmployeesChart) topEmployeesChart.destroy();
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(topEmployeesChart);
+    destroyChartByCanvasId('topEmployeesChart');
     topEmployeesChart = new Chart(el.getContext('2d'), {
       type: 'bar',
       data: { labels, datasets: [{ label:'عدد البلاغات', data: values, backgroundColor: labels.map((_, i) => empBarColors[i % empBarColors.length]), borderColor:'#fff', borderWidth:1, borderRadius:8, barThickness:24, maxBarThickness:28 }]},
@@ -1778,6 +1859,12 @@ async function applyReportExportPermissions() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // تدمير جميع الـ charts السابقة قبل البدء
+    destroyAllCharts();
+    
+    // تحميل بيانات المستخدم أولاً
+    await loadCurrentUser();
+    
     // تطبيق صلاحيات تصدير التقارير
     await applyReportExportPermissions();
     
@@ -1787,7 +1874,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1) حمّل المستشفيات واملأ القوائم
     const hospitals = await loadHospitals();
-    const defaultId  = 'all'; // اختيار "الكل" كافتراضي
+    // إذا لم يكن مدير تجمع، استخدم userHospitalId كافتراضي
+    const defaultId = (isClusterManager || !userHospitalId) ? 'all' : String(userHospitalId);
     const funnelSel  = document.getElementById('funnelHospital');
     const deptSel    = document.getElementById('deptCountHospital');
     const empSel     = document.getElementById('topEmployeesHospital');
@@ -1803,9 +1891,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const criticalHospitalSel = document.getElementById('criticalHospital');
     
     // تحديد صلاحيات المستخدم
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    const isCM = userData.RoleID === 1 || userData.roleId === 1;
-    const userHospId = userData.HospitalID || userData.hospitalId || null;
+    const isCM = isClusterManager; // استخدام المتغير العام
+    const userHospId = userHospitalId; // استخدام المتغير العام
     
     // ملء القوائم حسب نوع المستخدم
     if (isCM) {
@@ -1947,10 +2034,13 @@ async function loadHospitals() {
     const userRoleId = Number(userData.RoleID || userData.roleId || 0);
     const userHospitalId = Number(userData.HospitalID || userData.hospitalId || 0);
     
-    console.log('🔐 فحص صلاحيات المستخدم:', { userRoleId, userHospitalId });
+    // التحقق من isClusterManager
+    const isCluster = App.isClusterManager();
     
-    // إذا كان مدير تجمع، اجلب جميع المستشفيات
-    if (userRoleId === 1) {
+    console.log('🔐 فحص صلاحيات المستخدم:', { userRoleId, userHospitalId, isCluster });
+    
+    // إذا كان مدير تجمع (RoleID === 1 أو 4)، اجلب جميع المستشفيات
+    if (isCluster) {
       console.log('✅ مدير تجمع - جلب جميع المستشفيات');
       const r = await fetch(`${API_BASE}/api/dashboard/total/hospitals`);
       if (!r.ok) {
@@ -2143,7 +2233,9 @@ async function createHospitalFunnelChartById(hospitalId) {
       colors = ['#2563EB','#3B82F6','#22C55E','#10B981','#059669'];
     }
 
-    if (hospitalFunnelChart) hospitalFunnelChart.destroy();
+    // تدمير الـ chart السابق إذا كان موجوداً
+    destroyChart(hospitalFunnelChart);
+    destroyChartByCanvasId('complaintFunnelByHospital');
 
     hospitalFunnelChart = new Chart(ctx, {
       type: 'funnel',
@@ -2567,6 +2659,7 @@ async function renderDepartmentsChart(departments) {
     window.departmentsChartInstance.destroy();
     window.departmentsChartInstance = null;
   }
+  destroyChartByCanvasId('departmentsChart');
 
   // إزالة الرسالة السابقة إن وجدت
   const existingMsg = chartArea.querySelector('.no-data-message');
@@ -2786,6 +2879,7 @@ async function renderEmployeesChart(employees) {
     window.employeesChartInstance.destroy();
     window.employeesChartInstance = null;
   }
+  destroyChartByCanvasId('employeesChart');
 
   // إزالة الرسالة السابقة إن وجدت
   const existingMsg = chartArea.querySelector('.no-data-message');
