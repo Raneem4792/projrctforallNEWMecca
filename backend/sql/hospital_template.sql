@@ -1081,75 +1081,7 @@ CREATE TABLE IF NOT EXISTS role_default_permissions (
   DefaultViewScope ENUM('HOSPITAL','DEPARTMENT','ASSIGNED') DEFAULT 'HOSPITAL',
   PRIMARY KEY (RoleID, PermissionKey)
 );
-INSERT IGNORE INTO role_default_permissions (RoleID, PermissionKey, DefaultViewScope)
-VALUES
-(2, 'ADMIN_CLUSTERS', 'HOSPITAL'),
-(2, 'ADMIN_DEPARTMENTS', 'HOSPITAL'),
-(2, 'ADMIN_HOSPITAL', 'HOSPITAL'),
-(2, 'ADMIN_PANEL_ACCESS', 'HOSPITAL'),
-(2, 'COMPLAINT_DELETE', 'HOSPITAL'),
-(2, 'COMPLAINT_HISTORY_SCOPE', 'HOSPITAL'),
-(2, 'COMPLAINT_REPLY', 'HOSPITAL'),
-(2, 'COMPLAINT_STATUS_UPDATE', 'HOSPITAL'),
-(2, 'COMPLAINT_SUBMIT', 'HOSPITAL'),
-(2, 'COMPLAINT_TRANSFER', 'HOSPITAL'),
-(2, 'COMPLAINT_TRANSFER_DEPT', 'HOSPITAL'),
-(2, 'COMPLAINT_TRANSFER_USER', 'HOSPITAL'),
-(2, 'COMPLAINT_VIEW', 'HOSPITAL'),
-(2, 'DASH_PAGE', 'HOSPITAL'),
-(2, 'DASH_CARD_TOTALS', 'HOSPITAL'),
-(2, 'DASH_CARD_OPEN', 'HOSPITAL'),
-(2, 'DASH_CARD_CLOSED', 'HOSPITAL'),
-(2, 'DASH_CARD_URGENT', 'HOSPITAL'),
-(2, 'DASH_CARD_CLOSE_RATE', 'HOSPITAL'),
-(2, 'DASH_CARD_HOSPITAL_COUNT', 'HOSPITAL'),
-(2, 'DASH_CHART_CLASSIFICATIONS', 'HOSPITAL'),
-(2, 'DASH_CHART_DAILY_TREND', 'HOSPITAL'),
-(2, 'DASH_CHART_MYSTERY_BY_DEPT', 'HOSPITAL'),
-(2, 'DASH_CHART_TOP_CLINICS', 'HOSPITAL'),
-(2, 'DASH_URGENT_LIST', 'HOSPITAL'),
-(2, 'HOSPITAL_CREATE', 'HOSPITAL'),
-(2, 'HOSPITAL_LOGS', 'HOSPITAL'),
-(2, 'HOSPITAL_PERMISSIONS', 'HOSPITAL'),
-(2, 'HOSPITAL_TRASH', 'HOSPITAL'),
-(2, 'HOSPITAL_USER_CREATE', 'HOSPITAL'),
-(2, 'HOSPITAL_USER_EDIT', 'HOSPITAL'),
-(2, 'HOSPITAL_USER_DELETE', 'HOSPITAL'),
-(2, 'HOSPITAL_USERS', 'HOSPITAL'),
-(2, 'IMPORTS_PAGE', 'HOSPITAL'),
-(2, 'IMPORTS_937', 'HOSPITAL'),
-(2, 'IMPORTS_DEPARTMENTS', 'HOSPITAL'),
-(2, 'IMPORTS_MYSTERY', 'HOSPITAL'),
-(2, 'IMPROVEMENTS_MODULE', 'HOSPITAL'),
-(2, 'IMPROVEMENT_CREATE', 'HOSPITAL'),
-(2, 'IMPROVEMENT_VIEW', 'HOSPITAL'),
-(2, 'IMPROVEMENT_EDIT', 'HOSPITAL'),
-(2, 'IMPROVEMENT_DELETE', 'HOSPITAL'),
-(2, 'IMPROVEMENT_REPORT_VIEW', 'HOSPITAL'),
-(2, 'IMPROVEMENT_APPROVE', 'HOSPITAL'),
-(2, 'MYSTERY_MODULE', 'HOSPITAL'),
-(2, 'MYSTERY_VIEW', 'HOSPITAL'),
-(2, 'MYSTERY_REPLY_ADD', 'HOSPITAL'),
-(2, 'MYSTERY_STATUS_UPDATE', 'HOSPITAL'),
-(2, 'MYSTERY_TRANSFER_DEPT', 'HOSPITAL'),
-(2, 'MYSTERY_TRANSFER_EMP', 'HOSPITAL'),
-(2, 'MYSTERY_DELETE', 'HOSPITAL'),
-(2, 'REPORTS_PAGE', 'HOSPITAL'),
-(2, 'REPORTS_CARD_TOTALS', 'HOSPITAL'),
-(2, 'REPORTS_CARD_OPEN', 'HOSPITAL'),
-(2, 'REPORTS_CARD_CLOSED', 'HOSPITAL'),
-(2, 'REPORTS_CARD_URGENT', 'HOSPITAL'),
-(2, 'REPORTS_CARD_SLA', 'HOSPITAL'),
-(2, 'REPORTS_CARD_HOSPITALS', 'HOSPITAL'),
-(2, 'REPORTS_CHART_BY_DEPARTMENT', 'HOSPITAL'),
-(2, 'REPORTS_CHART_BY_HOSPITAL_TYPE', 'HOSPITAL'),
-(2, 'REPORTS_CHART_STATUS_DISTRIBUTION', 'HOSPITAL'),
-(2, 'REPORTS_CHART_TOP_EMPLOYEES', 'HOSPITAL'),
-(2, 'REPORTS_CHART_TREND_6M', 'HOSPITAL'),
-(2, 'REPORTS_CHART_URGENT_PERCENT', 'HOSPITAL'),
-(2, 'SUBMIT_COMPLAINT', 'HOSPITAL'),
-(2, 'TRACK_COMPLAINT', 'HOSPITAL'),
-(2, 'VIEW_COMPLAINTS', 'HOSPITAL');
+
 -- =========================================================
 -- تننت: جداول بلاغات إدارة التجمع داخل قاعدة المستشفى
 -- =========================================================
@@ -1512,4 +1444,317 @@ INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('IMPROVEMENT_937',  'مشروع 937', 'improvement'),
 ('IMPROVEMENT_PG',   'مشروع PressGaney', 'improvement'),
 ('IMPROVEMENT_OPEN', 'مشروع مفتوح / أخرى', 'improvement');
+
+INSERT INTO permissions (PermissionKey, NameAr, Category)
+VALUES ('COMPLAINT_EXPORT', 'تصدير البلاغات', 'complaints');
+
+
+
+
+
+CREATE TABLE `roles` (
+  `RoleID` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `Code` VARCHAR(40) NOT NULL,
+  `NameAr` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`RoleID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
+
+-- =========================
+-- SYSTEM الإدارة
+-- =========================
+('ADMIN_CLUSTERS', 'إدارة المستشفيات (التجمع)', 'system'),
+('ADMIN_DEPARTMENTS', 'إدارة الأقسام', 'system'),
+('ADMIN_HOSPITAL', 'إدارة المستشفى', 'system'),
+('ADMIN_PANEL_ACCESS', 'لوحة الإدارة', 'system'),
+
+-- =========================
+-- AUTH تسجيل الدخول
+-- =========================
+('ALLOW_MULTI_DEVICE_LOGIN', 'السماح بتسجيل الدخول من أكثر من جهاز', 'auth'),
+
+-- =========================
+-- ARCHIVE الأرشيف
+-- =========================
+('ARCHIVE_UPLOAD', 'إضافة مرفقات للأرشيف', 'archive'),
+('ARCHIVE_VIEW',   'عرض الأرشيف', 'archive'),
+
+-- =========================
+-- CLUSTER REPORTS بلاغات التجمع
+-- =========================
+('CLUSTER_REPORTS_MODULE', 'الدخول لموديول بلاغات إدارة التجمع', 'cluster_reports'),
+('CLUSTER_REPORT_CREATE',  'تقديم بلاغ إدارة التجمع', 'cluster_reports'),
+('CLUSTER_REPORT_DETAILS', 'عرض تفاصيل بلاغ إدارة التجمع', 'cluster_reports'),
+('CLUSTER_REPORT_REPLY',   'الرد على بلاغ إدارة التجمع', 'cluster_reports'),
+('CLUSTER_REPORT_STATUS',  'تغيير حالة بلاغ إدارة التجمع', 'cluster_reports'),
+('CLUSTER_REPORT_VIEW',    'عرض بلاغات إدارة التجمع', 'cluster_reports'),
+
+-- =========================
+-- COMPLAINTS البلاغات
+-- =========================
+('COMPLAINT_DELETE','حذف البلاغ','complaints'),
+('COMPLAINT_HISTORY_SCOPE','نطاق سجل البلاغات','complaints'),
+('COMPLAINT_REPLY','الرد على البلاغ','complaints'),
+('COMPLAINT_STATUS_UPDATE','تغيير حالة البلاغ','complaints'),
+('COMPLAINT_SUBMIT','تقديم بلاغ','complaints'),
+('COMPLAINT_TRANSFER','تحويل البلاغ (عام)','complaints'),
+('COMPLAINT_TRANSFER_DEPT','تحويل بين الأقسام','complaints'),
+('COMPLAINT_TRANSFER_HOSPITAL','تحويل البلاغ بين المستشفيات','complaints'),
+('COMPLAINT_TRANSFER_USER','تحويل بين الموظفين','complaints'),
+('COMPLAINT_VIEW','عرض/متابعة البلاغات','complaints'),
+('COMPLAINT_TYPE_CREATE','إضافة تصنيف بلاغ جديد','complaints'),
+('COMPLAINT_TYPE_DELETE','حذف تصنيف بلاغ','complaints'),
+('COMPLAINT_TYPE_EDIT','تعديل تصنيف بلاغ','complaints'),
+('COMPLAINT_SUBTYPE_CREATE','إضافة تصنيف فرعي جديد','complaints'),
+('COMPLAINT_SUBTYPE_DELETE','حذف تصنيف فرعي','complaints'),
+('COMPLAINT_SUBTYPE_EDIT','تعديل تصنيف فرعي','complaints'),
+('COMPLAINT_EXPORT','تصدير البلاغات','complaints'),
+('COMPLAINTS_EXPORT','تصدير بلاغات','complaints'),
+
+-- =========================
+-- DASHBOARD لوحة التحكم
+-- =========================
+('DASH_PAGE','عرض لوحة التحكم','dashboard'),
+('DASH_CARD_TOTALS','بطاقة إجمالي البلاغات','dashboard'),
+('DASH_CARD_OPEN','بطاقة البلاغات المفتوحة','dashboard'),
+('DASH_CARD_CLOSED','بطاقة البلاغات المغلقة','dashboard'),
+('DASH_CARD_URGENT','بطاقة البلاغات الحرجة','dashboard'),
+('DASH_CARD_CLOSE_RATE','بطاقة معدل الإغلاق','dashboard'),
+('DASH_CARD_HOSPITAL_COUNT','بطاقة عدد المستشفيات','dashboard'),
+('DASH_CHART_CLASSIFICATIONS','رسم التصنيفات','dashboard'),
+('DASH_CHART_DAILY_TREND','رسم الشكاوى اليومية','dashboard'),
+('DASH_CHART_MYSTERY_BY_DEPT','رسم الزائر السري حسب الأقسام','dashboard'),
+('DASH_CHART_TOP_CLINICS','رسم أعلى العيادات','dashboard'),
+('DASH_URGENT_LIST','قائمة البلاغات الحمراء','dashboard'),
+
+-- =========================
+-- HOSPITAL إدارة المستشفى
+-- =========================
+('HOSPITAL_CREATE','إضافة مستشفى','cluster'),
+('HOSPITAL_LOGS','عرض السجلات','hospital'),
+('HOSPITAL_PERMISSIONS','إدارة الصلاحيات','hospital'),
+('HOSPITAL_TRASH','إدارة المحذوفات','hospital'),
+('HOSPITAL_USERS','إدارة المستخدمين','hospital'),
+('HOSPITAL_USER_CREATE','إضافة مستخدم جديد','hospital'),
+('HOSPITAL_USER_DELETE','حذف المستخدم','hospital'),
+('HOSPITAL_USER_EDIT','تعديل المستخدم','hospital'),
+
+-- =========================
+-- IMPORTS الاستيراد
+-- =========================
+('IMPORTS_PAGE','عرض صفحة إرفاق الإكسل','imports'),
+('IMPORTS_937','استيراد إكسل بلاغات 937','imports'),
+('IMPORTS_DEPARTMENTS','استيراد إكسل الأقسام','imports'),
+('IMPORTS_MYSTERY','استيراد إكسل الزائر السري','imports'),
+
+-- =========================
+-- IMPROVEMENTS المشاريع التحسينية
+-- =========================
+('IMPROVEMENTS_MODULE','المشاريع التحسينية - الدخول للصفحة','improvements'),
+('IMPROVEMENT_VIEW','عرض مشروع تحسيني','improvements'),
+('IMPROVEMENT_CREATE','إضافة مشروع تحسيني','improvements'),
+('IMPROVEMENT_EDIT','تعديل مشروع تحسيني','improvements'),
+('IMPROVEMENT_DELETE','حذف مشروع تحسيني','improvements'),
+('IMPROVEMENT_REPORT_VIEW','عرض تقرير المشروع التحسيني','improvements'),
+('IMPROVEMENT_APPROVE','اعتماد مشاريع التحسين','improvement'),
+('IMPROVEMENT_937','مشروع 937','improvement'),
+('IMPROVEMENT_PG','مشروع PressGaney','improvement'),
+('IMPROVEMENT_OPEN','مشروع مفتوح / أخرى','improvement'),
+
+-- =========================
+-- MYSTERY الزائر السري
+-- =========================
+('MYSTERY_MODULE','الزائر السري - الدخول للصفحة','mystery'),
+('MYSTERY_VIEW','عرض تقييم الزائر السري','mystery'),
+('MYSTERY_REPLY_ADD','إضافة رد/تعليق على التقييم','mystery'),
+('MYSTERY_STATUS_UPDATE','تغيير حالة التقييم','mystery'),
+('MYSTERY_TRANSFER_DEPT','تحويل التقييم بين الأقسام','mystery'),
+('MYSTERY_TRANSFER_EMP','تحويل التقييم بين الموظفين','mystery'),
+('MYSTERY_DELETE','حذف تقييم الزائر السري','mystery'),
+
+-- =========================
+-- PRESSGANEY برسجيني
+-- =========================
+('PRESSGANEY_MODULE','الدخول لمنصة برسجيني','pressganey'),
+('PRESSGANEY_VIEW','عرض لوحة برسجيني','pressganey'),
+('PRESSGANEY_IMPORT','استيراد ملفات Excel برسجيني','pressganey'),
+
+-- =========================
+-- REPORTS التقارير
+-- =========================
+('REPORTS_PAGE','عرض صفحة التقارير والإحصائيات','reports'),
+('REPORTS_CARD_TOTALS','بطاقة إجمالي البلاغات','reports'),
+('REPORTS_CARD_OPEN','بطاقة البلاغات المفتوحة','reports'),
+('REPORTS_CARD_CLOSED','بطاقة البلاغات المغلقة','reports'),
+('REPORTS_CARD_URGENT','بطاقة البلاغات الحرجة','reports'),
+('REPORTS_CARD_SLA','بطاقة الالتزام بالـ SLA','reports'),
+('REPORTS_CARD_HOSPITALS','بطاقة عدد المستشفيات','reports'),
+('REPORTS_CHART_BY_DEPARTMENT','عدد البلاغات لكل قسم','reports'),
+('REPORTS_CHART_BY_HOSPITAL_TYPE','عدد البلاغات حسب نوع المستشفى','reports'),
+('REPORTS_CHART_STATUS_DISTRIBUTION','توزيع حالات البلاغات','reports'),
+('REPORTS_CHART_TOP_EMPLOYEES','أكثر الموظفين تكراراً','reports'),
+('REPORTS_CHART_TREND_6M','اتجاه البلاغات آخر 6 أشهر','reports'),
+('REPORTS_CHART_URGENT_PERCENT','نسبة البلاغات الحرجة','reports'),
+
+-- صلاحيات التصدير
+('REPORT_SUMMARY_EXPORT','تصدير تقرير الملخص','reports'),
+('REPORT_DETAILS_EXPORT','تصدير تقرير التفاصيل','reports'),
+('REPORT_DEPARTMENTS_EXPORT','تصدير تقرير الأقسام','reports'),
+('REPORT_EMPLOYEES_EXPORT','تصدير تقرير الموظفين','reports'),
+('REPORT_CRITICAL_EXPORT','تصدير تقرير البلاغات الحرجة','reports'),
+
+-- =========================
+-- FRONTEND إضافية
+-- =========================
+('SUBMIT_COMPLAINT','تقديم بلاغ','complaints'),
+('TRACK_COMPLAINT','متابعة سجل البلاغات','complaints'),
+('VIEW_COMPLAINTS','عرض سجل البلاغات','complaints');
+
+
+-- ==========================================================
+--    ROLE DEFAULT PERMISSIONS — SYSTEM ADMIN OF HOSPITAL
+--    RoleID = 2  (مدير النظام في المستشفى)
+--    جميع الصلاحيات بدون صلاحيات التجمع
+-- ==========================================================
+
+INSERT IGNORE INTO role_default_permissions (RoleID, PermissionKey, DefaultViewScope) VALUES
+
+-- =========================
+-- SYSTEM (بدون صلاحيات التجمع)
+-- =========================
+(2, 'ADMIN_DEPARTMENTS', 'HOSPITAL'),
+(2, 'ADMIN_HOSPITAL', 'HOSPITAL'),
+(2, 'ADMIN_PANEL_ACCESS', 'HOSPITAL'),
+
+-- =========================
+-- AUTH
+-- =========================
+(2, 'ALLOW_MULTI_DEVICE_LOGIN', 'HOSPITAL'),
+
+-- =========================
+-- ARCHIVE
+-- =========================
+(2, 'ARCHIVE_UPLOAD', 'HOSPITAL'),
+(2, 'ARCHIVE_VIEW', 'HOSPITAL'),
+
+-- =========================
+-- COMPLAINTS البلاغات
+-- =========================
+(2, 'COMPLAINT_DELETE','HOSPITAL'),
+(2, 'COMPLAINT_HISTORY_SCOPE','HOSPITAL'),
+(2, 'COMPLAINT_REPLY','HOSPITAL'),
+(2, 'COMPLAINT_STATUS_UPDATE','HOSPITAL'),
+(2, 'COMPLAINT_SUBMIT','HOSPITAL'),
+(2, 'COMPLAINT_TRANSFER','HOSPITAL'),
+(2, 'COMPLAINT_TRANSFER_DEPT','HOSPITAL'),
+(2, 'COMPLAINT_TRANSFER_HOSPITAL','HOSPITAL'),
+(2, 'COMPLAINT_TRANSFER_USER','HOSPITAL'),
+(2, 'COMPLAINT_VIEW','HOSPITAL'),
+(2, 'COMPLAINT_TYPE_CREATE','HOSPITAL'),
+(2, 'COMPLAINT_TYPE_EDIT','HOSPITAL'),
+(2, 'COMPLAINT_TYPE_DELETE','HOSPITAL'),
+(2, 'COMPLAINT_SUBTYPE_CREATE','HOSPITAL'),
+(2, 'COMPLAINT_SUBTYPE_EDIT','HOSPITAL'),
+(2, 'COMPLAINT_SUBTYPE_DELETE','HOSPITAL'),
+(2, 'COMPLAINT_EXPORT','HOSPITAL'),
+(2, 'COMPLAINTS_EXPORT','HOSPITAL'),
+
+-- =========================
+-- DASHBOARD
+-- =========================
+(2, 'DASH_PAGE','HOSPITAL'),
+(2, 'DASH_CARD_TOTALS','HOSPITAL'),
+(2, 'DASH_CARD_OPEN','HOSPITAL'),
+(2, 'DASH_CARD_CLOSED','HOSPITAL'),
+(2, 'DASH_CARD_URGENT','HOSPITAL'),
+(2, 'DASH_CARD_CLOSE_RATE','HOSPITAL'),
+(2, 'DASH_CARD_HOSPITAL_COUNT','HOSPITAL'),
+(2, 'DASH_CHART_CLASSIFICATIONS','HOSPITAL'),
+(2, 'DASH_CHART_DAILY_TREND','HOSPITAL'),
+(2, 'DASH_CHART_MYSTERY_BY_DEPT','HOSPITAL'),
+(2, 'DASH_CHART_TOP_CLINICS','HOSPITAL'),
+(2, 'DASH_URGENT_LIST','HOSPITAL'),
+
+-- =========================
+-- HOSPITAL إدارة المستشفى
+-- =========================
+(2, 'HOSPITAL_LOGS','HOSPITAL'),
+(2, 'HOSPITAL_PERMISSIONS','HOSPITAL'),
+(2, 'HOSPITAL_TRASH','HOSPITAL'),
+(2, 'HOSPITAL_USERS','HOSPITAL'),
+(2, 'HOSPITAL_USER_CREATE','HOSPITAL'),
+(2, 'HOSPITAL_USER_EDIT','HOSPITAL'),
+(2, 'HOSPITAL_USER_DELETE','HOSPITAL'),
+-- ⛔ مستبعد: (HOSPITAL_CREATE)
+
+-- =========================
+-- IMPORTS
+-- =========================
+(2, 'IMPORTS_PAGE','HOSPITAL'),
+(2, 'IMPORTS_937','HOSPITAL'),
+(2, 'IMPORTS_DEPARTMENTS','HOSPITAL'),
+(2, 'IMPORTS_MYSTERY','HOSPITAL'),
+
+-- =========================
+-- IMPROVEMENTS المشاريع التحسينية
+-- =========================
+(2, 'IMPROVEMENTS_MODULE','HOSPITAL'),
+(2, 'IMPROVEMENT_VIEW','HOSPITAL'),
+(2, 'IMPROVEMENT_CREATE','HOSPITAL'),
+(2, 'IMPROVEMENT_EDIT','HOSPITAL'),
+(2, 'IMPROVEMENT_DELETE','HOSPITAL'),
+(2, 'IMPROVEMENT_REPORT_VIEW','HOSPITAL'),
+(2, 'IMPROVEMENT_APPROVE','HOSPITAL'),
+(2, 'IMPROVEMENT_937','HOSPITAL'),
+(2, 'IMPROVEMENT_PG','HOSPITAL'),
+(2, 'IMPROVEMENT_OPEN','HOSPITAL'),
+
+-- =========================
+-- MYSTERY الزائر السري
+-- =========================
+(2, 'MYSTERY_MODULE','HOSPITAL'),
+(2, 'MYSTERY_VIEW','HOSPITAL'),
+(2, 'MYSTERY_REPLY_ADD','HOSPITAL'),
+(2, 'MYSTERY_STATUS_UPDATE','HOSPITAL'),
+(2, 'MYSTERY_TRANSFER_DEPT','HOSPITAL'),
+(2, 'MYSTERY_TRANSFER_EMP','HOSPITAL'),
+(2, 'MYSTERY_DELETE','HOSPITAL'),
+
+-- =========================
+-- PRESSGANEY
+-- =========================
+(2, 'PRESSGANEY_MODULE','HOSPITAL'),
+(2, 'PRESSGANEY_VIEW','HOSPITAL'),
+(2, 'PRESSGANEY_IMPORT','HOSPITAL'),
+
+-- =========================
+-- REPORTS التقارير
+-- =========================
+(2, 'REPORTS_PAGE','HOSPITAL'),
+(2, 'REPORTS_CARD_TOTALS','HOSPITAL'),
+(2, 'REPORTS_CARD_OPEN','HOSPITAL'),
+(2, 'REPORTS_CARD_CLOSED','HOSPITAL'),
+(2, 'REPORTS_CARD_URGENT','HOSPITAL'),
+(2, 'REPORTS_CARD_SLA','HOSPITAL'),
+(2, 'REPORTS_CARD_HOSPITALS','HOSPITAL'),
+(2, 'REPORTS_CHART_BY_DEPARTMENT','HOSPITAL'),
+(2, 'REPORTS_CHART_BY_HOSPITAL_TYPE','HOSPITAL'),
+(2, 'REPORTS_CHART_STATUS_DISTRIBUTION','HOSPITAL'),
+(2, 'REPORTS_CHART_TOP_EMPLOYEES','HOSPITAL'),
+(2, 'REPORTS_CHART_TREND_6M','HOSPITAL'),
+(2, 'REPORTS_CHART_URGENT_PERCENT','HOSPITAL'),
+(2, 'REPORT_SUMMARY_EXPORT','HOSPITAL'),
+(2, 'REPORT_DETAILS_EXPORT','HOSPITAL'),
+(2, 'REPORT_DEPARTMENTS_EXPORT','HOSPITAL'),
+(2, 'REPORT_EMPLOYEES_EXPORT','HOSPITAL'),
+(2, 'REPORT_CRITICAL_EXPORT','HOSPITAL'),
+
+-- =========================
+-- FRONTEND إضافية
+-- =========================
+(2, 'SUBMIT_COMPLAINT','HOSPITAL'),
+(2, 'TRACK_COMPLAINT','HOSPITAL'),
+(2, 'VIEW_COMPLAINTS','HOSPITAL');
 

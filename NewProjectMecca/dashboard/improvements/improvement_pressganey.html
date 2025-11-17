@@ -344,12 +344,21 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
 
         const hospitals = await res.json();
-        const list = Array.isArray(hospitals?.data) ? hospitals.data : Array.isArray(hospitals) ? hospitals : [];
+        
+        // نفس النمط المستخدم في list.html و new.html
+        // API يعيد array مباشرة أو { data: [...] }
+        const list = Array.isArray(hospitals) ? hospitals : (hospitals?.data || []);
+
+        // تسجيل للتحقق (يمكن حذفه لاحقاً)
+        if (list.length > 0) {
+          console.log('🏥 Sample hospital:', list[0]);
+        }
 
         list.forEach(h => {
           const opt = document.createElement('option');
           opt.value = h.HospitalID || h.id || '';
-          opt.textContent = h.NameAr || h.NameEn || h.HospitalNameAr || h.HospitalName || `مستشفى ${h.HospitalID || ''}`;
+          // نفس النمط المستخدم في list.html و new.html
+          opt.textContent = h.NameAr || h.NameEn || `مستشفى ${h.Code || h.HospitalID || ''}`;
           select.appendChild(opt);
         });
       } catch (e) {

@@ -161,6 +161,7 @@
   // عناصر الواجهة
   const bodyEl = document.getElementById('logsBody');
   const hospitalSelect = document.getElementById('hospitalSelect');
+  let hospitalSelectContainer = null; // سيتم تهيئتها بعد تحميل الصفحة
   const refreshBtn = document.querySelector('button.bg-indigo-600');
 
   // تخزين آخر اختيار
@@ -168,15 +169,70 @@
   const saveSel = (obj) => localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
   const getSel  = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; } };
 
+  // دالة لجلب المستخدم من التوكن
+  function getAuth() {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token) {
+        return { user: null, token: null };
+      }
+      const user = JSON.parse(atob(token.split('.')[1]));
+      return { user, token };
+    } catch (e) {
+      console.error('❌ Error decoding token:', e);
+      return { user: null, token: null };
+    }
+  }
+
+  // دالة للتحقق من كون المستخدم مدير تجمع
+  function isClusterManager() {
+    const { user } = getAuth();
+    if (!user) return false;
+    const role = Number(user?.RoleID || user?.roleId || user?.role_id);
+    return role === 1 || role === 4; // مدير تجمع أو مركزي
+  }
+
+  // دالة للحصول على HospitalID للمستخدم
+  function getUserHospitalId() {
+    const { user } = getAuth();
+    if (!user) return null;
+    return Number(user?.HospitalID || user?.hospitalId || user?.hospital_id) || null;
+  }
+
   // هيدر المصادقة (لو عندك توكن JWT)
   function authHeaders(){
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const { token } = getAuth();
     return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
                  : { 'Content-Type': 'application/json' };
   }
 
-  // 1) تحميل المستشفيات الفعّالة من القاعدة
+  // 1) تحميل المستشفيات الفعّالة من القاعدة (للمديرين فقط)
   async function loadHospitals(){
+    const isCluster = isClusterManager();
+    const userHospitalId = getUserHospitalId();
+
+    // الحصول على حاوية اختيار المستشفى
+    if (!hospitalSelectContainer && hospitalSelect) {
+      hospitalSelectContainer = hospitalSelect.closest('.bg-white');
+    }
+
+    // إذا كان موظف أو مدير نظام، أخفي قائمة اختيار المستشفى
+    if (!isCluster) {
+      if (hospitalSelectContainer) {
+        hospitalSelectContainer.style.display = 'none';
+      }
+      
+      // استخدم HospitalID الخاص بالمستخدم مباشرة
+      if (userHospitalId) {
+        hospitalSelect.value = userHospitalId;
+        await loadLogs(); // اعرض السجلات فورًا
+      } else {
+        bodyEl.innerHTML = emptyRow('لا يمكن تحديد المستشفى الخاص بك.');
+      }
+      return;
+    }
+
+    // إذا كان مدير تجمع، اعرض قائمة المستشفيات
     try{
       const res = await fetch(`${API_BASE}/api/hospitals?active=1`, { headers: authHeaders() });
       if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -255,16 +311,29 @@
   // 5) أحداث
   document.addEventListener('DOMContentLoaded', loadHospitals);
 
-  hospitalSelect.addEventListener('change', async () => {
-    const id = hospitalSelect.value;
-    const name = hospitalSelect.options[hospitalSelect.selectedIndex]?.textContent?.trim() || '';
-    if (!id){
-      bodyEl.innerHTML = emptyRow('اختر مستشفى لعرض السجلات.');
-      return;
-    }
-    saveSel({ id, name });
-    await loadLogs();
-  });
+  // إضافة مستمع لتغيير المستشفى (للمديرين فقط)
+  if (hospitalSelect) {
+    hospitalSelect.addEventListener('change', async () => {
+      const isCluster = isClusterManager();
+      // إذا لم يكن مدير تجمع، لا تسمح بتغيير المستشفى
+      if (!isCluster) {
+        const userHospitalId = getUserHospitalId();
+        if (userHospitalId) {
+          hospitalSelect.value = userHospitalId;
+        }
+        return;
+      }
+
+      const id = hospitalSelect.value;
+      const name = hospitalSelect.options[hospitalSelect.selectedIndex]?.textContent?.trim() || '';
+      if (!id){
+        bodyEl.innerHTML = emptyRow('اختر مستشفى لعرض السجلات.');
+        return;
+      }
+      saveSel({ id, name });
+      await loadLogs();
+    });
+  }
 
   if (refreshBtn){
     refreshBtn.addEventListener('click', async () => {
