@@ -57,6 +57,12 @@ async function applyHospitalTemplate({ host, user, password, dbName }) {
     console.log(`✅ تم تنفيذ القالب بنجاح على القاعدة ${dbName}`);
   } catch (err) {
     console.error('❌ خطأ أثناء تنفيذ القالب:', err.message);
+    console.error('❌ SQL Error Code:', err.code);
+    console.error('❌ SQL State:', err.sqlState);
+    console.error('❌ SQL Message:', err.sqlMessage);
+    if (err.sql) {
+      console.error('❌ SQL Query (first 500 chars):', err.sql.substring(0, 500));
+    }
     throw err;
   } finally {
     await conn.end();
@@ -165,8 +171,17 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
       dbName
     });
 
-    // 4) إنشاء قاعدة المستشفى (إن لم تكن موجودة) + فتح اتصال Tenant
-    await central.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
+    // 4) إنشاء قاعدة المستشفى (حذف القديمة إن كانت موجودة من محاولة فاشلة)
+    // ملاحظة: في الإنتاج قد ترغبين بالاحتفاظ بالبيانات، لكن للتطوير نعيد إنشاء القاعدة
+    try {
+      await central.query(`DROP DATABASE IF EXISTS \`${dbName}\``);
+      console.log(`🗑️ [Provision] تم حذف القاعدة القديمة (إن كانت موجودة): ${dbName}`);
+    } catch (dropErr) {
+      console.warn('⚠️ [Provision] تحذير عند حذف القاعدة:', dropErr.message);
+    }
+    
+    await central.query(`CREATE DATABASE \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
+    console.log(`✅ [Provision] تم إنشاء القاعدة: ${dbName}`);
 
     // 5) تنفيذ قالب المستشفى من ملف hospital_template.sql
     console.log('🔍 [Provision] تنفيذ قالب المستشفى...');
@@ -283,21 +298,42 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Provision Hospital Error:', err);
+    console.error('❌ Provision Hospital Error:', err);
+    console.error('❌ Error Stack:', err.stack);
+    console.error('❌ Error Details:', {
+      message: err.message,
+      code: err.code,
+      sqlState: err.sqlState,
+      sqlMessage: err.sqlMessage
+    });
 
     // محاولة تنظيف جزئي (اختياري): حذف سجل المستشفى إن فشل كل شيء قبل الإكمال
     try {
       if (hospitalId) {
         await central.query('DELETE FROM hospitals WHERE HospitalID = ?', [hospitalId]);
+        console.log('✅ تم حذف سجل المستشفى من القاعدة المركزية');
       }
       // ملاحظة: حذف قاعدة البيانات تلقائيًا قد لا يكون مرغوبًا في بيئة الإنتاج
       // لو حبيتي أضيف حذف القاعدة DB نفّذه بحذر:
       // await central.query(`DROP DATABASE IF EXISTS \`${dbName}\``);
     } catch (e) {
-      console.error('Rollback note:', e.message);
+      console.error('⚠️ Rollback note:', e.message);
     }
 
-    return res.status(500).json({ error: 'تعذر إنشاء المستشفى. راجعي السجل.' });
+    // إرسال تفاصيل الخطأ للعميل (في بيئة التطوير فقط)
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'تعذر إنشاء المستشفى. راجعي السجل.'
+      : `تعذر إنشاء المستشفى: ${err.message}${err.sqlMessage ? ` (SQL: ${err.sqlMessage})` : ''}`;
+
+    return res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV !== 'production' ? {
+        message: err.message,
+        code: err.code,
+        sqlState: err.sqlState,
+        sqlMessage: err.sqlMessage
+      } : undefined
+    });
   }
 });
 

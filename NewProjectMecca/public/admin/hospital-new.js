@@ -129,7 +129,12 @@ document.getElementById('hospitalForm').addEventListener('submit', async (e) => 
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.error || `HTTP ${res.status}`);
+      // إظهار تفاصيل الخطأ إذا كانت متوفرة
+      let errorMsg = data.error || `HTTP ${res.status}`;
+      if (data.details) {
+        errorMsg += `\n\nالتفاصيل:\n${JSON.stringify(data.details, null, 2)}`;
+      }
+      throw new Error(errorMsg);
     }
 
     // إظهار رسالة النجاح

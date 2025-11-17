@@ -677,7 +677,7 @@ VALUES
 -- Table: logs
 -- وصف: لتخزين سجل العمليات (Logs) في النظام
 -- =========================================================
-
+DROP TABLE IF EXISTS `logs`;
 CREATE TABLE `logs` (
   `LogID` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `HospitalID` INT UNSIGNED NOT NULL,
@@ -711,6 +711,7 @@ COLLATE=utf8mb4_unicode_ci;
 -- Table: trash_bin
 -- وصف: سلة المحذوفات لتتبع الكيانات المحذوفة واستعادتها أو تنظيفها
 -- =========================================================
+DROP TABLE IF EXISTS `trash_bin`;
 CREATE TABLE `trash_bin` (
   `TrashID` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `HospitalID` INT UNSIGNED NOT NULL,
@@ -798,6 +799,7 @@ CREATE TABLE IF NOT EXISTS role_default_permissions (
   FOREIGN KEY (PermissionKey) REFERENCES permissions(PermissionKey) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+DROP TABLE IF EXISTS mystery_complaints;
 CREATE TABLE mystery_complaints (
   MysteryID BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   HospitalID INT UNSIGNED NOT NULL,
@@ -969,7 +971,19 @@ CREATE TABLE IF NOT EXISTS improvement_projects (
   CreatedByUserID INT UNSIGNED NULL,
   CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  IsDeleted TINYINT(1) DEFAULT 0
+  ApprovedBy INT NULL,
+  ApprovedAt DATETIME NULL,
+  IsDeleted TINYINT(1) DEFAULT 0,
+  -- SMART Criteria
+  Smart_Specific TINYINT(1) DEFAULT 0,
+  Smart_Measurable TINYINT(1) DEFAULT 0,
+  Smart_Achievable TINYINT(1) DEFAULT 0,
+  Smart_Realistic TINYINT(1) DEFAULT 0,
+  Smart_TimeBound TINYINT(1) DEFAULT 0,
+  TeamMembers TEXT NULL,
+  SuccessCriteria TEXT NULL COMMENT 'معايير النجاح',
+  ProgressNotes TEXT NULL COMMENT 'ملاحظات التقدم',
+  ProgressPercent DECIMAL(5,2) NULL DEFAULT 0
 );
 
 -- جدول سجل التعديلات للمشاريع التحسينية
@@ -1216,28 +1230,8 @@ CREATE TABLE IF NOT EXISTS file_archive (
 );
 
 
-ALTER TABLE improvement_projects
-   ADD COLUMN SmartSpecific TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'محدد (Specific)',
- ADD COLUMN SmartMeasurable TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'قابل للقياس (Measurable)',
-  ADD COLUMN SmartAchievable TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'قابل للتحقق (Achievable)',
-  ADD COLUMN SmartRealistic TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'واقعي (Realistic)',
-   ADD COLUMN SmartTimebound TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'بزمن محدد (Time-bound)';
-
-
-ALTER TABLE improvement_projects
-ADD COLUMN TeamMembers TEXT NULL;
-
-
-ALTER TABLE improvement_projects 
-ADD COLUMN SuccessCriteria TEXT NULL COMMENT 'معايير النجاح';
-
-ALTER TABLE improvement_projects 
-ADD COLUMN ProgressNotes TEXT NULL COMMENT 'ملاحظات التقدم';
-
-
-ALTER TABLE improvement_projects
-ADD COLUMN ProgressPercent DECIMAL(5,2) NULL DEFAULT 0
-AFTER ProgressNotes;
+-- ملاحظة: جميع الأعمدة (SMART Criteria, TeamMembers, SuccessCriteria, ProgressNotes, ProgressPercent) موجودة الآن في CREATE TABLE improvement_projects
+-- لا حاجة لـ ALTER TABLE لأننا نحذف القاعدة بالكامل قبل إنشائها من جديد
 
 -- ملاحظة: إذا كنت لا تريد قيود المفاتيح الخارج
 ALTER TABLE file_archive
@@ -1332,11 +1326,7 @@ INSERT INTO permissions (PermissionKey, NameAr, Category) VALUES
 
 
 
-
-
-ALTER TABLE improvement_projects
-ADD COLUMN ApprovedBy INT NULL AFTER UpdatedAt,
-ADD COLUMN ApprovedAt DATETIME NULL AFTER ApprovedBy;
+-- ملاحظة: أعمدة ApprovedBy و ApprovedAt موجودة الآن في CREATE TABLE improvement_projects
 
 CREATE TABLE IF NOT EXISTS treatment_trips (
   TripID INT AUTO_INCREMENT PRIMARY KEY,
@@ -1370,7 +1360,7 @@ ADD COLUMN IsAvailable TINYINT(1) DEFAULT 0;
 ALTER TABLE zones
 ADD COLUMN IsAvailable TINYINT(1) DEFAULT 0;
 
-
+DROP TABLE IF EXISTS improvement_projects_937;
 CREATE TABLE improvement_projects_937 (
     Project937ID BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     GlobalID CHAR(36) NOT NULL,
@@ -1462,4 +1452,64 @@ CREATE TABLE IF NOT EXISTS improvement_projects_other (
   INDEX idx_priority (Priority),
   INDEX idx_created (CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ملاحظة: جدول improvement_projects_937 موجود أعلاه (السطر 1364)
+
+DROP TABLE IF EXISTS improvement_pressganey_projects;
+CREATE TABLE improvement_pressganey_projects (
+    ProjectID BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    -- معلومات المستشفى
+    HospitalID INT NOT NULL,
+
+    -- النطاق والرحلة العلاجية
+    ZoneID INT NULL,
+    TripID INT NULL,
+
+    -- السؤال أو بند الاستبيان
+    SurveyQuestion TEXT NOT NULL,
+
+    -- نسب الربع السنوية
+    Q1_Percentage DECIMAL(5,2) NULL,
+    Q2_Percentage DECIMAL(5,2) NULL,
+    Q3_Percentage DECIMAL(5,2) NULL,
+    Q4_Percentage DECIMAL(5,2) NULL,
+
+    -- الفترة الزمنية للقياس
+    MeasurementPeriod VARCHAR(255) NULL,
+
+    -- التحليل والتحسين
+    ProjectTitle VARCHAR(255) NOT NULL,
+    ProblemStatement TEXT NOT NULL,
+    AimStatement TEXT NOT NULL,
+    ProposedSolution TEXT NOT NULL,
+
+    -- تفاصيل المشروع
+    Priority ENUM('LOW','MEDIUM','HIGH','CRITICAL') DEFAULT 'MEDIUM',
+    ProjectOwner VARCHAR(255) NULL,
+    Status ENUM('DRAFT','PROPOSED','APPROVED','REJECTED','IN_PROGRESS','COMPLETED') DEFAULT 'DRAFT',
+
+    -- التواريخ
+    StartDate DATE NULL,
+    DueDate DATE NULL,
+
+    -- وقت الإنشاء والتعديل
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- إضافة صلاحيات أنواع المشاريع التحسينية
+-- =====================================================
+-- هذا السكريبت يضيف 3 صلاحيات جديدة لاختيار نوع المشروع:
+-- 1. IMPROVEMENT_937 - مشروع 937
+-- 2. IMPROVEMENT_PG - مشروع PressGaney
+-- 3. IMPROVEMENT_OPEN - مشروع مفتوح / أخرى
+-- =====================================================
+
+-- إضافة الصلاحيات في جدول permissions
+INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
+('IMPROVEMENT_937',  'مشروع 937', 'improvement'),
+('IMPROVEMENT_PG',   'مشروع PressGaney', 'improvement'),
+('IMPROVEMENT_OPEN', 'مشروع مفتوح / أخرى', 'improvement');
 
