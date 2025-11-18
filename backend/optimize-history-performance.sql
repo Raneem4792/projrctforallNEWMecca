@@ -1,5 +1,5 @@
 -- تحسينات الأداء لسجل البلاغات
--- تشغيل هذا الملف على القاعدة المركزية hospitals_mecca3
+-- تشغيل هذا الملف على القاعدة المركزية hospitals_mecca4
 
 -- 1. فهارس أساسية للبحث السريع
 CREATE INDEX IF NOT EXISTS idx_complaints_ticket ON complaints (TicketNumber);

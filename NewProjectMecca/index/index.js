@@ -224,27 +224,36 @@ function applySystemIconsToDom(lang = getCurrentLanguage()) {
   const records = systemIconsState.records;
   if (!records || Object.keys(records).length === 0) return;
 
-  const normalizeFallback = (imgEl) => {
-    const fallback = imgEl?.parentElement?.querySelector('.icon-fallback');
+  const normalizeFallback = (el) => {
+    const fallback = el?.parentElement?.querySelector('.icon-fallback');
     if (fallback) {
       fallback.classList.add('hidden');
     }
   };
 
-  document.querySelectorAll('.dynamic-icon').forEach(img => {
-    const key = img.dataset.key;
+  // تطبيق الأيقونات كـ SVG مباشرة (بدلاً من <img>)
+  document.querySelectorAll('.dynamic-icon').forEach(el => {
+    const key = el.dataset.key;
     if (!key) return;
     const icon = records[key];
     if (!icon || !icon.IconPath) return;
 
-    const src = buildIconUrl(icon.IconPath);
-    if (src) {
-      if (img.src !== src) {
-        img.src = src;
+    // إذا كان IconPath يحتوي على SVG كامل، نضعه مباشرة
+    if (icon.IconPath.trim().startsWith('<svg')) {
+      el.innerHTML = icon.IconPath;
+      el.classList.remove('hidden');
+      normalizeFallback(el);
+    } else {
+      // للتوافق مع الطريقة القديمة (إذا كان هناك مسار ملف)
+      const src = buildIconUrl(icon.IconPath);
+      if (src && el.tagName === 'IMG') {
+        if (el.src !== src) {
+          el.src = src;
+        }
+        el.alt = getIconTitle(icon, lang) || key;
+        el.classList.remove('hidden');
+        normalizeFallback(el);
       }
-      img.alt = getIconTitle(icon, lang) || key;
-      img.classList.remove('hidden');
-      normalizeFallback(img);
     }
   });
 

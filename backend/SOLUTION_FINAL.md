@@ -80,7 +80,7 @@ npm start
 ```
 
 ### **4. النتيجة:**
-- ✅ لا يوجد خطأ `hospitals_mecca3.user_permissions`
+- ✅ لا يوجد خطأ `hospitals_mecca4.user_permissions`
 - ✅ النظام يقرأ من `hosp_aaaa.user_permissions`
 - ✅ فلتر القسم يعمل بشكل صحيح
 - ✅ المستخدم يرى بلاغات القسم 2 فقط

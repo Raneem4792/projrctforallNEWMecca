@@ -4,8 +4,8 @@ export default {
   central: {
     host: process.env.CENTRAL_DB_HOST || '127.0.0.1',
     user: process.env.CENTRAL_DB_USER || 'root',
-    password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
-    database: process.env.CENTRAL_DB_NAME || 'hospitals_mecca3'
+    password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+    database: process.env.CENTRAL_DB_NAME || 'hospitals_mecca4'
   },
   
   // JWT
