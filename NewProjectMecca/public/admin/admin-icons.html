@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>إدارة الأيقونات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="../assets/js/theme.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50" style="font-family:'Tajawal',sans-serif">
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../admin/admin-hub.html" class="text-white hover:text-blue-200 transition-colors">مركز الإدارة</a>
+          <a href="../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center">
+            🌐 English
+          </button>
+        </nav>
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 pt-24 pb-14 flex-1 w-full max-w-6xl">
+    <div class="flex items-center justify-between flex-wrap gap-4 mb-8">
+      <div>
+        <p class="text-sm uppercase tracking-wider text-blue-500 font-semibold">Icon Manager</p>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B]">إدارة الأيقونات</h1>
+        <p class="text-gray-600 mt-2">تحديث أسماء وصور الأيقونات في الصفحة الرئيسية</p>
+      </div>
+      <div class="flex gap-3">
+        <button id="refreshIcons" class="px-4 py-2 rounded-lg border border-blue-500 text-blue-600 hover:bg-blue-50 transition text-sm">تحديث القائمة</button>
+        <a href="../admin/admin-hub.html" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition text-sm">عودة لمركز الإدارة</a>
+      </div>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900">لوحة الأيقونات</h2>
+          <p class="text-sm text-gray-500 mt-1">أي تعديل سيتم تطبيقه مباشرة على الصفحة الرئيسية</p>
+        </div>
+        <span id="lastSync" class="text-xs text-gray-500">—</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-right">
+          <thead class="bg-gray-50 text-sm text-gray-600">
+            <tr>
+              <th class="py-3 px-4">الأيقونة الحالية</th>
+              <th class="py-3 px-4">الاسم العربي</th>
+              <th class="py-3 px-4">الاسم الإنجليزي</th>
+              <th class="py-3 px-4">رفع أيقونة جديدة</th>
+              <th class="py-3 px-4">آخر تحديث</th>
+              <th class="py-3 px-4 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="iconsTable" class="divide-y divide-gray-100 bg-white"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="emptyState" class="hidden text-center py-16">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <p class="text-gray-600">لا توجد أيقونات للعرض حالياً</p>
+    </div>
+  </main>
+
+  <footer class="bg-gray-900 text-white py-10 mt-auto">
+    <div class="container mx-auto px-4 text-center text-sm text-gray-300">
+      © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+    </div>
+  </footer>
+
+  <div id="toast" class="fixed bottom-6 right-6 w-72 p-4 rounded-xl shadow-2xl text-sm hidden"></div>
+
+  <script>
+    const API_BASE = window.API_BASE || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3001' : '');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+    const iconsTable = document.getElementById('iconsTable');
+    const lastSyncEl = document.getElementById('lastSync');
+    const emptyState = document.getElementById('emptyState');
+    const toast = document.getElementById('toast');
+    const refreshButton = document.getElementById('refreshIcons');
+
+    const state = {
+      icons: [],
+      loadingKeys: new Set()
+    };
+
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const escapeHtml = (value = '') =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+
+    function buildIconUrl(pathValue) {
+      if (!pathValue) return '';
+      if (/^https?:\/\//i.test(pathValue) || pathValue.startsWith('data:')) {
+        return pathValue;
+      }
+      const normalized = pathValue.startsWith('/') ? pathValue : `/${pathValue}`;
+      return API_BASE ? `${API_BASE}${normalized}` : normalized;
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      try {
+        const date = new Date(value);
+        return date.toLocaleString('ar-SA', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return value;
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      toast.textContent = message;
+      toast.className = `fixed bottom-6 right-6 w-72 p-4 rounded-xl shadow-2xl text-sm text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-600'}`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
+
+    async function fetchIcons() {
+      try {
+        const res = await fetch(`${API_BASE}/api/icons`, {
+          headers: { 'Accept': 'application/json', ...headers },
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        state.icons = await res.json();
+        lastSyncEl.textContent = `آخر مزامنة: ${new Date().toLocaleString('ar-SA')}`;
+        renderIcons();
+      } catch (error) {
+        console.error('فشل جلب الأيقونات:', error);
+        showToast('تعذر تحميل الأيقونات', 'error');
+      }
+    }
+
+    function renderIcons() {
+      if (!state.icons.length) {
+        emptyState.classList.remove('hidden');
+        iconsTable.innerHTML = '';
+        return;
+      }
+      emptyState.classList.add('hidden');
+      iconsTable.innerHTML = state.icons.map(icon => {
+        const key = escapeHtml(icon.IconKey);
+        const ar = escapeHtml(icon.TitleAr || '');
+        const en = escapeHtml(icon.TitleEn || '');
+        const previewUrl = buildIconUrl(icon.IconPath);
+        return `
+          <tr class="text-sm">
+            <td class="py-4 px-4">
+              <div class="flex items-center gap-4">
+                <img id="preview-${key}" src="${previewUrl}" alt="${ar || key}" class="w-14 h-14 rounded-lg border border-gray-200 object-contain bg-white" />
+                <div class="text-xs text-gray-500 break-all">${escapeHtml(icon.IconPath || '')}</div>
+              </div>
+            </td>
+            <td class="py-4 px-4">
+              <input id="nameAr-${key}" type="text" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-400" value="${ar}" placeholder="الاسم بالعربي" />
+            </td>
+            <td class="py-4 px-4">
+              <input id="nameEn-${key}" type="text" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-400" value="${en}" placeholder="English name (اختياري)" dir="ltr" />
+            </td>
+            <td class="py-4 px-4">
+              <input id="file-${key}" type="file" accept=".png,.jpg,.jpeg,.gif,.svg,.webp" class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer" onchange="previewIcon('${key}', event)" />
+            </td>
+            <td class="py-4 px-4 text-gray-500 text-xs" id="updated-${key}">${formatDate(icon.UpdatedAt)}</td>
+            <td class="py-4 px-4 text-center">
+              <button class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      onclick="saveIcon('${key}', this)">
+                حفظ
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function previewIcon(key, event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const preview = document.getElementById(`preview-${key}`);
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function saveIcon(key, button) {
+      if (state.loadingKeys.has(key)) return;
+
+      const nameAr = document.getElementById(`nameAr-${key}`)?.value.trim();
+      const nameEn = document.getElementById(`nameEn-${key}`)?.value.trim();
+      const fileInput = document.getElementById(`file-${key}`);
+      const file = fileInput?.files?.[0];
+
+      if (!nameAr) {
+        showToast('الاسم العربي مطلوب', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('IconKey', key);
+      formData.append('TitleAr', nameAr);
+      formData.append('TitleEn', nameEn || '');
+      if (file) {
+        formData.append('IconFile', file);
+      }
+
+      state.loadingKeys.add(key);
+      button.disabled = true;
+      button.textContent = 'جار الحفظ...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/icons/update`, {
+          method: 'POST',
+          headers,
+          body: formData,
+          credentials: 'include'
+        });
+
+        if (!res.ok) {
+          const errorPayload = await res.json().catch(() => ({}));
+          throw new Error(errorPayload.message || `HTTP ${res.status}`);
+        }
+
+        const payload = await res.json();
+        const updatedIcon = payload.icon;
+        state.icons = state.icons.map(icon => icon.IconKey === key ? updatedIcon : icon);
+        renderIcons();
+        showToast('تم حفظ التحديث بنجاح');
+      } catch (error) {
+        console.error('فشل تحديث الأيقونة:', error);
+        showToast(error.message || 'تعذر حفظ التحديث', 'error');
+      } finally {
+        state.loadingKeys.delete(key);
+        button.disabled = false;
+        button.textContent = 'حفظ';
+        if (fileInput) {
+          fileInput.value = '';
+        }
+      }
+    }
+
+    refreshButton.addEventListener('click', () => {
+      fetchIcons();
+    });
+
+    window.saveIcon = saveIcon;
+    window.previewIcon = previewIcon;
+
+    fetchIcons();
+  </script>
+
+  <script src="../assets/js/auth-check.js"></script>
+</body>
+</html>
+
+

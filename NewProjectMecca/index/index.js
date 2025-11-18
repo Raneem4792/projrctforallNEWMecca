@@ -14,6 +14,18 @@
 let isScrolled = false;
 let animationObserver = null;
 let counterObserver = null;
+const systemIconsState = {
+  records: {},
+  lastLoadedAt: null
+};
+
+function getApiBase() {
+  if (window.API_BASE) {
+    return window.API_BASE;
+  }
+  const host = window.location.hostname;
+  return (host === 'localhost' || host === '127.0.0.1') ? 'http://localhost:3001' : '';
+}
 
 // ========================================
 // وظائف إدارة شريط التنقل
@@ -65,11 +77,7 @@ function initializeMobileMenu() {
  */
 async function fetchLandingStats() {
   // تحديد عنوان الـ API
-  const apiBase = window.API_BASE || (
-    (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-      ? 'http://localhost:3001'
-      : ''
-  );
+  const apiBase = getApiBase();
 
   try {
     // ✅ استخدام API الجديد الذي يجلب البيانات من قاعدة البيانات
@@ -164,6 +172,114 @@ function updateStatsWithDefaults() {
   console.warn('[LandingStats] استخدام القيم الافتراضية من HTML');
   // القيم الافتراضية موجودة مسبقاً في HTML (data-target attributes)
   // لذلك لا حاجة للتعديل - فقط نتركها كما هي
+}
+
+// ========================================
+// إدارة الأيقونات الديناميكية
+// ========================================
+
+function initializeSystemIcons() {
+  loadSystemIcons();
+  window.addEventListener('landing-language-change', (event) => {
+    const lang = event?.detail?.lang || getCurrentLanguage();
+    applySystemIconsToDom(lang);
+  });
+}
+
+async function loadSystemIcons() {
+  try {
+    const apiBase = getApiBase();
+    const authToken = localStorage.getItem('authToken') || localStorage.getItem('token');
+    const headers = { 'Accept': 'application/json' };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    const res = await fetch(`${apiBase}/api/icons`, {
+      headers,
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      throw new Error(`Icons API responded with ${res.status}`);
+    }
+
+    const data = await res.json();
+    systemIconsState.records = Array.isArray(data)
+      ? data.reduce((acc, icon) => {
+          if (icon?.IconKey) {
+            acc[icon.IconKey] = icon;
+          }
+          return acc;
+        }, {})
+      : {};
+    systemIconsState.lastLoadedAt = Date.now();
+
+    applySystemIconsToDom(getCurrentLanguage());
+  } catch (error) {
+    console.warn('[Icons] فشل تحميل الأيقونات الديناميكية:', error);
+  }
+}
+
+function applySystemIconsToDom(lang = getCurrentLanguage()) {
+  const records = systemIconsState.records;
+  if (!records || Object.keys(records).length === 0) return;
+
+  const normalizeFallback = (imgEl) => {
+    const fallback = imgEl?.parentElement?.querySelector('.icon-fallback');
+    if (fallback) {
+      fallback.classList.add('hidden');
+    }
+  };
+
+  document.querySelectorAll('.dynamic-icon').forEach(img => {
+    const key = img.dataset.key;
+    if (!key) return;
+    const icon = records[key];
+    if (!icon || !icon.IconPath) return;
+
+    const src = buildIconUrl(icon.IconPath);
+    if (src) {
+      if (img.src !== src) {
+        img.src = src;
+      }
+      img.alt = getIconTitle(icon, lang) || key;
+      img.classList.remove('hidden');
+      normalizeFallback(img);
+    }
+  });
+
+  document.querySelectorAll('.dynamic-title').forEach(el => {
+    const key = el.dataset.key;
+    if (!key) return;
+    const icon = records[key];
+    if (!icon) return;
+    const title = getIconTitle(icon, lang);
+    if (title) {
+      el.textContent = title;
+    }
+  });
+}
+
+function getIconTitle(icon, lang = 'ar') {
+  if (!icon) return '';
+  if (lang === 'en' && icon.TitleEn) {
+    return icon.TitleEn;
+  }
+  return icon.TitleAr || icon.TitleEn || '';
+}
+
+function buildIconUrl(pathValue) {
+  if (!pathValue) return '';
+  if (/^https?:\/\//i.test(pathValue) || pathValue.startsWith('data:')) {
+    return pathValue;
+  }
+  const normalized = pathValue.startsWith('/') ? pathValue : `/${pathValue}`;
+  const apiBase = getApiBase();
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
+function getCurrentLanguage() {
+  return window.currentLanguage || document.documentElement.getAttribute('lang') || 'ar';
 }
 
 // ========================================
@@ -642,6 +758,7 @@ function initializeApp() {
   // تهيئة الخدمات
   initializeServices();
   initializeServiceIcons();
+  initializeSystemIcons();
   
   // تهيئة النماذج
   initializeForms();

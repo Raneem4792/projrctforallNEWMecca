@@ -1831,3 +1831,34 @@ DELIMITER ;
 --   AND COLUMN_NAME IN ('ProcessingDurationHours', 'ProcessingDeadline');
 
 
+-- =====================================================
+--    ICON MANAGER - SYSTEM ICONS
+-- =====================================================
+-- هذا الجدول يدير أسماء الأيقونات وروابط الصور بشكل ديناميكي
+-- ويتم استخدامه في الصفحة الرئيسية ولوحة الإدارة بدون المساس بالصلاحيات
+
+CREATE TABLE IF NOT EXISTS system_icons (
+    IconKey   VARCHAR(50)  NOT NULL PRIMARY KEY COMMENT 'المفتاح الثابت مثل improvement, followup',
+    TitleAr   VARCHAR(255) NOT NULL COMMENT 'الاسم الظاهر بالعربي',
+    TitleEn   VARCHAR(255) NULL COMMENT 'الاسم الظاهر بالإنجليزي',
+    IconPath  VARCHAR(255) NOT NULL COMMENT 'رابط صورة الأيقونة (PNG/GIF/SVG)',
+    UpdatedAt TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) COMMENT='Dynamic system icons used across the landing page and admin center';
+
+-- القيم الافتراضية الأساسية — يمكن تحديثها من لوحة الإدارة
+INSERT INTO system_icons (IconKey, TitleAr, TitleEn, IconPath) VALUES
+('improvement', 'المشاريع التحسينية', 'Improvement Projects', 'assets/icons/default-improvement.png'),
+('followup', 'متابعة البلاغ', 'Track Complaint', 'assets/icons/default-follow.png'),
+('newComplaint', 'تقديم بلاغ جديد', 'Submit New Complaint', 'assets/icons/default-plus.png'),
+('excel', 'رفع الإكسل', 'Excel Import', 'assets/icons/default-excel.png'),
+('mystery', 'بلاغات الزائر السري', 'Mystery Complaints', 'assets/icons/default-mystery.png'),
+('pressganey', 'بيرس جيني', 'Press Ganey', 'assets/icons/default-press.png'),
+('archive', 'أرشيف المرفقات', 'File Archive', 'assets/icons/default-archive.png'),
+('cluster', 'بلاغات إدارة التجمع', 'Cluster Reports', 'assets/icons/default-cluster.png'),
+('admin', 'الإدارة', 'Administration', 'assets/icons/default-admin.png')
+ON DUPLICATE KEY UPDATE
+  TitleAr = VALUES(TitleAr),
+  TitleEn = VALUES(TitleEn),
+  IconPath = VALUES(IconPath);
+
+

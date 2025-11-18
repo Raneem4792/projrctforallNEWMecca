@@ -116,12 +116,13 @@
         <div id="cardSubmit" class="card-hover bg-white dark:bg-gray-800 rounded-xl p-7 shadow-lg border border-gray-100 dark:border-gray-700 transform scale-105" style="display:none"
              tabindex="0" role="button" aria-label="تقديم بلاغ جديد" onclick="window.location.href='../public/complaints/submit/submit-complaint.html'">
           <div class="service-icon w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="newComplaint" alt="تقديم بلاغ جديد" width="48" height="48" loading="lazy" />
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
             </svg>
           </div>
-          <h3 id="service1-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">تقديم بلاغ جديد</h3>
+          <h3 id="service1-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="newComplaint">تقديم بلاغ جديد</h3>
           <p id="service1-desc" class="text-gray-600 dark:text-gray-300 text-center">رفع بلاغ رسمي بسهولة</p>
           <div class="text-center mt-3">
             <span id="service1-action" class="text-blue-600 dark:text-blue-400 text-sm font-medium">ابدأ الآن ↗</span>
@@ -132,12 +133,13 @@
         <div id="cardTrack" class="card-hover bg-white dark:bg-gray-800 rounded-xl p-7 shadow-lg border border-gray-100 dark:border-gray-700 transform scale-105" style="display:none"
              tabindex="0" role="button" aria-label="متابعة بلاغ" onclick="window.location.href='../public/complaints/track/track-complaint.html'">
           <div class="service-icon w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="followup" alt="متابعة البلاغ" width="48" height="48" loading="lazy" />
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
-          <h3 id="service2-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">متابعة بلاغ</h3>
+          <h3 id="service2-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="followup">متابعة بلاغ</h3>
           <p id="service2-desc" class="text-gray-600 dark:text-gray-300 text-center">تتبّع حالة البلاغ</p>
           <div class="text-center mt-3">
             <span id="service2-action" class="text-blue-600 dark:text-blue-400 text-sm font-medium">ابدأ الآن ↗</span>
@@ -164,14 +166,15 @@
              tabindex="0" role="button" aria-label="المشاريع التحسينية"
              onclick="window.location.href='../dashboard/improvements/list.html'">
           <div class="service-icon w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="improvement" alt="المشاريع التحسينية" width="48" height="48" loading="lazy" />
             <!-- أيقونة كليب بورد مع علامة + -->
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
               <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     d="M9 2h6a2 2 0 012 2v2H7V4a2 2 0 012-2zM7 8h10v12a2 2 0 01-2 2H9a2 2 0 01-2-2V8z"/>
               <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 12v6m-3-3h6"/>
             </svg>
           </div>
-          <h3 id="service5-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">المشاريع التحسينية</h3>
+          <h3 id="service5-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="improvement">المشاريع التحسينية</h3>
           <p id="service5-desc" class="text-gray-600 dark:text-gray-300 text-center">اعرض، عدّل، وأنشئ مشروع تحسيني</p>
           <div class="text-center mt-3">
             <span id="service5-action" class="text-blue-600 dark:text-blue-400 text-sm font-medium">افتح لوحة المشاريع ↗</span>
@@ -184,13 +187,14 @@
            class="block bg-white dark:bg-gray-800 rounded-xl p-7 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-0.5 transition hidden"
            tabindex="0" role="button" aria-label="الإدارة">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="admin" alt="الإدارة" width="48" height="48" loading="lazy" />
             <!-- أيقونة إدارة -->
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-width="2" d="M12 6V3m0 18v-3M6 12H3m18 0h-3M5 5l2.1 2.1M16.9 16.9 19 19M5 19l2.1-2.1M16.9 7.1 19 5"/>
               <circle cx="12" cy="12" r="3" stroke-width="2"/>
             </svg>
           </div>
-          <h3 id="service4-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">الإدارة</h3>
+          <h3 id="service4-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="admin">الإدارة</h3>
           <p id="service4-desc" class="text-gray-600 dark:text-gray-300 text-center">إدارة المستشفيات والمستشفى</p>
         </a>
 
@@ -199,12 +203,13 @@
              tabindex="0" role="button" aria-label="إرفاق الإكسل"
              onclick="window.location.href='imports.html'">
           <div class="service-icon w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="excel" alt="رفع الإكسل" width="48" height="48" loading="lazy" />
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
             </svg>
           </div>
-          <h3 id="service6-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">إرفاق الإكسل</h3>
+          <h3 id="service6-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="excel">إرفاق الإكسل</h3>
           <p id="service6-desc" class="text-gray-600 dark:text-gray-300 text-center">936 • الزائر السري • الأقسام</p>
           <div class="text-center mt-3">
             <span id="service6-action" class="text-blue-600 dark:text-blue-400 text-sm font-medium">افتح صفحة الإرفاق ↗</span>
@@ -216,14 +221,15 @@
              tabindex="0" role="button" aria-label="بلاغات الزائر السري"
              onclick="window.location.href='../public/complaints/mystery/mystery-complaints.html'">
           <div class="service-icon w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="mystery" alt="بلاغات الزائر السري" width="48" height="48" loading="lazy" />
             <!-- أيقونة "زائر سري" (عين/نظارة) -->
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
               <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
               <circle cx="12" cy="12" r="3" stroke-width="2"/>
             </svg>
           </div>
-          <h3 id="service7-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">بلاغات الزائر السري</h3>
+          <h3 id="service7-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="mystery">بلاغات الزائر السري</h3>
           <p id="service7-desc" class="text-gray-600 dark:text-gray-300 text-center">عرض ومتابعة بلاغات الزائر السري</p>
           <div class="text-center mt-3">
             <span id="service7-action" class="text-blue-600 dark:text-blue-400 text-sm font-medium">افتح الصفحة ↗</span>
@@ -235,13 +241,14 @@
              tabindex="0" role="button" aria-label="تقارير برسجيني"
              onclick="window.location.href='../dashboard/pressganey/list.html'" style="display:none">
           <div class="service-icon w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="pressganey" alt="بيرس جيني" width="48" height="48" loading="lazy" />
             <!-- أيقونة إحصاءات -->
-            <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg class="icon-fallback w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 6h16M4 10h16M4 14h10M4 18h6"/>
             </svg>
           </div>
-          <h3 id="service11-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">برسجيني (Press Ganey)</h3>
+          <h3 id="service11-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="pressganey">برسجيني (Press Ganey)</h3>
           <p id="service11-desc" class="text-gray-600 dark:text-gray-300 text-center">تحليل نتائج تجربة المريض</p>
           <div class="text-center mt-3">
             <span id="service11-action" class="text-indigo-600 dark:text-indigo-400 text-sm font-medium">افتح لوحة برسجيني ↗</span>
@@ -253,13 +260,14 @@
              tabindex="0" role="button" aria-label="أرشيف المرفقات"
              onclick="window.location.href='archive.html'" style="display:none">
           <div class="service-icon w-16 h-16 bg-sky-100 dark:bg-sky-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="archive" alt="أرشيف المرفقات" width="48" height="48" loading="lazy" />
             <!-- أيقونة الأرشيف (صندوق) -->
-            <svg class="w-8 h-8 text-sky-600 dark:text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <svg class="icon-fallback w-8 h-8 text-sky-600 dark:text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
               <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
             </svg>
           </div>
-          <h3 id="service8-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">أرشيف المرفقات</h3>
+          <h3 id="service8-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="archive">أرشيف المرفقات</h3>
           <p id="service8-desc" class="text-gray-600 dark:text-gray-300 text-center">رفع وحفظ الملفات في الأرشيف</p>
           <div class="text-center mt-3">
             <span id="service8-action" class="text-sky-600 dark:text-sky-400 text-sm font-medium">افتح الأرشيف ↗</span>
@@ -287,12 +295,13 @@
              tabindex="0" role="button" aria-label="عرض بلاغات إدارة التجمع"
              onclick="openClusterList()" style="display:none">
           <div class="service-icon w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <img class="dynamic-icon hidden w-12 h-12 object-contain" data-key="cluster" alt="بلاغات إدارة التجمع" width="48" height="48" loading="lazy" />
+            <svg class="icon-fallback w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="3" y="4" width="18" height="14" rx="2" ry="2" stroke-width="2"></rect>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 20h8M12 16v4"/>
             </svg>
           </div>
-          <h3 id="service10-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">بلاغات إدارة التجمع</h3>
+          <h3 id="service10-title" class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" data-dynamic-title="true" data-key="cluster">بلاغات إدارة التجمع</h3>
           <p id="service10-desc" class="text-gray-600 dark:text-gray-300 text-center">عرض وفلترة البلاغات</p>
           <div class="text-center mt-3">
             <span id="service10-action" class="text-blue-600 dark:text-blue-400 text-sm font-medium">افتح الصفحة ↗</span>
@@ -470,6 +479,13 @@
   <!-- JavaScript Files - ملفات الجافاسكريبت -->
   <script src="../public/assets/js/app.js"></script>
   <script src="index.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initializeSystemIcons === 'function') {
+        initializeSystemIcons();
+      }
+    });
+  </script>
   
   <!-- Translation System - نظام الترجمة -->
   <script>
@@ -490,37 +506,28 @@
         'hero-subtitle': 'بلّغ، تابع، وتلقَّ الحل',
         
         // الخدمات
+        // ملاحظة: عناوين البطاقات (serviceX-title) ديناميكية وتأتي من قاعدة البيانات،
+        // لذلك تظل خارج قاموس الترجمة حتى لا يكتب النظام نصوصاً ثابتة فوقها
         'services-title': 'الخدمات الأساسية',
         'services-subtitle': 'اختر الخدمة المناسبة لك',
-        'service1-title': 'تقديم بلاغ جديد',
         'service1-desc': 'رفع بلاغ رسمي بسهولة',
         'service1-action': 'ابدأ الآن ↗',
-        'service2-title': 'متابعة بلاغ',
         'service2-desc': 'تتبّع حالة البلاغ',
         'service2-action': 'ابدأ الآن ↗',
-        'service3-title': 'سجل البلاغات',
         'service3-desc': 'عرض بلاغاتك السابقة',
-        'service4-title': 'الإدارة',
         'service4-desc': 'إدارة المستشفيات والمستشفى',
-        'service5-title': 'المشاريع التحسينية',
         'service5-desc': 'اعرض، عدّل، وأنشئ مشروع تحسيني',
         'service5-action': 'افتح لوحة المشاريع ↗',
-        'service6-title': 'إرفاق الإكسل',
         'service6-desc': '936 • الزائر السري • الأقسام',
         'service6-action': 'افتح صفحة الإرفاق ↗',
-        'service7-title': 'بلاغات الزائر السري',
         'service7-desc': 'عرض ومتابعة بلاغات الزائر السري',
         'service7-action': 'افتح الصفحة ↗',
-        'service8-title': 'أرشيف المرفقات',
         'service8-desc': 'رفع وحفظ الملفات في الأرشيف',
         'service8-action': 'افتح الأرشيف ↗',
-        'service9-title': 'بلاغ إدارة التجمع (جديد)',
         'service9-desc': 'سجّل ملاحظة ميدانية مع مرفقات',
         'service9-action': 'ابدأ ↗',
-        'service10-title': 'بلاغات إدارة التجمع',
         'service10-desc': 'عرض وفلترة البلاغات',
         'service10-action': 'افتح الصفحة ↗',
-        'service11-title': 'برسجيني (Press Ganey)',
         'service11-desc': 'تحليل نتائج تجربة المريض',
         'service11-action': 'افتح لوحة برسجيني ↗',
         
@@ -575,37 +582,28 @@
         'hero-subtitle': 'Report, Track, and Get Solutions',
         
         // الخدمات
+        // Note: card headings (serviceX-title) are dynamic (system icons API)
+        // so we intentionally keep only descriptions/actions here
         'services-title': 'Core Services',
         'services-subtitle': 'Choose the service that suits you',
-        'service1-title': 'Submit New Complaint',
         'service1-desc': 'File an official complaint easily',
         'service1-action': 'Start Now ↗',
-        'service2-title': 'Track Complaint',
         'service2-desc': 'Monitor complaint status',
         'service2-action': 'Start Now ↗',
-        'service3-title': 'Complaint History',
         'service3-desc': 'View your previous complaints',
-        'service4-title': 'Administration',
         'service4-desc': 'Manage hospitals and hospital operations',
-        'service5-title': 'Improvement Projects',
         'service5-desc': 'View, edit, and create improvement projects',
         'service5-action': 'Open Projects Hub ↗',
-        'service6-title': 'Excel Import',
         'service6-desc': '936 • Mystery Shopper • Departments',
         'service6-action': 'Open Import Page ↗',
-        'service7-title': 'Mystery Shopper Complaints',
         'service7-desc': 'View and follow up Mystery Shopper complaints',
         'service7-action': 'Open page ↗',
-        'service8-title': 'File Archive',
         'service8-desc': 'Upload and store files in archive',
         'service8-action': 'Open Archive ↗',
-        'service9-title': 'Cluster Management Complaint (New)',
         'service9-desc': 'Record a field observation with attachments',
         'service9-action': 'Start ↗',
-        'service10-title': 'Cluster Management Complaints',
         'service10-desc': 'View and filter complaints',
         'service10-action': 'Open page ↗',
-        'service11-title': 'Press Ganey',
         'service11-desc': 'Patient experience results analysis',
         'service11-action': 'Open Press Ganey Dashboard ↗',
         
@@ -649,6 +647,13 @@
     // الحالة الحالية للغة
     let currentLanguage = 'ar';
 
+    function isDynamicTitleElement(element) {
+      return !!(element && (
+        element.dataset?.dynamicTitle === 'true' ||
+        element.classList?.contains('dynamic-title')
+      ));
+    }
+
     // دالة تطبيق الترجمة
     function applyTranslation(lang) {
       const elements = translations[lang];
@@ -657,9 +662,12 @@
       // تطبيق الترجمة على جميع العناصر
       Object.keys(elements).forEach(id => {
         const element = document.getElementById(id);
-        if (element) {
-          element.textContent = elements[id];
+        if (!element) return;
+        if (isDynamicTitleElement(element)) {
+          // لا نغيّر العناوين الديناميكية أبداً
+          return;
         }
+        element.textContent = elements[id];
       });
 
       // تغيير اتجاه النص
@@ -682,6 +690,10 @@
       }
 
       currentLanguage = lang;
+      window.currentLanguage = lang;
+      window.dispatchEvent(new CustomEvent('landing-language-change', {
+        detail: { lang }
+      }));
     }
 
     // تهيئة النظام عند تحميل الصفحة

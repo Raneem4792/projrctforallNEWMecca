@@ -77,6 +77,19 @@
         <p class="text-gray-600 mt-1">مستخدمون، صلاحيات، السجلات، المحذوفات</p>
       </a>
 
+      <!-- إدارة الأيقونات -->
+      <a id="cardIconManager" href="admin-icons.html"
+         class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
+        <div class="w-16 h-16 mb-4 rounded-full bg-amber-50 flex items-center justify-center">
+          <svg class="w-8 h-8 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  d="M5 12h14M12 5l7 7-7 7M8 7h.01M8 17h.01"/>
+          </svg>
+        </div>
+        <h3 class="text-xl font-extrabold text-[#002B5B]">إدارة الأيقونات</h3>
+        <p class="text-gray-600 mt-1">تحديث أسماء وصور الأيقونات في الصفحة الرئيسية</p>
+      </a>
+
       <!-- إدارة الأقسام -->
       <a id="cardAdminDepts" href="admin-departments.html"
          class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
@@ -231,6 +244,7 @@
         show('cardAdminDepts',    isCentral || p.adminDepartments === true);
         show('cardAdminHospital', isCentral || p.adminHospital    === true);
         show('cardAdminClusters', isCentral || p.adminClusters    === true);
+        show('cardIconManager',   isCentral || p.adminPanel === true || p.adminHospital === true);
 
       } catch (err) {
         console.error('❌ خطأ في جلب الصلاحيات:', err);

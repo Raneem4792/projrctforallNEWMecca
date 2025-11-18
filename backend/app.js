@@ -73,6 +73,7 @@ import hospitalTripsRoutes from './routes/hospitalTrips.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import improvementPressganeyRoutes from './routes/improvementPressganey.routes.js';
+import iconsRoutes from './routes/icons.routes.js';
 
 // تأكيد تحميل reports routes
 console.log('📦 [app.js] جاري تحميل reports routes...');
@@ -262,6 +263,7 @@ app.use('/api/improvements', improvementsRoutes); // مشاريع التحسين
 app.use('/api/archive', archiveRoutes); // ركن الأرشيف ✅
 app.use('/api/cluster-reports', clusterReportsRoutes); // بلاغات إدارة التجمع ✅
 app.use('/api/pressganey', pressganeyRoutes); // Press Ganey ✅
+app.use('/api/icons', iconsRoutes); // إدارة أيقونات النظام ✅
 
 // ✅ تقارير PDF/Excel - مع logging للتأكد
 console.log('📦 [app.js] جاري تركيب reports routes على /api/reports...');
