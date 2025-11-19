@@ -209,9 +209,9 @@ router.get('/track', optionalAuth, async (req, res) => {
             console.log(`🔍 [TRACK] البحث في مستشفى ${hospital.HospitalID}: ${hospital.NameAr}`);
             
             const hospitalPool = mysql.createPool({
-              host: hospital.DbHost || '127.0.0.1',
-              user: hospital.DbUser || 'root',
-              password: hospital.DbPass || '',
+              host: hospital.DbHost || CENTRAL_DB_HOST,
+              user: hospital.DbUser || CENTRAL_DB_USER,
+              password: typeof hospital.DbPass !== 'undefined' ? hospital.DbPass : CENTRAL_DB_PASS,
               database: hospital.DbName,
               waitForConnections: true,
               connectionLimit: 3
@@ -264,11 +264,11 @@ router.get('/track', optionalAuth, async (req, res) => {
         try {
           const hospitalInfo = await getHospitalInfo(hospitalId);
           if (hospitalInfo && hospitalInfo.DbName) {
-            // إنشاء اتصال بقاعدة المستشفى
+            // إنشاء اتصال بقاعدة المستشفى باستخدام بيانات الدخول الخاصة بها
             const hospitalPool = mysql.createPool({
-              host: CENTRAL_DB_HOST,
-              user: CENTRAL_DB_USER,
-              password: CENTRAL_DB_PASS,
+              host: hospitalInfo.DbHost || CENTRAL_DB_HOST,
+              user: hospitalInfo.DbUser || CENTRAL_DB_USER,
+              password: typeof hospitalInfo.DbPass !== 'undefined' ? hospitalInfo.DbPass : CENTRAL_DB_PASS,
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -326,9 +326,9 @@ router.get('/track', optionalAuth, async (req, res) => {
                   
                   try {
                     const hospitalPool2 = mysql.createPool({
-                      host: hospital.DbHost || 'localhost',
-                      user: hospital.DbUser || 'root',
-                      password: hospital.DbPass || '',
+                      host: hospital.DbHost || CENTRAL_DB_HOST,
+                      user: hospital.DbUser || CENTRAL_DB_USER,
+                      password: typeof hospital.DbPass !== 'undefined' ? hospital.DbPass : CENTRAL_DB_PASS,
                       database: hospital.DbName,
                       waitForConnections: true,
                       connectionLimit: 3
@@ -378,9 +378,9 @@ router.get('/track', optionalAuth, async (req, res) => {
               console.log(`🔍 [TRACK] البحث في مستشفى ${hospital.HospitalID}: ${hospital.NameAr}`);
               
               const hospitalPool = mysql.createPool({
-                host: hospital.DbHost || 'localhost',
-                user: hospital.DbUser || 'root',
-                password: hospital.DbPass || '',
+                host: hospital.DbHost || CENTRAL_DB_HOST,
+                user: hospital.DbUser || CENTRAL_DB_USER,
+                password: typeof hospital.DbPass !== 'undefined' ? hospital.DbPass : CENTRAL_DB_PASS,
                 database: hospital.DbName,
                 waitForConnections: true,
                 connectionLimit: 3
@@ -744,9 +744,9 @@ router.get('/history', requireAuth, async (req, res) => {
             console.log(`🔍 [HISTORY] البحث في مستشفى ${hospital.HospitalID}: ${hospital.NameAr}`);
             
             const hospitalPool = mysql.createPool({
-              host: hospital.DbHost || 'localhost',
-              user: hospital.DbUser || 'root',
-              password: hospital.DbPass || '',
+              host: hospital.DbHost || CENTRAL_DB_HOST,
+              user: hospital.DbUser || CENTRAL_DB_USER,
+              password: typeof hospital.DbPass !== 'undefined' ? hospital.DbPass : CENTRAL_DB_PASS,
               database: hospital.DbName,
               waitForConnections: true,
               connectionLimit: 3
@@ -811,9 +811,9 @@ router.get('/history', requireAuth, async (req, res) => {
           if (hospitalInfo && hospitalInfo.DbName) {
             // إنشاء اتصال بقاعدة المستشفى
             const hospitalPool = mysql.createPool({
-              host: CENTRAL_DB_HOST,
-              user: CENTRAL_DB_USER,
-              password: CENTRAL_DB_PASS,
+              host: hospitalInfo.DbHost || CENTRAL_DB_HOST,
+              user: hospitalInfo.DbUser || CENTRAL_DB_USER,
+              password: typeof hospitalInfo.DbPass !== 'undefined' ? hospitalInfo.DbPass : CENTRAL_DB_PASS,
               database: hospitalInfo.DbName,
               waitForConnections: true,
               connectionLimit: 5
@@ -891,9 +891,9 @@ router.get('/history', requireAuth, async (req, res) => {
                 console.log(`🔍 [HISTORY] البحث في مستشفى ${hospital.HospitalID}: ${hospital.NameAr}`);
                 
                 const hospitalPool = mysql.createPool({
-                  host: hospital.DbHost || 'localhost',
-                  user: hospital.DbUser || 'root',
-                  password: hospital.DbPass || '',
+                  host: hospital.DbHost || CENTRAL_DB_HOST,
+                  user: hospital.DbUser || CENTRAL_DB_USER,
+                  password: typeof hospital.DbPass !== 'undefined' ? hospital.DbPass : CENTRAL_DB_PASS,
                   database: hospital.DbName,
                   waitForConnections: true,
                   connectionLimit: 3

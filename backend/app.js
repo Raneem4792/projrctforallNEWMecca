@@ -74,6 +74,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import improvementPressganeyRoutes from './routes/improvementPressganey.routes.js';
 import iconsRoutes from './routes/icons.routes.js';
+import { getCentralPool } from './db/centralPool.js';
 
 // تأكيد تحميل reports routes
 console.log('📦 [app.js] جاري تحميل reports routes...');
@@ -239,6 +240,19 @@ app.use('/api/lookups', lookupRoutes);
 app.use('/api/admin/departments', adminDepartmentRoutes);
 app.use('/api/admin/hospitals', adminHospitalsRoutes);
 app.use('/api/employees', employeeRoutes);
+// API endpoint لجلب قائمة المنشآت من القاعدة المركزية
+app.get('/api/facilities', async (req, res) => {
+  try {
+    const central = await getCentralPool();
+    const [rows] = await central.query(
+      "SELECT FacilityID, FacilityName FROM central_facilities WHERE IsActive = 1 ORDER BY FacilityName ASC"
+    );
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/hospitals', hospitalsRoutes);
 app.use('/api/permissions', permissionsRoutes);

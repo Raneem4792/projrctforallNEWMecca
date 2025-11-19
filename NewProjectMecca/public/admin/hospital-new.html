@@ -41,8 +41,10 @@
 
         <div class="grid md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1">الاسم (عربي)</label>
-            <input id="hNameAr" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
+            <label class="block text-sm text-gray-600 mb-1">الاسم (عربي) / المنشأة</label>
+            <select id="hNameAr" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200">
+              <option value="">اختر المنشأة</option>
+            </select>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">الاسم (English)</label>
@@ -163,6 +165,51 @@
   </footer>
 
   <script src="hospital-new.js"></script>
+  <script>
+    // تحديد عنوان API
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    async function loadFacilities() {
+      try {
+        const res = await fetch(`${API_BASE}/api/facilities`);
+        
+        if (!res.ok) {
+          console.error('Failed to load facilities:', res.status, res.statusText);
+          return;
+        }
+
+        const json = await res.json();
+
+        if (!json.success) {
+          console.error('API returned error:', json.message);
+          return;
+        }
+
+        const select = document.getElementById('hNameAr');
+        select.innerHTML = `<option value="">اختر المنشأة</option>`;
+
+        if (json.data && json.data.length > 0) {
+          json.data.forEach(item => {
+            select.innerHTML += `
+              <option value="${item.FacilityName}">
+                ${item.FacilityName}
+              </option>`;
+          });
+          console.log(`✅ تم تحميل ${json.data.length} منشأة بنجاح`);
+        } else {
+          console.warn('⚠️ لا توجد منشآت في القاعدة المركزية');
+        }
+
+      } catch (err) {
+        console.error("Error loading facilities:", err);
+      }
+    }
+
+    // تشغّل تلقائياً عند فتح الصفحة
+    loadFacilities();
+  </script>
 </body>
 </html>
 
