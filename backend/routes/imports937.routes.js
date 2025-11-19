@@ -635,6 +635,35 @@ function mapExecStatusToSystem(v){
   return 'OPEN';
 }
 
+const CATEGORY_MAIN_HEADERS = [
+  'التصنيف الرئيسي',
+  'الرئيسي',
+  'Main Category',
+  'Main',
+  'Category',
+  'TypeName',
+  'Type'
+];
+
+const CATEGORY_SUB_HEADERS = [
+  'التصنيف الفرعي',
+  'الفرعي',
+  'Sub Category',
+  'Subcategory',
+  'Subtype',
+  'SubTypeName',
+  'Sub'
+];
+
+function pickColumnValue(row, headers) {
+  for (const key of headers) {
+    if (row[key] === undefined || row[key] === null) continue;
+    const value = String(row[key]).trim();
+    if (value.length) return value;
+  }
+  return '';
+}
+
 // ---- Route: import Departments Excel ----
 router.post(
   '/imports/departments',
@@ -712,6 +741,142 @@ router.post(
     } catch (error) {
       console.error('خطأ في استيراد الأقسام:', error);
       res.status(500).json({ message: 'خطأ في استيراد الأقسام: ' + error.message });
+    }
+  }
+);
+
+// ---- Route: import Categories Excel ----
+router.post(
+  '/imports/categories',
+  requireAuth,
+  requirePermission('IMPORTS_CATEGORIES'),
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'لم يتم رفع ملف.' });
+
+      const isCluster = req.user?.RoleID === 1 || req.user?.IsClusterManager === true || req.user?.RoleKey === 'CLUSTER_MANAGER';
+      if (req.query.hospitalId && !isCluster) {
+        return res.status(403).json({ message: 'غير مصرح بتمرير HospitalID.' });
+      }
+
+      let hospitalId = null;
+      if (isCluster) {
+        hospitalId = Number(req.query.hospitalId);
+        if (!hospitalId) {
+          return res.status(400).json({ message: 'يرجى اختيار المستشفى.' });
+        }
+      } else {
+        hospitalId = Number(req.user?.HospitalID || req.hospitalId);
+        if (!hospitalId) {
+          return res.status(400).json({ message: 'HospitalID غير محدد للمستخدم.' });
+        }
+      }
+
+      const tenantPool = await getTenantPoolByHospitalId(hospitalId);
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) return res.status(400).json({ message: 'تعذّر قراءة ورقة الإكسل.' });
+
+      const rows = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+      if (!rows.length) return res.status(400).json({ message: 'لا توجد بيانات في الملف.' });
+
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
+      let duplicates = 0;
+      let errors = 0;
+      const duplicateDetails = [];
+
+      const mainCache = new Map();
+      const subCache = new Map();
+      const timestampSupport = {
+        complaint_types: null,
+        complaint_subtypes: null
+      };
+
+      const touchTimestamp = async (table, idKey, idValue) => {
+        if (timestampSupport[table] === false) return;
+        try {
+          await tenantPool.query(`UPDATE ${table} SET UpdatedAt = NOW() WHERE ${idKey} = ?`, [idValue]);
+          timestampSupport[table] = true;
+        } catch (error) {
+          if (error?.code === 'ER_BAD_FIELD_ERROR' || error?.code === 'ER_BAD_COLUMN_ERROR') {
+            timestampSupport[table] = false;
+            console.warn(`[imports/categories] Timestamp column missing on ${table}; skipping updates.`);
+            return;
+          }
+          throw error;
+        }
+      };
+
+      for (const row of rows) {
+        const mainName = pickColumnValue(row, CATEGORY_MAIN_HEADERS);
+        const subName = pickColumnValue(row, CATEGORY_SUB_HEADERS);
+
+        if (!mainName || !subName) {
+          skipped++;
+          continue;
+        }
+
+        const mainKey = mainName.toLowerCase();
+        const subKey = `${mainKey}::${subName.toLowerCase()}`;
+        if (subCache.has(subKey)) {
+          skipped++;
+          continue;
+        }
+
+        try {
+          let mainId = mainCache.get(mainKey);
+          if (!mainId) {
+            const [existingMain] = await tenantPool.query(
+              'SELECT ComplaintTypeID FROM complaint_types WHERE TypeName = ? LIMIT 1',
+              [mainName]
+            );
+
+            if (existingMain.length) {
+              mainId = existingMain[0].ComplaintTypeID;
+              await touchTimestamp('complaint_types', 'ComplaintTypeID', mainId);
+            } else {
+              const [insertMain] = await tenantPool.query(
+                'INSERT INTO complaint_types (TypeName) VALUES (?)',
+                [mainName]
+              );
+              mainId = insertMain.insertId;
+              inserted++;
+            }
+            mainCache.set(mainKey, mainId);
+          }
+
+          const [existingSub] = await tenantPool.query(
+            `SELECT SubTypeID FROM complaint_subtypes WHERE ComplaintTypeID = ? AND SubTypeName = ? LIMIT 1`,
+            [mainId, subName]
+          );
+
+          if (existingSub.length) {
+            duplicates++;
+            duplicateDetails.push({ main: mainName, sub: subName });
+            subCache.set(subKey, true);
+            continue;
+          } else {
+            await tenantPool.query(
+              `INSERT INTO complaint_subtypes (ComplaintTypeID, SubTypeName) VALUES (?, ?)`,
+              [mainId, subName]
+            );
+            inserted++;
+          }
+
+          subCache.set(subKey, true);
+        } catch (error) {
+          errors++;
+          console.error('Import categories row failed:', { error: error.message, row });
+        }
+      }
+
+      res.json({ inserted, updated, skipped, duplicates, errors, duplicateDetails });
+    } catch (err) {
+      console.error('POST /api/imports/categories failed:', err);
+      res.status(500).json({ message: 'خطأ أثناء استيراد التصنيفات', details: err.message });
     }
   }
 );

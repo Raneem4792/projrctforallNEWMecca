@@ -229,6 +229,47 @@
         </div>
       </section>
 
+      <!-- إكسل التصنيفات -->
+      <section class="card-hover bg-white rounded-xl shadow-lg border p-6 animate-fade-in-up">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
+          </div>
+          <h2 id="sectionCategoriesTitle" class="text-lg font-semibold">إكسل التصنيفات</h2>
+        </div>
+
+        <div class="space-y-4">
+          <div id="categoriesHospitalWrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-1">المستشفى</label>
+            <select id="categoriesHospitalSelect" class="w-full border rounded-lg px-3 py-2">
+              <option value="">— اختر مستشفى —</option>
+            </select>
+            <small id="categoriesHospitalHint" class="text-gray-500">يظهر فقط لمدير التجمع</small>
+          </div>
+
+          <form id="formCategories" class="space-y-3">
+            <input type="file" name="file" accept=".xlsx,.xls,.csv" required
+                   class="block w-full text-sm text-gray-700">
+            <button id="uploadCategories" type="submit"
+                    class="px-4 py-2 rounded-lg text-white" style="background:#6b21a8">
+              رفع الملف
+            </button>
+            <span id="statusCategories" class="text-sm text-gray-500"></span>
+          </form>
+
+          <div id="categoriesResults" class="hidden mt-4 p-4 bg-gray-50 border rounded-lg">
+            <h3 id="catResultsTitle" class="text-sm font-semibold">نتائج الاستيراد:</h3>
+            <p><span id="catLabelInserted">تمت الإضافة:</span> <span id="catInsert">0</span></p>
+            <p><span id="catLabelUpdated">تم التحديث:</span> <span id="catUpdate">0</span></p>
+            <p><span id="catLabelSkipped">تم التخطي:</span> <span id="catSkip">0</span></p>
+            <p><span id="catLabelDuplicates">المكررة:</span> <span id="catDup">0</span></p>
+            <p><span id="catLabelErrors">الأخطاء:</span> <span id="catErr">0</span></p>
+          </div>
+        </div>
+      </section>
+
       <!-- بلاغات 937 -->
       <section class="card-hover bg-white rounded-xl shadow-lg border border-gray-100 p-6 animate-fade-in-up">
         <div class="flex items-center gap-3 mb-4">
@@ -923,12 +964,20 @@
         'section2-title': 'إكسل الزائر السري',
         'section3-title': 'إكسل الأقسام',
         'section4-title': 'إكسل بلاغات 937',
+        'sectionCategoriesTitle': 'إكسل التصنيفات',
+        'catResultsTitle': 'نتائج الاستيراد:',
+        'catLabelInserted': 'تمت الإضافة:',
+        'catLabelUpdated': 'تم التحديث:',
+        'catLabelSkipped': 'تم التخطي:',
+        'catLabelDuplicates': 'المكررة:',
+        'catLabelErrors': 'الأخطاء:',
         'template2-link': 'تنزيل القالب',
         'template3-link': 'تنزيل القالب',
         'template4-link': 'تنزيل القالب',
         'upload2-btn': 'رفع الملف',
         'upload3-btn': 'رفع الملف',
         'upload4-btn': 'رفع الملف',
+        'uploadCategories': 'رفع الملف',
         
         // الفوتير
         'footer-org-name': 'تجمع مكة الصحي',
@@ -971,12 +1020,20 @@
         'section2-title': 'Mystery Shopper Excel',
         'section3-title': 'Departments Excel',
         'section4-title': '937 Complaints Excel',
+        'sectionCategoriesTitle': 'Categories Excel',
+        'catResultsTitle': 'Import Results:',
+        'catLabelInserted': 'Inserted:',
+        'catLabelUpdated': 'Updated:',
+        'catLabelSkipped': 'Skipped:',
+        'catLabelDuplicates': 'Duplicates:',
+        'catLabelErrors': 'Errors:',
         'template2-link': 'Download Template',
         'template3-link': 'Download Template',
         'template4-link': 'Download Template',
         'upload2-btn': 'Upload File',
         'upload3-btn': 'Upload File',
         'upload4-btn': 'Upload File',
+        'uploadCategories': 'Upload File',
         
         // الفوتير
         'footer-org-name': 'Makkah Health Cluster',
@@ -1315,6 +1372,131 @@
     document.getElementById('btnSaveMysterySummary')?.addEventListener('click', saveMysterySummary);
   </script>
 
+  <!-- وحدة استيراد التصنيفات -->
+  <script>
+    (function initCategoriesModule() {
+      const form = document.getElementById('formCategories');
+      if (!form) return;
+
+      const statusEl = document.getElementById('statusCategories');
+      const resultsBox = document.getElementById('categoriesResults');
+      const insertEl = document.getElementById('catInsert');
+      const updateEl = document.getElementById('catUpdate');
+      const skipEl = document.getElementById('catSkip');
+      const errEl = document.getElementById('catErr');
+
+      function isClusterCategories() {
+        const wrap = document.getElementById('categoriesHospitalWrap');
+        return wrap && !wrap.classList.contains('hidden');
+      }
+
+      function buildCategoriesEndpoint() {
+        const sel = document.getElementById('categoriesHospitalSelect');
+        const wrap = document.getElementById('categoriesHospitalWrap');
+        if (sel && wrap && !wrap.classList.contains('hidden') && sel.value) {
+          return `/api/imports/categories?hospitalId=${encodeURIComponent(sel.value)}`;
+        }
+        return '/api/imports/categories';
+      }
+
+      async function populateCategoriesHospitals() {
+        const wrap = document.getElementById('categoriesHospitalWrap');
+        const sel = document.getElementById('categoriesHospitalSelect');
+        const hint = document.getElementById('categoriesHospitalHint');
+        if (!wrap || !sel) return;
+
+        const me = await getMe().catch(() => null);
+        if (!isClusterManager(me)) {
+          wrap.classList.add('hidden');
+          return;
+        }
+
+        wrap.classList.remove('hidden');
+        sel.innerHTML = '<option value="">— اختر مستشفى —</option>';
+
+        try {
+          const hospitals = await fetchHospitalsActive();
+          if (!Array.isArray(hospitals) || hospitals.length === 0) {
+            if (hint) hint.textContent = 'لا توجد مستشفيات متاحة.';
+            return;
+          }
+
+          hospitals
+            .sort((a, b) => (a?.NameAr || '').localeCompare(b?.NameAr || '', 'ar'))
+            .forEach((h) => {
+              const opt = document.createElement('option');
+              opt.value = h.HospitalID;
+              opt.textContent = h.NameAr || h.NameEn || `Hospital #${h.HospitalID}`;
+              sel.appendChild(opt);
+            });
+        } catch (error) {
+          console.error('categories hospitals load failed:', error);
+          if (hint) hint.textContent = 'تعذر تحميل قائمة المستشفيات.';
+        }
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const fileInput = form.querySelector('input[type=file]');
+        const file = fileInput?.files?.[0];
+        if (!file) {
+          statusEl.textContent = 'اختر ملف.';
+          statusEl.className = 'text-red-600';
+          return;
+        }
+
+        if (isClusterCategories()) {
+          const sel = document.getElementById('categoriesHospitalSelect');
+          if (!sel?.value) {
+            statusEl.textContent = 'اختر المستشفى أولاً.';
+            statusEl.className = 'text-red-600';
+            return;
+          }
+        }
+
+        statusEl.textContent = 'جاري الرفع...';
+        statusEl.className = 'text-gray-600';
+
+        const fd = new FormData();
+        fd.append('file', file);
+
+        try {
+          const url = buildCategoriesEndpoint();
+          const res = await fetch(`${API_BASE}${url}`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: fd
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            statusEl.textContent = 'خطأ: ' + (data?.message || res.statusText);
+            statusEl.className = 'text-red-600';
+            return;
+          }
+
+          statusEl.textContent = 'تم بنجاح!';
+          statusEl.className = 'text-green-600';
+
+          insertEl.textContent = data.inserted ?? 0;
+          updateEl.textContent = data.updated ?? 0;
+          skipEl.textContent = data.skipped ?? 0;
+          skipEl.textContent = data.skipped ?? 0;
+          const dupEl = document.getElementById('catDup');
+          if (dupEl) dupEl.textContent = data.duplicates ?? 0;
+          errEl.textContent = data.errors ?? 0;
+          resultsBox.classList.remove('hidden');
+        } catch (error) {
+          statusEl.textContent = 'فشل الرفع: ' + error.message;
+          statusEl.className = 'text-red-600';
+        }
+      });
+
+      populateCategoriesHospitals();
+    })();
+  </script>
+
   <!-- نظام حماية الصفحات -->
   <script src="../public/assets/js/auth-check.js"></script>
 
@@ -1333,11 +1515,17 @@
 
       const me = await res.json();
       const imp = me.imports || {};
+      const isClusterManager = Boolean(
+        me?.user?.RoleID === 1 ||
+        me?.user?.IsClusterManager === true ||
+        me?.user?.role?.isClusterManager === true
+      );
 
       // سكاشن الصفحة (حسب هيكل imports.html)
       const secMystery = document.querySelector('section h2#section2-title')?.closest('section');
       const secDepts   = document.querySelector('section h2#section3-title')?.closest('section');
       const sec937     = document.querySelector('section h2#section4-title')?.closest('section');
+      const secCategories = document.querySelector('section h2#sectionCategoriesTitle')?.closest('section');
 
       // 1) إن لم يملك IMPORTS_PAGE أخفي الصفحة كلها
       if (!imp.importsPage) {
@@ -1356,6 +1544,13 @@
       if (secDepts) {
         secDepts.style.display = imp.importDepartments ? '' : 'none';
         secDepts.querySelectorAll('form input, form button').forEach(el=> el.disabled = !imp.importDepartments);
+      }
+
+      if (secCategories) {
+        const allowed = (imp.importCategories || false) || isClusterManager;
+        secCategories.style.display = allowed ? '' : 'none';
+        secCategories.querySelectorAll('form input, form button')
+          .forEach(el => el.disabled = allowed ? false : true);
       }
 
       if (sec937) {

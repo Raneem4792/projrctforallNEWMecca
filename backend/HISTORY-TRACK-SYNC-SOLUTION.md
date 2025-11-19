@@ -192,7 +192,7 @@ CREATE INDEX idx_complaints_hosp_created ON complaints (HospitalID, CreatedAt);
 ```bash
 cd backend
 # تشغيل فهارس الأداء
-mysql -u root -p hospitals_mecca4 < optimize-history-performance.sql
+mysql -u root -p hospitals_mecca3 < optimize-history-performance.sql
 
 # إعادة تشغيل السيرفر
 npm start

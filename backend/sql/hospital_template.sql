@@ -880,7 +880,8 @@ INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('IMPORTS_PAGE',             'عرض صفحة إرفاق الإكسل',           'imports'),
 ('IMPORTS_DEPARTMENTS',      'استيراد إكسل الأقسام',            'imports'),
 ('IMPORTS_MYSTERY',          'استيراد إكسل الزائر السري',       'imports'),
-('IMPORTS_937',              'استيراد إكسل بلاغات 937',         'imports');
+('IMPORTS_937',              'استيراد إكسل بلاغات 937',         'imports'),
+('IMPORTS_CATEGORIES',       'استيراد إكسل التصنيفات',          'imports');
 
 
 -- إضافة مفاتيح لوحة التحكم في قاعدة المستشفى
@@ -1548,6 +1549,7 @@ INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('IMPORTS_937','استيراد إكسل بلاغات 937','imports'),
 ('IMPORTS_DEPARTMENTS','استيراد إكسل الأقسام','imports'),
 ('IMPORTS_MYSTERY','استيراد إكسل الزائر السري','imports'),
+('IMPORTS_CATEGORIES','استيراد إكسل التصنيفات','imports'),
 
 -- =========================
 -- IMPROVEMENTS المشاريع التحسينية
@@ -1696,6 +1698,7 @@ INSERT IGNORE INTO role_default_permissions (RoleID, PermissionKey, DefaultViewS
 (2, 'IMPORTS_937','HOSPITAL'),
 (2, 'IMPORTS_DEPARTMENTS','HOSPITAL'),
 (2, 'IMPORTS_MYSTERY','HOSPITAL'),
+(2, 'IMPORTS_CATEGORIES','HOSPITAL'),
 
 -- =========================
 -- IMPROVEMENTS المشاريع التحسينية

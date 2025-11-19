@@ -299,6 +299,11 @@
                     <input type="checkbox" id="p_imports_937" class="w-4 h-4">
                     <span>استيراد 937</span>
                   </label>
+
+                  <label class="flex items-center gap-3">
+                    <input type="checkbox" id="p_imports_categories" class="w-4 h-4">
+                    <span>استيراد التصنيفات</span>
+                  </label>
                 </div>
               </section>
 
@@ -955,6 +960,7 @@ async function loadUserPerms(hid, userId){
     $('#p_imports_depts').checked = !!p.importDepartments;
     $('#p_imports_mystery').checked = !!p.importMystery;
     $('#p_imports_937').checked = !!p.import937;
+    $('#p_imports_categories').checked = !!p.importCategories;
     // صلاحيات لوحة التحكم
     $('#p_dash_page').checked = !!p.dashPage;
     $('#p_dash_card_totals').checked = !!p.dashCardTotals;
@@ -1108,6 +1114,7 @@ document.addEventListener("DOMContentLoaded", () => {
       importDepartments: $('#p_imports_depts').checked,
       importMystery: $('#p_imports_mystery').checked,
       import937: $('#p_imports_937').checked,
+      importCategories: $('#p_imports_categories').checked,
       // صلاحيات لوحة التحكم
       dashPage: $('#p_dash_page').checked,
       dashCardTotals: $('#p_dash_card_totals').checked,

@@ -690,6 +690,7 @@ router.get('/me-permissions', async (req, res) => {
           importDepartments: hasPermission('IMPORTS_DEPARTMENTS'),
           importMystery: hasPermission('IMPORTS_MYSTERY'),
           import937: hasPermission('IMPORTS_937'),
+          importCategories: hasPermission('IMPORTS_CATEGORIES'),
           // صلاحيات منصة برسجيني
           pressganey: {
             module: hasPermission('PRESSGANEY_MODULE'),
@@ -775,7 +776,8 @@ router.get('/me-permissions', async (req, res) => {
         importsPage: permissions.importsPage || false,
         importDepartments: permissions.importDepartments || false,
         importMystery: permissions.importMystery || false,
-        import937: permissions.import937 || false
+        import937: permissions.import937 || false,
+        importCategories: permissions.importCategories || false
       },
       // صلاحيات بلاغات إدارة التجمع
       clusterSubmit: permissions.clusterSubmit || false,

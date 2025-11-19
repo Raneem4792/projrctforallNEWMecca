@@ -130,6 +130,7 @@ export async function getUserPermissions(req, res) {
         importDepartments: has('IMPORTS_DEPARTMENTS'),
         importMystery: has('IMPORTS_MYSTERY'),
         import937: has('IMPORTS_937'),
+        importCategories: has('IMPORTS_CATEGORIES'),
         // ===== Dashboard permissions =====
         dashPage:             has('DASH_PAGE'),
         dashCardTotals:       has('DASH_CARD_TOTALS'),
@@ -209,6 +210,7 @@ export async function saveUserPermissions(req, res) {
       improvement937, improvementPG, improvementOpen,
       mysteryModule, mysteryView, mysteryReplyAdd, mysteryStatusUpdate, mysteryTransferDept, mysteryTransferEmp, mysteryDelete,
       importsPage, importDepartments, importMystery, import937,
+      importCategories,
       // Dashboard permissions
       dashPage, dashCardTotals, dashCardOpen, dashCardClosed, dashCardUrgent, dashCardCloseRate, dashCardHospCount,
       dashChartMystery, dashChartClasses, dashChartTopClinics, dashChartDailyTrend, dashUrgentList,
@@ -339,6 +341,7 @@ export async function saveUserPermissions(req, res) {
     importDepartments ? await upsert('IMPORTS_DEPARTMENTS') : await drop('IMPORTS_DEPARTMENTS');
     importMystery ? await upsert('IMPORTS_MYSTERY') : await drop('IMPORTS_MYSTERY');
     import937 ? await upsert('IMPORTS_937') : await drop('IMPORTS_937');
+    importCategories ? await upsert('IMPORTS_CATEGORIES') : await drop('IMPORTS_CATEGORIES');
     
     // Dashboard permissions
     dashPage ? await upsert('DASH_PAGE') : await drop('DASH_PAGE');
@@ -492,6 +495,7 @@ export async function getMyPermissions(req, res) {
             importDepartments: true,
             importMystery: true,
             import937: true,
+            importCategories: true,
             dashPage: true,
             dashCardTotals: true,
             dashCardOpen: true,
