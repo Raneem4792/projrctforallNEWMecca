@@ -158,10 +158,16 @@ async function applyActionPermissions(hospitalId) {
     const p = await res.json();
 
     // مفاتيحنا المتفق عليها
+    const isClusterManager = Boolean(
+      p.user?.RoleID === 1 ||
+      p.user?.IsClusterManager === true ||
+      p.user?.role?.isClusterManager === true
+    );
+
     const canReply        = !!(p.reply ?? p.canReply);
     const canTransferDept = !!(p.transferDept ?? p.canTransferDept);
     const canTransferUser = !!(p.transferUser ?? p.canTransferUser);
-    const canTransferHospital = !!(p.complaintTransferHospital ?? false);
+    const canTransferHospital = !!(p.complaintTransferHospital ?? false) || isClusterManager;
     const canTransfer     = canTransferDept || canTransferUser || canTransferHospital; // أي نوع من التحويل
     const canStatusUpdate = !!(p.statusUpdate ?? p.canStatusUpdate);
     const canDelete       = !!(p.remove ?? p.canDelete);

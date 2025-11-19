@@ -455,6 +455,7 @@ export async function getMyPermissions(req, res) {
             view: true,
             historyScope: 'HOSPITAL',
             reply: true,
+            complaintTransferHospital: true,
             transfer: true,
             transferDept: true,
             transferUser: true,

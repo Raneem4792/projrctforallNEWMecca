@@ -42,9 +42,26 @@
         <div class="grid md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm text-gray-600 mb-1">الاسم (عربي) / المنشأة</label>
-            <select id="hNameAr" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200">
-              <option value="">اختر المنشأة</option>
-            </select>
+            <div id="facilityDropdownWrapper" class="relative">
+              <input id="hNameAr" name="hNameAr" type="text" readonly required
+                     placeholder="اختر المنشأة"
+                     class="w-full h-11 rounded-xl border border-gray-200 px-3 pr-10 cursor-pointer focus:ring-2 focus:ring-blue-200 bg-white"/>
+              <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 9l4-4 4 4m0 6l-4 4-4-4"/>
+                </svg>
+              </span>
+              <div id="facilityDropdown" class="absolute z-20 mt-1 w-full bg-white border border-gray-100 rounded-2xl shadow-xl hidden">
+                <div class="p-3 border-b border-gray-100">
+                  <input id="facilitySearchInput" type="text" placeholder="ابحث عن منشأة..."
+                         class="w-full h-10 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-indigo-100 text-sm"/>
+                </div>
+                <div id="facilityOptions" class="max-h-64 overflow-y-auto">
+                  <!-- يتم الحقن من السكربت -->
+                </div>
+              </div>
+            </div>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">الاسم (English)</label>
@@ -171,6 +188,37 @@
       ? 'http://localhost:3001'
       : '';
 
+    const facilityInput = document.getElementById('hNameAr');
+    const facilityDropdown = document.getElementById('facilityDropdown');
+    const facilityWrapper = document.getElementById('facilityDropdownWrapper');
+    const facilityOptionsBox = document.getElementById('facilityOptions');
+    const facilitySearchInput = document.getElementById('facilitySearchInput');
+    let facilitiesCache = [];
+
+    function toggleFacilityDropdown(show) {
+      if (!facilityDropdown) return;
+      facilityDropdown.classList.toggle('hidden', !show);
+      if (show && facilitySearchInput) {
+        facilitySearchInput.value = '';
+        facilitySearchInput.focus();
+        renderFacilityOptions(facilitiesCache);
+      }
+    }
+
+    function renderFacilityOptions(list = []) {
+      if (!facilityOptionsBox) return;
+      if (!list.length) {
+        facilityOptionsBox.innerHTML = `<div class="p-3 text-sm text-gray-500">لا توجد نتائج.</div>`;
+        return;
+      }
+      facilityOptionsBox.innerHTML = list.map(item => `
+        <button type="button" class="w-full text-right px-4 py-2 text-sm hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none facility-option"
+                data-value="${item.FacilityName}">
+          ${item.FacilityName}
+        </button>
+      `).join('');
+    }
+
     async function loadFacilities() {
       try {
         const res = await fetch(`${API_BASE}/api/facilities`);
@@ -187,25 +235,48 @@
           return;
         }
 
-        const select = document.getElementById('hNameAr');
-        select.innerHTML = `<option value="">اختر المنشأة</option>`;
-
-        if (json.data && json.data.length > 0) {
-          json.data.forEach(item => {
-            select.innerHTML += `
-              <option value="${item.FacilityName}">
-                ${item.FacilityName}
-              </option>`;
-          });
-          console.log(`✅ تم تحميل ${json.data.length} منشأة بنجاح`);
+        facilitiesCache = Array.isArray(json.data) ? json.data : [];
+        if (facilitiesCache.length > 0) {
+          renderFacilityOptions(facilitiesCache);
+          console.log(`✅ تم تحميل ${facilitiesCache.length} منشأة بنجاح`);
         } else {
           console.warn('⚠️ لا توجد منشآت في القاعدة المركزية');
+          renderFacilityOptions([]);
         }
 
       } catch (err) {
         console.error("Error loading facilities:", err);
       }
     }
+
+    if (facilityWrapper) {
+      facilityWrapper.addEventListener('click', () => toggleFacilityDropdown(true));
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!facilityWrapper?.contains(e.target)) {
+        toggleFacilityDropdown(false);
+      }
+    });
+
+    facilityOptionsBox?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.facility-option');
+      if (!btn || !facilityInput) return;
+      facilityInput.value = btn.dataset.value || '';
+      toggleFacilityDropdown(false);
+    });
+
+    facilitySearchInput?.addEventListener('input', (e) => {
+      const term = e.target.value.trim().toLowerCase();
+      if (!term) {
+        renderFacilityOptions(facilitiesCache);
+        return;
+      }
+      const filtered = facilitiesCache.filter(item =>
+        (item.FacilityName || '').toLowerCase().includes(term)
+      );
+      renderFacilityOptions(filtered);
+    });
 
     // تشغّل تلقائياً عند فتح الصفحة
     loadFacilities();
