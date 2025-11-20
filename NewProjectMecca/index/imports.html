@@ -270,6 +270,47 @@
         </div>
       </section>
 
+      <!-- إكسل توزيع الأقسام -->
+      <section class="card-hover bg-white rounded-xl shadow-lg border border-gray-100 p-6 animate-fade-in-up">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
+          </div>
+          <h2 id="sectionDeptAssignTitle" class="text-lg font-semibold">إكسل توزيع الأقسام</h2>
+        </div>
+
+        <div class="space-y-4">
+          <div id="deptAssignHospitalWrap" class="hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-1">المستشفى</label>
+            <select id="deptAssignHospitalSelect" class="w-full border rounded-lg px-3 py-2">
+              <option value="">— اختر مستشفى —</option>
+            </select>
+            <small class="text-gray-500">يظهر فقط لمدير التجمع</small>
+          </div>
+          <div id="deptAssignInfo" class="hidden text-sm font-medium text-gray-700"></div>
+
+          <form id="formDeptAssign" class="space-y-3">
+            <input id="deptAssignFile" type="file" accept=".xlsx,.xls,.csv" required
+                   class="block w-full text-sm text-gray-700"/>
+            <div class="flex items-center gap-3">
+              <button type="submit" id="uploadDeptAssign" class="px-4 py-2 rounded-lg text-white" style="background:#312e81">رفع الملف</button>
+              <span id="statusDeptAssign" class="text-sm text-gray-500"></span>
+            </div>
+          </form>
+
+          <div id="deptAssignResults" class="hidden mt-4 p-4 bg-gray-50 border rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">نتائج التوزيع:</h3>
+            <p id="deptAssignSummary" class="text-sm text-gray-700"></p>
+            <div id="deptAssignMissingWrap" class="hidden mt-3">
+              <p class="text-sm font-semibold text-gray-800 mb-1">عيادات غير مربوطة:</p>
+              <ul id="deptAssignMissing" class="text-sm text-gray-600 list-disc list-inside space-y-1"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- بلاغات 937 -->
       <section class="card-hover bg-white rounded-xl shadow-lg border border-gray-100 p-6 animate-fade-in-up">
         <div class="flex items-center gap-3 mb-4">
@@ -779,6 +820,8 @@
           statusDepts.className = 'text-red-600 text-sm';
           return;
         }
+        const sel = document.getElementById('clusterHospitalSelect');
+        const requiresSelection = sel && !sel.classList.contains('hidden');
         
         statusDepts.textContent = 'جاري الرفع والمعالجة...';
         statusDepts.className = 'text-gray-500 text-sm';
@@ -786,6 +829,16 @@
 
         const fd = new FormData();
         fd.append('file', file);
+        
+        if (requiresSelection) {
+          const selectedHospitalId = sel.value;
+          if (!selectedHospitalId) {
+            statusDepts.textContent = 'اختر المستشفى أولاً (لأنك مدير التجمع).';
+            statusDepts.className = 'text-red-600 text-sm';
+            return;
+          }
+          fd.append('hospitalId', selectedHospitalId);
+        }
         
         try {
           const url = getDepartmentsImportUrl();
@@ -965,6 +1018,7 @@
         'section3-title': 'إكسل الأقسام',
         'section4-title': 'إكسل بلاغات 937',
         'sectionCategoriesTitle': 'إكسل التصنيفات',
+        'sectionDeptAssignTitle': 'إكسل توزيع الأقسام',
         'catResultsTitle': 'نتائج الاستيراد:',
         'catLabelInserted': 'تمت الإضافة:',
         'catLabelUpdated': 'تم التحديث:',
@@ -1021,6 +1075,7 @@
         'section3-title': 'Departments Excel',
         'section4-title': '937 Complaints Excel',
         'sectionCategoriesTitle': 'Categories Excel',
+        'sectionDeptAssignTitle': 'Clinic → Department Excel',
         'catResultsTitle': 'Import Results:',
         'catLabelInserted': 'Inserted:',
         'catLabelUpdated': 'Updated:',
@@ -1494,6 +1549,136 @@
       });
 
       populateCategoriesHospitals();
+    })();
+  </script>
+
+  <!-- وحدة توزيع الأقسام -->
+  <script>
+    (function initDepartmentsAssignModule() {
+      const form = document.getElementById('formDeptAssign');
+      if (!form) return;
+
+      const hospitalWrap = document.getElementById('deptAssignHospitalWrap');
+      const hospitalSelect = document.getElementById('deptAssignHospitalSelect');
+      const hospitalInfo = document.getElementById('deptAssignInfo');
+      const statusEl = document.getElementById('statusDeptAssign');
+      const resultBox = document.getElementById('deptAssignResults');
+      const summaryEl = document.getElementById('deptAssignSummary');
+      const missingWrap = document.getElementById('deptAssignMissingWrap');
+      const missingList = document.getElementById('deptAssignMissing');
+
+      let fixedHospitalId = null;
+
+      async function initHospitals() {
+        try {
+          const me = await getMe().catch(() => null);
+          if (!me) return;
+
+          if (isClusterManager(me)) {
+            hospitalWrap?.classList.remove('hidden');
+            hospitalInfo?.classList.add('hidden');
+            if (hospitalSelect) {
+              hospitalSelect.innerHTML = '<option value="">— اختر مستشفى —</option>';
+              const hospitals = await fetchHospitalsActive().catch(() => []);
+              hospitals
+                .sort((a, b) => (a?.NameAr || '').localeCompare(b?.NameAr || '', 'ar'))
+                .forEach((h) => {
+                  const opt = document.createElement('option');
+                  opt.value = h.HospitalID;
+                  opt.textContent = h.NameAr || h.NameEn || `Hospital #${h.HospitalID}`;
+                  hospitalSelect.appendChild(opt);
+                });
+            }
+          } else {
+            hospitalWrap?.classList.add('hidden');
+            const userData = me?.user || me || {};
+            fixedHospitalId =
+              userData?.HospitalID ||
+              userData?.hospitalId ||
+              Number(localStorage.getItem('hospitalId')) ||
+              null;
+
+            if (hospitalInfo) {
+              const hospitalName =
+                userData?.Hospital?.NameAr ||
+                localStorage.getItem('hospitalNameAr') ||
+                'مستشفى غير محدد';
+              hospitalInfo.textContent = `المستشفى: ${hospitalName}`;
+              hospitalInfo.classList.remove('hidden');
+            }
+          }
+        } catch (error) {
+          console.error('فشل تحميل قائمة المستشفيات لتوزيع الأقسام:', error);
+        }
+      }
+
+      initHospitals();
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const file = document.getElementById('deptAssignFile')?.files?.[0];
+        if (!file) {
+          statusEl.textContent = 'اختر ملف.';
+          statusEl.className = 'text-sm text-red-600';
+          return;
+        }
+
+        let hospitalId = null;
+        if (hospitalWrap && !hospitalWrap.classList.contains('hidden')) {
+          hospitalId = hospitalSelect?.value || null;
+          if (!hospitalId) {
+            statusEl.textContent = 'اختر المستشفى أولاً.';
+            statusEl.className = 'text-sm text-red-600';
+            return;
+          }
+        } else {
+          hospitalId = fixedHospitalId || Number(localStorage.getItem('hospitalId')) || null;
+          if (!hospitalId) {
+            statusEl.textContent = 'لم يتم تحديد المستشفى تلقائياً.';
+            statusEl.className = 'text-sm text-red-600';
+            return;
+          }
+        }
+
+        statusEl.textContent = 'جاري الرفع...';
+        statusEl.className = 'text-sm text-gray-500';
+        resultBox.classList.add('hidden');
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('hospitalId', hospitalId);
+
+        try {
+          const res = await fetch(`${API_BASE}/api/imports/departments-assign`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: fd
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+
+          statusEl.textContent = 'تم بنجاح!';
+          statusEl.className = 'text-sm text-green-600';
+
+          summaryEl.innerHTML = data.message || `تم تحديث <strong>${data.updated || 0}</strong> بلاغ.`;
+
+          if (Array.isArray(data.missingClinics) && data.missingClinics.length) {
+            missingWrap.classList.remove('hidden');
+            missingList.innerHTML = data.missingClinics
+              .map((clinic) => `<li>${clinic}</li>`)
+              .join('');
+          } else {
+            missingWrap.classList.add('hidden');
+            missingList.innerHTML = '';
+          }
+
+          resultBox.classList.remove('hidden');
+        } catch (error) {
+          statusEl.textContent = 'فشل الرفع: ' + error.message;
+          statusEl.className = 'text-sm text-red-600';
+        }
+      });
     })();
   </script>
 

@@ -85,11 +85,16 @@ export async function deleteComplaint(req, res) {
 }
 
 export async function transferComplaintDepartment(req, res) {
+  const hospitalId = Number(req.hospitalId || req.query?.hospitalId || req.user?.HospitalID);
+  const actorUserId = await resolveResponderUserId(req, hospitalId);
+  if (!actorUserId) {
+    return res.status(403).json({ ok:false, message:'ليس لديك حساب فعّال داخل هذه المستشفى.' });
+  }
+
   const conn = await req.hospitalPool.getConnection();
   try {
     const complaintId = Number(req.params.id);
     const { toDepartmentId, note } = req.body || {};
-    const actorUserId = Number(req.user?.uid || req.user?.UserID);
 
     if (!complaintId || !toDepartmentId) {
       return res.status(400).json({ ok:false, message:'toDepartmentId مطلوب' });

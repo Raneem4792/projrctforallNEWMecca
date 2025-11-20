@@ -160,7 +160,17 @@ function asDate(val) {
 const HEADER_MAP = {
   // في الإكسل:
   ticketNumber: ['رقم البلاغ', 'رقم التذكرة', 'رقم الطلب', 'Ticket No', 'Ticket Number'],
-  hospitalName: ['المنشأة/ الخدمة', 'المنشأة/الخدمة', 'اسم المنشأة', 'المنشأة', 'المستشفى', 'Facility', 'Hospital'],
+  hospitalName: [
+    'المنشأة/ الخدمة',
+    'المنشأة/الخدمة',
+    'المنشأة/ الإدارة',
+    'المنشأة/الادارة',
+    'اسم المنشأة',
+    'المنشأة',
+    'المستشفى',
+    'Facility',
+    'Hospital'
+  ],
   patientFullName: ['اسم المريض/المتصل', 'اسم المتصل', 'اسم المريض', 'Caller Name', 'Patient Name'],
   patientIDNumber: ['رقم هوية المتصل', 'رقم الهوية', 'هوية المتصل', 'National ID', 'Caller ID'],
   patientMobile: ['رقم الجوال للمتصل', 'رقم الجوال', 'جوال', 'Mobile', 'Caller Phone'],
@@ -664,6 +674,56 @@ function pickColumnValue(row, headers) {
   return '';
 }
 
+const DEPT_NAME_HEADERS = [
+  'اسم القسم',
+  'القسم',
+  'اسم القسم (عربي)',
+  'القسم/الإدارة',
+  'القسم / الإدارة',
+  'القسم‏/الإدارة',
+  'القسم‏ / ‏الإدارة',
+  'Department',
+  'Department Name',
+  'NameAr'
+];
+
+const DEPT_NAME_EN_HEADERS = [
+  'اسم القسم بالإنجليزية',
+  'NameEn',
+  'Department Name (English)',
+  'Department Name En',
+  'Department (English)'
+];
+
+const DEPT_CODE_HEADERS = [
+  'كود القسم',
+  'Code',
+  'الكود',
+  'Department Code'
+];
+
+function pickField(row, headers, fallback = '') {
+  const val = pickColumnValue(row, headers);
+  return val || fallback;
+}
+
+function normalizeHeaderKey(key = '') {
+  return String(key)
+    .replace(/\ufeff/g, '')
+    .replace(/[\u200f\u202a\u202b\u202c\u202d\u202e]/g, '')
+    .replace(/[\/\u2044\u2215\u02F8]/g, '/')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanRowKeys(row = {}) {
+  const cleaned = {};
+  for (const [key, value] of Object.entries(row)) {
+    cleaned[normalizeHeaderKey(key)] = value;
+  }
+  return cleaned;
+}
+
 // ---- Route: import Departments Excel ----
 router.post(
   '/imports/departments',
@@ -696,47 +756,65 @@ router.post(
       const ws = workbook.Sheets[sheetName];
       if (!ws) return res.status(400).json({ message: 'لا يمكن قراءة ورقة الإكسل.' });
 
-      const data = xlsx.utils.sheet_to_json(ws);
+      const dataRaw = xlsx.utils.sheet_to_json(ws, { header: 1, raw: true });
+      const rows = dataRaw.filter(r => Array.isArray(r) && r.some(cell => cell != null && cell !== ''));
+      if (!rows.length) return res.status(400).json({ message: 'لا توجد بيانات في الملف.' });
+
+      const headerArr = rows[0].map((cell) => normalizeHeaderKey(cell || ''));
+      const data = rows.slice(1).map((row) => {
+        const obj = {};
+        headerArr.forEach((header, idx) => {
+          if (!header) return;
+          obj[header] = row[idx];
+        });
+        return obj;
+      });
       if (!data.length) return res.status(400).json({ message: 'لا توجد بيانات في الملف.' });
 
-      const inserted = [];
-      const errors = [];
+      let inserted = 0;
+      let skipped = 0;
+      let errors = 0;
 
       for (const row of data) {
         try {
-          const nameAr = row['اسم القسم'] || row['NameAr'] || row['القسم'] || '';
-          const nameEn = row['اسم القسم بالإنجليزية'] || row['NameEn'] || row['Department Name'] || '';
-          const code = row['كود القسم'] || row['Code'] || row['الكود'] || '';
+          const nameAr = pickField(row, DEPT_NAME_HEADERS).trim();
+          const nameEn = pickField(row, DEPT_NAME_EN_HEADERS, nameAr).trim();
+          const code = pickField(row, DEPT_CODE_HEADERS).trim();
           
           if (!nameAr.trim()) {
-            errors.push(`صف بدون اسم القسم: ${JSON.stringify(row)}`);
+            skipped++;
+            continue;
+          }
+
+          const [exists] = await pool.query(
+            `SELECT DepartmentID FROM departments WHERE HospitalID = ? AND NameAr = ? LIMIT 1`,
+            [hospitalId, nameAr]
+          );
+
+          if (exists.length > 0) {
+            skipped++;
             continue;
           }
 
           await pool.query(
             `INSERT INTO departments (HospitalID, NameAr, NameEn, Code, IsActive, SortOrder, CreatedAt, UpdatedAt)
-             VALUES (?, ?, ?, ?, 1, 999, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE
-               NameEn = VALUES(NameEn),
-               Code = VALUES(Code),
-               UpdatedAt = NOW()`,
+             VALUES (?, ?, ?, ?, 1, 999, NOW(), NOW())`,
             [hospitalId, nameAr.trim(), nameEn.trim() || nameAr.trim(), code.trim() || null]
           );
 
-          inserted.push({ nameAr: nameAr.trim(), nameEn: nameEn.trim() || nameAr.trim() });
+          inserted++;
         } catch (error) {
-          errors.push(`خطأ في الصف ${JSON.stringify(row)}: ${error.message}`);
+          errors++;
+          console.error('خطأ في صف الأقسام:', error.message, row);
         }
       }
 
       res.json({
-        success: true,
-        message: `تم استيراد ${inserted.length} قسم بنجاح`,
-        data: {
-          inserted: inserted.length,
-          errors: errors.length,
-          details: errors
-        }
+        inserted,
+        updated: 0,
+        skipped,
+        errors,
+        total: inserted + skipped + errors
       });
     } catch (error) {
       console.error('خطأ في استيراد الأقسام:', error);
