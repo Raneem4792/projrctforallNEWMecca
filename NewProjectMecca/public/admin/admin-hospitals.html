@@ -51,9 +51,15 @@
         <h2 class="text-xl font-extrabold text-[#002B5B]">إدارة المستشفيات</h2>
         <p class="text-sm text-gray-600">إضافة وتعديل وحذف مستشفيات التجمع</p>
       </div>
-      <a id="btnAddHospital" href="hospital-new.html" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition flex items-center" style="display: none;">
-        + إضافة مستشفى جديد
-      </a>
+      <div class="flex items-center gap-3">
+        <label id="btnImportHospitals" for="excelFileInput" class="h-10 px-4 rounded-xl bg-emerald-600 text-white text-sm hover:bg-emerald-700 transition flex items-center cursor-pointer" style="display: none;">
+          📥 استيراد من Excel
+        </label>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" />
+        <a id="btnAddHospital" href="hospital-new.html" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition flex items-center" style="display: none;">
+          + إضافة مستشفى جديد
+        </a>
+      </div>
     </div>
 
     <!-- قائمة المستشفيات -->
@@ -99,12 +105,83 @@
         const canCreate = data?.canCreateHospital === true;
         
         const btn = document.getElementById('btnAddHospital');
+        const btnImport = document.getElementById('btnImportHospitals');
         if (btn && canCreate) {
           btn.style.display = 'flex';
+        }
+        if (btnImport && canCreate) {
+          btnImport.style.display = 'flex';
         }
       } catch (err) {
         console.error('خطأ في فحص الصلاحيات:', err);
       }
+    }
+
+    // معالجة استيراد المستشفيات من Excel
+    const excelFileInput = document.getElementById('excelFileInput');
+    if (excelFileInput) {
+      excelFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.name.match(/\.(xlsx|xls)$/i)) {
+          alert('⚠️ يجب رفع ملف Excel فقط (.xlsx أو .xls)');
+          excelFileInput.value = '';
+          return;
+        }
+
+        const confirmImport = confirm('هل أنت متأكد من استيراد المستشفيات من هذا الملف؟\n\nملاحظة: سيتم إنشاء مستشفيات جديدة فقط.');
+        if (!confirmImport) {
+          excelFileInput.value = '';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btnImport = document.getElementById('btnImportHospitals');
+        const originalText = btnImport.textContent;
+        btnImport.disabled = true;
+        btnImport.textContent = '⏳ جاري الاستيراد...';
+
+        try {
+          const token = localStorage.getItem('authToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+          const res = await fetch(`${API_BASE}/api/admin/hospitals/import`, {
+            method: 'POST',
+            headers: {
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: formData
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.message || data.error || `HTTP ${res.status}`);
+          }
+
+          const successMsg = `✅ تم استيراد المستشفيات بنجاح!\n\n` +
+            `📊 النتائج:\n` +
+            `• تم إنشاء: ${data.created || 0} مستشفى\n` +
+            `• تم تحديث: ${data.updated || 0} مستشفى\n` +
+            `• تم تخطي: ${data.skipped || 0} صف\n` +
+            `• أخطاء: ${data.errors || 0}\n\n` +
+            (data.details ? `تفاصيل:\n${data.details}` : '');
+          
+          alert(successMsg);
+          
+          // إعادة تحميل قائمة المستشفيات
+          await loadHospitals();
+          
+        } catch (err) {
+          console.error('❌ خطأ في استيراد المستشفيات:', err);
+          alert(`⚠️ فشل استيراد المستشفيات:\n\n${err.message}\n\nتأكد من:\n• صحة تنسيق ملف Excel\n• وجود جميع الحقول المطلوبة\n• تشغيل الباكند`);
+        } finally {
+          btnImport.disabled = false;
+          btnImport.textContent = originalText;
+          excelFileInput.value = '';
+        }
+      });
     }
 
     async function loadHospitals(){
@@ -328,8 +405,13 @@
           <input id="f_Phone" class="w-full rounded-xl border px-3 py-2">
         </div>
         <div>
-          <label class="block text-sm mb-1">النطاق (Domain)</label>
-          <input id="f_Domain" class="w-full rounded-xl border px-3 py-2" placeholder="example.com">
+          <label class="block text-sm mb-1">نوع المنشأة</label>
+          <select id="f_FacilityType" class="w-full rounded-xl border px-3 py-2 bg-white" required>
+            <option value="">اختر نوع المنشأة</option>
+            <option value="hospital">مستشفى</option>
+            <option value="center">مركز صحي</option>
+            <option value="administration">إدارة</option>
+          </select>
         </div>
 
         <div>
@@ -398,7 +480,7 @@
           document.getElementById('f_Region').value     = h.Region || '';
           document.getElementById('f_Email').value      = h.Email || '';
           document.getElementById('f_Phone').value      = h.Phone || '';
-          document.getElementById('f_Domain').value     = h.Domain || '';
+          document.getElementById('f_FacilityType').value = h.FacilityType || 'hospital';
           document.getElementById('f_Code').value       = h.Code || '';
           document.getElementById('f_SortOrder').value  = h.SortOrder ?? 100;
           document.getElementById('f_IsActive').checked = !!h.IsActive;
@@ -437,7 +519,7 @@
         Region:   document.getElementById('f_Region').value.trim(),
         Email:    document.getElementById('f_Email').value.trim(),
         Phone:    document.getElementById('f_Phone').value.trim(),
-        Domain:   document.getElementById('f_Domain').value.trim(),
+        FacilityType: document.getElementById('f_FacilityType').value.trim() || 'hospital',
         Code:     document.getElementById('f_Code').value.trim(),
         SortOrder: Number(document.getElementById('f_SortOrder').value || 100),
         IsActive: document.getElementById('f_IsActive').checked ? 1 : 0

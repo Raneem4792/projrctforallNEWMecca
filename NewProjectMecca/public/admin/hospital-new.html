@@ -73,6 +73,15 @@
             <label class="block text-sm text-gray-600 mb-1">الكود المختصر (مثال: KAH)</label>
             <input id="hCode" required class="uppercase w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200" maxlength="10"/>
           </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">نوع المنشأة</label>
+            <select id="hFacilityTypeSelect" required class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200 bg-white">
+              <option value="">اختر نوع المنشأة</option>
+              <option value="hospital">مستشفى</option>
+              <option value="center">مركز صحي</option>
+              <option value="administration">إدارة</option>
+            </select>
+          </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-sm text-gray-600 mb-1">المدينة</label>
@@ -99,10 +108,6 @@
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">النطاق/الدومين</label>
-            <input id="hDomain" placeholder="example.com" class="w-full h-11 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200"/>
-          </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">شعار المستشفى (اختياري)</label>
             <input id="hLogo" type="file" accept="image/*" class="w-full h-11 rounded-xl border border-gray-200 px-3 py-2"/>
@@ -280,6 +285,8 @@
       // تعبئة النوع باللغة الإنجليزية (للباكند)
       const type = btn.dataset.type || '';
       const facilityTypeInput = document.getElementById('hFacilityType');
+      const facilityTypeSelect = document.getElementById('hFacilityTypeSelect');
+      
       if (facilityTypeInput) {
         if (type === "hospital") {
           facilityTypeInput.value = "hospital";
@@ -289,6 +296,12 @@
           facilityTypeInput.value = "administration";
         }
       }
+      
+      // تحديث القائمة المنسدلة المرئية
+      if (facilityTypeSelect && type) {
+        facilityTypeSelect.value = type || "hospital";
+      }
+      
       toggleFacilityDropdown(false);
     });
 

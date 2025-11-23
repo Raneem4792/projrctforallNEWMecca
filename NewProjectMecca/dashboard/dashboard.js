@@ -151,8 +151,8 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
       data: {
         labels,
         datasets: [
-          { label: 'مغلقة', data: closed, backgroundColor: '#10B981', stack: 'm', borderRadius: 6, barThickness: 14 },
-          { label: 'مفتوحة', data: open,   backgroundColor: '#F59E0B', stack: 'm', borderRadius: 6, barThickness: 14 }
+          { label: 'مغلقة', data: closed, backgroundColor: '#0FA47A', stack: 'm', borderRadius: 6, barThickness: 14 },
+          { label: 'مفتوحة', data: open,   backgroundColor: '#1D9BF0', stack: 'm', borderRadius: 6, barThickness: 14 }
         ]
       },
       options: {
@@ -604,6 +604,11 @@ async function filterDashboardByFacility(type, id) {
   // ========================================
   updatePageTitle(item.name);
 
+  // ========================================
+  // 7) إظهار قسم التصدير
+  // ========================================
+  showExportSection(id, item.name);
+
   console.log('✅ تم تطبيق التصفية بنجاح');
 }
 
@@ -635,6 +640,9 @@ async function reloadFilteredData(hospitalId) {
     await loadStatusChart();
     await loadCategoriesChart();
     await loadSubcategoriesChart();
+
+    // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
+    await loadPatientFrequencyTable(1);
 
     console.log('✅ تم إعادة تحميل جميع البيانات المفلترة');
   } catch (error) {
@@ -1007,6 +1015,9 @@ async function updateDepartmentsChartWithData(data, hospitalId) {
     if (!container) return;
     
     container.innerHTML = "";
+    
+    // ملء قائمة المستشفيات في القائمة المنسدلة
+    populateWeeklyHospitalFilter();
 
     // عند الفلترة، يجب أن يكون هناك مستشفى واحد فقط
     // فلترة إضافية قوية للتأكد من أن grouped يحتوي فقط على المستشفى المحدد
@@ -1126,16 +1137,30 @@ async function updateDepartmentsChartWithData(data, hospitalId) {
       console.log(`🎯 المستشفى المحدد: ${hospitalName || 'غير معروف'} (ID: ${hospitalId})`);
       console.log(`📊 المستشفيات في grouped:`, Object.keys(grouped));
     }
+    
+    // تحديد إذا كان هناك مستشفى واحد فقط (عند التصفية)
+    const isSingleHospital = hospitalId && Object.keys(grouped).length === 1;
+    
+    // تعديل grid layout عند وجود مستشفى واحد فقط
+    if (isSingleHospital) {
+      container.className = "grid grid-cols-1 gap-6";
+    } else {
+      container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6";
+    }
+    
     Object.entries(grouped).forEach(([hospital, deptMap]) => {
       const deptsArr = Object.values(deptMap);
       const sorted = [...deptsArr].sort((a,b)=> b.count - a.count).slice(0, 5);
       const safeId = hospital.replace(/[^a-zA-Z0-9\-ا-ي]+/g, '-');
 
+      // ارتفاع أكبر للرسم عند وجود مستشفى واحد فقط
+      const chartHeight = isSingleHospital ? '500px' : '220px';
+
       const card = document.createElement("div");
       card.className = "bg-white border border-gray-100 shadow-sm rounded-xl p-5";
       card.innerHTML = `
         <h4 class="font-bold text-lg mb-3 text-blue-900">${hospital}</h4>
-        <div class="mb-4" style="height:220px"><canvas id="depts-chart-${safeId}"></canvas></div>
+        <div class="mb-4" style="height:${chartHeight}"><canvas id="depts-chart-${safeId}"></canvas></div>
         <table class="min-w-full text-sm text-center border-collapse">
           <thead>
             <tr class="bg-gray-100 text-gray-700">
@@ -1162,7 +1187,7 @@ async function updateDepartmentsChartWithData(data, hospitalId) {
                        '🟢 طبيعية';
         const improve = isRed
           ? `<button class="px-3 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700"
-               onclick="window.location.href='improvements/new.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}'">
+               onclick="window.location.href='improvements/improvement_937.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}'">
                🚀 مشروع تحسيني
              </button>`
           : '-';
@@ -1179,24 +1204,9 @@ async function updateDepartmentsChartWithData(data, hospitalId) {
           return `../public/complaints/history/complaint-details.html?${q.toString()}`;
         };
 
-        const deptCell = crit?.ticket
-          ? `<a class="underline ${isRed ? 'text-red-700 hover:text-red-900' : 'text-blue-700 hover:text-blue-900'}"
-               href="${makeDetailsHref(crit)}">${dept.name}</a>`
-          : `<a class="underline text-blue-700 hover:text-blue-900"
+        const deptCell = `<a class="underline ${isRed ? 'text-red-700 hover:text-red-900' : 'text-blue-700 hover:text-blue-900'} cursor-pointer"
                href="javascript:void(0)"
-               onclick="(async()=>{
-                 const res = await getLatestTicketByHospitalDept('${hospital.replace(/'/g,"\\'")}','${dept.name.replace(/'/g,"\\'")}');
-                 if (res?.ticket) {
-                   const q = new URLSearchParams({
-                     ticket: res.ticket,
-                     ...(res.hospitalId ? { hid: res.hospitalId } : {}),
-                     ...(res.complaintId ? { complaintId: res.complaintId } : {})
-                   });
-                   location.href = '../public/complaints/history/complaint-details.html?' + q.toString();
-                 } else {
-                   location.href = 'open.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}';
-                 }
-               })()">${dept.name}</a>`;
+               onclick="openDepartmentComplaintsModal('${hospital.replace(/'/g,"\\'")}','${dept.name.replace(/'/g,"\\'")}')">${dept.name}</a>`;
 
         tbody.insertAdjacentHTML('beforeend', `
           <tr class="${rowClass}">
@@ -1237,6 +1247,7 @@ function showBackButton() {
     // إزالة التصفية وإعادة تحميل الصفحة
     window.filteredHospitalId = null;
     window.isFiltered = false;
+    hideExportSection(); // إخفاء قسم التصدير
     window.location.href = 'dashboard.html';
   };
 
@@ -1257,6 +1268,51 @@ function updatePageTitle(facilityName) {
 
   // تحديث عنوان المتصفح
   document.title = `لوحة التحكم - ${facilityName}`;
+}
+
+/**
+ * إظهار قسم التصدير عند تحديد مستشفى
+ */
+function showExportSection(hospitalId, hospitalName) {
+  const exportSection = document.getElementById('hospital-export-section');
+  const exportTitle = document.getElementById('hospital-export-title');
+  
+  if (!hospitalId || !hospitalName) {
+    // لا تظهر القسم إذا لم يكن هناك مستشفى محدد
+    hideExportSection();
+    return;
+  }
+  
+  if (exportSection) {
+    exportSection.classList.remove('hidden');
+    exportSection.style.display = 'block'; // تأكد من إظهاره
+    if (exportTitle) {
+      exportTitle.textContent = `تقرير: ${hospitalName}`;
+    }
+    
+    // ربط الأزرار
+    const excelBtn = document.getElementById('export-excel-btn');
+    const pdfBtn = document.getElementById('export-pdf-btn');
+    
+    if (excelBtn) {
+      excelBtn.onclick = () => exportHospitalReport(hospitalId, hospitalName, 'excel');
+    }
+    
+    if (pdfBtn) {
+      pdfBtn.onclick = () => exportHospitalReport(hospitalId, hospitalName, 'pdf');
+    }
+  }
+}
+
+/**
+ * إخفاء قسم التصدير
+ */
+function hideExportSection() {
+  const exportSection = document.getElementById('hospital-export-section');
+  if (exportSection) {
+    exportSection.classList.add('hidden');
+    exportSection.style.display = 'none'; // تأكد من إخفائه
+  }
 }
 
 /**
@@ -1484,10 +1540,14 @@ async function updateTopDepartmentsChart() {
  */
 async function updateDepartmentsChart() {
   // ⭐ لو فيه تصفية لا تشتغل هذه الدالة أبداً (منع الكتابة فوق التصفية)
-  if (window.filteredHospitalId) {
+  // إلا إذا كانت التصفية من القائمة المنسدلة للأسبوع
+  if (window.filteredHospitalId && !document.getElementById('weekly-hospital-filter')?.value) {
     console.log(`⛔ منع updateDepartmentsChart() من التشغيل - تصفية نشطة للمستشفى ${window.filteredHospitalId}`);
     return;
   }
+  
+  // ملء القائمة المنسدلة عند أول تحميل
+  populateWeeklyHospitalFilter();
 
   try {
     const API_BASE =
@@ -1629,17 +1689,30 @@ async function updateDepartmentsChart() {
     const container = document.getElementById("hospitals-depts-container");
     container.innerHTML = "";
 
+    // تحديد إذا كان هناك مستشفى واحد فقط (عند التصفية)
+    const isSingleHospital = window.filteredHospitalId && Object.keys(grouped).length === 1;
+    
+    // تعديل grid layout عند وجود مستشفى واحد فقط
+    if (isSingleHospital) {
+      container.className = "grid grid-cols-1 gap-6";
+    } else {
+      container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6";
+    }
+
     // 🎨 إنشاء كرت لكل مستشفى
     Object.entries(grouped).forEach(([hospital, deptMap]) => {
       const deptsArr = Object.values(deptMap);     // ← مصفوفة الأقسام
       const sorted   = [...deptsArr].sort((a,b)=> b.count - a.count).slice(0, 5);
       const safeId   = hospital.replace(/[^a-zA-Z0-9\-ا-ي]+/g, '-');
 
+      // ارتفاع أكبر للرسم عند وجود مستشفى واحد فقط
+      const chartHeight = isSingleHospital ? '500px' : '220px';
+
       const card = document.createElement("div");
       card.className = "bg-white border border-gray-100 shadow-sm rounded-xl p-5";
       card.innerHTML = `
         <h4 class="font-bold text-lg mb-3 text-blue-900">${hospital}</h4>
-        <div class="mb-4" style="height:220px"><canvas id="depts-chart-${safeId}"></canvas></div>
+        <div class="mb-4" style="height:${chartHeight}"><canvas id="depts-chart-${safeId}"></canvas></div>
         <table class="min-w-full text-sm text-center border-collapse">
           <thead>
             <tr class="bg-gray-100 text-gray-700">
@@ -1667,7 +1740,7 @@ async function updateDepartmentsChart() {
                        '🟢 طبيعية';
         const improve = isRed
           ? `<button class="px-3 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700"
-               onclick="window.location.href='improvements/new.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}'">
+               onclick="window.location.href='improvements/improvement_937.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}'">
                🚀 مشروع تحسيني
              </button>`
           : '-';
@@ -1684,24 +1757,9 @@ async function updateDepartmentsChart() {
           return `../public/complaints/history/complaint-details.html?${q.toString()}`;
         };
 
-        const deptCell = crit?.ticket
-          ? `<a class="underline ${isRed ? 'text-red-700 hover:text-red-900' : 'text-blue-700 hover:text-blue-900'}"
-               href="${makeDetailsHref(crit)}">${dept.name}</a>`
-          : `<a class="underline text-blue-700 hover:text-blue-900"
+        const deptCell = `<a class="underline ${isRed ? 'text-red-700 hover:text-red-900' : 'text-blue-700 hover:text-blue-900'} cursor-pointer"
                href="javascript:void(0)"
-               onclick="(async()=>{
-                 const res = await getLatestTicketByHospitalDept('${hospital.replace(/'/g,"\\'")}','${dept.name.replace(/'/g,"\\'")}');
-                 if (res?.ticket) {
-                   const q = new URLSearchParams({
-                     ticket: res.ticket,
-                     ...(res.hospitalId ? { hid: res.hospitalId } : {}),
-                     ...(res.complaintId ? { complaintId: res.complaintId } : {})
-                   });
-                   location.href = '../public/complaints/history/complaint-details.html?' + q.toString();
-                 } else {
-                   location.href = 'open.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}';
-                 }
-               })()">${dept.name}</a>`;
+               onclick="openDepartmentComplaintsModal('${hospital.replace(/'/g,"\\'")}','${dept.name.replace(/'/g,"\\'")}')">${dept.name}</a>`;
 
         tbody.insertAdjacentHTML('beforeend', `
           <tr class="${rowClass}">
@@ -1718,6 +1776,89 @@ async function updateDepartmentsChart() {
     });
   } catch (err) {
     console.error("خطأ في تحميل بيانات الأقسام حسب المستشفى:", err);
+  }
+}
+
+/**
+ * ملء قائمة المستشفيات في القائمة المنسدلة للأسبوع
+ */
+function populateWeeklyHospitalFilter() {
+  const select = document.getElementById('weekly-hospital-filter');
+  if (!select) return;
+  
+  // إذا لم تكن البيانات محملة بعد، انتظر قليلاً
+  if (!hospitalsData || hospitalsData.length === 0) {
+    // إعادة المحاولة بعد 500ms
+    setTimeout(() => populateWeeklyHospitalFilter(), 500);
+    return;
+  }
+  
+  // حفظ القيمة المحددة حالياً
+  const currentValue = select.value;
+  
+  // مسح الخيارات القديمة (ما عدا "جميع المستشفيات")
+  select.innerHTML = '<option value="">جميع المستشفيات</option>';
+  
+  // إضافة المستشفيات
+  hospitalsData.forEach(hospital => {
+    const option = document.createElement('option');
+    option.value = hospital.id;
+    option.textContent = hospital.name;
+    select.appendChild(option);
+  });
+  
+  // استعادة القيمة المحددة
+  if (currentValue) {
+    select.value = currentValue;
+  }
+  
+  // إزالة event listeners القديمة وإضافة واحدة جديدة
+  const newSelect = select.cloneNode(true);
+  select.parentNode.replaceChild(newSelect, select);
+  
+  // إضافة event listener للتصفية
+  newSelect.addEventListener('change', async (e) => {
+    const selectedHospitalId = e.target.value;
+    if (selectedHospitalId) {
+      // تعيين التصفية النشطة
+      window.filteredHospitalId = selectedHospitalId;
+      // تصفية البيانات حسب المستشفى المحدد
+      await filterWeeklyBoardByHospital(selectedHospitalId);
+      // إعادة تحميل جدول تكرار الشكاوى
+      await loadPatientFrequencyTable(1);
+    } else {
+      // إزالة التصفية النشطة
+      window.filteredHospitalId = null;
+      // عرض جميع المستشفيات
+      await updateDepartmentsChart();
+      // إعادة تحميل جدول تكرار الشكاوى بدون تصفية
+      await loadPatientFrequencyTable(1);
+    }
+  });
+}
+
+/**
+ * تصفية لوحة الأسبوع حسب المستشفى المحدد
+ */
+async function filterWeeklyBoardByHospital(hospitalId) {
+  try {
+    // تعيين التصفية النشطة
+    window.filteredHospitalId = hospitalId;
+    
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    const qs = `?hospitalId=${encodeURIComponent(hospitalId)}`;
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/departments${qs}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    
+    const result = await response.json();
+    if (!result.success || !result.data) return;
+    
+    // استخدام نفس الدالة لكن مع البيانات المفلترة
+    await updateDepartmentsChartWithData(result.data, hospitalId);
+  } catch (error) {
+    console.error('❌ خطأ في تصفية لوحة الأسبوع:', error);
   }
 }
 
@@ -2707,6 +2848,9 @@ async function initializeDashboard() {
       console.log(`✅ تم تعيين window.filteredHospitalId = ${window.filteredHospitalId} من URL (مركز صحي) - قبل تحميل البيانات`);
     }
 
+    // 0) إخفاء قسم التصدير افتراضياً (قبل أي شيء)
+    hideExportSection();
+
     // 1) هوية المستخدم ودوره
     await loadCurrentUser();
 
@@ -2731,6 +2875,11 @@ async function initializeDashboard() {
       if (hf) hf.style.display = 'none';
     }
 
+    // إخفاء قسم التصدير إذا لم تكن هناك تصفية
+    if (!hospitalId && !centerId) {
+      hideExportSection();
+    }
+
     // توليد قوائم الفلترة (المستشفيات والمراكز الصحية)
     generateHospitalFilterList();
     generateCenterFilterList();
@@ -2748,6 +2897,9 @@ async function initializeDashboard() {
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
+    
+    // 🔹 تحديث تاريخ الأسبوع الحالي
+    updateWeeklyPeriod();
 
     // 3) باقي الأقسام (فقط إذا لم تكن هناك تصفية)
     if (!hospitalId && !centerId) {
@@ -3204,17 +3356,17 @@ async function loadStatusChart() {
       unknown: 'غير محدد',
     };
 
-    // 🎨 ألوان لكل حالة
+    // 🎨 ألوان لكل حالة - متناسقة مع نظام الألوان الأساسي للداشبورد
     const colorMap = {
-      open: '#3B82F6', // أزرق
-      waiting: '#FBBF24', // أصفر
-      in_progress: '#10B981', // أخضر
-      on_hold: '#6B7280', // رمادي
-      escalated: '#EF4444', // أحمر
-      closed: '#6366F1', // بنفسجي
-      resolved: '#22C55E', // أخضر فاقع
-      cancelled: '#DC2626', // أحمر غامق
-      unknown: '#9CA3AF', // رمادي فاتح
+      open: '#1D9BF0', // أزرق فاتح (سماوي) - مفتوحة
+      waiting: '#FBBF24', // أصفر - قيد المتابعة
+      in_progress: '#1D9BF0', // أزرق فاتح - قيد المعالجة
+      on_hold: '#6B7280', // رمادي - معلق
+      escalated: '#EF4444', // أحمر - حرجة/مصعد
+      closed: '#0FA47A', // أخضر - مغلقة
+      resolved: '#0FA47A', // أخضر - محلول (نفس لون المغلقة)
+      cancelled: '#DC2626', // أحمر غامق - ملغي
+      unknown: '#9CA3AF', // رمادي فاتح - غير محدد
     };
 
     const labels = json.data.map(s => statusMap[s.StatusCode] || s.StatusCode);
@@ -3342,25 +3494,36 @@ async function loadCategoriesChart() {
       total: Number(c.Total) || 0
     }));
 
+    // ألوان احترافية موحدة
+    const professionalColors = [
+      "#1D4ED8", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444",
+      "#6366F1", "#EC4899", "#14B8A6", "#A855F7", "#F97316",
+      "#22C55E", "#0EA5E9", "#2DD4BF", "#94A3B8"
+    ];
+
     const chartInstance = new Chart(ctx.getContext('2d'), {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels,
         datasets: [{
           data: values,
-          backgroundColor: colors,
+          backgroundColor: professionalColors.slice(0, labels.length),
           borderColor: '#ffffff',
-          borderWidth: 2,
+          borderWidth: 1,
+          hoverOffset: 12,
           categoriesData: categoriesData // حفظ البيانات للاستخدام في onClick
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: "55%",
         plugins: {
           legend: {
             position: 'right',
             labels: {
+              boxWidth: 12,
+              padding: 10,
               font: { family: 'Tajawal', size: 13 },
               color: '#374151',
             },
@@ -3445,13 +3608,6 @@ async function loadSubcategoriesChart() {
     const labels = json.data.map(s => s.SubCategory || 'غير محدد');
     const values = json.data.map(s => Number(s.Total) || 0);
 
-    // ألوان متدرجة
-    const colors = [
-      '#3B82F6', '#0FA47A', '#F59E0B', '#8B5CF6', '#06B6D4',
-      '#DC2626', '#14B8A6', '#6366F1', '#F97316', '#0EA5E9',
-      '#EC4899', '#84CC16', '#A855F7', '#22D3EE', '#F43F5E'
-    ].slice(0, labels.length);
-
     // 🧹 تدمير أي رسم سابق
     Chart.helpers.each(Chart.instances, (inst) => {
       if (inst.canvas && inst.canvas.id === 'subcategories-chart') {
@@ -3476,8 +3632,9 @@ async function loadSubcategoriesChart() {
         datasets: [{
           label: 'عدد البلاغات',
           data: values,
-          backgroundColor: colors,
+          backgroundColor: '#0EA5E9',
           borderRadius: 6,
+          maxBarThickness: 18,
           subcategoriesData: subcategoriesData // حفظ البيانات للاستخدام في onClick
         }],
       },
@@ -3498,12 +3655,15 @@ async function loadSubcategoriesChart() {
         scales: {
           x: {
             beginAtZero: true,
-            grid: { color: 'rgba(0,0,0,.05)' },
+            grid: { display: false },
             ticks: { color: '#374151' },
           },
           y: {
             grid: { display: false },
-            ticks: { color: '#374151', font: { family: 'Tajawal', size: 12 } },
+            ticks: { 
+              color: '#374151', 
+              font: { family: 'Tajawal', size: 12 } 
+            },
           },
         },
         onClick: (evt, elements) => {
@@ -3561,8 +3721,13 @@ async function loadPatientFrequencyTable(page = 1) {
     const urlParams = new URLSearchParams(location.search);
     let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
     
+    // تحويل hospitalId إلى رقم إذا كان موجوداً
+    if (hospitalId) {
+      hospitalId = Number(hospitalId);
+    }
+    
     if (!hospitalId && !App.isClusterManager()) {
-      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId;
+      hospitalId = Number(currentUser?.HospitalID || currentUser?.hospitalId || 0);
     }
     
     const params = new URLSearchParams({
@@ -3570,7 +3735,7 @@ async function loadPatientFrequencyTable(page = 1) {
       limit: patientFrequencyLimit.toString()
     });
     
-    if (hospitalId) {
+    if (hospitalId && hospitalId > 0) {
       params.set('hospitalId', hospitalId.toString());
     }
     
@@ -3811,4 +3976,657 @@ function getPriorityLabel(priority) {
   return priority || 'غير محدد';
 }
 
+/**
+ * فتح نافذة منبثقة لعرض بلاغات قسم معين
+ * متاحة بشكل عام للاستخدام من onclick في HTML
+ */
+window.openDepartmentComplaintsModal = async function(hospitalName, departmentName) {
+  const modal = document.getElementById('department-complaints-modal');
+  const listDiv = document.getElementById('department-complaints-list');
+  const infoDiv = document.getElementById('department-modal-info');
+  const closeBtn = document.getElementById('department-modal-close');
+  
+  if (!modal || !listDiv) return;
+  
+  // إظهار الـ modal
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  
+  // تحديث معلومات القسم
+  if (infoDiv) {
+    infoDiv.textContent = `المستشفى: ${hospitalName} | القسم: ${departmentName}`;
+  }
+  
+  // عرض حالة التحميل
+  listDiv.innerHTML = '<div class="text-center text-gray-500 py-8">جاري تحميل البلاغات...</div>';
+  
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    const params = new URLSearchParams({
+      hospitalName: hospitalName,
+      departmentName: departmentName
+    });
+    
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/department-complaints?${params.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const json = await response.json();
+    
+    if (!json.success || !json.data || !json.data.length) {
+      listDiv.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد بلاغات لهذا القسم</div>';
+      return;
+    }
+    
+    // عرض البلاغات
+    listDiv.innerHTML = '';
+    json.data.forEach((complaint, index) => {
+      const complaintCard = document.createElement('div');
+      complaintCard.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors';
+      
+      const statusColor = getStatusColor(complaint.StatusCode);
+      const priorityColor = getPriorityColor(complaint.PriorityCode);
+      const date = new Date(complaint.CreatedAt).toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      complaintCard.innerHTML = `
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="font-bold text-lg" style="color:#002B5B">${complaint.TicketNumber || 'غير محدد'}</span>
+              <span class="px-2 py-1 rounded text-xs font-semibold" style="background:${statusColor.bg}; color:${statusColor.text}">
+                ${complaint.StatusLabelAr || complaint.StatusCode || 'غير محدد'}
+              </span>
+              <span class="px-2 py-1 rounded text-xs font-semibold" style="background:${priorityColor.bg}; color:${priorityColor.text}">
+                ${getPriorityLabel(complaint.PriorityCode)}
+              </span>
+            </div>
+            <div class="text-sm text-gray-600 mb-2">
+              <span class="font-semibold">النوع:</span> ${complaint.ComplaintTypeNameAr || 'غير محدد'}
+              ${complaint.PatientFullName ? ` | <span class="font-semibold">المريض:</span> ${complaint.PatientFullName}` : ''}
+            </div>
+            <p class="text-sm text-gray-700 line-clamp-2">${complaint.Description || 'لا يوجد وصف'}</p>
+            <div class="text-xs text-gray-500 mt-2">تاريخ الإنشاء: ${date}</div>
+          </div>
+        </div>
+      `;
+      
+      // إضافة event listener لفتح صفحة التفاصيل
+      complaintCard.addEventListener('click', () => {
+        const ticket = complaint.TicketNumber;
+        const complaintId = complaint.ComplaintID;
+        const hospitalId = complaint.HospitalID;
+        
+        // بناء رابط صفحة التفاصيل
+        const params = new URLSearchParams();
+        if (ticket) params.set('ticket', ticket);
+        if (complaintId) params.set('complaintId', complaintId);
+        if (hospitalId) params.set('hid', hospitalId);
+        
+        window.location.href = `../public/complaints/history/complaint-details.html?${params.toString()}`;
+      });
+      
+      listDiv.appendChild(complaintCard);
+    });
+    
+  } catch (error) {
+    console.error('❌ خطأ في تحميل بلاغات القسم:', error);
+    listDiv.innerHTML = '<div class="text-center text-red-500 py-8">حدث خطأ في تحميل البلاغات</div>';
+  }
+  
+  // دالة إغلاق الـ modal
+  const closeModal = () => {
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+  };
+  
+  // إضافة event listener لإغلاق الـ modal
+  if (closeBtn) {
+    closeBtn.onclick = closeModal;
+  }
+  
+  // إغلاق عند النقر خارج الـ modal
+  const handleModalClick = (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  };
+  modal.removeEventListener('click', handleModalClick); // إزالة أي مستمع سابق
+  modal.addEventListener('click', handleModalClick);
+}
+
+/**
+ * تحديث تاريخ الأسبوع الحالي (من الأحد إلى السبت)
+ */
+function updateWeeklyPeriod() {
+  const periodElement = document.getElementById('weekly-period');
+  if (!periodElement) return;
+  
+  const now = new Date();
+  
+  // حساب يوم الأحد من الأسبوع الحالي (الأسبوع يبدأ من الأحد في السعودية)
+  const dayOfWeek = now.getDay(); // 0 = الأحد, 1 = الاثنين, ..., 6 = السبت
+  const daysToSunday = dayOfWeek === 0 ? 0 : -dayOfWeek; // إذا كان اليوم الأحد، لا نحتاج للرجوع
+  
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() + daysToSunday);
+  sunday.setHours(0, 0, 0, 0);
+  
+  // حساب يوم السبت من نفس الأسبوع
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  saturday.setHours(23, 59, 59, 999);
+  
+  // تنسيق التاريخ بالعربية
+  const monthNames = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+  
+  const formatDate = (date) => {
+    const day = date.getDate();
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+  
+  const startDate = formatDate(sunday);
+  const endDate = formatDate(saturday);
+  
+  // إذا كان نفس الشهر، نعرض: "12-9 أكتوبر 2025"
+  // إذا كان شهرين مختلفين، نعرض: "30 سبتمبر - 6 أكتوبر 2025"
+  if (sunday.getMonth() === saturday.getMonth() && sunday.getFullYear() === saturday.getFullYear()) {
+    periodElement.textContent = `الفترة: ${sunday.getDate()}-${saturday.getDate()} ${monthNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
+  } else {
+    periodElement.textContent = `الفترة: ${startDate} - ${endDate}`;
+  }
+}
+
+/**
+ * تصدير تقرير المستشفى (Excel أو PDF)
+ */
+async function exportHospitalReport(hospitalId, hospitalName, format) {
+  try {
+    const periodSelect = document.getElementById('export-period-select');
+    const months = periodSelect ? Number(periodSelect.value) || 12 : 12;
+    
+    // عرض رسالة تحميل
+    const loadingMsg = format === 'excel' ? 'جاري تصدير Excel...' : 'جاري تصدير PDF...';
+    alert(loadingMsg);
+    
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    // جلب البيانات من API
+    const response = await authFetch(
+      `${API_BASE}/api/dashboard/total/hospital-monthly-report?hospitalId=${hospitalId}&months=${months}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'فشل في جلب البيانات');
+    }
+    
+    // جلب بيانات التصنيفات
+    const classificationsResponse = await authFetch(
+      `${API_BASE}/api/dashboard/total/classifications-with-status?hospitalId=${hospitalId}`
+    );
+    let classificationsData = null;
+    if (classificationsResponse.ok) {
+      const classificationsResult = await classificationsResponse.json();
+      if (classificationsResult.success) {
+        classificationsData = classificationsResult.data;
+      }
+    }
+    
+    if (format === 'excel') {
+      await exportHospitalExcel(data, hospitalName, classificationsData);
+    } else {
+      await exportHospitalPDF(data, hospitalName, classificationsData);
+    }
+    
+  } catch (error) {
+    console.error('❌ خطأ في تصدير تقرير المستشفى:', error);
+    alert(`حدث خطأ في التصدير: ${error.message}`);
+  }
+}
+
+/**
+ * تصدير تقرير Excel
+ */
+async function exportHospitalExcel(data, hospitalName, classificationsData = null) {
+  try {
+    if (!window.XLSX) {
+      throw new Error('مكتبة XLSX غير متوفرة');
+    }
+    
+    const wb = window.XLSX.utils.book_new();
+    
+    // ورقة البيانات الشهرية
+    const monthlyRows = [
+      ['الشهر', 'إجمالي البلاغات', 'مفتوحة', 'مغلقة', 'حرجة'],
+      ...data.monthlyData.map(row => [
+        row.month_label,
+        row.total_complaints,
+        row.open_complaints,
+        row.closed_complaints,
+        row.critical_complaints
+      ])
+    ];
+    
+    const ws = window.XLSX.utils.aoa_to_sheet(monthlyRows);
+    
+    // تنسيق الأعمدة
+    ws['!cols'] = [
+      { wch: 15 }, // الشهر
+      { wch: 18 }, // إجمالي
+      { wch: 12 }, // مفتوحة
+      { wch: 12 }, // مغلقة
+      { wch: 12 }  // حرجة
+    ];
+    
+    window.XLSX.utils.book_append_sheet(wb, ws, 'البيانات الشهرية');
+    
+    // ورقة الملخص
+    const summaryRows = [
+      ['المستشفى', data.hospital.name],
+      ['كود المستشفى', data.hospital.code || 'غير محدد'],
+      ['الفترة', `${data.period.from} إلى ${data.period.to}`],
+      [''],
+      ['الإحصائيات الإجمالية', ''],
+      ['إجمالي البلاغات', data.summary.total_reports],
+      ['بلاغات مفتوحة', data.summary.open_reports],
+      ['بلاغات مغلقة', data.summary.closed_reports],
+      ['بلاغات حرجة', data.summary.critical_count],
+      ['معدل الإغلاق', `${data.summary.resolution_rate}%`],
+      [''],
+      ['الاتجاه', data.trend.direction === 'up' ? 'ارتفاع' : data.trend.direction === 'down' ? 'انخفاض' : 'مستقر'],
+      ['التغيير', data.trend.change],
+      ['النسبة المئوية', `${data.trend.percentage}%`]
+    ];
+    
+    const wsSummary = window.XLSX.utils.aoa_to_sheet(summaryRows);
+    wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }];
+    window.XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص');
+    
+    // ورقة التصنيفات الرئيسية
+    if (classificationsData && classificationsData.mainClassifications) {
+      const mainClassRows = [
+        ['التصنيف', 'إجمالي البلاغات', 'مفتوحة', 'مغلقة', 'زائر سري'],
+        ...classificationsData.mainClassifications.map(item => [
+          item.Category || 'غير محدد',
+          item.TotalCount || 0,
+          item.OpenCount || 0,
+          item.ClosedCount || 0,
+          item.MysteryCount || 0
+        ])
+      ];
+      const wsMainClass = window.XLSX.utils.aoa_to_sheet(mainClassRows);
+      wsMainClass['!cols'] = [
+        { wch: 25 }, // التصنيف
+        { wch: 18 }, // إجمالي
+        { wch: 12 }, // مفتوحة
+        { wch: 12 }, // مغلقة
+        { wch: 12 }  // زائر سري
+      ];
+      window.XLSX.utils.book_append_sheet(wb, wsMainClass, 'التصنيفات الرئيسية');
+    }
+    
+    // ورقة التصنيفات الفرعية
+    if (classificationsData && classificationsData.subClassifications) {
+      const subClassRows = [
+        ['التصنيف الفرعي', 'إجمالي البلاغات', 'مفتوحة', 'مغلقة', 'زائر سري'],
+        ...classificationsData.subClassifications.map(item => [
+          item.SubCategory || 'غير محدد',
+          item.TotalCount || 0,
+          item.OpenCount || 0,
+          item.ClosedCount || 0,
+          item.MysteryCount || 0
+        ])
+      ];
+      const wsSubClass = window.XLSX.utils.aoa_to_sheet(subClassRows);
+      wsSubClass['!cols'] = [
+        { wch: 25 }, // التصنيف الفرعي
+        { wch: 18 }, // إجمالي
+        { wch: 12 }, // مفتوحة
+        { wch: 12 }, // مغلقة
+        { wch: 12 }  // زائر سري
+      ];
+      window.XLSX.utils.book_append_sheet(wb, wsSubClass, 'التصنيفات الفرعية');
+    }
+    
+    // حفظ الملف
+    const fileName = `تقرير-${data.hospital.name}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    window.XLSX.writeFile(wb, fileName);
+    
+    console.log('✅ تم تصدير Excel بنجاح');
+    
+  } catch (error) {
+    console.error('❌ خطأ في تصدير Excel:', error);
+    throw error;
+  }
+}
+
+/**
+ * تصدير تقرير PDF باستخدام html2canvas لدعم العربية
+ */
+async function exportHospitalPDF(data, hospitalName, classificationsData = null) {
+  try {
+    if (!window.jspdf || !window.html2canvas) {
+      throw new Error('مكتبات التصدير غير متوفرة');
+    }
+    
+    const { jsPDF } = window.jspdf;
+    
+    // إنشاء عنصر HTML مخفي للتقرير
+    const reportContainer = document.createElement('div');
+    reportContainer.style.position = 'absolute';
+    reportContainer.style.left = '-9999px';
+    reportContainer.style.width = '210mm'; // A4 width
+    reportContainer.style.padding = '20mm';
+    reportContainer.style.backgroundColor = '#ffffff';
+    reportContainer.style.fontFamily = 'Tajawal, Arial, sans-serif';
+    reportContainer.style.direction = 'rtl';
+    reportContainer.style.textAlign = 'right';
+    
+    const trendText = data.trend.direction === 'up' ? 'ارتفاع' : data.trend.direction === 'down' ? 'انخفاض' : 'مستقر';
+    const trendColor = data.trend.direction === 'up' ? '#dc2626' : data.trend.direction === 'down' ? '#059669' : '#6b7280';
+    
+    // بناء HTML للتقرير
+    reportContainer.innerHTML = `
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
+        body { font-family: 'Tajawal', Arial, sans-serif; }
+        .report-header {
+          text-align: center;
+          margin-bottom: 30px;
+          padding-bottom: 15px;
+          border-bottom: 3px solid #004A9F;
+        }
+        .report-title {
+          font-size: 24px;
+          font-weight: bold;
+          color: #002B5B;
+          margin-bottom: 10px;
+        }
+        .report-info {
+          font-size: 14px;
+          color: #666;
+          margin: 5px 0;
+        }
+        .summary-section {
+          margin: 20px 0;
+        }
+        .summary-title {
+          font-size: 18px;
+          font-weight: bold;
+          color: #002B5B;
+          margin-bottom: 15px;
+        }
+        .summary-item {
+          font-size: 14px;
+          margin: 8px 0;
+          padding-right: 20px;
+        }
+        .trend-info {
+          margin-top: 15px;
+          padding: 10px;
+          background: #f3f4f6;
+          border-radius: 8px;
+          font-size: 14px;
+        }
+        .trend-text {
+          color: ${trendColor};
+          font-weight: bold;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+          font-size: 13px;
+        }
+        table th {
+          background: #004A9F;
+          color: white;
+          padding: 12px;
+          text-align: center;
+          font-weight: bold;
+        }
+        table td {
+          padding: 10px;
+          text-align: center;
+          border: 1px solid #e5e7eb;
+        }
+        table tr:nth-child(even) {
+          background: #f9fafb;
+        }
+        .chart-title {
+          font-size: 18px;
+          font-weight: bold;
+          color: #002B5B;
+          margin: 30px 0 15px 0;
+          text-align: center;
+        }
+        .chart-container {
+          width: 100%;
+          height: 300px;
+          margin: 20px 0;
+          position: relative;
+        }
+      </style>
+      
+      <div class="report-header">
+        <div class="report-title">تقرير المستشفى: ${data.hospital.name}</div>
+        <div class="report-info">كود المستشفى: ${data.hospital.code || 'غير محدد'}</div>
+        <div class="report-info">الفترة: ${data.period.from} إلى ${data.period.to}</div>
+        <div class="report-info">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</div>
+      </div>
+      
+      <div class="summary-section">
+        <div class="summary-title">الإحصائيات الإجمالية</div>
+        <div class="summary-item">إجمالي البلاغات: <strong>${data.summary.total_reports}</strong></div>
+        <div class="summary-item">بلاغات مفتوحة: <strong>${data.summary.open_reports}</strong></div>
+        <div class="summary-item">بلاغات مغلقة: <strong>${data.summary.closed_reports}</strong></div>
+        <div class="summary-item">بلاغات حرجة: <strong>${data.summary.critical_count}</strong></div>
+        <div class="summary-item">معدل الإغلاق: <strong>${data.summary.resolution_rate}%</strong></div>
+        <div class="trend-info">
+          الاتجاه: <span class="trend-text">${trendText} (${data.trend.percentage > 0 ? '+' : ''}${data.trend.percentage}%)</span>
+          - التغيير: ${data.trend.change > 0 ? '+' : ''}${data.trend.change} بلاغ
+        </div>
+      </div>
+      
+      <div class="summary-section">
+        <div class="summary-title">البيانات الشهرية</div>
+        <table>
+          <thead>
+            <tr>
+              <th>الشهر</th>
+              <th>إجمالي البلاغات</th>
+              <th>مفتوحة</th>
+              <th>مغلقة</th>
+              <th>حرجة</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.monthlyData.map(row => `
+              <tr>
+                <td>${row.month_label}</td>
+                <td>${row.total_complaints}</td>
+                <td>${row.open_complaints}</td>
+                <td>${row.closed_complaints}</td>
+                <td>${row.critical_complaints}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      
+      ${classificationsData ? `
+      <div class="summary-section">
+        <div class="summary-title">التصنيفات الرئيسية</div>
+        <table>
+          <thead>
+            <tr>
+              <th>التصنيف</th>
+              <th>إجمالي البلاغات</th>
+              <th>مفتوحة</th>
+              <th>مغلقة</th>
+              <th>زائر سري</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${classificationsData.mainClassifications.map(item => `
+              <tr>
+                <td>${item.Category || 'غير محدد'}</td>
+                <td>${item.TotalCount || 0}</td>
+                <td>${item.OpenCount || 0}</td>
+                <td>${item.ClosedCount || 0}</td>
+                <td>${item.MysteryCount || 0}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="summary-section">
+        <div class="summary-title">التصنيفات الفرعية</div>
+        <table>
+          <thead>
+            <tr>
+              <th>التصنيف الفرعي</th>
+              <th>إجمالي البلاغات</th>
+              <th>مفتوحة</th>
+              <th>مغلقة</th>
+              <th>زائر سري</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${classificationsData.subClassifications.map(item => `
+              <tr>
+                <td>${item.SubCategory || 'غير محدد'}</td>
+                <td>${item.TotalCount || 0}</td>
+                <td>${item.OpenCount || 0}</td>
+                <td>${item.ClosedCount || 0}</td>
+                <td>${item.MysteryCount || 0}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+      
+      <div class="chart-title">الرسوم البيانية</div>
+      <div class="chart-container">
+        <canvas id="report-chart" width="800" height="300"></canvas>
+      </div>
+    `;
+    
+    document.body.appendChild(reportContainer);
+    
+    // إنشاء رسم بياني
+    const canvas = reportContainer.querySelector('#report-chart');
+    if (canvas && window.Chart) {
+      const ctx = canvas.getContext('2d');
+      const labels = data.monthlyData.map(r => r.month_label);
+      const values = data.monthlyData.map(r => r.total_complaints);
+      
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'إجمالي البلاغات',
+            data: values,
+            borderColor: '#004A9F',
+            backgroundColor: 'rgba(0, 74, 159, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                font: { family: 'Tajawal', size: 14 }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                font: { family: 'Tajawal' }
+              }
+            },
+            x: {
+              ticks: {
+                font: { family: 'Tajawal' }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // انتظار تحميل الصور والخطوط
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // تحويل HTML إلى صورة
+    const canvasImg = await window.html2canvas(reportContainer, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
+    
+    // إنشاء PDF
+    const imgData = canvasImg.toDataURL('image/png');
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvasImg.height * imgWidth) / canvasImg.width;
+    let heightLeft = imgHeight;
+    
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let position = 0;
+    
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    
+    // إزالة العنصر المخفي
+    document.body.removeChild(reportContainer);
+    
+    // حفظ الملف
+    const fileName = `تقرير-${data.hospital.name}-${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+    
+    console.log('✅ تم تصدير PDF بنجاح');
+    
+  } catch (error) {
+    console.error('❌ خطأ في تصدير PDF:', error);
+    throw error;
+  }
+}
 

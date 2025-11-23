@@ -41,7 +41,7 @@
       </div>
       <a href="dashboard.html"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-[#002B5B] hover:bg-blue-50 transition">
-        ← العودة للوحة
+        ← العودة الى لوحة التحكم
       </a>
     </div>
 
@@ -424,8 +424,9 @@
               color: '#0f172a',
               font: { size: 13, weight: 'bold', family: 'Tajawal' },
               formatter: (value) => {
+                if (value === 0) return '';
                 const pct = ((value / hospitalTotal) * 100).toFixed(2);
-                return `${value};\n${pct}%`;
+                return `${value}\n${pct}%`;
               }
             },
             tooltip: {
@@ -575,8 +576,9 @@
               color: '#0f172a',
               font: { size: 13, weight: 'bold', family: 'Tajawal' },
               formatter: (value) => {
+                if (value === 0) return '';
                 const pct = ((value / centerTotal) * 100).toFixed(2);
-                return `${value};\n${pct}%`;
+                return `${value}\n${pct}%`;
               }
             },
             tooltip: {

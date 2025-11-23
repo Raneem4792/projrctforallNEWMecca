@@ -1265,9 +1265,14 @@ router.post('/', requireAuth, upload.array('attachments', 10), resolveHospitalId
     const ComplaintTypeID  = Number(req.body.ComplaintTypeID || req.body.complaintTypeId || 0) || null;
     const SubTypeID        = Number(req.body.SubTypeID || req.body.subTypeId || 0) || null;
     
-    // ✅ تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
+    // ✅ تحديد الأولوية: إذا كان التصنيف "الأدوية" (ComplaintTypeID = 6) أو "سوء معاملة" (ComplaintTypeID = 17) → URGENT
     let PriorityCode = (req.body.PriorityCode || req.body.priorityCode || 'MEDIUM').toUpperCase();
-    if (ComplaintTypeID === 17) {
+    if (ComplaintTypeID === 6) {
+      // الأدوية → حرج/عاجل
+      PriorityCode = 'URGENT';
+      console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "الأدوية"');
+    } else if (ComplaintTypeID === 17) {
+      // سوء معاملة → حرج/عاجل
       PriorityCode = 'URGENT';
       console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
     }

@@ -82,13 +82,17 @@ document.getElementById('hospitalForm').addEventListener('submit', async (e) => 
     passwordPlain: document.getElementById('adminPassword').value
   };
 
+  const facilityType = document.getElementById('hFacilityTypeSelect')?.value.trim() || 
+                      document.getElementById('hFacilityType')?.value.trim() || 
+                      'hospital';
+
   const payload = {
     nameAr: document.getElementById('hNameAr').value.trim(),
     nameEn: document.getElementById('hNameEn').value.trim(),
     code: document.getElementById('hCode').value.trim().toUpperCase(),
     cityAr: document.getElementById('hCity').value.trim(),
     regionAr: document.getElementById('hRegion').value.trim(),
-    facilityType: document.getElementById('hFacilityType')?.value.trim() || '', // النوع من المنشأة
+    facilityType: facilityType, // النوع من المنشأة
     isActive: document.getElementById('hActive').checked ? 1 : 0,
     departments: departments,
     adminUser: adminUser
@@ -181,7 +185,6 @@ async function loadHospitalData(id){
         address:'طريق المدينة',
         phone:'0123456789',
         email:'info@kah.sa',
-        domain:'kah.sa',
         active:1,
         departments:[
           {name:'الطوارئ',code:'ER',email:'er@kah.sa',head:'د. محمد'},
@@ -204,7 +207,6 @@ async function loadHospitalData(id){
         address:'حي حراء',
         phone:'0123456780',
         email:'info@hrh.sa',
-        domain:'hrh.sa',
         active:1,
         departments:[
           {name:'التمريض',code:'NUR',email:'nur@hrh.sa',head:''}
@@ -226,7 +228,6 @@ async function loadHospitalData(id){
         address:'شارع النور',
         phone:'0123456770',
         email:'info@nrh.sa',
-        domain:'nrh.sa',
         active:0,
         departments:[
           {name:'العناية المركزة',code:'ICU',email:'icu@nrh.sa',head:'د. سعد'}
@@ -256,7 +257,6 @@ async function loadHospitalData(id){
     document.getElementById('hAddress').value = data.address;
     document.getElementById('hPhone').value = data.phone;
     document.getElementById('hEmail').value = data.email;
-    document.getElementById('hDomain').value = data.domain;
     document.getElementById('hActive').checked = !!data.active;
 
     // الأقسام

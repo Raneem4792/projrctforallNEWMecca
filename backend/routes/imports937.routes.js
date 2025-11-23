@@ -177,7 +177,7 @@ const HEADER_MAP = {
   gender: ['الجنس', 'Gender'],
   visitDate: ['تاريخ الزيارة', 'تاريخ البلاغ', 'Visit Date', 'Date'],
   complaintTypeName: ['التصنيف الرئيسي', 'نوع البلاغ', 'Main Type'],
-  subTypeName: ['التصنيف الفرعي', 'Sub Type', 'Subtype'],
+  subTypeName: ['التصنيف الفرعي للتذكرة', 'التصنيف الفرعي', 'Sub Type', 'Subtype'],
   description: ['الوصف', 'وصف البلاغ', 'Description'],
   priority: ['الأولوية', 'Priority'],
   status: ['الحالة', 'Status'],
@@ -314,13 +314,32 @@ async function findTypeIdByName(pool, name) {
   return rows?.[0]?.ComplaintTypeID || null;
 }
 
-async function findSubTypeIdByName(pool, name) {
+async function findSubTypeIdByName(pool, name, complaintTypeID = null) {
   if (!name) return null;
   const [rows] = await pool.query(
     'SELECT SubTypeID FROM complaint_subtypes WHERE SubTypeName = ? OR SubTypeNameEn = ? LIMIT 1',
     [name, name]
   );
-  return rows?.[0]?.SubTypeID || null;
+  if (rows?.[0]?.SubTypeID) {
+    return rows[0].SubTypeID;
+  }
+  
+  // إذا لم يكن موجوداً وكان لدينا ComplaintTypeID، ننشئه تلقائياً
+  if (complaintTypeID) {
+    try {
+      const [insertResult] = await pool.query(
+        'INSERT INTO complaint_subtypes (ComplaintTypeID, SubTypeName) VALUES (?, ?)',
+        [complaintTypeID, name]
+      );
+      console.log(`✅ تم إنشاء التصنيف الفرعي تلقائياً: "${name}" للتصنيف الرئيسي ID: ${complaintTypeID}`);
+      return insertResult.insertId;
+    } catch (error) {
+      console.error(`❌ خطأ في إنشاء التصنيف الفرعي "${name}":`, error.message);
+      return null;
+    }
+  }
+  
+  return null;
 }
 
 // --- الراوت --------------------------------------------------------
@@ -369,6 +388,15 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
     // Debug: عرض الأعمدة المكتشفة وعينة من أسماء المستشفيات
     console.log('📋 Header Row Detected at:', hdrRow);
     console.log('📋 HEADER INDEX:', headerIndex);
+    console.log('📋 Headers found:', headers);
+    console.log('🔍 SubType column found:', headerIndex.subTypeName ? 'YES' : 'NO');
+    if (headerIndex.subTypeName) {
+      console.log('🔍 SubType column name:', headers[headerIndex.subTypeName] || 'unknown');
+      console.log('🔍 Sample SubType values (first 5):', jsonRows.slice(0, 5).map((r, i) => {
+        const v = r[headerIndex.subTypeName];
+        return { row: hdrRow + 2 + i, subType: v };
+      }));
+    }
     console.log('🏥 SAMPLE HOSPITAL CELLS (first 5 rows):',
       jsonRows.slice(0, 5).map((r, i) => {
         const v = headerIndex.hospitalName ? r[headerIndex.hospitalName] : undefined;
@@ -459,11 +487,22 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
           const complaintTypeName = (get('complaintTypeName') || '').toString().trim() || null;
           const subTypeName = (get('subTypeName') || '').toString().trim() || null;
           const ComplaintTypeID = complaintTypeName ? await findTypeIdByName(conn, complaintTypeName) : null;
-          const SubTypeID = subTypeName ? await findSubTypeIdByName(conn, subTypeName) : null;
+          // نمرر ComplaintTypeID لإنشاء التصنيف الفرعي تلقائياً إذا لم يكن موجوداً
+          const SubTypeID = subTypeName ? await findSubTypeIdByName(conn, subTypeName, ComplaintTypeID) : null;
+          
+          // Debug: طباعة معلومات التصنيفات
+          if (subTypeName && idx <= 3) {
+            console.log(`📝 Row ${idx}: SubTypeName="${subTypeName}", SubTypeID=${SubTypeID}, ComplaintTypeID=${ComplaintTypeID}`);
+          }
 
-          // --- تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
+          // --- تحديد الأولوية: إذا كان التصنيف "الأدوية" (ComplaintTypeID = 6) أو "سوء معاملة" (ComplaintTypeID = 17) → URGENT
           let PriorityCode = 'MEDIUM';
-          if (ComplaintTypeID === 17) {
+          if (ComplaintTypeID === 6) {
+            // الأدوية → حرج/عاجل
+            PriorityCode = 'URGENT';
+            console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "الأدوية"');
+          } else if (ComplaintTypeID === 17) {
+            // سوء معاملة → حرج/عاجل
             PriorityCode = 'URGENT';
             console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
           } else {

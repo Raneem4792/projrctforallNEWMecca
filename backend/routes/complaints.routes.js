@@ -82,9 +82,14 @@ router.post('/', requireAuth, resolveHospitalId, attachHospitalPool, upload.arra
     const SubTypeID        = Number(req.body.SubTypeID || req.body.subTypeId || 0) || null;
     const ProcessingDurationHours = req.body.ProcessingDuration ? Number(req.body.ProcessingDuration) : null;
     
-    // ✅ تحديد الأولوية: إذا كان التصنيف "سوء معاملة" (ComplaintTypeID = 17) → URGENT
+    // ✅ تحديد الأولوية: إذا كان التصنيف "الأدوية" (ComplaintTypeID = 6) أو "سوء معاملة" (ComplaintTypeID = 17) → URGENT
     let PriorityCode;
-    if (ComplaintTypeID === 17) {
+    if (ComplaintTypeID === 6) {
+      // الأدوية → حرج/عاجل
+      PriorityCode = 'URGENT';
+      console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "الأدوية"');
+    } else if (ComplaintTypeID === 17) {
+      // سوء معاملة → حرج/عاجل
       PriorityCode = 'URGENT';
       console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
     } else {

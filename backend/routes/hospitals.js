@@ -62,9 +62,12 @@ router.get('/:id', async (req, res) => {
         CityEn,
         RegionAr, 
         RegionEn,
+        FacilityType,
         IsActive, 
         SortOrder,
-        CreatedAt
+        CreatedAt,
+        Email,
+        Phone
       FROM hospitals 
       WHERE HospitalID = ?
     `, [id]);
@@ -160,6 +163,7 @@ router.put('/:id', async (req, res) => {
       CityEn, 
       RegionAr, 
       RegionEn, 
+      FacilityType,
       IsActive, 
       SortOrder 
     } = req.body;
@@ -197,9 +201,9 @@ router.put('/:id', async (req, res) => {
     await pool.query(`
       UPDATE hospitals 
       SET NameAr = ?, NameEn = ?, Code = ?, CityAr = ?, CityEn = ?, 
-          RegionAr = ?, RegionEn = ?, IsActive = ?, SortOrder = ?
+          RegionAr = ?, RegionEn = ?, FacilityType = ?, IsActive = ?, SortOrder = ?
       WHERE HospitalID = ?
-    `, [NameAr, NameEn, Code, CityAr, CityEn, RegionAr, RegionEn, IsActive, SortOrder, id]);
+    `, [NameAr, NameEn, Code, CityAr, CityEn, RegionAr, RegionEn, FacilityType || null, IsActive, SortOrder, id]);
     
     res.json({ 
       success: true,

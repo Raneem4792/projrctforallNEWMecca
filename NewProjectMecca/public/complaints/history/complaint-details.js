@@ -556,11 +556,35 @@ async function loadDetails() {
     const dNID = document.getElementById('dNID');
     if (dNID) dNID.textContent = c.PatientIDNumber || c.nationalId || '';
 
-    // معلومات البلاغ
+    // معلومات البلاغ - التصنيف الرئيسي
     const typeNameAr = c.ComplaintTypeNameAr || c.TypeName || c.typeName || '';
-    const subTypeText = c.SubTypeNameAr || c.subTypeName || c.SubTypeID || c.subType || '';
-    const typeText = [typeNameAr, subTypeText].filter(Boolean).join(' — ');
-    qs('dType').textContent = typeText || '—';
+    qs('dType').textContent = typeNameAr || '—';
+    
+    // التصنيف الفرعي - عرضه في حقل منفصل
+    const subTypeEl = document.getElementById('uiSubTypeName');
+    if (subTypeEl) {
+      // البحث عن التصنيف الفرعي بجميع الأسماء المحتملة
+      const subTypeName = c.SubTypeNameAr || c.SubTypeNameEn || c.subTypeName || c.SubTypeName || c.SubTypeNameAr || '';
+      subTypeEl.textContent = subTypeName ? subTypeName.trim() : '—';
+      
+      // Debug: طباعة معلومات التصنيف الفرعي
+      if (subTypeName) {
+        console.log('✅ تم العثور على التصنيف الفرعي:', {
+          SubTypeNameAr: c.SubTypeNameAr,
+          SubTypeNameEn: c.SubTypeNameEn,
+          subTypeName: c.subTypeName,
+          SubTypeID: c.SubTypeID,
+          finalValue: subTypeName
+        });
+      } else {
+        console.warn('⚠️ التصنيف الفرعي غير موجود في البيانات:', {
+          SubTypeNameAr: c.SubTypeNameAr,
+          SubTypeNameEn: c.SubTypeNameEn,
+          SubTypeID: c.SubTypeID,
+          allKeys: Object.keys(c)
+        });
+      }
+    }
     qs('dVisitDate').textContent = formatDateLocal(c.VisitDate || c.visitDate || '—');
     qs('dCreated').textContent = formatDateLocal(c.CreatedAt || c.createdAt);
     qs('dUpdated').textContent = formatDateLocal(c.UpdatedAt || c.lastUpdate);

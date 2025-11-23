@@ -16,6 +16,13 @@
   <!-- Chart.js للرسوم البيانية -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  
+  <!-- مكتبات التصدير -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- مكتبة jsPDF-AutoTable لدعم الجداول -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
   <!-- ملفات CSS و JS الخاصة بالداشبورد -->
   <link rel="stylesheet" href="../public/assets/css/styles.css" />
@@ -58,15 +65,15 @@
   <main class="pt-20">
 
     <!-- ✅ أولاً: الإحصائيات الرئيسية -->
-    <section class="pt-4 pb-10 mesh-gradient">
+    <section class="pt-4 pb-4 mesh-gradient">
       <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
+        <div class="text-center mb-6">
           <h2 class="text-3xl font-bold mb-4" style="color:#002B5B;">الإحصائيات الرئيسية</h2>
           <div class="w-24 h-1 mx-auto mb-4" style="background:linear-gradient(90deg,#004A9F,#0FA47A)"></div>
           <p class="text-xl text-gray-600">نظرة شاملة على أداء النظام</p>
         </div>
 
-        <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3 justify-center mt-[-10px]">
+        <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3 justify-center">
           <!-- إجمالي البلاغات -->
           <div data-perm="DASH_CARD_TOTALS" class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3 hidden">
             <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
@@ -149,25 +156,41 @@
       </div>
     </section>
 
-    <!-- ===============================
-         قوائم الفلترة حسب نوع المنشأة
-       =============================== -->
-    <section id="facility-filter-section" class="mt-6">
+    <!-- قسم أزرار التصدير (يظهر عند تحديد مستشفى) -->
+    <section id="hospital-export-section" class="hidden bg-white border-b shadow-sm py-4" style="display: none !important;">
       <div class="container mx-auto px-4">
-        <!-- قائمة المستشفيات -->
-        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المستشفيات</h3>
-        <div id="hospital-filter-list" class="flex flex-wrap gap-3 mb-6"></div>
-
-        <!-- قائمة المراكز الصحية -->
-        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المراكز الصحية</h3>
-        <div id="center-filter-list" class="flex flex-wrap gap-3"></div>
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div class="flex items-center gap-3">
+            <h3 id="hospital-export-title" class="text-xl font-bold" style="color:#002B5B;">تقرير المستشفى</h3>
+            <select id="export-period-select" class="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="1">آخر شهر</option>
+              <option value="3">آخر 3 أشهر</option>
+              <option value="6">آخر 6 أشهر</option>
+              <option value="12" selected>آخر سنة</option>
+            </select>
+          </div>
+          <div class="flex gap-3">
+            <button id="export-excel-btn" class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>تصدير Excel</span>
+            </button>
+            <button id="export-pdf-btn" class="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+              <span>تصدير PDF</span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- ===========================
          Health Facilities Charts
          =========================== -->
-    <section id="health-facilities-charts" class="py-10">
+    <section id="health-facilities-charts" class="pt-4 pb-10">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-3xl font-bold" style="color:#002B5B">المرافق الصحية</h2>
@@ -190,36 +213,51 @@
       </div>
     </section>
 
+    <!-- ===============================
+         قوائم الفلترة حسب نوع المنشأة
+       =============================== -->
+    <section id="facility-filter-section" class="mt-6">
+      <div class="container mx-auto px-4">
+        <!-- قائمة المستشفيات -->
+        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المستشفيات</h3>
+        <div id="hospital-filter-list" class="flex flex-wrap gap-3 mb-6"></div>
+
+        <!-- قائمة المراكز الصحية -->
+        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المراكز الصحية</h3>
+        <div id="center-filter-list" class="flex flex-wrap gap-3"></div>
+      </div>
+    </section>
+
     <!-- الزائر السري - حسب الأقسام -->
 <!-- ===============================
      التصنيفات – كرت مستقل مثل الزائر السري
      =============================== -->
 <section id="categories-section" class="py-10">
   <div class="container mx-auto px-4">
-    <!-- التصنيفات الرئيسية -->
-    <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mb-6">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B">التصنيفات</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- التصنيفات الرئيسية -->
+      <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+        <h3 class="font-bold text-xl mb-2" style="color:#002B5B">التصنيفات</h3>
+        <p class="text-xs text-gray-500 text-center mb-2">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
+        <div class="h-96">
+          <canvas id="categories-chart"></canvas>
+        </div>
       </div>
 
-      <div style="height:350px;">
-        <canvas id="categories-chart"></canvas>
-      </div>
-    </div>
-
-    <!-- التصنيفات الفرعية -->
-    <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mb-6">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B">التصنيفات الفرعية</h3>
+      <!-- التصنيفات الفرعية -->
+      <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+        <h3 class="font-bold text-xl mb-2" style="color:#002B5B">التصنيفات الفرعية</h3>
+        <p class="text-xs text-gray-500 text-center mb-2">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
+        <div class="h-96">
+          <canvas id="subcategories-chart"></canvas>
+        </div>
       </div>
 
-      <div style="height:400px;">
-        <canvas id="subcategories-chart"></canvas>
-      </div>
     </div>
 
     <!-- حالة البلاغ -->
-    <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+    <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mt-6">
       <div class="flex items-center justify-between mb-3">
         <h3 class="font-bold text-xl" style="color:#002B5B">حالة البلاغ</h3>
       </div>
@@ -322,6 +360,29 @@
       </div>
     </div>
 
+    <!-- Modal لعرض بلاغات القسم -->
+    <div id="department-complaints-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" style="display: none;">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h3 class="text-xl font-bold" style="color:#002B5B">بلاغات القسم</h3>
+            <p id="department-modal-info" class="text-sm text-gray-600 mt-1"></p>
+          </div>
+          <button id="department-modal-close" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
+            ×
+          </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="department-complaints-list" class="space-y-3">
+            <div class="text-center text-gray-500 py-8">جاري تحميل البلاغات...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===========================
          Weekly 937 Board (مثل الصورة)
          =========================== -->
@@ -329,8 +390,8 @@
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-3xl font-bold" style="color:#002B5B">لوحة البيانات خلال أسبوع</h2>
-          <div class="text-sm text-gray-500">
-            الفترة: 12-9 أكتوبر 2025
+          <div id="weekly-period" class="text-sm text-gray-500">
+            الفترة: جاري التحميل...
           </div>
         </div>
 
@@ -355,7 +416,12 @@
 
             <div class="mt-6">
               <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm w-full">
-                <h3 class="font-bold mb-3 text-lg" style="color:#002B5B">أعلى العيادات حسب المستشفى</h3>
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-bold text-lg" style="color:#002B5B">أعلى العيادات حسب المستشفى</h3>
+                  <select id="weekly-hospital-filter" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="min-width: 200px;">
+                    <option value="">جميع المستشفيات</option>
+                  </select>
+                </div>
 
                 <div id="hospitals-depts-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
               </div>
@@ -564,8 +630,8 @@
   <!-- سكربت زر مشروع تحسيني -->
   <script>
     document.getElementById('btnAddImprovement').addEventListener('click', () => {
-      // الانتقال لصفحة إضافة المشروع
-      window.location.href = 'improvements/new.html';
+      // الانتقال لصفحة إضافة المشروع 937
+      window.location.href = 'improvements/improvement_937.html';
     });
   </script>
 </body>
