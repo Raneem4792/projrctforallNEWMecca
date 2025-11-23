@@ -245,8 +245,19 @@ app.use('/api/employees', employeeRoutes);
 app.get('/api/facilities', async (req, res) => {
   try {
     const central = await getCentralPool();
+    // جلب FacilityID, FacilityName, FacilityType (يُحدد تلقائياً من الاسم)
     const [rows] = await central.query(
-      "SELECT FacilityID, FacilityName FROM central_facilities WHERE IsActive = 1 ORDER BY FacilityName ASC"
+      `SELECT 
+        FacilityID, 
+        FacilityName, 
+        CASE
+          WHEN FacilityName LIKE 'مستشفى%' THEN 'hospital'
+          WHEN FacilityName LIKE 'مركز صحي%' THEN 'center'
+          ELSE 'administration'
+        END AS FacilityType
+      FROM central_facilities 
+      WHERE IsActive = 1 
+      ORDER BY FacilityName ASC`
     );
     res.json({ success: true, data: rows });
   } catch (err) {

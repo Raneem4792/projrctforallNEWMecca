@@ -45,39 +45,33 @@
       </a>
     </div>
 
-    <section class="bg-white rounded-2xl shadow border border-gray-100 p-6 mb-8">
+    <!-- ████ المستشفيات ████ -->
+    <section id="hospitalSection" class="bg-white rounded-2xl shadow border border-gray-100 p-6 mb-8">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold text-[#002B5B]">عدد البلاغات حسب المستشفى</h2>
-        <div id="chartMeta" class="text-sm text-gray-500"></div>
+        <h2 class="text-xl font-bold text-[#002B5B]">بلاغات المستشفيات</h2>
+        <div id="hospitalMeta" class="text-sm text-gray-500"></div>
       </div>
       <div class="grid lg:grid-cols-2 gap-6">
-        <div id="chartWrapper" class="relative" style="min-height: 280px;">
-          <canvas id="hospitalTypeChart" class="w-full"></canvas>
-          <div id="chartEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
+        <div id="hospitalChartWrapper" class="relative" style="min-height: 280px;">
+          <canvas id="hospitalBar"></canvas>
+          <div id="hospitalChartEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
             <div class="text-center text-gray-500">
-              <div class="text-lg font-semibold mb-1">لا توجد بيانات للعرض</div>
-              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف حتى الآن.</p>
+              <div class="text-lg font-semibold mb-1">لا توجد بيانات للمستشفيات</div>
+              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف في المستشفيات حتى الآن.</p>
             </div>
           </div>
         </div>
-        <div id="pieWrapper" class="relative" style="min-height: 280px;">
-          <canvas id="hospitalTypePie" class="w-full"></canvas>
-          <div id="pieEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
+        <div id="hospitalPieWrapper" class="relative" style="min-height: 280px;">
+          <canvas id="hospitalPie"></canvas>
+          <div id="hospitalPieEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
             <div class="text-center text-gray-500">
-              <div class="text-lg font-semibold mb-1">لا توجد بيانات للعرض</div>
-              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف حتى الآن.</p>
+              <div class="text-lg font-semibold mb-1">لا توجد بيانات للمستشفيات</div>
+              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف في المستشفيات حتى الآن.</p>
             </div>
           </div>
         </div>
       </div>
-    </section>
-
-    <section class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold text-[#002B5B]">تفاصيل المستشفيات</h2>
-        <span id="tableMeta" class="text-sm text-gray-500"></span>
-      </div>
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto mt-6">
         <table class="min-w-full text-center border border-gray-100 rounded-xl overflow-hidden">
           <thead class="bg-gray-100 text-gray-600 text-sm">
             <tr>
@@ -85,7 +79,46 @@
               <th class="py-3 px-4 border-b border-gray-200">عدد البلاغات</th>
             </tr>
           </thead>
-          <tbody id="hospitalRows" class="text-sm"></tbody>
+          <tbody id="hospitalTable" class="text-sm"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ████ المراكز الصحية ████ -->
+    <section id="centerSection" class="bg-white rounded-2xl shadow border border-gray-100 p-6 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-[#002B5B]">بلاغات المراكز الصحية</h2>
+        <div id="centerMeta" class="text-sm text-gray-500"></div>
+      </div>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div id="centerChartWrapper" class="relative" style="min-height: 280px;">
+          <canvas id="centerBar"></canvas>
+          <div id="centerChartEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
+            <div class="text-center text-gray-500">
+              <div class="text-lg font-semibold mb-1">لا توجد بيانات للمراكز الصحية</div>
+              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف في المراكز الصحية حتى الآن.</p>
+            </div>
+          </div>
+        </div>
+        <div id="centerPieWrapper" class="relative" style="min-height: 280px;">
+          <canvas id="centerPie"></canvas>
+          <div id="centerPieEmptyState" class="absolute inset-0 flex items-center justify-center hidden">
+            <div class="text-center text-gray-500">
+              <div class="text-lg font-semibold mb-1">لا توجد بيانات للمراكز الصحية</div>
+              <p class="text-sm">لم يتم تسجيل بلاغات لهذا التصنيف في المراكز الصحية حتى الآن.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="overflow-x-auto mt-6">
+        <table class="min-w-full text-center border border-gray-100 rounded-xl overflow-hidden">
+          <thead class="bg-gray-100 text-gray-600 text-sm">
+            <tr>
+              <th class="py-3 px-4 border-b border-gray-200">المركز الصحي</th>
+              <th class="py-3 px-4 border-b border-gray-200">عدد البلاغات</th>
+            </tr>
+          </thead>
+          <tbody id="centerTable" class="text-sm"></tbody>
         </table>
       </div>
     </section>
@@ -98,16 +131,13 @@
 
     const pageTitle = document.getElementById('pageTitle');
     const pageSubtitle = document.getElementById('pageSubtitle');
-    const chartMeta = document.getElementById('chartMeta');
-    const tableMeta = document.getElementById('tableMeta');
-    const chartEmptyState = document.getElementById('chartEmptyState');
-    const hospitalsBody = document.getElementById('hospitalRows');
-    const chartCanvas = document.getElementById('hospitalTypeChart');
-    const pieCanvas = document.getElementById('hospitalTypePie');
-    const pieEmptyState = document.getElementById('pieEmptyState');
+    const hospitalMeta = document.getElementById('hospitalMeta');
+    const centerMeta = document.getElementById('centerMeta');
 
-    let hospitalChartInstance = null;
+    let hospitalBarInstance = null;
     let hospitalPieInstance = null;
+    let centerBarInstance = null;
+    let centerPieInstance = null;
 
     pageTitle.textContent = labelParam
       ? `بلاغات تصنيف "${labelParam}"`
@@ -118,9 +148,17 @@
       : 'اختر تصنيفاً من لوحة التحكم لعرض تفاصيله هنا.';
 
     if (!typeParam) {
-      chartMeta.textContent = '';
-      chartEmptyState.classList.remove('hidden');
-      hospitalsBody.innerHTML = `
+      hospitalMeta.textContent = '';
+      centerMeta.textContent = '';
+      document.getElementById('hospitalChartEmptyState')?.classList.remove('hidden');
+      document.getElementById('centerChartEmptyState')?.classList.remove('hidden');
+      document.getElementById('hospitalTable').innerHTML = `
+        <tr>
+          <td colspan="2" class="py-6 text-gray-500">
+            يرجى العودة للوحة التحكم واختيار تصنيف لعرض تفاصيله.
+          </td>
+        </tr>`;
+      document.getElementById('centerTable').innerHTML = `
         <tr>
           <td colspan="2" class="py-6 text-gray-500">
             يرجى العودة للوحة التحكم واختيار تصنيف لعرض تفاصيله.
@@ -138,20 +176,63 @@
         const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-        chartMeta.textContent = 'جاري تحميل البيانات...';
-        tableMeta.textContent = '';
-        chartEmptyState.classList.add('hidden');
-        hospitalsBody.innerHTML = `
+        hospitalMeta.textContent = 'جاري تحميل البيانات...';
+        centerMeta.textContent = 'جاري تحميل البيانات...';
+        document.getElementById('hospitalTable').innerHTML = `
+          <tr>
+            <td colspan="2" class="py-6 text-gray-500">جاري تحميل البيانات...</td>
+          </tr>`;
+        document.getElementById('centerTable').innerHTML = `
           <tr>
             <td colspan="2" class="py-6 text-gray-500">جاري تحميل البيانات...</td>
           </tr>`;
 
-        const res = await fetch(`${API_BASE}/api/dashboard/total/complaint-types/by-hospital?type=${encodeURIComponent(typeParam)}`, { headers });
+        // جلب معلومات المستخدم لتحديد دور المستخدم
+        let currentUser = null;
+        let isClusterManager = false;
+        let userHospitalId = null;
+        
+        try {
+          const userRes = await fetch(`${API_BASE}/api/auth/me`, { headers });
+          if (userRes.ok) {
+            currentUser = await userRes.json();
+            isClusterManager = !!(currentUser?.RoleID === 1 || currentUser?.IsClusterManager === true);
+            userHospitalId = currentUser?.HospitalID || currentUser?.hospitalId || null;
+          }
+        } catch (error) {
+          console.warn('تحذير: لم يتم تحميل بيانات المستخدم:', error);
+        }
+
+        // بناء URL مع hospitalId حسب دور المستخدم
+        let apiUrl = `${API_BASE}/api/dashboard/total/complaint-types/by-hospital?type=${encodeURIComponent(typeParam)}`;
+        
+        // التحقق من hospitalId في URL أولاً (إذا اختار المستخدم مستشفى محدد)
+        const urlParams = new URLSearchParams(window.location.search);
+        let hospitalId = urlParams.get('hospitalId');
+        
+        // إذا لم يكن هناك hospitalId في URL:
+        // - مدير التجمع: لا نرسل hospitalId (يعرض جميع المستشفيات)
+        // - موظف/مدير نظام: نرسل hospitalId الخاص به
+        if (!hospitalId) {
+          if (!isClusterManager && userHospitalId) {
+            hospitalId = userHospitalId;
+            apiUrl += `&hospitalId=${encodeURIComponent(hospitalId)}`;
+          }
+          // إذا كان مدير تجمع، لا نضيف hospitalId لعرض جميع المستشفيات
+        } else {
+          // إذا كان هناك hospitalId في URL، نستخدمه
+          apiUrl += `&hospitalId=${encodeURIComponent(hospitalId)}`;
+        }
+
+        const res = await fetch(apiUrl, { headers });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const payload = await res.json();
         const list = Array.isArray(payload?.data) ? payload.data : [];
-        const sorted = list
+        
+        // تقسيم البيانات إلى مستشفيات ومراكز صحية
+        const hospitals = list
+          .filter(item => (item.FacilityType || 'hospital').toLowerCase() === 'hospital')
           .map(item => ({
             hospitalId: item.HospitalID,
             hospitalName: item.HospitalName || 'مستشفى غير معروف',
@@ -159,51 +240,107 @@
           }))
           .sort((a, b) => b.count - a.count);
 
-        renderChart(sorted);
-        renderPieChart(sorted);
-        renderTable(sorted);
+        const centers = list
+          .filter(item => (item.FacilityType || '').toLowerCase() === 'center')
+          .map(item => ({
+            hospitalId: item.HospitalID,
+            hospitalName: item.HospitalName || 'مركز صحي غير معروف',
+            count: Number(item.TotalCount || 0)
+          }))
+          .sort((a, b) => b.count - a.count);
 
-        const totalCount = sorted.reduce((sum, item) => sum + item.count, 0);
-        chartMeta.textContent = `إجمالي البلاغات: ${totalCount}`;
-        tableMeta.textContent = `عدد المستشفيات: ${sorted.length}`;
+        // إخفاء الأقسام حسب نوع البيانات
+        const hospitalSection = document.getElementById('hospitalSection');
+        const centerSection = document.getElementById('centerSection');
+        
+        // إذا كانت البيانات تحتوي فقط على مراكز صحية → إخفاء قسم المستشفيات
+        if (hospitals.length === 0 && centers.length > 0) {
+          if (hospitalSection) hospitalSection.style.display = 'none';
+          if (centerSection) centerSection.style.display = 'block';
+        }
+        // إذا كانت البيانات تحتوي فقط على مستشفيات → إخفاء قسم المراكز الصحية
+        else if (hospitals.length > 0 && centers.length === 0) {
+          if (hospitalSection) hospitalSection.style.display = 'block';
+          if (centerSection) centerSection.style.display = 'none';
+        }
+        // إذا كانت البيانات تحتوي على كليهما → إظهار كليهما
+        else if (hospitals.length > 0 && centers.length > 0) {
+          if (hospitalSection) hospitalSection.style.display = 'block';
+          if (centerSection) centerSection.style.display = 'block';
+        }
+        // إذا لم تكن هناك بيانات → إظهار كليهما (لإظهار رسالة عدم وجود بيانات)
+        else {
+          if (hospitalSection) hospitalSection.style.display = 'block';
+          if (centerSection) centerSection.style.display = 'block';
+        }
+
+        renderHospitalCharts(hospitals);
+        renderCenterCharts(centers);
+        renderHospitalTable(hospitals);
+        renderCenterTable(centers);
+
+        const hospitalTotal = hospitals.reduce((sum, item) => sum + item.count, 0);
+        const centerTotal = centers.reduce((sum, item) => sum + item.count, 0);
+        hospitalMeta.textContent = hospitals.length > 0 ? `إجمالي البلاغات: ${hospitalTotal} - عدد المستشفيات: ${hospitals.length}` : 'لا توجد بيانات';
+        centerMeta.textContent = centers.length > 0 ? `إجمالي البلاغات: ${centerTotal} - عدد المراكز: ${centers.length}` : 'لا توجد بيانات';
       } catch (err) {
         console.error('خطأ في تحميل تفاصيل التصنيف:', err);
-        chartEmptyState.classList.remove('hidden');
-        if (pieEmptyState) pieEmptyState.classList.remove('hidden');
-        chartMeta.textContent = 'تعذر تحميل البيانات';
-        hospitalsBody.innerHTML = `
+        document.getElementById('hospitalChartEmptyState')?.classList.remove('hidden');
+        document.getElementById('centerChartEmptyState')?.classList.remove('hidden');
+        hospitalMeta.textContent = 'تعذر تحميل البيانات';
+        centerMeta.textContent = 'تعذر تحميل البيانات';
+        document.getElementById('hospitalTable').innerHTML = `
+          <tr>
+            <td colspan="2" class="py-6 text-red-600">تعذر تحميل البيانات، حاول مجدداً لاحقاً.</td>
+          </tr>`;
+        document.getElementById('centerTable').innerHTML = `
           <tr>
             <td colspan="2" class="py-6 text-red-600">تعذر تحميل البيانات، حاول مجدداً لاحقاً.</td>
           </tr>`;
       }
     }
 
-    function renderChart(data) {
-      if (!chartCanvas) return;
+    function renderHospitalCharts(hospitals) {
+      const hospitalBarCanvas = document.getElementById('hospitalBar');
+      const hospitalPieCanvas = document.getElementById('hospitalPie');
+      const hospitalChartEmptyState = document.getElementById('hospitalChartEmptyState');
+      const hospitalPieEmptyState = document.getElementById('hospitalPieEmptyState');
 
-      if (!data.length || data.every(item => item.count === 0)) {
-        chartEmptyState.classList.remove('hidden');
-        if (hospitalChartInstance) {
-          hospitalChartInstance.destroy();
-          hospitalChartInstance = null;
+      if (!hospitalBarCanvas || !hospitalPieCanvas) return;
+
+      // إخفاء رسالة عدم وجود بيانات إذا كان هناك بيانات
+      if (hospitals.length > 0 && hospitals.some(h => h.count > 0)) {
+        hospitalChartEmptyState?.classList.add('hidden');
+        hospitalPieEmptyState?.classList.add('hidden');
+      } else {
+        hospitalChartEmptyState?.classList.remove('hidden');
+        hospitalPieEmptyState?.classList.remove('hidden');
+        if (hospitalBarInstance) {
+          hospitalBarInstance.destroy();
+          hospitalBarInstance = null;
+        }
+        if (hospitalPieInstance) {
+          hospitalPieInstance.destroy();
+          hospitalPieInstance = null;
         }
         return;
       }
 
-      if (hospitalChartInstance) {
-        hospitalChartInstance.destroy();
-      }
+      // تدمير الرسوم السابقة
+      if (hospitalBarInstance) hospitalBarInstance.destroy();
+      if (hospitalPieInstance) hospitalPieInstance.destroy();
 
-      hospitalChartInstance = new Chart(chartCanvas.getContext('2d'), {
+      // رسم Bar Chart للمستشفيات
+      hospitalBarInstance = new Chart(hospitalBarCanvas.getContext('2d'), {
         type: 'bar',
         data: {
-          labels: data.map(item => item.hospitalName),
+          labels: hospitals.map(h => h.hospitalName),
           datasets: [{
-            data: data.map(item => item.count),
-            backgroundColor: '#2d75c7',
+            data: hospitals.map(h => h.count),
+            backgroundColor: '#2D75C7',
             borderRadius: 8,
             barThickness: 28,
-            hospitals: data
+            hospitals: hospitals
           }]
         },
         options: {
@@ -255,47 +392,24 @@
         },
         plugins: [ChartDataLabels]
       });
-    }
 
-    function renderPieChart(data) {
-      if (!pieCanvas) return;
-
-      if (!data.length || data.every(item => item.count === 0)) {
-        if (pieEmptyState) pieEmptyState.classList.remove('hidden');
-        if (hospitalPieInstance) {
-          hospitalPieInstance.destroy();
-          hospitalPieInstance = null;
-        }
-        return;
-      } else if (pieEmptyState) {
-        pieEmptyState.classList.add('hidden');
-      }
-
-      if (hospitalPieInstance) {
-        hospitalPieInstance.destroy();
-      }
-
-      const total = data.reduce((sum, item) => sum + item.count, 0) || 1;
-
-      const colors = data.map((item, idx) => {
-        const palette = [
-          '#2d75c7', '#7cb518', '#f59e0b', '#ef4444',
-          '#10b981', '#8b5cf6', '#ec4899', '#312e81',
-          '#f97316', '#22d3ee'
-        ];
+      // رسم Pie Chart للمستشفيات
+      const hospitalTotal = hospitals.reduce((sum, h) => sum + h.count, 0) || 1;
+      const hospitalColors = hospitals.map((h, idx) => {
+        const palette = ['#2d75c7', '#7cb518', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899', '#312e81', '#f97316', '#22d3ee'];
         return palette[idx % palette.length];
       });
 
-      hospitalPieInstance = new Chart(pieCanvas.getContext('2d'), {
+      hospitalPieInstance = new Chart(hospitalPieCanvas.getContext('2d'), {
         type: 'pie',
         data: {
-          labels: data.map(item => item.hospitalName),
+          labels: hospitals.map(h => h.hospitalName),
           datasets: [{
-            data: data.map(item => item.count),
-            backgroundColor: colors,
+            data: hospitals.map(h => h.count),
+            backgroundColor: hospitalColors,
             borderWidth: 1,
             borderColor: '#ffffff',
-            hospitals: data
+            hospitals: hospitals
           }]
         },
         options: {
@@ -310,7 +424,7 @@
               color: '#0f172a',
               font: { size: 13, weight: 'bold', family: 'Tajawal' },
               formatter: (value) => {
-                const pct = ((value / total) * 100).toFixed(2);
+                const pct = ((value / hospitalTotal) * 100).toFixed(2);
                 return `${value};\n${pct}%`;
               }
             },
@@ -318,7 +432,7 @@
               callbacks: {
                 label: ctx => {
                   const value = ctx.formattedValue;
-                  const pct = ((ctx.raw / total) * 100).toFixed(2);
+                  const pct = ((ctx.raw / hospitalTotal) * 100).toFixed(2);
                   return `${ctx.label}: ${value} (${pct}%)`;
                 }
               }
@@ -337,18 +451,172 @@
       });
     }
 
-    function renderTable(data) {
-      if (!data.length) {
-        hospitalsBody.innerHTML = `
+    function renderCenterCharts(centers) {
+      const centerBarCanvas = document.getElementById('centerBar');
+      const centerPieCanvas = document.getElementById('centerPie');
+      const centerChartEmptyState = document.getElementById('centerChartEmptyState');
+      const centerPieEmptyState = document.getElementById('centerPieEmptyState');
+
+      if (!centerBarCanvas || !centerPieCanvas) return;
+
+      // إخفاء رسالة عدم وجود بيانات إذا كان هناك بيانات
+      if (centers.length > 0 && centers.some(c => c.count > 0)) {
+        centerChartEmptyState?.classList.add('hidden');
+        centerPieEmptyState?.classList.add('hidden');
+      } else {
+        centerChartEmptyState?.classList.remove('hidden');
+        centerPieEmptyState?.classList.remove('hidden');
+        if (centerBarInstance) {
+          centerBarInstance.destroy();
+          centerBarInstance = null;
+        }
+        if (centerPieInstance) {
+          centerPieInstance.destroy();
+          centerPieInstance = null;
+        }
+        return;
+      }
+
+      // تدمير الرسوم السابقة
+      if (centerBarInstance) centerBarInstance.destroy();
+      if (centerPieInstance) centerPieInstance.destroy();
+
+      // رسم Bar Chart للمراكز الصحية
+      centerBarInstance = new Chart(centerBarCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: centers.map(c => c.hospitalName),
+          datasets: [{
+            data: centers.map(c => c.count),
+            backgroundColor: '#7CB518',
+            borderRadius: 8,
+            barThickness: 28,
+            centers: centers
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'x',
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#0f172a',
+              font: { size: 13, weight: 'bold' },
+              formatter: value => value
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.formattedValue}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                autoSkip: false,
+                color: '#1f2937',
+                font: { size: 12 }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(148, 163, 184, 0.15)' },
+              ticks: {
+                color: '#475569',
+                font: { size: 12 },
+                precision: 0
+              }
+            }
+          },
+          onClick: (evt, elements, chart) => {
+            if (!elements || !elements.length) return;
+            const { datasetIndex, index } = elements[0];
+            const dataset = chart.data.datasets?.[datasetIndex];
+            const selected = dataset?.centers?.[index];
+            if (!selected) return;
+            navigateToHospitalComplaints(selected);
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+
+      // رسم Pie Chart للمراكز الصحية
+      const centerTotal = centers.reduce((sum, c) => sum + c.count, 0) || 1;
+      const centerColors = centers.map((c, idx) => {
+        const palette = ['#7cb518', '#2d75c7', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899', '#312e81', '#f97316', '#22d3ee'];
+        return palette[idx % palette.length];
+      });
+
+      centerPieInstance = new Chart(centerPieCanvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: centers.map(c => c.hospitalName),
+          datasets: [{
+            data: centers.map(c => c.count),
+            backgroundColor: centerColors,
+            borderWidth: 1,
+            borderColor: '#ffffff',
+            centers: centers
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { family: 'Tajawal', size: 12 } }
+            },
+            datalabels: {
+              color: '#0f172a',
+              font: { size: 13, weight: 'bold', family: 'Tajawal' },
+              formatter: (value) => {
+                const pct = ((value / centerTotal) * 100).toFixed(2);
+                return `${value};\n${pct}%`;
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const value = ctx.formattedValue;
+                  const pct = ((ctx.raw / centerTotal) * 100).toFixed(2);
+                  return `${ctx.label}: ${value} (${pct}%)`;
+                }
+              }
+            }
+          },
+          onClick: (evt, elements, chart) => {
+            if (!elements || !elements.length) return;
+            const { datasetIndex, index } = elements[0];
+            const dataset = chart.data.datasets?.[datasetIndex];
+            const selected = dataset?.centers?.[index];
+            if (!selected) return;
+            navigateToHospitalComplaints(selected);
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderHospitalTable(hospitals) {
+      const hospitalTable = document.getElementById('hospitalTable');
+      if (!hospitalTable) return;
+
+      if (!hospitals.length || hospitals.every(h => h.count === 0)) {
+        hospitalTable.innerHTML = `
           <tr>
             <td colspan="2" class="py-6 text-gray-500">
-              لا توجد بلاغات مسجلة لهذا التصنيف في الوقت الحالي.
+              لا توجد بلاغات مسجلة لهذا التصنيف في المستشفيات.
             </td>
           </tr>`;
         return;
       }
 
-      hospitalsBody.innerHTML = data.map(item => `
+      hospitalTable.innerHTML = hospitals.map(item => `
         <tr class="border-b border-gray-100 hover:bg-blue-50 transition cursor-pointer"
             data-hospital-id="${item.hospitalId}"
             data-hospital-name="${item.hospitalName}">
@@ -357,7 +625,39 @@
         </tr>
       `).join('');
 
-      hospitalsBody.querySelectorAll('tr').forEach(row => {
+      hospitalTable.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('click', () => {
+          const hospital = row.getAttribute('data-hospital-name');
+          const hospitalId = row.getAttribute('data-hospital-id');
+          navigateToHospitalComplaints({ hospitalName: hospital, hospitalId });
+        });
+      });
+    }
+
+    function renderCenterTable(centers) {
+      const centerTable = document.getElementById('centerTable');
+      if (!centerTable) return;
+
+      if (!centers.length || centers.every(c => c.count === 0)) {
+        centerTable.innerHTML = `
+          <tr>
+            <td colspan="2" class="py-6 text-gray-500">
+              لا توجد بلاغات مسجلة لهذا التصنيف في المراكز الصحية.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      centerTable.innerHTML = centers.map(item => `
+        <tr class="border-b border-gray-100 hover:bg-green-50 transition cursor-pointer"
+            data-hospital-id="${item.hospitalId}"
+            data-hospital-name="${item.hospitalName}">
+          <td class="py-3 px-4 font-medium text-[#002B5B]">${item.hospitalName}</td>
+          <td class="py-3 px-4 text-gray-700">${item.count}</td>
+        </tr>
+      `).join('');
+
+      centerTable.querySelectorAll('tr').forEach(row => {
         row.addEventListener('click', () => {
           const hospital = row.getAttribute('data-hospital-name');
           const hospitalId = row.getAttribute('data-hospital-id');

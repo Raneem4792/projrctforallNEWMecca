@@ -98,7 +98,8 @@ router.get('/by-hospital',
     
     // بناء SQL query مع فلترة
     let hospitalQuery = `
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, SortOrder, 
+             COALESCE(FacilityType, 'Hospital') AS FacilityType
       FROM hospitals 
       WHERE IsActive = 1
     `;
@@ -224,6 +225,7 @@ router.get('/by-hospital',
       return {
         HospitalID: hospital.HospitalID,
         HospitalName: hospital.HospitalName,
+        FacilityType: hospital.FacilityType || 'Hospital', // إرجاع نوع المنشأة
         counts: {
           // مجاميع حسب الأولوية (قد يكون بعضها صفر/NULL)
           complaint:  Number(c.complaint_count  || 0),
@@ -399,23 +401,33 @@ router.get('/departments',
   async (req, res) => {
   try {
     // جلب المستشفيات حسب المعامل
-    const hospitalId = req.query.hospitalId;
+    const hospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
     let hospitalsQuery = `
       SELECT HospitalID, NameAr AS HospitalName, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
     `;
     
-    if (hospitalId) {
+    if (hospitalId && !isNaN(hospitalId)) {
       hospitalsQuery += ` AND HospitalID = ?`;
     }
     
     hospitalsQuery += ` ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC`;
     
-    const queryParams = hospitalId ? [hospitalId] : [];
+    const queryParams = (hospitalId && !isNaN(hospitalId)) ? [hospitalId] : [];
     const [allHospitals] = await pool.query(hospitalsQuery, queryParams);
 
     console.log(`🔍 جلب الأقسام مع العدادات من ${allHospitals.length} مستشفى${hospitalId ? ` (مفلتر بـ ${hospitalId})` : ''}`);
+    
+    // طباعة تفاصيل إضافية للتشخيص
+    if (hospitalId) {
+      console.log(`📊 تفاصيل الفلترة:`, {
+        hospitalIdRequest: req.query.hospitalId,
+        hospitalIdParsed: hospitalId,
+        hospitalsFound: allHospitals.length,
+        hospitalNames: allHospitals.map(h => h.HospitalName)
+      });
+    }
 
     const { getHospitalPool } = await import('../config/db.js');
     const rows = [];
@@ -495,7 +507,8 @@ router.get('/complaint-types', async (req, res) => {
     const hospitalParams = hospitalId ? [hospitalId] : [];
 
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, SortOrder,
+             COALESCE(FacilityType, 'hospital') AS FacilityType
       FROM hospitals
       ${hospitalWhereClause}
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -596,7 +609,8 @@ router.get('/complaint-types/by-hospital', async (req, res) => {
     const hospitalParams = hospitalId ? [hospitalId] : [];
 
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, SortOrder,
+             COALESCE(FacilityType, 'hospital') AS FacilityType
       FROM hospitals
       ${hospitalWhereClause}
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -614,21 +628,71 @@ router.get('/complaint-types/by-hospital', async (req, res) => {
     const { getHospitalPool } = await import('../config/db.js');
     const results = [];
 
+    // التحقق إذا كان typeParam رقم (SubTypeID) أو نص (SubTypeName / TypeName)
+    const isNumericTypeParam = /^\d+$/.test(typeParam);
+    const numericTypeParam = isNumericTypeParam ? Number(typeParam) : null;
+
     for (const hospital of allHospitals) {
       try {
         const hospitalPool = await getHospitalPool(hospital.HospitalID);
-        const [rows] = await hospitalPool.query(`
-          SELECT COUNT(*) AS TotalCount
-          FROM complaints c
-          JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
-          WHERE c.IsDeleted = 0
-            AND (ct.TypeCode = ? OR ct.TypeName = ?)
-        `, [typeParam, typeParam]);
+        let total = 0;
 
-        const total = Number(rows?.[0]?.TotalCount ?? 0);
+        // إذا كان typeParam رقم، نحاول البحث في التصنيفات الفرعية أولاً
+        if (isNumericTypeParam && numericTypeParam) {
+          // البحث في التصنيفات الفرعية (SubTypeID)
+          let [rows] = await hospitalPool.query(`
+            SELECT COUNT(*) AS TotalCount
+            FROM complaints c
+            JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+            WHERE c.IsDeleted = 0
+              AND st.SubTypeID = ?
+          `, [numericTypeParam]);
+          
+          total = Number(rows?.[0]?.TotalCount ?? 0);
+          
+          // إذا لم نجد في التصنيفات الفرعية، نبحث في التصنيفات الرئيسية
+          if (total === 0) {
+            [rows] = await hospitalPool.query(`
+              SELECT COUNT(*) AS TotalCount
+              FROM complaints c
+              JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+              WHERE c.IsDeleted = 0
+                AND ct.ComplaintTypeID = ?
+            `, [numericTypeParam]);
+            
+            total = Number(rows?.[0]?.TotalCount ?? 0);
+          }
+        } else {
+          // إذا كان typeParam نص، نبحث في كلا الجدولين
+          // البحث في التصنيفات الرئيسية أولاً
+          let [rows] = await hospitalPool.query(`
+            SELECT COUNT(*) AS TotalCount
+            FROM complaints c
+            JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+            WHERE c.IsDeleted = 0
+              AND (ct.TypeCode = ? OR ct.TypeName = ?)
+          `, [typeParam, typeParam]);
+
+          total = Number(rows?.[0]?.TotalCount ?? 0);
+          
+          // إذا لم نجد نتائج في التصنيفات الرئيسية، نبحث في التصنيفات الفرعية
+          if (total === 0) {
+            [rows] = await hospitalPool.query(`
+              SELECT COUNT(*) AS TotalCount
+              FROM complaints c
+              JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+              WHERE c.IsDeleted = 0
+                AND (st.SubTypeName = ? OR st.SubTypeNameEn = ?)
+            `, [typeParam, typeParam]);
+            
+            total = Number(rows?.[0]?.TotalCount ?? 0);
+          }
+        }
+
         results.push({
           HospitalID: hospital.HospitalID,
           HospitalName: hospital.HospitalName,
+          FacilityType: hospital.FacilityType || 'hospital',
           TotalCount: total
         });
       } catch (error) {
@@ -2062,6 +2126,619 @@ router.get('/home-stats', async (req, res) => {
       success: false,
       error: 'Database error',
       message: error.message 
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/status ==========
+router.get('/status',
+  requireAuth,
+  requirePermission('DASH_CHART_TOP_CLINICS'),
+  async (req, res) => {
+  try {
+    const hospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    
+    // جلب جميع المستشفيات النشطة (أو المستشفى المحدد)
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+    
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals
+      ${hospitalWhereClause}
+      ORDER BY NameAr ASC
+    `, hospitalParams);
+    
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        data: [],
+        total: 0
+      });
+    }
+    
+    const { getHospitalPool } = await import('../config/db.js');
+    const statusCounts = {};
+    
+    // دالة لتوحيد أسماء الحالات (open, OPEN, مفتوح كلها تصبح "open")
+    const normalizeStatus = (status) => {
+      if (!status) return 'unknown';
+      const statusStr = status.toString().trim();
+      const normalized = statusStr.toLowerCase();
+      
+      // توحيد الحالات العربية والإنجليزية (مع دعم UPPERCASE)
+      // بناءً على جدول الحالات: cancelled, closed, escalated, in_progress, on_hold, open, resolved, waiting
+      const statusMap = {
+        // Open states
+        'open': 'open',
+        'opened': 'open',
+        'OPEN': 'open',
+        'OPENED': 'open',
+        'مفتوح': 'open',
+        'مفتوحة': 'open',
+        
+        // Closed states
+        'closed': 'closed',
+        'close': 'closed',
+        'CLOSED': 'closed',
+        'CLOSE': 'closed',
+        'مغلق': 'closed',
+        'مغلقة': 'closed',
+        
+        // In Progress states
+        'in_progress': 'in_progress',
+        'inprogress': 'in_progress',
+        'IN_PROGRESS': 'in_progress',
+        'INPROGRESS': 'in_progress',
+        'قيد المعالجة': 'in_progress',
+        'جاري المعالجة': 'in_progress',
+        
+        // Waiting states
+        'waiting': 'waiting',
+        'wait': 'waiting',
+        'WAITING': 'waiting',
+        'WAIT': 'waiting',
+        'بانتظار': 'waiting',
+        'بانتظار رد القسم': 'waiting',
+        'بانتظار رد القسم': 'waiting',
+        
+        // On Hold states
+        'on_hold': 'on_hold',
+        'onhold': 'on_hold',
+        'ON_HOLD': 'on_hold',
+        'ONHOLD': 'on_hold',
+        'معلق': 'on_hold',
+        'معلقة': 'on_hold',
+        
+        // Escalated states
+        'escalated': 'escalated',
+        'ESCALATED': 'escalated',
+        'مصعد': 'escalated',
+        'مُصعّد': 'escalated',
+        
+        // Resolved states
+        'resolved': 'resolved',
+        'resolve': 'resolved',
+        'RESOLVED': 'resolved',
+        'RESOLVE': 'resolved',
+        'محلول': 'resolved',
+        'محلولة': 'resolved',
+        'مكتمل': 'resolved',
+        
+        // Cancelled states
+        'cancelled': 'cancelled',
+        'cancel': 'cancelled',
+        'CANCELLED': 'cancelled',
+        'CANCEL': 'cancelled',
+        'ملغي': 'cancelled',
+        'ملغاة': 'cancelled',
+      };
+      
+      // البحث أولاً بالقيمة الأصلية (مهم للحالات العربية)
+      if (statusMap[statusStr]) {
+        return statusMap[statusStr];
+      }
+      
+      // ثم البحث بالقيمة الصغيرة (للحالات الإنجليزية)
+      return statusMap[normalized] || normalized;
+    };
+    
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // جلب إحصائيات الحالات من قاعدة بيانات المستشفى
+        const [statusStats] = await hospitalPool.query(`
+          SELECT 
+            StatusCode AS Status,
+            COUNT(*) AS Total
+          FROM complaints
+          WHERE (IsDeleted = 0 OR IsDeleted IS NULL)
+          GROUP BY StatusCode
+        `);
+        
+        // تجميع الإحصائيات مع توحيد الحالات
+        statusStats.forEach(stat => {
+          const status = stat.Status || stat.StatusCode || 'unknown';
+          const normalizedStatus = normalizeStatus(status);
+          statusCounts[normalizedStatus] = (statusCounts[normalizedStatus] || 0) + Number(stat.Total || 0);
+        });
+      } catch (error) {
+        console.error(`خطأ في جلب إحصائيات الحالات من المستشفى ${hospital.HospitalID}:`, error.message);
+      }
+    }
+    
+    // تحويل إلى مصفوفة
+    const data = Object.entries(statusCounts).map(([StatusCode, Total]) => ({
+      StatusCode,
+      Total: Number(Total)
+    })).sort((a, b) => b.Total - a.Total);
+    
+    res.json({
+      success: true,
+      data,
+      total: data.reduce((sum, item) => sum + item.Total, 0)
+    });
+    
+  } catch (error) {
+    console.error('GET /dashboard/total/status', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/categories ==========
+router.get('/categories',
+  requireAuth,
+  requirePermission('DASH_CHART_TOP_CLINICS'),
+  async (req, res) => {
+  try {
+    const hospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    
+    // جلب جميع المستشفيات النشطة (أو المستشفى المحدد)
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+    
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals
+      ${hospitalWhereClause}
+      ORDER BY NameAr ASC
+    `, hospitalParams);
+    
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        data: [],
+        total: 0
+      });
+    }
+    
+    const { getHospitalPool } = await import('../config/db.js');
+    const categoryMap = new Map(); // استخدام Map لتخزين Category + TypeCode + ComplaintTypeID
+    
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // جلب إحصائيات التصنيفات الرئيسية من جدول complaint_types
+        const [categoryStats] = await hospitalPool.query(`
+          SELECT 
+            ct.ComplaintTypeID,
+            ct.TypeName AS Category,
+            ct.TypeCode AS CategoryCode,
+            COUNT(c.ComplaintID) AS Total
+          FROM complaints c
+          INNER JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+          WHERE (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+            AND ct.TypeName IS NOT NULL
+          GROUP BY ct.ComplaintTypeID, ct.TypeName, ct.TypeCode
+          HAVING Total > 0
+        `);
+        
+        // تجميع الإحصائيات حسب اسم التصنيف (مع حفظ TypeCode و ComplaintTypeID)
+        categoryStats.forEach(stat => {
+          const category = stat.Category || 'غير محدد';
+          const categoryCode = stat.CategoryCode || '';
+          const complaintTypeID = stat.ComplaintTypeID || null;
+          
+          if (!categoryMap.has(category)) {
+            categoryMap.set(category, {
+              Category: category,
+              CategoryCode: categoryCode,
+              ComplaintTypeID: complaintTypeID,
+              Total: 0
+            });
+          }
+          
+          const existing = categoryMap.get(category);
+          existing.Total += Number(stat.Total || 0);
+          // تحديث TypeCode و ComplaintTypeID إذا كانت غير موجودة
+          if (!existing.CategoryCode && categoryCode) {
+            existing.CategoryCode = categoryCode;
+          }
+          if (!existing.ComplaintTypeID && complaintTypeID) {
+            existing.ComplaintTypeID = complaintTypeID;
+          }
+        });
+      } catch (error) {
+        console.error(`خطأ في جلب إحصائيات التصنيفات من المستشفى ${hospital.HospitalID}:`, error.message);
+      }
+    }
+    
+    // تحويل إلى مصفوفة
+    const data = Array.from(categoryMap.values())
+      .map(item => ({
+        Category: item.Category,
+        CategoryCode: item.CategoryCode,
+        ComplaintTypeID: item.ComplaintTypeID,
+        Total: Number(item.Total)
+      }))
+      .sort((a, b) => b.Total - a.Total);
+    
+    res.json({
+      success: true,
+      data,
+      total: data.reduce((sum, item) => sum + item.Total, 0)
+    });
+    
+  } catch (error) {
+    console.error('GET /dashboard/total/categories', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/subcategories ==========
+router.get('/subcategories',
+  requireAuth,
+  requirePermission('DASH_CHART_TOP_CLINICS'),
+  async (req, res) => {
+  try {
+    const hospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    
+    // جلب جميع المستشفيات النشطة (أو المستشفى المحدد)
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+    
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals
+      ${hospitalWhereClause}
+      ORDER BY NameAr ASC
+    `, hospitalParams);
+    
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        data: [],
+        total: 0
+      });
+    }
+    
+    const { getHospitalPool } = await import('../config/db.js');
+    const subcategoryMap = new Map(); // استخدام Map لتخزين SubCategory + SubTypeID
+    
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // جلب إحصائيات التصنيفات الفرعية من جدول complaint_subtypes
+        const [subcategoryStats] = await hospitalPool.query(`
+          SELECT 
+            st.SubTypeID,
+            st.SubTypeName AS SubCategory,
+            st.SubTypeNameEn AS SubCategoryEn,
+            COUNT(c.ComplaintID) AS Total
+          FROM complaints c
+          INNER JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+          WHERE (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+            AND st.SubTypeName IS NOT NULL
+          GROUP BY st.SubTypeID, st.SubTypeName, st.SubTypeNameEn
+          HAVING Total > 0
+        `);
+        
+        // تجميع الإحصائيات حسب اسم التصنيف الفرعي (مع حفظ SubTypeID)
+        subcategoryStats.forEach(stat => {
+          const subcategory = stat.SubCategory || stat.SubCategoryEn || 'غير محدد';
+          const subTypeID = stat.SubTypeID || null;
+          
+          if (!subcategoryMap.has(subcategory)) {
+            subcategoryMap.set(subcategory, {
+              SubCategory: subcategory,
+              SubTypeID: subTypeID,
+              Total: 0
+            });
+          }
+          
+          const existing = subcategoryMap.get(subcategory);
+          existing.Total += Number(stat.Total || 0);
+          // تحديث SubTypeID إذا كان غير موجود
+          if (!existing.SubTypeID && subTypeID) {
+            existing.SubTypeID = subTypeID;
+          }
+        });
+      } catch (error) {
+        console.error(`خطأ في جلب إحصائيات التصنيفات الفرعية من المستشفى ${hospital.HospitalID}:`, error.message);
+      }
+    }
+    
+    // تحويل إلى مصفوفة وترتيب حسب العدد
+    const data = Array.from(subcategoryMap.values())
+      .map(item => ({
+        SubCategory: item.SubCategory,
+        SubTypeID: item.SubTypeID,
+        Total: Number(item.Total)
+      }))
+      .sort((a, b) => b.Total - a.Total)
+      .slice(0, 15); // أعلى 15 تصنيف فرعي
+    
+    res.json({
+      success: true,
+      data,
+      total: data.reduce((sum, item) => sum + item.Total, 0)
+    });
+    
+  } catch (error) {
+    console.error('GET /dashboard/total/subcategories', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/patient-frequency ==========
+// جدول تكرار الشكاوى حسب رقم الهوية والمستشفى
+router.get('/patient-frequency', 
+  requireAuth,
+  async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit) || 100));
+    const offset = (page - 1) * limit;
+
+    // جلب بيانات المستخدم
+    const user = req.user;
+    const userRoleId = Number(user?.RoleID || user?.roleId || 0);
+    const userHospitalId = Number(user?.HospitalID || user?.hospitalId || 0);
+    const isCluster = userRoleId === 1 || userRoleId === 4; // مدير تجمع أو مركزي
+    
+    // فلترة حسب hospitalId من query parameter أو من بيانات المستخدم
+    const requestedHospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    let targetHospitalId = null;
+    
+    if (isCluster) {
+      targetHospitalId = requestedHospitalId;
+    } else {
+      targetHospitalId = userHospitalId || requestedHospitalId;
+    }
+
+    // جلب قائمة المستشفيات
+    let hospitalQuery = `
+      SELECT HospitalID, NameAr, NameEn, DbName
+      FROM hospitals 
+      WHERE IsActive = 1
+    `;
+    const queryParams = [];
+    
+    if (targetHospitalId) {
+      hospitalQuery += ` AND HospitalID = ?`;
+      queryParams.push(targetHospitalId);
+    }
+    
+    hospitalQuery += ` ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC`;
+    
+    const [allHospitals] = await pool.query(hospitalQuery, queryParams);
+    
+    // تجميع البيانات من جميع المستشفيات
+    const frequencyMap = new Map(); // key: `${PatientIDNumber}|||${HospitalID}`
+    
+    const { getHospitalPool } = await import('../config/db.js');
+    
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // جلب البيانات المجمعة حسب PatientIDNumber فقط (كل مستشفى له قاعدة بيانات منفصلة)
+        const [rows] = await hospitalPool.query(`
+          SELECT 
+            PatientIDNumber,
+            COUNT(*) AS frequency
+          FROM complaints
+          WHERE PatientIDNumber IS NOT NULL 
+            AND PatientIDNumber != ''
+            AND (IsDeleted = 0 OR IsDeleted IS NULL)
+          GROUP BY PatientIDNumber
+          ORDER BY frequency DESC
+        `);
+        
+        // إضافة البيانات إلى الخريطة
+        for (const row of rows) {
+          const key = `${row.PatientIDNumber}|||${hospital.HospitalID}`;
+          if (frequencyMap.has(key)) {
+            // هذا لا يجب أن يحدث لأن كل مستشفى له قاعدة بيانات منفصلة
+            frequencyMap.get(key).frequency += Number(row.frequency);
+          } else {
+            frequencyMap.set(key, {
+              PatientIDNumber: row.PatientIDNumber,
+              HospitalID: hospital.HospitalID,
+              HospitalName: hospital.NameAr || hospital.NameEn,
+              frequency: Number(row.frequency)
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`❌ خطأ في جلب بيانات مستشفى ${hospital.NameAr}:`, error.message);
+        // نكمل مع المستشفيات الأخرى
+      }
+    }
+    
+    // تحويل الخريطة إلى مصفوفة
+    const allData = Array.from(frequencyMap.values());
+    
+    // فلترة البيانات: فقط الأعلى تكرار من كل مستشفى أو اللي مكرر أكثر من 5 مرات
+    const hospitalMaxFreq = new Map(); // key: HospitalID, value: max frequency
+    const filteredData = [];
+    
+    // أولاً: إيجاد أعلى تكرار لكل مستشفى
+    for (const item of allData) {
+      const currentMax = hospitalMaxFreq.get(item.HospitalID) || 0;
+      if (item.frequency > currentMax) {
+        hospitalMaxFreq.set(item.HospitalID, item.frequency);
+      }
+    }
+    
+    // ثانياً: إضافة البيانات التي تطابق الشروط
+    for (const item of allData) {
+      const maxFreqForHospital = hospitalMaxFreq.get(item.HospitalID) || 0;
+      
+      // إضافة إذا كان:
+      // 1. أعلى تكرار في مستشفاه
+      // 2. أو مكرر أكثر من 5 مرات
+      if (item.frequency === maxFreqForHospital || item.frequency > 5) {
+        filteredData.push(item);
+      }
+    }
+    
+    // ترتيب البيانات حسب التكرار (الأعلى أولاً)
+    filteredData.sort((a, b) => b.frequency - a.frequency);
+    
+    // حساب الإجمالي
+    const total = filteredData.length;
+    
+    // تطبيق pagination
+    const paginatedData = filteredData.slice(offset, offset + limit);
+    
+    res.json({
+      success: true,
+      data: paginatedData,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: offset + limit < total,
+        hasPrev: page > 1
+      }
+    });
+    
+  } catch (error) {
+    console.error('GET /dashboard/total/patient-frequency', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Database error',
+      message: error.message 
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/patient-complaints ==========
+// جلب جميع شكاوى شخص معين حسب رقم الهوية والمستشفى
+router.get('/patient-complaints',
+  requireAuth,
+  async (req, res) => {
+  try {
+    const patientIDNumber = req.query.patientIDNumber;
+    const hospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    
+    if (!patientIDNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'رقم الهوية مطلوب'
+      });
+    }
+    
+    // جلب بيانات المستخدم
+    const user = req.user;
+    const userRoleId = Number(user?.RoleID || user?.roleId || 0);
+    const userHospitalId = Number(user?.HospitalID || user?.hospitalId || 0);
+    const isCluster = userRoleId === 1 || userRoleId === 4;
+    
+    // تحديد المستشفى المستهدف
+    let targetHospitalId = null;
+    if (isCluster) {
+      targetHospitalId = hospitalId;
+    } else {
+      targetHospitalId = userHospitalId || hospitalId;
+    }
+    
+    if (!targetHospitalId) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المستشفى مطلوب'
+      });
+    }
+    
+    const { getHospitalPool } = await import('../config/db.js');
+    const hospitalPool = await getHospitalPool(targetHospitalId);
+    
+    // جلب جميع شكاوى الشخص
+    const [complaints] = await hospitalPool.query(`
+      SELECT 
+        c.ComplaintID,
+        c.TicketNumber,
+        c.PatientFullName,
+        c.PatientIDNumber,
+        c.Description,
+        c.VisitDate,
+        c.StatusCode,
+        c.PriorityCode,
+        c.CreatedAt,
+        c.HospitalID,
+        c.DepartmentID,
+        d.NameAr AS DepartmentNameAr,
+        d.NameEn AS DepartmentNameEn,
+        ct.TypeName AS ComplaintTypeNameAr,
+        cs.LabelAr AS StatusLabelAr
+      FROM complaints c
+      LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+      LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+      LEFT JOIN complaint_statuses cs ON cs.StatusCode = c.StatusCode
+      WHERE c.PatientIDNumber = ?
+        AND c.HospitalID = ?
+        AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+      ORDER BY c.CreatedAt DESC
+    `, [patientIDNumber, targetHospitalId]);
+    
+    // جلب اسم المستشفى من القاعدة المركزية
+    const [hospitalInfo] = await pool.query(`
+      SELECT NameAr, NameEn
+      FROM hospitals
+      WHERE HospitalID = ?
+    `, [targetHospitalId]);
+    
+    res.json({
+      success: true,
+      data: complaints.map(c => ({
+        ...c,
+        HospitalName: hospitalInfo[0]?.NameAr || hospitalInfo[0]?.NameEn || 'غير محدد'
+      })),
+      total: complaints.length,
+      patientIDNumber,
+      hospitalId: targetHospitalId,
+      hospitalName: hospitalInfo[0]?.NameAr || hospitalInfo[0]?.NameEn || 'غير محدد'
+    });
+    
+  } catch (error) {
+    console.error('GET /dashboard/total/patient-complaints', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
     });
   }
 });

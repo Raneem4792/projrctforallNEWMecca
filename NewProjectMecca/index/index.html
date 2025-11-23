@@ -59,6 +59,17 @@
             🌐 English
           </button>
 
+          <!-- زر الإشعارات -->
+          <button id="notificationsButton" 
+                  class="relative text-white hover:text-blue-200 dark:hover:text-blue-300 transition-colors p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/20">
+            <span class="text-xl">🔔</span>
+
+            <!-- البادج (عدد الإشعارات) -->
+            <span id="notificationsBadge" 
+                  class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+            </span>
+          </button>
+
           <!-- زر تبديل الوضع الداكن -->
           <button id="darkToggle" class="text-white hover:text-blue-200 dark:hover:text-blue-300 transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/20" aria-label="تبديل الوضع الداكن">
             <span id="darkToggleIcon">🌙</span>
@@ -959,29 +970,44 @@
     /* Pop-up للبلاغات الحرجة */
     #urgentAlertPopup {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      top: 20px;
+      left: 20px;              /* 👈 صار على اليسار */
+      transform: none !important;  /* 👈 منع التحريك للوسط */
+      
       background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       color: white;
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(220, 38, 38, 0.5);
+      padding: 1.4rem 1.8rem;
+      border-radius: 18px;
+      box-shadow: 0 10px 35px rgba(220, 38, 38, 0.4);
       z-index: 10000;
-      max-width: 800px;
-      width: 90%;
-      animation: slideIn 0.3s ease-out;
+
+      width: min(700px, 90vw);
+      max-height: 35vh;
+      overflow-y: auto;
+
+      animation: slideInLeft 0.3s ease-out; /* 👈 حركة من اليسار */
       direction: rtl;
     }
 
-    @keyframes slideIn {
+    .custom-top-modal {
+      margin-top: 20px !important;
+      top: 20px !important;
+      left: 20px !important;
+      transform: none !important;
+      width: min(700px, 90vw) !important;
+      max-height: 35vh !important;
+      border-radius: 18px;
+    }
+
+    /* حركة الدخول من اليسار */
+    @keyframes slideInLeft {
       from {
         opacity: 0;
-        transform: translate(-50%, -60%);
+        transform: translateX(-30px);
       }
       to {
         opacity: 1;
-        transform: translate(-50%, -50%);
+        transform: translateX(0);
       }
     }
 
@@ -992,11 +1018,11 @@
     @keyframes fadeOut {
       from {
         opacity: 1;
-        transform: translate(-50%, -50%);
+        transform: translateX(0);
       }
       to {
         opacity: 0;
-        transform: translate(-50%, -40%);
+        transform: translateX(-30px);
       }
     }
 
@@ -1075,7 +1101,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.3); /* <— كان 0.5 */
       z-index: 9999;
       animation: fadeIn 0.3s ease-out;
     }
@@ -1131,8 +1157,9 @@
         // إنشاء Pop-up
         const popup = document.createElement('div');
         popup.id = 'urgentAlertPopup';
-        popup.style.maxWidth = '800px';
-        popup.style.maxHeight = '80vh';
+        popup.classList.add('custom-top-modal');
+        popup.style.maxWidth = '700px';
+        popup.style.maxHeight = '35vh';
         popup.style.overflowY = 'auto';
 
         let html = `
@@ -1223,6 +1250,7 @@
 
       // جعل الدالة متاحة عالمياً
       window.hideUrgentPopup = hideUrgentPopup;
+      window.showAllUrgentPopup = showAllUrgentPopup;
 
       // ✅ دالة فتح صفحة تفاصيل البلاغ
       function openComplaintDetails(ticketNumber, hospitalId) {
@@ -1277,12 +1305,26 @@
 
           if (data.success && data.hasUrgent && data.complaints && data.complaints.length > 0) {
             showAllUrgentPopup(data.complaints);
+            
+            // تحديث Badge زر الإشعارات
+            const notifBadge = document.getElementById('notificationsBadge');
+            if (notifBadge) {
+              notifBadge.textContent = data.complaints.length;
+              notifBadge.classList.remove('hidden');
+            }
+            
             // تحديث وقت آخر فحص بأحدث بلاغ
             if (data.complaints.length > 0) {
               const latestComplaint = data.complaints.sort((a, b) => 
                 new Date(b.CreatedAt) - new Date(a.CreatedAt)
               )[0];
               lastCheckedTime = new Date(latestComplaint.CreatedAt);
+            }
+          } else {
+            // لا توجد بلاغات حرجة - إخفاء البادج
+            const notifBadge = document.getElementById('notificationsBadge');
+            if (notifBadge) {
+              notifBadge.classList.add('hidden');
             }
           }
         } catch (error) {
@@ -1315,6 +1357,15 @@
               );
             }
 
+            // تحديث Badge زر الإشعارات (فقط للبلاغات الجديدة)
+            const notifBadge = document.getElementById('notificationsBadge');
+            if (notifBadge) {
+              if (newComplaints.length > 0) {
+                notifBadge.textContent = newComplaints.length;
+                notifBadge.classList.remove('hidden');
+              }
+            }
+
             // إذا كان هناك بلاغات جديدة، اعرضها
             if (newComplaints.length > 0) {
               // اجلب كل البلاغات لعرضها (ليس فقط الجديدة)
@@ -1326,6 +1377,12 @@
               )[0];
               lastCheckedTime = new Date(latestComplaint.CreatedAt);
             }
+          } else {
+            // لا توجد بلاغات حرجة - إخفاء البادج
+            const notifBadge = document.getElementById('notificationsBadge');
+            if (notifBadge) {
+              notifBadge.classList.add('hidden');
+            }
           }
         } catch (error) {
           console.error('❌ خطأ في فحص البلاغات الحرجة الجديدة:', error);
@@ -1334,6 +1391,12 @@
 
       // تهيئة النظام عند تحميل الصفحة
       document.addEventListener('DOMContentLoaded', function() {
+        // إخفاء زر الإشعارات للمستخدمين غير المركزيين
+        const notifBtn = document.getElementById('notificationsButton');
+        if (notifBtn && !isCentralAdmin) {
+          notifBtn.style.display = 'none';
+        }
+
         // جلب كل البلاغات الحرجة عند تحميل الصفحة
         checkUrgentAll();
 
@@ -1341,6 +1404,45 @@
         checkInterval = setInterval(() => {
           checkUrgentNew();
         }, 10000); // 10 ثوانٍ
+
+        // ✅ ربط زر الإشعارات بفتح نافذة البلاغات الحرجة
+        const notifBadge = document.getElementById('notificationsBadge');
+        
+        if (notifBtn && isCentralAdmin) {
+          notifBtn.addEventListener('click', async () => {
+            try {
+              const response = await fetch(`${API_BASE}/api/public/complaints/urgent-all`, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json'
+                }
+              });
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+
+              const data = await response.json();
+
+              if (data.success && data.hasUrgent && data.complaints && data.complaints.length > 0) {
+                showAllUrgentPopup(data.complaints);
+                // إخفاء البادج بعد فتح النافذة
+                if (notifBadge) {
+                  notifBadge.classList.add('hidden');
+                }
+              } else {
+                // لا توجد بلاغات حرجة
+                alert('لا توجد بلاغات حرجة حالياً');
+                if (notifBadge) {
+                  notifBadge.classList.add('hidden');
+                }
+              }
+            } catch (error) {
+              console.error('❌ خطأ في جلب البلاغات الحرجة:', error);
+              alert('حدث خطأ في جلب البلاغات الحرجة');
+            }
+          });
+        }
       });
 
       // تنظيف عند إغلاق الصفحة

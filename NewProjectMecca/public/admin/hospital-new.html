@@ -46,6 +46,7 @@
               <input id="hNameAr" name="hNameAr" type="text" readonly required
                      placeholder="اختر المنشأة"
                      class="w-full h-11 rounded-xl border border-gray-200 px-3 pr-10 cursor-pointer focus:ring-2 focus:ring-blue-200 bg-white"/>
+              <input id="hFacilityType" type="hidden" name="facilityType"/>
               <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -211,12 +212,24 @@
         facilityOptionsBox.innerHTML = `<div class="p-3 text-sm text-gray-500">لا توجد نتائج.</div>`;
         return;
       }
-      facilityOptionsBox.innerHTML = list.map(item => `
-        <button type="button" class="w-full text-right px-4 py-2 text-sm hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none facility-option"
-                data-value="${item.FacilityName}">
-          ${item.FacilityName}
-        </button>
-      `).join('');
+      facilityOptionsBox.innerHTML = list.map(item => {
+        // تحويل النوع من الإنجليزية إلى العربية
+        let typeLabel = '';
+        if (item.FacilityType === "hospital") typeLabel = "مستشفى";
+        else if (item.FacilityType === "center") typeLabel = "مركز صحي";
+        else typeLabel = "إدارة";
+
+        return `
+          <button type="button"
+            class="w-full text-right px-4 py-2 text-sm hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none facility-option"
+            data-value="${item.FacilityName}"
+            data-type="${item.FacilityType || ''}"
+            data-id="${item.FacilityID || ''}">
+            ${item.FacilityName}
+            ${typeLabel ? `<span class="text-gray-400 text-xs mr-2">(${typeLabel})</span>` : ''}
+          </button>
+        `;
+      }).join('');
     }
 
     async function loadFacilities() {
@@ -263,6 +276,19 @@
       const btn = e.target.closest('.facility-option');
       if (!btn || !facilityInput) return;
       facilityInput.value = btn.dataset.value || '';
+      
+      // تعبئة النوع باللغة الإنجليزية (للباكند)
+      const type = btn.dataset.type || '';
+      const facilityTypeInput = document.getElementById('hFacilityType');
+      if (facilityTypeInput) {
+        if (type === "hospital") {
+          facilityTypeInput.value = "hospital";
+        } else if (type === "center") {
+          facilityTypeInput.value = "center";
+        } else {
+          facilityTypeInput.value = "administration";
+        }
+      }
       toggleFacilityDropdown(false);
     });
 

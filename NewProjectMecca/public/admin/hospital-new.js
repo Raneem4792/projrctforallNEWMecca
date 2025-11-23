@@ -88,6 +88,7 @@ document.getElementById('hospitalForm').addEventListener('submit', async (e) => 
     code: document.getElementById('hCode').value.trim().toUpperCase(),
     cityAr: document.getElementById('hCity').value.trim(),
     regionAr: document.getElementById('hRegion').value.trim(),
+    facilityType: document.getElementById('hFacilityType')?.value.trim() || '', // النوع من المنشأة
     isActive: document.getElementById('hActive').checked ? 1 : 0,
     departments: departments,
     adminUser: adminUser

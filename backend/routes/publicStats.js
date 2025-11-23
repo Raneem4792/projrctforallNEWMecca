@@ -73,5 +73,32 @@ router.get('/landing-stats', async (req, res) => {
   }
 });
 
+const footerDefaults = {
+  orgName: process.env.FOOTER_ORG_NAME || 'تجمع مكة الصحي',
+  systemName: process.env.FOOTER_SYSTEM_NAME || 'نظام البلاغات',
+  description: process.env.FOOTER_DESCRIPTION || 'منصة رسمية لتقديم ومتابعة البلاغات',
+  support1: process.env.FOOTER_SUPPORT_NUMBER_1 || '0559735137',
+  support2: process.env.FOOTER_SUPPORT_NUMBER_2 || '0542282550',
+  email: process.env.FOOTER_SUPPORT_EMAIL || 'support@makkahhealth.gov.sa',
+  hours: process.env.FOOTER_WORKING_HOURS || '24/7'
+};
+
+router.get('/footer-info', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        ...footerDefaults
+      }
+    });
+  } catch (error) {
+    console.error('❌ footer-info error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء تحميل بيانات الفوتر'
+    });
+  }
+});
+
 export default router;
 

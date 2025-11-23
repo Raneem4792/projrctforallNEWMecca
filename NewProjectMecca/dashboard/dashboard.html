@@ -149,6 +149,21 @@
       </div>
     </section>
 
+    <!-- ===============================
+         قوائم الفلترة حسب نوع المنشأة
+       =============================== -->
+    <section id="facility-filter-section" class="mt-6">
+      <div class="container mx-auto px-4">
+        <!-- قائمة المستشفيات -->
+        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المستشفيات</h3>
+        <div id="hospital-filter-list" class="flex flex-wrap gap-3 mb-6"></div>
+
+        <!-- قائمة المراكز الصحية -->
+        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المراكز الصحية</h3>
+        <div id="center-filter-list" class="flex flex-wrap gap-3"></div>
+      </div>
+    </section>
+
     <!-- ===========================
          Health Facilities Charts
          =========================== -->
@@ -158,12 +173,18 @@
           <h2 class="text-3xl font-bold" style="color:#002B5B">المرافق الصحية</h2>
         </div>
 
-        <!-- المستشفيات فقط -->
-        <div class="grid grid-cols-1 gap-6">
+        <!-- المستشفيات والمراكز الصحية -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- المستشفيات -->
           <div data-perm="DASH_CHART_TOP_CLINICS" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
             <h3 class="font-bold mb-3 text-center" style="color:#002B5B">المستشفيات</h3>
             <div style="height:400px"><canvas id="hospitals-chart"></canvas></div>
+          </div>
+          
+          <!-- المراكز الصحية -->
+          <div data-perm="DASH_CHART_TOP_CLINICS" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
+            <h3 class="font-bold mb-3 text-center" style="color:#002B5B">المراكز الصحية</h3>
+            <div style="height:400px"><canvas id="centers-chart"></canvas></div>
           </div>
         </div>
       </div>
@@ -175,13 +196,36 @@
      =============================== -->
 <section id="categories-section" class="py-10">
   <div class="container mx-auto px-4">
-    <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+    <!-- التصنيفات الرئيسية -->
+    <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mb-6">
       <div class="flex items-center justify-between mb-3">
         <h3 class="font-bold text-xl" style="color:#002B5B">التصنيفات</h3>
       </div>
 
       <div style="height:350px;">
         <canvas id="categories-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- التصنيفات الفرعية -->
+    <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-xl" style="color:#002B5B">التصنيفات الفرعية</h3>
+      </div>
+
+      <div style="height:400px;">
+        <canvas id="subcategories-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- حالة البلاغ -->
+    <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-xl" style="color:#002B5B">حالة البلاغ</h3>
+      </div>
+
+      <div style="height:350px;">
+        <canvas id="status-chart"></canvas>
       </div>
     </div>
   </div>
@@ -206,6 +250,77 @@
         </div>
       </div>
     </section>
+
+    <!-- جدول تكرار الشكاوى حسب رقم الهوية -->
+    <section id="patient-frequency-section" class="py-10">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="font-bold text-xl" style="color:#002B5B">تكرار الشكاوى حسب رقم الهوية</h3>
+          </div>
+          
+          <!-- الجدول -->
+          <div class="overflow-x-auto">
+            <table id="patient-frequency-table" class="min-w-full text-sm text-center border-collapse">
+              <thead>
+                <tr class="bg-gray-100 text-gray-700">
+                  <th class="py-3 px-4 border font-semibold">الهويه</th>
+                  <th class="py-3 px-4 border font-semibold">التكرار</th>
+                  <th class="py-3 px-4 border font-semibold">اسم المستشفى</th>
+                </tr>
+              </thead>
+              <tbody id="patient-frequency-tbody" class="bg-white">
+                <tr>
+                  <td colspan="3" class="py-8 text-gray-500">جاري تحميل البيانات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination -->
+          <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+            <div id="patient-frequency-info" class="text-sm text-gray-600">
+              جاري التحميل...
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="patient-frequency-prev" 
+                      class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled>
+                <
+              </button>
+              <button id="patient-frequency-next" 
+                      class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled>
+                >
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal لعرض شكاوى الشخص -->
+    <div id="patient-complaints-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" style="display: none;">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h3 class="text-xl font-bold" style="color:#002B5B">شكاوى الشخص</h3>
+            <p id="patient-modal-info" class="text-sm text-gray-600 mt-1"></p>
+          </div>
+          <button id="patient-modal-close" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
+            ×
+          </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="patient-complaints-list" class="space-y-3">
+            <div class="text-center text-gray-500 py-8">جاري تحميل الشكاوى...</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ===========================
          Weekly 937 Board (مثل الصورة)

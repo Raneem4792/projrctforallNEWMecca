@@ -90,7 +90,7 @@ async function hasPermissionFor(userId, hospitalId, permissionKey) {
   POST /api/admin/hospitals
   body:
   {
-    nameAr, nameEn, code, cityAr, regionAr, isActive,
+    nameAr, nameEn, code, cityAr, regionAr, facilityType, isActive,
     departments: [{ nameAr, nameEn, code, defaultEmail, headName, headEmail }],
     adminUser: { fullName, username, email, mobile, passwordPlain }
   }
@@ -124,6 +124,7 @@ router.post('/', requireAuth, async (req, res) => {
     nameAr, nameEn = '',
     code: rawCode,
     cityAr = '', regionAr = '',
+    facilityType = '', // النوع من central_facilities
     isActive = 1,
       departments = [],
     adminUser
@@ -164,9 +165,9 @@ router.post('/', requireAuth, async (req, res) => {
     // 3) إنشاء سجل المستشفى في القاعدة المركزية
     const [insHosp] = await central.query(
       `INSERT INTO hospitals
-       (NameAr, NameEn, Code, CityAr, RegionAr, IsActive, Active, DbName, DbHost, DbUser, DbPass, CreatedAt)
-       VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, NOW())`,
-      [nameAr, nameEn, code, cityAr, regionAr, dbName, dbHost, dbUser, dbPass]
+       (NameAr, NameEn, Code, CityAr, RegionAr, FacilityType, IsActive, Active, DbName, DbHost, DbUser, DbPass, CreatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, NOW())`,
+      [nameAr, nameEn, code, cityAr, regionAr, facilityType || null, dbName, dbHost, dbUser, dbPass]
     );
     hospitalId = insHosp.insertId;
     

@@ -75,7 +75,12 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
 
     const params = new URLSearchParams();
 
-    if (App.isClusterManager()) {
+    // التحقق من وجود تصفية نشطة أولاً
+    const filteredId = window.filteredHospitalId;
+    if (filteredId) {
+      params.set('hospitalId', filteredId);
+      console.log('🔍 التصفية النشطة - استخدام hospitalId المفلتر للزائر السري:', filteredId);
+    } else if (App.isClusterManager()) {
       const hid = document.getElementById('mystery-hospital-select')?.value || localStorage.getItem('mysteryDashHospitalId');
       if (!hid) {
         // رسالة توجيهية
@@ -388,6 +393,7 @@ async function loadHospitalsData() {
       return {
         id: hospital.HospitalID,
         name: hospital.HospitalName,
+        FacilityType: hospital.FacilityType || 'Hospital', // إضافة نوع المنشأة
         type: 'عام',
         beds: 0,
         totalReports,
@@ -405,7 +411,12 @@ async function loadHospitalsData() {
       };
     });
 
-    updateMainStatsCards();
+    // ⭐ إذا كان هناك تصفية نشطة، لا نحدث الكروت العامة لأنها ستُحدث عبر filterDashboardByFacility
+    if (!window.filteredHospitalId) {
+      updateMainStatsCards();
+    } else {
+      console.log(`⛔ تم منع استدعاء updateMainStatsCards() في loadHospitalsData() - تصفية نشطة للمستشفى ${window.filteredHospitalId}`);
+    }
 
     // Fallback: إن لم توجد redReports لكن يوجد عدّ حرِج، جيب قائمة حرجة من API
     const totalCritical = hospitalsData.reduce((s,h)=> s + (h.priorityCounts?.red||0), 0);
@@ -441,6 +452,881 @@ async function loadHospitalsData() {
   } catch (error) {
     console.error('خطأ في تحميل بيانات المستشفيات:', error);
     throw error;
+  }
+}
+
+/**
+ * توليد قائمة المستشفيات للفلترة
+ */
+function generateHospitalFilterList() {
+  const list = document.getElementById('hospital-filter-list');
+  if (!list) return;
+
+  // فلترة فقط المستشفيات (FacilityType = 'hospital')
+  const hospitalsOnly = hospitalsData.filter(h =>
+    (h.FacilityType || '').toLowerCase() === 'hospital'
+  );
+
+  list.innerHTML = '';
+
+  // إذا لم يكن مدير تجمع، لا نعرض القائمة (لأنه مستشفى واحد فقط)
+  if (!isClusterManager && hospitalsOnly.length <= 1) {
+    return;
+  }
+
+  hospitalsOnly.forEach(h => {
+    const btn = document.createElement('button');
+    btn.className = 'px-4 py-2 rounded-full border text-sm font-medium hover:bg-blue-600 hover:text-white transition';
+    btn.style.borderColor = '#004A9F';
+    btn.style.color = '#004A9F';
+    btn.dataset.hospitalId = h.id;
+
+    btn.textContent = h.name;
+
+    btn.onclick = () => {
+      window.location.href = `dashboard.html?hospitalId=${h.id}`;
+    };
+
+    list.appendChild(btn);
+  });
+}
+
+/**
+ * توليد قائمة المراكز الصحية للفلترة
+ */
+function generateCenterFilterList() {
+  const list = document.getElementById('center-filter-list');
+  if (!list) return;
+
+  // فلترة فقط المراكز الصحية (FacilityType = 'center')
+  const centersOnly = hospitalsData.filter(h =>
+    (h.FacilityType || '').toLowerCase() === 'center'
+  );
+
+  list.innerHTML = '';
+
+  // إذا لم يكن مدير تجمع، لا نعرض القائمة (لأنه مركز واحد فقط)
+  if (!isClusterManager && centersOnly.length <= 1) {
+    return;
+  }
+
+  centersOnly.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'px-4 py-2 rounded-full border text-sm font-medium hover:bg-green-600 hover:text-white transition';
+    btn.style.borderColor = '#0FA47A';
+    btn.style.color = '#0FA47A';
+    btn.dataset.centerId = c.id;
+
+    btn.textContent = c.name;
+
+    btn.onclick = () => {
+      window.location.href = `dashboard.html?centerId=${c.id}`;
+    };
+
+    list.appendChild(btn);
+  });
+}
+
+/**
+ * فلترة لوحة التحكم بناءً على مستشفى أو مركز صحي محدد
+ */
+async function filterDashboardByFacility(type, id) {
+  console.log('🔍 Filtering dashboard by:', type, id);
+
+  // جلب البيانات من hospitalsData
+  const item = hospitalsData.find(h => h.id == id);
+  if (!item) {
+    console.error('❌ Facility not found:', id);
+    return;
+  }
+
+  // حفظ معرف المستشفى/المركز المحدد للاستخدام في جميع الدوال
+  window.filteredHospitalId = id;
+  window.isFiltered = true;
+
+  // ========================================
+  // 1) تحديث الكروت الأساسية
+  // ========================================
+  const totalCard = document.getElementById('card-total');
+  const openCard = document.getElementById('card-open');
+  const closedCard = document.getElementById('card-closed');
+  const criticalCard = document.getElementById('card-critical');
+  const resolutionCard = document.getElementById('card-resolution');
+
+  if (totalCard) totalCard.textContent = item.totalReports || 0;
+  if (openCard) openCard.textContent = item.openReports || 0;
+  if (closedCard) closedCard.textContent = item.closedReports || 0;
+  if (criticalCard) criticalCard.textContent = item.priorityCounts?.red || 0;
+  if (resolutionCard) resolutionCard.textContent = `${item.resolutionRate || 0}%`;
+
+  // ========================================
+  // 2) تحديث لوحة 937 (Weekly Board)
+  // ========================================
+  updateWeeklyBoardCards(
+    item.totalReports || 0,
+    item.openReports || 0,
+    item.closedReports || 0,
+    item.priorityCounts?.red || 0
+  );
+
+  // ========================================
+  // 3) إعادة تحميل البيانات المفلترة
+  // ========================================
+  // إعادة تحميل الأقسام الأعلى للمستشفى المحدد
+  await reloadFilteredData(id);
+
+  // تحديث البلاغات الحرجة
+  await renderTopRedList();
+
+  // ========================================
+  // 4) إخفاء الأقسام غير المرتبطة
+  // ========================================
+  // إخفاء قسم المستشفيات والمراكز الصحية (الرسوم العامة)
+  const healthCharts = document.getElementById('health-facilities-charts');
+  if (healthCharts) healthCharts.style.display = 'none';
+
+  // ⭐ لا نخفي أقسام التصنيفات والزائر السري لأنها تعمل مع أو بدون تصفية
+  // document.querySelectorAll('#categories-section, #mystery-section').forEach(el => {
+  //   if (el) el.style.display = 'none';
+  // });
+
+  // إخفاء قوائم الفلترة نفسها
+  const filterSection = document.getElementById('facility-filter-section');
+  if (filterSection) filterSection.style.display = 'none';
+
+  // ========================================
+  // 5) إظهار زر "العودة" أو "عرض الكل"
+  // ========================================
+  showBackButton();
+
+  // ========================================
+  // 6) تحديث العنوان لإظهار اسم المستشفى/المركز
+  // ========================================
+  updatePageTitle(item.name);
+
+  console.log('✅ تم تطبيق التصفية بنجاح');
+}
+
+/**
+ * إعادة تحميل البيانات المفلترة للمستشفى/المركز المحدد
+ */
+async function reloadFilteredData(hospitalId) {
+  try {
+    console.log('🔄 إعادة تحميل البيانات المفلترة للمستشفى:', hospitalId);
+
+    // 1) تحديث الأقسام الأعلى
+    await updateTopDepartmentsChartFiltered(hospitalId);
+
+    // 2) تحديث أنواع البلاغات
+    await updateComplaintTypesChartFiltered(hospitalId);
+
+    // 3) تحديث الرسم البياني اليومي
+    await updateDailyComplaintsChartFiltered(hospitalId);
+
+    // 4) تحديث البلاغات الحرجة
+    await updateCriticalReportsFiltered(hospitalId);
+
+    // 5) تحديث الزائر السري
+    if (typeof App.renderMysteryByDepartment === 'function') {
+      await App.renderMysteryByDepartment();
+    }
+
+    // 6) تحديث الرسوم البيانية الجديدة
+    await loadStatusChart();
+    await loadCategoriesChart();
+    await loadSubcategoriesChart();
+
+    console.log('✅ تم إعادة تحميل جميع البيانات المفلترة');
+  } catch (error) {
+    console.error('❌ خطأ في إعادة تحميل البيانات المفلترة:', error);
+  }
+}
+
+/**
+ * تحديث الأقسام الأعلى مع فلترة المستشفى
+ */
+async function updateTopDepartmentsChartFiltered(hospitalId) {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // تحويل hospitalId إلى رقم للتأكد من المقارنة الصحيحة
+    const targetHospitalId = Number(hospitalId);
+    const qs = `?hospitalId=${encodeURIComponent(targetHospitalId)}`;
+    
+    console.log(`🔍 جلب بيانات الأقسام للمستشفى: ${targetHospitalId}`);
+    
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/departments${qs}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+    const result = await response.json();
+    if (result.success && result.data) {
+      console.log(`✅ تم جلب ${result.data.length} قسم من API`);
+      console.log(`📊 معلومات API:`, {
+        total: result.total,
+        hospitals: result.hospitals,
+        hospitalId: result.hospitalId
+      });
+      
+      // طباعة عينة من البيانات للتأكد من بنيتها
+      if (result.data.length > 0) {
+        console.log(`📋 عينة من البيانات القادمة من API:`, result.data.slice(0, 2).map(r => ({
+          HospitalID: r.HospitalID,
+          HospitalName: r.HospitalName,
+          DepartmentName: r.DepartmentName
+        })));
+      }
+      
+      // استخدام نفس منطق updateDepartmentsChart لكن مع البيانات المفلترة
+      await updateDepartmentsChartWithData(result.data, targetHospitalId);
+    } else {
+      console.warn('⚠️ API لم يرجع بيانات صحيحة:', result);
+    }
+  } catch (error) {
+    console.error('❌ خطأ في تحميل بيانات الأقسام المفلترة:', error);
+  }
+}
+
+/**
+ * تحديث أنواع البلاغات مع فلترة المستشفى
+ */
+async function updateComplaintTypesChartFiltered(hospitalId) {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    const qs = `?hospitalId=${encodeURIComponent(hospitalId)}`;
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/complaint-types${qs}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+    const result = await response.json();
+    if (result.success && result.data) {
+      const typeMap = new Map();
+      result.data.forEach(type => {
+        const key = (type.TypeCode || type.TypeName || '').trim();
+        const displayName = (type.TypeName || type.TypeCode || '').trim();
+        if (!key || !displayName) return;
+
+        const inc = Number(type.TotalCount ?? type.Count ?? type.count ?? 1);
+        if (!typeMap.has(key)) {
+          typeMap.set(key, {
+            key,
+            code: type.TypeCode || null,
+            name: displayName,
+            count: 0
+          });
+        }
+        const entry = typeMap.get(key);
+        entry.count += inc;
+      });
+
+      const sortedTypes = Array.from(typeMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8);
+
+      updateComplaintTypesChartCanvas(sortedTypes);
+    }
+  } catch (error) {
+    console.error('خطأ في تحميل بيانات أنواع البلاغات المفلترة:', error);
+  }
+}
+
+/**
+ * تحديث الرسم البياني اليومي مع فلترة المستشفى
+ */
+async function updateDailyComplaintsChartFiltered(hospitalId) {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    const qs = `?hospitalId=${encodeURIComponent(hospitalId)}`;
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/daily-complaints${qs}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+    const result = await response.json();
+    if (result.success && result.data) {
+      updateDailyComplaintsChartCanvas(result.data);
+    } else {
+      updateDailyComplaintsChartCanvas([]);
+    }
+  } catch (error) {
+    console.error('خطأ في تحميل البيانات اليومية المفلترة:', error);
+    updateDailyComplaintsChartCanvas([]);
+  }
+}
+
+/**
+ * تحديث البلاغات الحرجة مع فلترة المستشفى
+ */
+async function updateCriticalReportsFiltered(hospitalId) {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    const qs = `?hospitalId=${encodeURIComponent(hospitalId)}`;
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/critical-reports${qs}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+    const result = await response.json();
+    if (result.success && result.data && result.data.reports) {
+      // تحديث قائمة البلاغات الحرجة
+      const container = document.getElementById('red-list');
+      const totalSpan = document.getElementById('red-total');
+      
+      if (container && totalSpan) {
+        const reports = result.data.reports.slice(0, 6);
+        totalSpan.textContent = result.data.reports.length;
+        container.innerHTML = '';
+
+        reports.forEach(r => {
+          const card = document.createElement('div');
+          card.className = 'bg-red-50 border border-red-100 rounded-xl p-4 hover:bg-red-100 transition cursor-pointer';
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-bold text-red-800">${r.TicketNumber || r.ticket || 'N/A'}</div>
+                <div class="text-xs text-red-700">${r.DepartmentName || r.department || 'غير محدد'}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-red-800">${r.CreatedAt || r.createdAt || ''}</div>
+                <div class="mt-1 text-xs text-gray-600">${r.HospitalName || r.hospital || ''}</div>
+              </div>
+            </div>
+          `;
+          
+          card.onclick = () => {
+            const q = new URLSearchParams({
+              ticket: r.TicketNumber || r.ticket,
+              ...(r.HospitalID ? { hid: r.HospitalID } : {}),
+              ...(r.ComplaintID ? { complaintId: r.ComplaintID } : {})
+            });
+            window.location.href = `../public/complaints/history/complaint-details.html?${q.toString()}`;
+          };
+          
+          container.appendChild(card);
+        });
+      }
+    }
+  } catch (error) {
+    console.error('خطأ في تحميل البلاغات الحرجة المفلترة:', error);
+  }
+}
+
+/**
+ * تحديث الأقسام مع البيانات المفلترة
+ */
+async function updateDepartmentsChartWithData(data, hospitalId) {
+  try {
+    // نفس منطق updateDepartmentsChart لكن مع البيانات المفلترة
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // ========================================
+    // 🔍 فلترة البيانات حسب المستشفى المحدد
+    // ========================================
+    // الحصول على اسم المستشفى من hospitalsData
+    const selectedHospital = hospitalsData.find(h => h.id == hospitalId);
+    const hospitalName = selectedHospital?.name || null;
+    
+    // فلترة البيانات حسب HospitalID أو HospitalName
+    let filteredData = data;
+    if (hospitalId) {
+      // تحويل hospitalId إلى عدد للتأكد من المقارنة الصحيحة
+      const targetHospitalId = Number(hospitalId);
+      
+      filteredData = data.filter(row => {
+        const rowHospitalId = Number(row.HospitalID ?? row.hospitalId ?? row.hospital_id ?? 0);
+        const rowHospitalName = (row.HospitalName ?? row.hospitalName ?? row.hospital ?? '').trim();
+        
+        // المقارنة حسب ID (الأولوية) أو Name (كبديل)
+        if (rowHospitalId && rowHospitalId === targetHospitalId) {
+          return true;
+        }
+        if (hospitalName && rowHospitalName && rowHospitalName === hospitalName.trim()) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      console.log(`🔍 فلترة الأقسام حسب المستشفى: ID=${hospitalId} (${hospitalName || 'غير معروف'})`);
+      console.log(`📊 عدد الصفوف قبل الفلترة: ${data.length}, بعد الفلترة: ${filteredData.length}`);
+      
+      // طباعة عينة من البيانات المفلترة للتأكد
+      if (filteredData.length > 0) {
+        console.log(`✅ عينة من البيانات المفلترة:`, filteredData.slice(0, 3).map(r => ({
+          HospitalID: r.HospitalID,
+          HospitalName: r.HospitalName,
+          DepartmentName: r.DepartmentName
+        })));
+      }
+    }
+
+    // إذا لم توجد بيانات بعد الفلترة
+    if (!filteredData || filteredData.length === 0) {
+      const container = document.getElementById("hospitals-depts-container");
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center text-gray-500 p-6 bg-white rounded-xl border border-gray-100">
+            <p class="text-lg mb-2">لا توجد بيانات للعيادات الخاصة بهذا المستشفى.</p>
+            <p class="text-sm text-gray-400">${hospitalName || 'المستشفى المحدد'}</p>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    // جلب البلاغات الحرجة للمستشفى المحدد
+    const critRes = await authFetch(`${API_BASE}/api/dashboard/total/critical-reports?hospitalId=${encodeURIComponent(hospitalId)}`);
+    let criticalPairs = new Set();
+    let criticalMap = new Map();
+
+    if (critRes.ok) {
+      const crit = await critRes.json();
+      const list = (crit?.data?.reports ?? crit?.reports ?? []);
+      list.forEach(r => {
+        const hosp = (r.HospitalName ?? r.hospital ?? '').trim();
+        const dept = (r.DepartmentName ?? r.department ?? '').trim();
+        const code = (r.PriorityCode ?? r.priority ?? '').toString().toUpperCase();
+        if ((hosp && dept) && (code === 'URGENT' || code === 'CRITICAL' || code === 'RED' || code === 'HIGH')) {
+          const key = `${hosp}|||${dept}`;
+          criticalPairs.add(key);
+          criticalMap.set(key, {
+            ticket: (r.TicketNumber ?? r.ticket),
+            complaintId: (r.ComplaintID ?? r.complaintId),
+            hospitalId: (r.HospitalID ?? r.hospitalId)
+          });
+        }
+      });
+    }
+
+    const REPEAT_THRESHOLD = 3;
+    const grouped = {};
+    
+    // استخدام البيانات المفلترة
+    // تأكيد: عند التصفية، يجب أن يكون هناك مستشفى واحد فقط
+    if (hospitalId && filteredData.length > 0) {
+      // التحقق من أن جميع البيانات تنتمي لنفس المستشفى
+      const uniqueHospitals = new Set(filteredData.map(r => {
+        const id = r.HospitalID ?? r.hospitalId ?? r.hospital_id;
+        const name = r.HospitalName ?? r.hospitalName ?? r.hospital;
+        return `${id}|${name}`;
+      }));
+      
+      if (uniqueHospitals.size > 1) {
+        console.warn(`⚠️ تحذير: البيانات المفلترة تحتوي على ${uniqueHospitals.size} مستشفى مختلف!`);
+        console.warn('المستشفيات المكتشفة:', Array.from(uniqueHospitals));
+        // فلترة إضافية حسب hospitalId المحدد
+        const targetId = Number(hospitalId);
+        filteredData = filteredData.filter(r => {
+          const id = Number(r.HospitalID ?? r.hospitalId ?? r.hospital_id ?? 0);
+          return id === targetId;
+        });
+        console.log(`✅ بعد الفلترة الإضافية: ${filteredData.length} صف`);
+      }
+    }
+    
+    // ⚠️ تحذير: التحقق من أن filteredData تحتوي فقط على المستشفى المحدد
+    if (hospitalId) {
+      const targetHospitalId = Number(hospitalId);
+      const hospitalsInFilteredData = new Set(filteredData.map(r => {
+        const id = Number(r.HospitalID ?? r.hospitalId ?? r.hospital_id ?? 0);
+        const name = r.HospitalName ?? r.hospitalName ?? r.hospital;
+        return { id, name };
+      }));
+      
+      const uniqueHospitalIds = new Set(Array.from(hospitalsInFilteredData).map(h => h.id));
+      if (uniqueHospitalIds.size > 1) {
+        console.error(`❌ خطأ: البيانات المفلترة تحتوي على ${uniqueHospitalIds.size} مستشفى مختلف!`);
+        console.error('المستشفيات في filteredData:', Array.from(hospitalsInFilteredData));
+        console.error('المستشفى المطلوب:', targetHospitalId);
+        
+        // فلترة إضافية قوية
+        filteredData = filteredData.filter(r => {
+          const id = Number(r.HospitalID ?? r.hospitalId ?? r.hospital_id ?? 0);
+          return id === targetHospitalId;
+        });
+        console.log(`✅ بعد الفلترة الإضافية القوية: ${filteredData.length} صف`);
+      } else {
+        console.log(`✅ البيانات المفلترة تحتوي على مستشفى واحد فقط: ${Array.from(uniqueHospitalIds)[0]}`);
+      }
+    }
+    
+    filteredData.forEach(row => {
+      const hosp = row.HospitalName || "مستشفى غير محدد";
+      const dept = row.DepartmentName || "عيادة غير محددة";
+
+      if (!grouped[hosp]) grouped[hosp] = {};
+      if (!grouped[hosp][dept]) {
+        grouped[hosp][dept] = { name: dept, count: 0, hasHigh: false, mediumCount: 0 };
+      }
+
+      const total = Number(row.TotalCount ?? row.total ?? row.Count ?? row.count ?? 
+                           row.ReportsCount ?? row.ComplaintsCount ?? 1);
+      grouped[hosp][dept].count += total;
+
+      if (isHighOrCritical(row)) {
+        grouped[hosp][dept].hasHigh = true;
+      }
+
+      const aggUrgent = Number(row.UrgentCount ?? row.urgentCount ?? row.CriticalCount ?? row.RedCount ?? 0);
+      if (aggUrgent > 0) grouped[hosp][dept].hasHigh = true;
+
+      if (criticalPairs.has(`${hosp}|||${dept}`)) {
+        grouped[hosp][dept].hasHigh = true;
+      }
+
+      const aggMedium = Number(row.MediumCount ?? row.mediumCount ?? 
+                               row.ByPriority?.MEDIUM ?? row.byPriority?.MEDIUM ?? 0);
+      if (aggMedium > 0) grouped[hosp][dept].mediumCount += aggMedium;
+      else if (isMedium(row)) grouped[hosp][dept].mediumCount += total;
+    });
+
+    // ========================================
+    // 📝 تحديث عنوان القسم لإظهار اسم المستشفى المحدد
+    // ========================================
+    if (hospitalId && hospitalName) {
+      // البحث عن العنوان - قد يكون داخل div أو مباشرًا
+      const container = document.getElementById("hospitals-depts-container");
+      if (container) {
+        const parent = container.parentElement;
+        const titleElement = parent?.querySelector('h3');
+        if (titleElement) {
+          // حفظ العنوان الأصلي إذا لم يكن محفوظًا مسبقًا
+          if (!titleElement.dataset.originalTitle) {
+            titleElement.dataset.originalTitle = titleElement.textContent || 'أعلى العيادات حسب المستشفى';
+          }
+          // تحديث العنوان ليعرض اسم المستشفى المحدد
+          titleElement.textContent = `أعلى العيادات – ${hospitalName}`;
+          console.log(`✅ تم تحديث عنوان القسم: أعلى العيادات – ${hospitalName}`);
+        }
+      }
+    }
+
+    const container = document.getElementById("hospitals-depts-container");
+    if (!container) return;
+    
+    container.innerHTML = "";
+
+    // عند الفلترة، يجب أن يكون هناك مستشفى واحد فقط
+    // فلترة إضافية قوية للتأكد من أن grouped يحتوي فقط على المستشفى المحدد
+    if (hospitalId) {
+      const targetHospitalId = Number(hospitalId);
+      
+      // البحث عن المستشفى المطابق في grouped حسب ID أو Name
+      let matchingHospitalName = null;
+      
+      // أولاً: البحث حسب الاسم من hospitalsData
+      if (hospitalName) {
+        matchingHospitalName = Object.keys(grouped).find(hospName => {
+          return hospName.trim() === hospitalName.trim();
+        });
+      }
+      
+      // ثانياً: إذا لم نجد بالاسم، نبحث في البيانات المفلترة عن HospitalID
+      if (!matchingHospitalName && filteredData.length > 0) {
+        // البحث عن HospitalID في البيانات المفلترة
+        const matchingRow = filteredData.find(r => {
+          const id = Number(r.HospitalID ?? r.hospitalId ?? r.hospital_id ?? 0);
+          return id === targetHospitalId;
+        });
+        
+        if (matchingRow) {
+          const matchingName = matchingRow.HospitalName ?? matchingRow.hospitalName ?? matchingRow.hospital;
+          matchingHospitalName = Object.keys(grouped).find(hospName => {
+            return hospName.trim() === matchingName?.trim();
+          });
+        }
+      }
+      
+      // ثالثاً: إذا لم نجد، نستخدم أول مستشفى في grouped (يجب أن يكون واحد فقط بعد الفلترة)
+      if (!matchingHospitalName && Object.keys(grouped).length > 0) {
+        // التحقق من أن جميع المستشفيات في grouped تنتمي لنفس HospitalID
+        const hospitalsInGrouped = Object.keys(grouped);
+        const hospitalIdsInGrouped = new Set();
+        
+        filteredData.forEach(r => {
+          const hospName = r.HospitalName || "مستشفى غير محدد";
+          if (hospitalsInGrouped.includes(hospName)) {
+            const id = Number(r.HospitalID ?? r.hospitalId ?? r.hospital_id ?? 0);
+            if (id === targetHospitalId) {
+              hospitalIdsInGrouped.add(hospName);
+            }
+          }
+        });
+        
+        if (hospitalIdsInGrouped.size > 0) {
+          matchingHospitalName = Array.from(hospitalIdsInGrouped)[0];
+        } else {
+          // إذا لم نجد أي مستشفى يطابق، نستخدم أول مستشفى
+          matchingHospitalName = hospitalsInGrouped[0];
+          console.warn(`⚠️ لم يتم العثور على مستشفى مطابق لـ ID=${targetHospitalId}, سيتم استخدام: ${matchingHospitalName}`);
+        }
+      }
+      
+      // مسح grouped وإعادة تعبئته بالمستشفى المطابق فقط
+      if (matchingHospitalName) {
+        const matchingData = grouped[matchingHospitalName];
+        // مسح جميع المستشفيات الأخرى
+        Object.keys(grouped).forEach(key => {
+          if (key !== matchingHospitalName) {
+            delete grouped[key];
+          }
+        });
+        console.log(`✅ تم التأكد من أن grouped يحتوي فقط على: ${matchingHospitalName} (ID: ${targetHospitalId})`);
+      } else {
+        console.error(`❌ خطأ: لم يتم العثور على مستشفى مطابق لـ ID=${targetHospitalId}`);
+        // في حالة الخطأ، نمسح كل شيء ونعرض رسالة
+        Object.keys(grouped).forEach(key => delete grouped[key]);
+      }
+    }
+
+    const hospitalsList = Object.entries(grouped);
+    if (hospitalsList.length === 0) {
+      container.innerHTML = `
+        <div class="text-center text-gray-500 p-6 bg-white rounded-xl border border-gray-100 col-span-full">
+          <p class="text-lg mb-2">لا توجد بيانات للعيادات الخاصة بهذا المستشفى.</p>
+          <p class="text-sm text-gray-400">${hospitalName || 'المستشفى المحدد'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    // التأكد من أن هناك مستشفى واحد فقط عند التصفية
+    if (hospitalId && hospitalsList.length > 1) {
+      console.error(`❌ خطأ: لا تزال هناك ${hospitalsList.length} مستشفى في grouped بعد الفلترة!`);
+      console.error('المستشفيات:', hospitalsList.map(([name]) => name));
+      console.error('المستشفى المطلوب:', hospitalId, hospitalName);
+      
+      // فلترة نهائية قوية: استخدام فقط المستشفى المطابق
+      const targetHospitalId = Number(hospitalId);
+      const finalFilteredGrouped = {};
+      
+      // البحث عن المستشفى المطابق في filteredData
+      const matchingRow = filteredData.find(r => {
+        const id = Number(r.HospitalID ?? r.hospitalId ?? r.hospital_id ?? 0);
+        return id === targetHospitalId;
+      });
+      
+      if (matchingRow) {
+        const matchingHospitalName = matchingRow.HospitalName ?? matchingRow.hospitalName ?? matchingRow.hospital;
+        if (grouped[matchingHospitalName]) {
+          finalFilteredGrouped[matchingHospitalName] = grouped[matchingHospitalName];
+          console.log(`✅ تم تطبيق فلترة نهائية: ${matchingHospitalName}`);
+        }
+      }
+      
+      // استبدال grouped بالنسخة المفلترة
+      Object.keys(grouped).forEach(key => delete grouped[key]);
+      Object.assign(grouped, finalFilteredGrouped);
+    }
+
+    console.log(`📋 عدد المستشفيات المعروضة: ${Object.keys(grouped).length}`);
+    if (hospitalId) {
+      console.log(`🎯 المستشفى المحدد: ${hospitalName || 'غير معروف'} (ID: ${hospitalId})`);
+      console.log(`📊 المستشفيات في grouped:`, Object.keys(grouped));
+    }
+    Object.entries(grouped).forEach(([hospital, deptMap]) => {
+      const deptsArr = Object.values(deptMap);
+      const sorted = [...deptsArr].sort((a,b)=> b.count - a.count).slice(0, 5);
+      const safeId = hospital.replace(/[^a-zA-Z0-9\-ا-ي]+/g, '-');
+
+      const card = document.createElement("div");
+      card.className = "bg-white border border-gray-100 shadow-sm rounded-xl p-5";
+      card.innerHTML = `
+        <h4 class="font-bold text-lg mb-3 text-blue-900">${hospital}</h4>
+        <div class="mb-4" style="height:220px"><canvas id="depts-chart-${safeId}"></canvas></div>
+        <table class="min-w-full text-sm text-center border-collapse">
+          <thead>
+            <tr class="bg-gray-100 text-gray-700">
+              <th class="py-2 px-4 border">العيادة</th>
+              <th class="py-2 px-4 border">عدد البلاغات</th>
+              <th class="py-2 px-4 border">الحالة</th>
+              <th class="py-2 px-4 border">مشروع تحسيني</th>
+            </tr>
+          </thead>
+          <tbody id="body-${safeId}"></tbody>
+        </table>
+      `;
+      container.appendChild(card);
+
+      const tbody = card.querySelector("tbody");
+
+      sorted.forEach(dept => {
+        const isRed = dept.hasHigh || (dept.mediumCount >= REPEAT_THRESHOLD);
+        const rowClass = isRed ? 'table-row-red' :
+                         dept.count >= REPEAT_THRESHOLD ? 'table-row-orange' :
+                         'table-row-green';
+        const status = isRed ? '🔴 حرجة' :
+                       dept.count >= REPEAT_THRESHOLD ? '🟠 متكررة' :
+                       '🟢 طبيعية';
+        const improve = isRed
+          ? `<button class="px-3 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700"
+               onclick="window.location.href='improvements/new.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}'">
+               🚀 مشروع تحسيني
+             </button>`
+          : '-';
+
+        const key = `${hospital}|||${dept.name}`;
+        const crit = criticalMap.get(key);
+
+        const makeDetailsHref = (obj) => {
+          const q = new URLSearchParams({
+            ticket: obj.ticket,
+            ...(obj.hospitalId ? { hid: obj.hospitalId } : {}),
+            ...(obj.complaintId ? { complaintId: obj.complaintId } : {})
+          });
+          return `../public/complaints/history/complaint-details.html?${q.toString()}`;
+        };
+
+        const deptCell = crit?.ticket
+          ? `<a class="underline ${isRed ? 'text-red-700 hover:text-red-900' : 'text-blue-700 hover:text-blue-900'}"
+               href="${makeDetailsHref(crit)}">${dept.name}</a>`
+          : `<a class="underline text-blue-700 hover:text-blue-900"
+               href="javascript:void(0)"
+               onclick="(async()=>{
+                 const res = await getLatestTicketByHospitalDept('${hospital.replace(/'/g,"\\'")}','${dept.name.replace(/'/g,"\\'")}');
+                 if (res?.ticket) {
+                   const q = new URLSearchParams({
+                     ticket: res.ticket,
+                     ...(res.hospitalId ? { hid: res.hospitalId } : {}),
+                     ...(res.complaintId ? { complaintId: res.complaintId } : {})
+                   });
+                   location.href = '../public/complaints/history/complaint-details.html?' + q.toString();
+                 } else {
+                   location.href = 'open.html?hospital=${encodeURIComponent(hospital)}&department=${encodeURIComponent(dept.name)}';
+                 }
+               })()">${dept.name}</a>`;
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr class="${rowClass}">
+            <td class="py-2 px-4 border">${deptCell}</td>
+            <td class="py-2 px-4 border">${dept.count}</td>
+            <td class="py-2 px-4 border">${status}</td>
+            <td class="py-2 px-4 border">${improve}</td>
+          </tr>
+        `);
+      });
+
+      createMiniDeptsChart(`depts-chart-${safeId}`, sorted, hospital, criticalMap);
+    });
+  } catch (err) {
+    console.error("خطأ في تحديث الأقسام المفلترة:", err);
+  }
+}
+
+/**
+ * إظهار زر "العودة" أو "عرض الكل"
+ */
+function showBackButton() {
+  // إزالة أي زر عودة موجود مسبقاً
+  const existingBtn = document.getElementById('filter-back-btn');
+  if (existingBtn) existingBtn.remove();
+
+  // إنشاء زر جديد
+  const backBtn = document.createElement('button');
+  backBtn.id = 'filter-back-btn';
+  backBtn.className = 'fixed top-20 left-4 z-50 px-6 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2';
+  backBtn.innerHTML = `
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
+    <span>عرض الكل</span>
+  `;
+  backBtn.onclick = () => {
+    // إزالة التصفية وإعادة تحميل الصفحة
+    window.filteredHospitalId = null;
+    window.isFiltered = false;
+    window.location.href = 'dashboard.html';
+  };
+
+  document.body.appendChild(backBtn);
+}
+
+/**
+ * تحديث عنوان الصفحة لإظهار اسم المستشفى/المركز
+ */
+function updatePageTitle(facilityName) {
+  // تحديث العنوان في الصفحة
+  const titleElement = document.querySelector('h1, .page-title, #page-title');
+  if (titleElement) {
+    const originalTitle = titleElement.dataset.originalTitle || titleElement.textContent;
+    titleElement.dataset.originalTitle = originalTitle;
+    titleElement.textContent = `${originalTitle} - ${facilityName}`;
+  }
+
+  // تحديث عنوان المتصفح
+  document.title = `لوحة التحكم - ${facilityName}`;
+}
+
+/**
+ * تحديث قوائم الفلترة لإظهار المحدد وإضافة زر "عرض الكل"
+ */
+function updateFilterLists() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const hospitalId = urlParams.get('hospitalId');
+  const centerId = urlParams.get('centerId');
+
+  // تحديث قائمة المستشفيات
+  const hospitalList = document.getElementById('hospital-filter-list');
+  if (hospitalList) {
+    // إضافة زر "عرض الكل" إذا كان هناك فلترة
+    const existingAllBtn = hospitalList.querySelector('.show-all-btn');
+    if ((hospitalId || centerId) && !existingAllBtn) {
+      const allBtn = document.createElement('button');
+      allBtn.className = 'show-all-btn px-4 py-2 rounded-full border text-sm font-medium hover:bg-gray-100 transition';
+      allBtn.style.borderColor = '#6B7280';
+      allBtn.style.color = '#6B7280';
+      allBtn.textContent = 'عرض الكل';
+      allBtn.onclick = () => {
+        window.location.href = 'dashboard.html';
+      };
+      hospitalList.insertBefore(allBtn, hospitalList.firstChild);
+    }
+
+    // تحديث زر المستشفى المحدد
+    if (hospitalId) {
+      hospitalList.querySelectorAll('button').forEach(btn => {
+        if (btn.textContent !== 'عرض الكل' && btn.dataset.hospitalId == hospitalId) {
+          btn.style.backgroundColor = '#004A9F';
+          btn.style.color = '#fff';
+        } else if (btn.textContent !== 'عرض الكل') {
+          btn.style.backgroundColor = '';
+          btn.style.color = '#004A9F';
+        }
+      });
+    }
+  }
+
+  // تحديث قائمة المراكز الصحية
+  const centerList = document.getElementById('center-filter-list');
+  if (centerList) {
+    // إضافة زر "عرض الكل" إذا كان هناك فلترة
+    const existingAllBtn = centerList.querySelector('.show-all-btn');
+    if ((hospitalId || centerId) && !existingAllBtn) {
+      const allBtn = document.createElement('button');
+      allBtn.className = 'show-all-btn px-4 py-2 rounded-full border text-sm font-medium hover:bg-gray-100 transition';
+      allBtn.style.borderColor = '#6B7280';
+      allBtn.style.color = '#6B7280';
+      allBtn.textContent = 'عرض الكل';
+      allBtn.onclick = () => {
+        window.location.href = 'dashboard.html';
+      };
+      centerList.insertBefore(allBtn, centerList.firstChild);
+    }
+
+    // تحديث زر المركز المحدد
+    if (centerId) {
+      centerList.querySelectorAll('button').forEach(btn => {
+        if (btn.textContent !== 'عرض الكل' && btn.dataset.centerId == centerId) {
+          btn.style.backgroundColor = '#0FA47A';
+          btn.style.color = '#fff';
+        } else if (btn.textContent !== 'عرض الكل') {
+          btn.style.backgroundColor = '';
+          btn.style.color = '#0FA47A';
+        }
+      });
+    }
   }
 }
 
@@ -490,8 +1376,13 @@ function updateMainStatsCards() {
   // تحديث قسم "لوحة البيانات خلال أسبوع"
   updateWeeklyBoardCards(totalReports, openReports, closedReports, criticalReports);
   
-  // تحديث قسم "أعلى العيادات"
-  updateTopDepartmentsChart();
+  // تحديث قسم "أعلى العيادات" (فقط إذا لم تكن هناك تصفية نشطة)
+  // ⭐ إذا كان هناك تصفية، لا نستدعي updateTopDepartmentsChart() لأنها ستعيد تحميل كل المستشفيات
+  if (!window.filteredHospitalId) {
+    updateTopDepartmentsChart();
+  } else {
+    console.log(`⛔ تم منع استدعاء updateTopDepartmentsChart() في updateMainStatsCards() - تصفية نشطة للمستشفى ${window.filteredHospitalId}`);
+  }
   
   // تحديث قسم "الاشكاليات"
   updateComplaintTypesChart();
@@ -536,6 +1427,14 @@ function updateWeeklyBoardCards(totalReports, openReports, closedReports, critic
  * تحديث قسم "أعلى العيادات" بالبيانات الحقيقية
  */
 async function updateTopDepartmentsChart() {
+  // ⭐ إذا كان هناك تصفية نشطة، استخدم الدالة المخصصة للتصفية
+  const filteredId = window.filteredHospitalId;
+  if (filteredId) {
+    console.log(`✅ تصفية نشطة - استخدام updateTopDepartmentsChartFiltered للمستشفى ${filteredId}`);
+    await updateTopDepartmentsChartFiltered(filteredId);
+    return;
+  }
+
   try {
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
       ? 'http://localhost:3001' : '';
@@ -544,6 +1443,7 @@ async function updateTopDepartmentsChart() {
     
     // تحديد المعاملات حسب دور المستخدم
     let qs = "";
+    
     if (!isClusterManager && userHospitalId) {
       // موظف عادي: فقط مستشفاه
       qs = `?hospitalId=${encodeURIComponent(userHospitalId)}`;
@@ -558,17 +1458,21 @@ async function updateTopDepartmentsChart() {
 
     const result = await response.json();
     if (result.success && result.data) {
-      const departmentCounts = {};
-      result.data.forEach(dept => {
-        // استخدم العدّاد الحقيقي من API بدلاً من عد الصفوف
-        const inc = Number(dept.TotalCount ?? dept.Count ?? dept.count ?? 1);
-        departmentCounts[dept.DepartmentName] = (departmentCounts[dept.DepartmentName] || 0) + inc;
-      });
-      const sortedDepartments = Object.entries(departmentCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a,b) => b.count - a.count)
-        .slice(0, 10);
-      updateDepartmentsChart(sortedDepartments);
+      // بدون تصفية، استخدم الدالة العادية
+      if (false) { // تم نقل منطق التصفية للأعلى
+        await updateDepartmentsChartWithData(result.data, filteredId);
+      } else {
+        const departmentCounts = {};
+        result.data.forEach(dept => {
+          const inc = Number(dept.TotalCount ?? dept.Count ?? dept.count ?? 1);
+          departmentCounts[dept.DepartmentName] = (departmentCounts[dept.DepartmentName] || 0) + inc;
+        });
+        const sortedDepartments = Object.entries(departmentCounts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a,b) => b.count - a.count)
+          .slice(0, 10);
+        updateDepartmentsChart(sortedDepartments);
+      }
     }
   } catch (error) {
     console.error('خطأ في تحميل بيانات الأقسام:', error);
@@ -579,6 +1483,12 @@ async function updateTopDepartmentsChart() {
  * تحديث قسم "أعلى العيادات" مقسم حسب المستشفى
  */
 async function updateDepartmentsChart() {
+  // ⭐ لو فيه تصفية لا تشتغل هذه الدالة أبداً (منع الكتابة فوق التصفية)
+  if (window.filteredHospitalId) {
+    console.log(`⛔ منع updateDepartmentsChart() من التشغيل - تصفية نشطة للمستشفى ${window.filteredHospitalId}`);
+    return;
+  }
+
   try {
     const API_BASE =
       location.hostname === "localhost" || location.hostname === "127.0.0.1"
@@ -587,9 +1497,15 @@ async function updateDepartmentsChart() {
 
     if (!currentUser) await loadCurrentUser();
     
-    // تحديد المعاملات حسب دور المستخدم
+    // تحديد المعاملات حسب التصفية النشطة أو دور المستخدم
     let qs = "";
-    if (!isClusterManager && userHospitalId) {
+    const filteredId = window.filteredHospitalId;
+    
+    if (filteredId) {
+      // إذا كان هناك تصفية نشطة، استخدم hospitalId المفلتر
+      qs = `?hospitalId=${encodeURIComponent(filteredId)}`;
+      console.log(`🔍 التصفية النشطة - جلب الأقسام من مستشفى ${filteredId} فقط`);
+    } else if (!isClusterManager && userHospitalId) {
       // موظف عادي: فقط مستشفاه
       qs = `?hospitalId=${encodeURIComponent(userHospitalId)}`;
       console.log(`🔍 الموظف العادي - جلب الأقسام من مستشفى ${userHospitalId} فقط`);
@@ -696,6 +1612,19 @@ async function updateDepartmentsChart() {
         }))
       )
     );
+
+    // ========================================
+    // 📝 إعادة العنوان الأصلي للقسم (عند عدم وجود فلترة)
+    // ========================================
+    const titleElement = document.querySelector('#hospitals-depts-container')?.previousElementSibling;
+    if (titleElement && titleElement.tagName === 'H3') {
+      // حفظ العنوان الأصلي إذا لم يكن محفوظًا مسبقًا
+      if (!titleElement.dataset.originalTitle) {
+        titleElement.dataset.originalTitle = titleElement.textContent || 'أعلى العيادات حسب المستشفى';
+      }
+      // إعادة العنوان الأصلي
+      titleElement.textContent = titleElement.dataset.originalTitle;
+    }
 
     const container = document.getElementById("hospitals-depts-container");
     container.innerHTML = "";
@@ -896,9 +1825,15 @@ async function updateComplaintTypesChart() {
 
     if (!currentUser) await loadCurrentUser();
     
-    // تحديد المعاملات حسب دور المستخدم
+    // تحديد المعاملات حسب دور المستخدم أو التصفية النشطة
     let qs = "";
-    if (!isClusterManager && userHospitalId) {
+    const filteredId = window.filteredHospitalId;
+    
+    if (filteredId) {
+      // إذا كان هناك تصفية نشطة، استخدم hospitalId المفلتر
+      qs = `?hospitalId=${encodeURIComponent(filteredId)}`;
+      console.log(`🔍 التصفية النشطة - جلب أنواع البلاغات من مستشفى ${filteredId} فقط`);
+    } else if (!isClusterManager && userHospitalId) {
       // موظف عادي: فقط مستشفاه
       qs = `?hospitalId=${encodeURIComponent(userHospitalId)}`;
       console.log(`🔍 الموظف العادي - جلب أنواع البلاغات من مستشفى ${userHospitalId} فقط`);
@@ -1035,10 +1970,17 @@ async function updateDailyComplaintsChart() {
 
     if (!currentUser) await loadCurrentUser();
     
-    // إرسال hospitalId دائماً إذا كان معروفاً (حتى لمدير التجمع)
-    const qs = userHospitalId ? `?hospitalId=${encodeURIComponent(userHospitalId)}` : '';
+    // تحديد المعاملات حسب التصفية النشطة أو دور المستخدم
+    let qs = "";
+    const filteredId = window.filteredHospitalId;
     
-    if (userHospitalId) {
+    if (filteredId) {
+      // إذا كان هناك تصفية نشطة، استخدم hospitalId المفلتر
+      qs = `?hospitalId=${encodeURIComponent(filteredId)}`;
+      console.log(`🔍 التصفية النشطة - جلب البيانات اليومية من مستشفى ${filteredId}`);
+    } else if (userHospitalId) {
+      // موظف عادي: فقط مستشفاه
+      qs = `?hospitalId=${encodeURIComponent(userHospitalId)}`;
       console.log(`🔍 جلب البيانات اليومية من مستشفى ${userHospitalId}`);
     } else {
       console.log(`🔍 جلب البيانات اليومية من كل المستشفيات`);
@@ -1289,10 +2231,17 @@ function generateHospitalCards(filterRedOnly = false) {
 /**
  * عرض قائمة مختصرة بأحدث البلاغات الحمراء
  */
-function renderTopRedList() {
+async function renderTopRedList() {
   const container = document.getElementById('red-list');
   const totalSpan = document.getElementById('red-total');
   if (!container || !totalSpan) return;
+
+  // إذا كان هناك تصفية نشطة، استخدم API مباشرة
+  const filteredId = window.filteredHospitalId;
+  if (filteredId) {
+    await updateCriticalReportsFiltered(filteredId);
+    return;
+  }
 
   // جمع جميع البلاغات الحمراء من كل المستشفيات
   const allRed = hospitalsData.flatMap(h =>
@@ -1740,20 +2689,51 @@ async function loadAllDashboardCharts() {
  */
 async function initializeDashboard() {
   try {
+    // ⭐⭐ أولاً: قراءة التصفية من URL قبل أي شيء (مهم جداً!)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hospitalId = urlParams.get('hospitalId');
+    const centerId = urlParams.get('centerId');
+
+    // ⭐ إذا كان فيه hospitalId في الرابط خلي النظام يتعرف عليه للتصفية
+    if (hospitalId) {
+      window.filteredHospitalId = Number(hospitalId);
+      window.isFiltered = true;
+      console.log(`✅ تم تعيين window.filteredHospitalId = ${window.filteredHospitalId} من URL (قبل تحميل البيانات)`);
+    }
+    
+    if (centerId) {
+      window.filteredHospitalId = Number(centerId);
+      window.isFiltered = true;
+      console.log(`✅ تم تعيين window.filteredHospitalId = ${window.filteredHospitalId} من URL (مركز صحي) - قبل تحميل البيانات`);
+    }
+
     // 1) هوية المستخدم ودوره
     await loadCurrentUser();
 
     // 2) تطبيق صلاحيات لوحة التحكم
     await applyDashboardPermissions();
 
+    // 3) بيانات المستشفيات (ستتقيّد بالدور تلقائياً) - الآن بعد تعيين filteredHospitalId
+    await loadHospitalsData();
+
+    // تطبيق الفلترة تلقائياً إذا كان هناك معرّف في URL
+    if (hospitalId || centerId) {
+      const filterId = hospitalId || centerId;
+      await filterDashboardByFacility(hospitalId ? 'hospital' : 'center', filterId);
+      // عند التصفية، لا نحتاج لتحميل باقي الأقسام العامة
+      return;
+    }
+
+    // إذا لم تكن هناك تصفية، نكمل التحميل العادي
     // إخفاء مخطط المستشفيات إذا المستخدم ليس مدير تجمع
     if (!isClusterManager) {
       const hf = document.getElementById('health-facilities-charts');
       if (hf) hf.style.display = 'none';
     }
 
-    // 2) بيانات المستشفيات (ستتقيّد بالدور تلقائياً)
-    await loadHospitalsData();
+    // توليد قوائم الفلترة (المستشفيات والمراكز الصحية)
+    generateHospitalFilterList();
+    generateCenterFilterList();
 
     // 🔹 تحميل قائمة المستشفيات لمدير التجمع
     await App.loadHospitalsSelectForMystery();
@@ -1761,10 +2741,20 @@ async function initializeDashboard() {
     // 🔹 استدعاء رسم الزائر السري
     App.renderMysteryByDepartment();
 
-    // 3) باقي الأقسام
-    renderTopRedList();
-    initializeEventHandlers();
-    updateLastUpdateTime();
+    // 🔹 تحميل الرسوم البيانية الجديدة (تعمل مع أو بدون تصفية)
+    await loadStatusChart();
+    await loadCategoriesChart();
+    await loadSubcategoriesChart();
+    
+    // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
+    await loadPatientFrequencyTable(1);
+
+    // 3) باقي الأقسام (فقط إذا لم تكن هناك تصفية)
+    if (!hospitalId && !centerId) {
+      renderTopRedList();
+      initializeEventHandlers();
+      updateLastUpdateTime();
+    }
 
     // 4) تحميل جميع الرسوم البيانية لمدير التجمع
     if (isClusterManager) {
@@ -1847,12 +2837,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return authFetch(`${API_BASE}/api/dashboard/total/by-hospital${qs}`);
     }).then(response => response.json())
       .then(apiData => {
-        console.log('بيانات المستشفيات من قاعدة البيانات:', apiData);
+        console.log('بيانات جميع المرافق من قاعدة البيانات:', apiData);
+        
+        // 🎯 فلترة فقط المستشفيات (FacilityType = 'hospital')
+        const hospitalsOnly = apiData.filter(
+          h => (h.FacilityType || '').toLowerCase() === 'hospital'
+        );
+        
+        console.log('🎯 بيانات المستشفيات فقط:', hospitalsOnly);
         
         // فلترة البيانات إذا لم يكن مدير تجمع
         const hospitalsData = (!isClusterManager && userHospitalId)
-          ? apiData.filter(h => (h.HospitalID === userHospitalId || h.HospitalId === userHospitalId))
-          : apiData;
+          ? hospitalsOnly.filter(h => (h.HospitalID === userHospitalId || h.HospitalId === userHospitalId))
+          : hospitalsOnly;
         
         console.log('بيانات المستشفيات بعد الفلترة:', hospitalsData);
         
@@ -1949,7 +2946,125 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // تم حذف كود المراكز الصحية - المستشفيات فقط
+  // ===============================
+  //   Health Centers Chart
+  // ===============================
+  const centersCtx = document.getElementById('centers-chart');
+  if (centersCtx) {
+    // جلب البيانات الحقيقية من API
+    const API_BASE = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3001' : '';
+    
+    // تحميل المستخدم أولاً إذا لم يكن محملاً
+    loadCurrentUser().then(() => {
+      const qs = (!isClusterManager && userHospitalId) ? `?hospitalId=${encodeURIComponent(userHospitalId)}` : '';
+      return authFetch(`${API_BASE}/api/dashboard/total/by-hospital${qs}`);
+    })
+    .then(response => response.json())
+    .then(apiData => {
+      console.log('بيانات جميع المرافق من قاعدة البيانات:', apiData);
+      
+      // 🎯 فلترة فقط المراكز الصحية (FacilityType = 'center')
+      const centersOnly = apiData.filter(
+          x => (x.FacilityType || '').toLowerCase() === 'center'
+      );
+      
+      console.log('🎯 بيانات المراكز الصحية فقط:', centersOnly);
+      
+      // فلترة البيانات إذا لم يكن مدير تجمع
+      const centersData = (!isClusterManager && userHospitalId)
+        ? centersOnly.filter(h => (h.HospitalID === userHospitalId || h.HospitalId === userHospitalId))
+        : centersOnly;
+      
+      console.log('بيانات المراكز الصحية بعد الفلترة:', centersData);
+      
+      // تحضير البيانات للرسم البياني
+      const labels = centersData.map(c => c.HospitalName || c.NameAr || 'غير محدد');
+      const data = centersData.map(c => Number(c.counts?.total ?? 0));
+      
+      console.log('تسميات المراكز الصحية:', labels);
+      console.log('بيانات البلاغات للمراكز:', data);
+
+      // البحث عن جميع الرسوم البيانية الموجودة على هذا Canvas وتدميرها
+      Chart.helpers.each(Chart.instances, function(instance) {
+        if (instance.canvas.id === 'centers-chart') {
+          instance.destroy();
+        }
+      });
+
+      // التحقق من وجود بيانات
+      if (!labels.length || data.every(val => val === 0)) {
+        console.warn('لا توجد بيانات للمراكز الصحية أو جميع القيم صفر');
+        centersCtx.parentElement.innerHTML = `
+          <div class="text-center py-8">
+            <div class="text-gray-600 text-lg mb-2">📊 لا توجد بيانات للمراكز الصحية</div>
+            <div class="text-gray-500">لم يتم العثور على بلاغات للمراكز الصحية</div>
+          </div>
+        `;
+        return;
+      }
+
+      // ألوان مختلفة لكل مركز صحي
+      const colors = [
+        '#3B82F6', '#0FA47A', '#F59E0B', '#8B5CF6', '#06B6D4', '#DC2626',
+        '#14B8A6', '#6366F1', '#F97316', '#0EA5E9'
+      ].slice(0, labels.length);
+
+      console.log('إنشاء الرسم الدائري للمراكز الصحية:', { labels, data, colors });
+
+      // إنشاء الرسم الدائري
+      new Chart(centersCtx.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'عدد البلاغات',
+            data: data,
+            backgroundColor: colors,
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                font: { family: 'Tajawal', size: 13 },
+                color: '#374151'
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.formattedValue}`
+              }
+            }
+          }
+        }
+      });
+    })
+    .catch(error => {
+      console.error('❌ خطأ في تحميل بيانات المراكز الصحية:', error);
+      console.error('تفاصيل الخطأ:', {
+        message: error.message,
+        status: error.status
+      });
+      
+      // في حالة الخطأ، اعرض رسالة خطأ
+      centersCtx.parentElement.innerHTML = `
+        <div class="text-center py-8">
+          <div class="text-red-600 text-lg mb-2">⚠️ تعذر تحميل بيانات المراكز الصحية</div>
+          <div class="text-gray-600 mb-2">خطأ في الاتصال بقاعدة البيانات</div>
+          <div class="text-sm text-gray-500 mb-4">${error.message || 'خطأ غير معروف'}</div>
+          <button onclick="location.reload()" 
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            إعادة المحاولة
+          </button>
+        </div>
+      `;
+    });
+  }
 
 });
 
@@ -2031,5 +3146,669 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ========================================
+// دوال رسم الرسوم البيانية الجديدة
+// ========================================
+
+/**
+ * تحميل ورسم مخطط حالة البلاغ
+ */
+async function loadStatusChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+    
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
+    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
+    
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/status${qs}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    
+    const json = await resp.json();
+
+    if (!json.success || !json.data || !json.data.length) {
+      const parent = document.getElementById('status-chart')?.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات لحالة البلاغ</div>';
+      }
+      return;
+    }
+
+    // 🗂️ تحويل الأكواد إلى عناوين عربية (جميع الحالات من الجدول)
+    const statusMap = {
+      open: 'مفتوح',
+      waiting: 'بانتظار رد القسم',
+      in_progress: 'قيد المعالجة',
+      on_hold: 'معلق',
+      escalated: 'مصعد',
+      closed: 'مغلق',
+      resolved: 'محلول',
+      cancelled: 'ملغي',
+      // حالات إضافية للتوافق
+      unknown: 'غير محدد',
+    };
+
+    // 🎨 ألوان لكل حالة
+    const colorMap = {
+      open: '#3B82F6', // أزرق
+      waiting: '#FBBF24', // أصفر
+      in_progress: '#10B981', // أخضر
+      on_hold: '#6B7280', // رمادي
+      escalated: '#EF4444', // أحمر
+      closed: '#6366F1', // بنفسجي
+      resolved: '#22C55E', // أخضر فاقع
+      cancelled: '#DC2626', // أحمر غامق
+      unknown: '#9CA3AF', // رمادي فاتح
+    };
+
+    const labels = json.data.map(s => statusMap[s.StatusCode] || s.StatusCode);
+    const values = json.data.map(s => Number(s.Total) || 0);
+    const colors = json.data.map(s => colorMap[s.StatusCode] || '#9CA3AF');
+
+    // 🧹 تدمير أي رسم سابق على نفس الكانفس
+    Chart.helpers.each(Chart.instances, (inst) => {
+      if (inst.canvas && inst.canvas.id === 'status-chart') {
+        inst.destroy();
+      }
+    });
+
+    const ctx = document.getElementById('status-chart');
+    if (!ctx) return;
+
+    new Chart(ctx.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              font: { family: 'Tajawal', size: 13 },
+              color: '#374151',
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const total = values.reduce((sum, v) => sum + v, 0);
+                const val = ctx.parsed || 0;
+                const percent = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return `${ctx.label}: ${val} (${percent}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط حالة البلاغ:', error);
+  }
+}
+
+/**
+ * تحميل ورسم مخطط التصنيفات الرئيسية
+ */
+async function loadCategoriesChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+    
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
+    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
+    
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/categories${qs}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    
+    const json = await resp.json();
+
+    if (!json.success || !json.data || !json.data.length) {
+      const parent = document.getElementById('categories-chart')?.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات للتصنيفات</div>';
+      }
+      return;
+    }
+
+    // 🗂️ التصنيفات تأتي من جدول complaint_types مباشرة (TypeName)
+    // لا نحتاج لتحويل لأن API يرجع TypeName العربي مباشرة
+
+    // 🎨 ألوان متدرجة للتصنيفات (كل تصنيف لون مختلف)
+    const colorPalette = [
+      '#3B82F6', '#0FA47A', '#F59E0B', '#8B5CF6', '#06B6D4',
+      '#DC2626', '#14B8A6', '#6366F1', '#F97316', '#0EA5E9',
+      '#EC4899', '#84CC16', '#A855F7', '#22D3EE', '#F43F5E'
+    ];
+
+    const labels = json.data.map(c => c.Category || 'غير محدد');
+    const values = json.data.map(c => Number(c.Total) || 0);
+    const colors = json.data.map((c, index) => colorPalette[index % colorPalette.length]);
+
+    // 🧹 تدمير أي رسم سابق
+    Chart.helpers.each(Chart.instances, (inst) => {
+      if (inst.canvas && inst.canvas.id === 'categories-chart') {
+        inst.destroy();
+      }
+    });
+
+    const ctx = document.getElementById('categories-chart');
+    if (!ctx) return;
+
+    // حفظ البيانات الكاملة للتصنيفات للاستخدام في onClick
+    const categoriesData = json.data.map(c => ({
+      label: c.Category || 'غير محدد',
+      code: c.CategoryCode || c.ComplaintTypeID?.toString() || '',
+      id: c.ComplaintTypeID || null,
+      total: Number(c.Total) || 0
+    }));
+
+    const chartInstance = new Chart(ctx.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          categoriesData: categoriesData // حفظ البيانات للاستخدام في onClick
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              font: { family: 'Tajawal', size: 13 },
+              color: '#374151',
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const total = values.reduce((sum, v) => sum + v, 0);
+                const val = ctx.parsed || 0;
+                const percent = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return `${ctx.label}: ${val} (${percent}%)`;
+              },
+            },
+          },
+        },
+        onClick: (evt, elements) => {
+          if (!elements || elements.length === 0) return;
+          
+          // الحصول على العنصر الذي تم النقر عليه
+          const element = elements[0];
+          const dataset = chartInstance.data.datasets[0];
+          const categoryData = dataset.categoriesData?.[element.index];
+          
+          if (categoryData) {
+            // الانتقال إلى صفحة تفاصيل التصنيف
+            // استخدام CategoryCode إذا كان موجوداً، وإلا ComplaintTypeID، وإلا TypeName
+            const type = categoryData.code || categoryData.id?.toString() || categoryData.label;
+            const label = categoryData.label;
+            const url = `classification-details.html?type=${encodeURIComponent(type)}&label=${encodeURIComponent(label)}`;
+            console.log(`🔗 الانتقال إلى صفحة تفاصيل التصنيف: ${url}`, categoryData);
+            window.location.href = url;
+          } else {
+            console.warn('⚠️ لم يتم العثور على بيانات التصنيف للعنصر:', element);
+          }
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط التصنيفات:', error);
+  }
+}
+
+/**
+ * تحميل ورسم مخطط التصنيفات الفرعية
+ */
+async function loadSubcategoriesChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+    
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
+    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
+    
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/subcategories${qs}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    
+    const json = await resp.json();
+
+    if (!json.success || !json.data || !json.data.length) {
+      const parent = document.getElementById('subcategories-chart')?.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات للتصنيفات الفرعية</div>';
+      }
+      return;
+    }
+
+    const labels = json.data.map(s => s.SubCategory || 'غير محدد');
+    const values = json.data.map(s => Number(s.Total) || 0);
+
+    // ألوان متدرجة
+    const colors = [
+      '#3B82F6', '#0FA47A', '#F59E0B', '#8B5CF6', '#06B6D4',
+      '#DC2626', '#14B8A6', '#6366F1', '#F97316', '#0EA5E9',
+      '#EC4899', '#84CC16', '#A855F7', '#22D3EE', '#F43F5E'
+    ].slice(0, labels.length);
+
+    // 🧹 تدمير أي رسم سابق
+    Chart.helpers.each(Chart.instances, (inst) => {
+      if (inst.canvas && inst.canvas.id === 'subcategories-chart') {
+        inst.destroy();
+      }
+    });
+
+    const ctx = document.getElementById('subcategories-chart');
+    if (!ctx) return;
+
+    // حفظ البيانات الكاملة للتصنيفات الفرعية للاستخدام في onClick
+    const subcategoriesData = json.data.map(s => ({
+      label: s.SubCategory || 'غير محدد',
+      id: s.SubTypeID || null,
+      total: Number(s.Total) || 0
+    }));
+
+    const chartInstance = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'عدد البلاغات',
+          data: values,
+          backgroundColor: colors,
+          borderRadius: 6,
+          subcategoriesData: subcategoriesData // حفظ البيانات للاستخدام في onClick
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y', // رسم أفقي
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.formattedValue}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,.05)' },
+            ticks: { color: '#374151' },
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: '#374151', font: { family: 'Tajawal', size: 12 } },
+          },
+        },
+        onClick: (evt, elements) => {
+          if (!elements || elements.length === 0) return;
+          
+          // الحصول على العنصر الذي تم النقر عليه
+          const element = elements[0];
+          const dataset = chartInstance.data.datasets[0];
+          const subcategoryData = dataset.subcategoriesData?.[element.index];
+          
+          if (subcategoryData) {
+            // الانتقال إلى صفحة تفاصيل التصنيف الفرعي
+            // استخدام SubTypeID إذا كان موجوداً، وإلا SubCategory
+            const type = subcategoryData.id?.toString() || subcategoryData.label;
+            const label = subcategoryData.label;
+            const url = `classification-details.html?type=${encodeURIComponent(type)}&label=${encodeURIComponent(label)}`;
+            console.log(`🔗 الانتقال إلى صفحة تفاصيل التصنيف الفرعي: ${url}`, subcategoryData);
+            window.location.href = url;
+          } else {
+            console.warn('⚠️ لم يتم العثور على بيانات التصنيف الفرعي للعنصر:', element);
+          }
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط التصنيفات الفرعية:', error);
+  }
+}
+
+/**
+ * تحميل وعرض جدول تكرار الشكاوى حسب رقم الهوية
+ */
+let currentPatientFrequencyPage = 1;
+const patientFrequencyLimit = 100;
+
+async function loadPatientFrequencyTable(page = 1) {
+  try {
+    const tbody = document.getElementById('patient-frequency-tbody');
+    const infoDiv = document.getElementById('patient-frequency-info');
+    const prevBtn = document.getElementById('patient-frequency-prev');
+    const nextBtn = document.getElementById('patient-frequency-next');
+    
+    if (!tbody) return;
+    
+    // عرض حالة التحميل
+    tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-gray-500">جاري تحميل البيانات...</td></tr>';
+    if (infoDiv) infoDiv.textContent = 'جاري التحميل...';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    // جلب hospitalId من URL أو من المستخدم
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    if (!hospitalId && !App.isClusterManager()) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId;
+    }
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: patientFrequencyLimit.toString()
+    });
+    
+    if (hospitalId) {
+      params.set('hospitalId', hospitalId.toString());
+    }
+    
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/patient-frequency?${params.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const json = await response.json();
+    
+    if (!json.success || !json.data || !json.data.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-gray-500">لا توجد بيانات</td></tr>';
+      if (infoDiv) infoDiv.textContent = 'لا توجد بيانات';
+      return;
+    }
+    
+    // عرض البيانات
+    tbody.innerHTML = '';
+    json.data.forEach((row, index) => {
+      const tr = document.createElement('tr');
+      tr.className = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} cursor-pointer hover:bg-blue-50 transition-colors`;
+      tr.innerHTML = `
+        <td class="py-3 px-4 border">${row.PatientIDNumber || 'غير محدد'}</td>
+        <td class="py-3 px-4 border font-semibold">${row.frequency || 0}</td>
+        <td class="py-3 px-4 border">${row.HospitalName || 'غير محدد'}</td>
+      `;
+      
+      // إضافة event listener لفتح الـ modal
+      tr.addEventListener('click', () => {
+        openPatientComplaintsModal(row.PatientIDNumber, row.HospitalID, row.HospitalName);
+      });
+      
+      tbody.appendChild(tr);
+    });
+    
+    // تحديث معلومات Pagination
+    const pagination = json.pagination || {};
+    if (infoDiv) {
+      const start = (pagination.page - 1) * pagination.limit + 1;
+      const end = Math.min(start + pagination.limit - 1, pagination.total);
+      infoDiv.textContent = `${start} - ${end} / ${pagination.total}`;
+    }
+    
+    // تحديث أزرار Pagination
+    if (prevBtn) {
+      prevBtn.disabled = !pagination.hasPrev;
+      prevBtn.onclick = () => {
+        if (pagination.hasPrev) {
+          currentPatientFrequencyPage = pagination.page - 1;
+          loadPatientFrequencyTable(currentPatientFrequencyPage);
+        }
+      };
+    }
+    
+    if (nextBtn) {
+      nextBtn.disabled = !pagination.hasNext;
+      nextBtn.onclick = () => {
+        if (pagination.hasNext) {
+          currentPatientFrequencyPage = pagination.page + 1;
+          loadPatientFrequencyTable(currentPatientFrequencyPage);
+        }
+      };
+    }
+    
+    currentPatientFrequencyPage = pagination.page || page;
+    
+  } catch (error) {
+    console.error('❌ خطأ في تحميل جدول تكرار الشكاوى:', error);
+    const tbody = document.getElementById('patient-frequency-tbody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-red-500">حدث خطأ في تحميل البيانات</td></tr>';
+    }
+  }
+}
+
+/**
+ * فتح نافذة منبثقة لعرض شكاوى شخص معين
+ */
+async function openPatientComplaintsModal(patientIDNumber, hospitalId, hospitalName) {
+  const modal = document.getElementById('patient-complaints-modal');
+  const listDiv = document.getElementById('patient-complaints-list');
+  const infoDiv = document.getElementById('patient-modal-info');
+  const closeBtn = document.getElementById('patient-modal-close');
+  
+  if (!modal || !listDiv) return;
+  
+  // إظهار الـ modal
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  
+  // تحديث معلومات الشخص
+  if (infoDiv) {
+    infoDiv.textContent = `رقم الهوية: ${patientIDNumber} | المستشفى: ${hospitalName}`;
+  }
+  
+  // عرض حالة التحميل
+  listDiv.innerHTML = '<div class="text-center text-gray-500 py-8">جاري تحميل الشكاوى...</div>';
+  
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    const params = new URLSearchParams({
+      patientIDNumber: patientIDNumber.toString(),
+      hospitalId: hospitalId.toString()
+    });
+    
+    const response = await authFetch(`${API_BASE}/api/dashboard/total/patient-complaints?${params.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const json = await response.json();
+    
+    if (!json.success || !json.data || !json.data.length) {
+      listDiv.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد شكاوى لهذا الشخص</div>';
+      return;
+    }
+    
+    // عرض الشكاوى
+    listDiv.innerHTML = '';
+    json.data.forEach((complaint, index) => {
+      const complaintCard = document.createElement('div');
+      complaintCard.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors';
+      
+      const statusColor = getStatusColor(complaint.StatusCode);
+      const priorityColor = getPriorityColor(complaint.PriorityCode);
+      const date = new Date(complaint.CreatedAt).toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      complaintCard.innerHTML = `
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="font-bold text-lg" style="color:#002B5B">${complaint.TicketNumber || 'غير محدد'}</span>
+              <span class="px-2 py-1 rounded text-xs font-semibold" style="background:${statusColor.bg}; color:${statusColor.text}">
+                ${complaint.StatusLabelAr || complaint.StatusCode || 'غير محدد'}
+              </span>
+              <span class="px-2 py-1 rounded text-xs font-semibold" style="background:${priorityColor.bg}; color:${priorityColor.text}">
+                ${getPriorityLabel(complaint.PriorityCode)}
+              </span>
+            </div>
+            <div class="text-sm text-gray-600 mb-2">
+              <span class="font-semibold">النوع:</span> ${complaint.ComplaintTypeNameAr || 'غير محدد'}
+              ${complaint.DepartmentNameAr ? ` | <span class="font-semibold">القسم:</span> ${complaint.DepartmentNameAr}` : ''}
+            </div>
+            <p class="text-sm text-gray-700 line-clamp-2">${complaint.Description || 'لا يوجد وصف'}</p>
+            <div class="text-xs text-gray-500 mt-2">تاريخ الإنشاء: ${date}</div>
+          </div>
+        </div>
+      `;
+      
+      // إضافة event listener لفتح صفحة التفاصيل
+      complaintCard.addEventListener('click', () => {
+        const ticket = complaint.TicketNumber;
+        const complaintId = complaint.ComplaintID;
+        const hospitalId = complaint.HospitalID;
+        
+        // بناء رابط صفحة التفاصيل
+        const params = new URLSearchParams();
+        if (ticket) params.set('ticket', ticket);
+        if (complaintId) params.set('complaintId', complaintId);
+        if (hospitalId) params.set('hid', hospitalId);
+        
+        window.location.href = `../public/complaints/history/complaint-details.html?${params.toString()}`;
+      });
+      
+      listDiv.appendChild(complaintCard);
+    });
+    
+  } catch (error) {
+    console.error('❌ خطأ في تحميل شكاوى الشخص:', error);
+    listDiv.innerHTML = '<div class="text-center text-red-500 py-8">حدث خطأ في تحميل الشكاوى</div>';
+  }
+  
+  // دالة إغلاق الـ modal
+  const closeModal = () => {
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+  };
+  
+  // إضافة event listener لإغلاق الـ modal
+  if (closeBtn) {
+    closeBtn.onclick = closeModal;
+  }
+  
+  // إغلاق عند النقر خارج الـ modal
+  const handleModalClick = (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  };
+  modal.removeEventListener('click', handleModalClick); // إزالة أي مستمع سابق
+  modal.addEventListener('click', handleModalClick);
+}
+
+/**
+ * دوال مساعدة للألوان والتسميات
+ */
+function getStatusColor(status) {
+  const statusUpper = (status || '').toUpperCase();
+  if (statusUpper.includes('CLOSED') || statusUpper.includes('مغلق')) {
+    return { bg: '#ECFDF5', text: '#10B981' };
+  } else if (statusUpper.includes('OPEN') || statusUpper.includes('مفتوح')) {
+    return { bg: '#EFF6FF', text: '#2563EB' };
+  } else if (statusUpper.includes('CRITICAL') || statusUpper.includes('حرج')) {
+    return { bg: '#FEF2F2', text: '#EF4444' };
+  }
+  return { bg: '#F3F4F6', text: '#6B7280' };
+}
+
+function getPriorityColor(priority) {
+  const priorityUpper = (priority || '').toUpperCase();
+  if (priorityUpper.includes('CRITICAL') || priorityUpper.includes('HIGH') || priorityUpper.includes('حرج') || priorityUpper.includes('عالي')) {
+    return { bg: '#FEF2F2', text: '#EF4444' };
+  } else if (priorityUpper.includes('MEDIUM') || priorityUpper.includes('متوسط')) {
+    return { bg: '#FFFBEB', text: '#F59E0B' };
+  }
+  return { bg: '#F3F4F6', text: '#6B7280' };
+}
+
+function getPriorityLabel(priority) {
+  const priorityUpper = (priority || '').toUpperCase();
+  if (priorityUpper.includes('CRITICAL') || priorityUpper.includes('حرج')) {
+    return 'حرجة';
+  } else if (priorityUpper.includes('HIGH') || priorityUpper.includes('عالي')) {
+    return 'عالية';
+  } else if (priorityUpper.includes('MEDIUM') || priorityUpper.includes('متوسط')) {
+    return 'متوسطة';
+  } else if (priorityUpper.includes('LOW') || priorityUpper.includes('منخفض')) {
+    return 'منخفضة';
+  }
+  return priority || 'غير محدد';
+}
 
 

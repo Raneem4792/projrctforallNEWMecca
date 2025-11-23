@@ -783,3 +783,157 @@ select {
 .table-row-green:hover {
   background-color: #dcfce7 !important;
 }
+
+/* ========================================
+   جدول تكرار الشكاوى حسب رقم الهوية
+   Patient Frequency Table Styles
+   ======================================== */
+
+#patient-frequency-section {
+  background-color: #f3f4f6; /* Dark gray background like in the image */
+}
+
+#patient-frequency-section .bg-white {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+#patient-frequency-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+#patient-frequency-table thead {
+  background-color: #f3f4f6; /* Light gray header background */
+}
+
+#patient-frequency-table thead th {
+  padding: 12px 16px;
+  text-align: center;
+  font-weight: 600;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+#patient-frequency-table tbody tr {
+  background-color: white;
+}
+
+#patient-frequency-table tbody tr:nth-child(even) {
+  background-color: #f9fafb; /* Alternating light gray rows */
+}
+
+#patient-frequency-table tbody td {
+  padding: 12px 16px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  font-size: 14px;
+}
+
+#patient-frequency-table tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+/* Pagination Styles */
+#patient-frequency-section .flex.items-center.justify-between {
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+#patient-frequency-info {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+#patient-frequency-prev,
+#patient-frequency-next {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+#patient-frequency-prev:hover:not(:disabled),
+#patient-frequency-next:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+#patient-frequency-prev:disabled,
+#patient-frequency-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f3f4f6;
+}
+
+/* ========================================
+   Modal لعرض شكاوى الشخص
+   Patient Complaints Modal Styles
+   ======================================== */
+
+#patient-complaints-modal {
+  backdrop-filter: blur(4px);
+  display: none !important;
+}
+
+#patient-complaints-modal.flex {
+  display: flex !important;
+}
+
+#patient-complaints-modal .bg-white {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+#patient-modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+#patient-modal-close:hover {
+  background-color: #f3f4f6;
+}
+
+#patient-complaints-list .border {
+  transition: all 0.2s;
+}
+
+#patient-complaints-list .border:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
