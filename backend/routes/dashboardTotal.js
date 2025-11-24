@@ -3422,4 +3422,254 @@ router.get('/complaints/subtypes', async (req, res) => {
   }
 });
 
+// ========== GET /api/dashboard/total/sla-delays ==========
+// جلب إحصائيات تأخر البلاغات حسب الوقت (سوء تعامل 24 ساعة / باقي البلاغات 48 ساعة)
+router.get('/sla-delays', async (req, res) => {
+  try {
+    const hospitalId = req.query?.hospitalId ? Number(req.query.hospitalId) : null;
+    const startDate = req.query.start;
+    const endDate = req.query.end;
+
+    // إذا لم يتم إرسال التواريخ، نستخدم الفترة الحالية
+    const start = startDate || new Date().toISOString().slice(0, 10);
+    const end = endDate || new Date().toISOString().slice(0, 10);
+
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+
+    // جلب جميع المستشفيات النشطة
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      FROM hospitals
+      ${hospitalWhereClause}
+      ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
+    `, hospitalParams);
+
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        data: {
+          bad_behavior_late: 0,
+          bad_behavior_ok: 0,
+          other_late: 0,
+          other_ok: 0
+        }
+      });
+    }
+
+    const { getHospitalPool } = await import('../config/db.js');
+    
+    // تجميع البيانات من جميع المستشفيات
+    let bad_behavior_late = 0;
+    let bad_behavior_ok = 0;
+    let other_late = 0;
+    let other_ok = 0;
+
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // فلترة التاريخ
+        const dateFilter = `
+          AND c.CreatedAt >= '${start} 00:00:00'
+          AND c.CreatedAt <= '${end} 23:59:59'
+        `;
+        
+        const [rows] = await hospitalPool.query(`
+          SELECT
+            SUM(
+              CASE 
+                WHEN (ct.TypeName LIKE '%سوء تعامل%' OR ct.TypeName LIKE '%ممارسة%' OR ct.TypeCode = 'MISCONDUCT')
+                 AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+                 AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) > 24
+                 ${dateFilter}
+                THEN 1 ELSE 0 END
+            ) AS bad_behavior_late,
+            SUM(
+              CASE 
+                WHEN (ct.TypeName LIKE '%سوء تعامل%' OR ct.TypeName LIKE '%ممارسة%' OR ct.TypeCode = 'MISCONDUCT')
+                 AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+                 AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) <= 24
+                 ${dateFilter}
+                THEN 1 ELSE 0 END
+            ) AS bad_behavior_ok,
+            SUM(
+              CASE 
+                WHEN (ct.TypeName NOT LIKE '%سوء تعامل%' AND ct.TypeName NOT LIKE '%ممارسة%' AND (ct.TypeCode IS NULL OR ct.TypeCode != 'MISCONDUCT'))
+                 AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+                 AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) > 48
+                 ${dateFilter}
+                THEN 1 ELSE 0 END
+            ) AS other_late,
+            SUM(
+              CASE 
+                WHEN (ct.TypeName NOT LIKE '%سوء تعامل%' AND ct.TypeName NOT LIKE '%ممارسة%' AND (ct.TypeCode IS NULL OR ct.TypeCode != 'MISCONDUCT'))
+                 AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+                 AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) <= 48
+                 ${dateFilter}
+                THEN 1 ELSE 0 END
+            ) AS other_ok
+          FROM complaints c
+          LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+          WHERE c.IsDeleted = 0
+        `);
+
+        const row = rows[0] || {};
+        bad_behavior_late += Number(row.bad_behavior_late || 0);
+        bad_behavior_ok += Number(row.bad_behavior_ok || 0);
+        other_late += Number(row.other_late || 0);
+        other_ok += Number(row.other_ok || 0);
+      } catch (error) {
+        console.error(`خطأ في جلب بيانات تأخر البلاغات من المستشفى ${hospital.HospitalID}:`, error.message);
+        // نستمر في المستشفيات الأخرى
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        bad_behavior_late,
+        bad_behavior_ok,
+        other_late,
+        other_ok
+      }
+    });
+  } catch (error) {
+    console.error('GET /dashboard/total/sla-delays', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/sla-delays/list ==========
+// جلب قائمة البلاغات المتأخرة حسب الفلتر
+router.get('/sla-delays/list', async (req, res) => {
+  try {
+    const hospitalId = req.query?.hospitalId ? Number(req.query.hospitalId) : null;
+    const filter = req.query.filter; // 'bad_late' / 'bad_ok' / 'other_late' / 'other_ok'
+    const startDate = req.query.start;
+    const endDate = req.query.end;
+
+    if (!filter) {
+      return res.status(400).json({
+        success: false,
+        message: 'filter parameter is required'
+      });
+    }
+
+    // إذا لم يتم إرسال التواريخ، نستخدم الفترة الحالية
+    const start = startDate || new Date().toISOString().slice(0, 10);
+    const end = endDate || new Date().toISOString().slice(0, 10);
+
+    const hospitalWhereClause = hospitalId
+      ? 'WHERE IsActive = 1 AND HospitalID = ?'
+      : 'WHERE IsActive = 1';
+    const hospitalParams = hospitalId ? [hospitalId] : [];
+
+    // جلب جميع المستشفيات النشطة
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals
+      ${hospitalWhereClause}
+      ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
+    `, hospitalParams);
+
+    if (!allHospitals.length) {
+      return res.json({
+        success: true,
+        complaints: []
+      });
+    }
+
+    const { getHospitalPool } = await import('../config/db.js');
+    const allComplaints = [];
+
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        let condition = '';
+
+        if (filter === 'bad_late') {
+          condition = `
+            (ct.TypeName LIKE '%سوء تعامل%' OR ct.TypeName LIKE '%ممارسة%' OR ct.TypeCode = 'MISCONDUCT')
+            AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) > 24
+            AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+          `;
+        } else if (filter === 'bad_ok') {
+          condition = `
+            (ct.TypeName LIKE '%سوء تعامل%' OR ct.TypeName LIKE '%ممارسة%' OR ct.TypeCode = 'MISCONDUCT')
+            AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) <= 24
+            AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+          `;
+        } else if (filter === 'other_late') {
+          condition = `
+            (ct.TypeName NOT LIKE '%سوء تعامل%' AND ct.TypeName NOT LIKE '%ممارسة%' AND (ct.TypeCode IS NULL OR ct.TypeCode != 'MISCONDUCT'))
+            AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) > 48
+            AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+          `;
+        } else if (filter === 'other_ok') {
+          condition = `
+            (ct.TypeName NOT LIKE '%سوء تعامل%' AND ct.TypeName NOT LIKE '%ممارسة%' AND (ct.TypeCode IS NULL OR ct.TypeCode != 'MISCONDUCT'))
+            AND TIMESTAMPDIFF(HOUR, c.CreatedAt, NOW()) <= 48
+            AND c.StatusCode NOT IN ('CLOSED','مغلق','محلول','مكتمل','closed','resolved')
+          `;
+        } else {
+          continue; // تخطي إذا كان الفلتر غير صحيح
+        }
+
+        // فلترة التاريخ
+        const dateFilter = `
+          AND c.CreatedAt >= '${start} 00:00:00'
+          AND c.CreatedAt <= '${end} 23:59:59'
+        `;
+
+        const [rows] = await hospitalPool.query(`
+          SELECT
+            c.ComplaintID,
+            ? AS HospitalID,
+            ? AS HospitalName,
+            COALESCE(NULLIF(c.TicketNumber,''), CONCAT('C-', c.ComplaintID)) AS TicketNo,
+            c.CreatedAt,
+            c.StatusCode,
+            d.NameAr AS DepartmentName,
+            ct.TypeName AS TypeName
+          FROM complaints c
+          LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+          LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+          WHERE c.IsDeleted = 0
+            AND ${condition}
+            ${dateFilter}
+          ORDER BY c.CreatedAt DESC
+        `, [hospital.HospitalID, hospital.HospitalName]);
+
+        allComplaints.push(...rows);
+      } catch (error) {
+        console.error(`خطأ في جلب قائمة البلاغات المتأخرة من المستشفى ${hospital.HospitalID}:`, error.message);
+        // نستمر في المستشفيات الأخرى
+      }
+    }
+
+    // ترتيب حسب تاريخ الإنشاء (الأحدث أولاً)
+    allComplaints.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+
+    res.json({
+      success: true,
+      complaints: allComplaints
+    });
+  } catch (error) {
+    console.error('GET /dashboard/total/sla-delays/list', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error',
+      message: error.message
+    });
+  }
+});
+
 export default router;

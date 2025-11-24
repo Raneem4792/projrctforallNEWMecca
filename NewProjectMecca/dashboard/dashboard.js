@@ -639,6 +639,7 @@ async function reloadFilteredData(hospitalId) {
     // 6) تحديث الرسوم البيانية الجديدة
     await loadStatusChart();
     await loadCategoriesChart();
+    await loadSLADelayChart();
 
     // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -2892,6 +2893,7 @@ async function initializeDashboard() {
     // 🔹 تحميل الرسوم البيانية الجديدة (تعمل مع أو بدون تصفية)
     await loadStatusChart();
     await loadCategoriesChart();
+    await loadSLADelayChart();
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -3418,6 +3420,361 @@ async function loadStatusChart() {
     });
   } catch (error) {
     console.error('❌ خطأ في تحميل مخطط حالة البلاغ:', error);
+  }
+}
+
+/**
+ * تحديد فترة الأسبوع (الأربعاء → الخميس)
+ */
+function getWeekRange() {
+  const today = new Date();
+  const day = today.getDay(); // 0 = الأحد ... 3 = الأربعاء
+
+  // نخلي بداية الأسبوع يوم الأربعاء
+  let diff;
+  if (day >= 3) {
+    diff = day - 3; // إذا كان اليوم الأربعاء أو بعده
+  } else {
+    diff = 7 - (3 - day); // إذا كان قبل الأربعاء، نرجع للأربعاء الماضي
+  }
+
+  const start = new Date(today);
+  start.setDate(today.getDate() - diff);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 8); // إلى الخميس (الأسبوع التالي)
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+    startDate: start,
+    endDate: end
+  };
+}
+
+/**
+ * مخطط تأخر معالجة البلاغات:
+ * - سوء تعامل متأخرة (أحمر بعد 24 ساعة)
+ * - سوء تعامل ضمن الوقت
+ * - بلاغات أخرى متأخرة (أحمر بعد 48 ساعة)
+ * - بلاغات أخرى ضمن الوقت
+ */
+async function loadSLADelayChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    // تحميل المستخدم إذا مو محمّل
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+
+    // إذا مو مدير تجمع: نثبت المستشفى حق المستخدم
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون فلتر = جميع المستشفيات
+      hospitalId = null;
+    }
+
+    // تحديد فترة الأسبوع (الأربعاء → الخميس)
+    const week = getWeekRange();
+    
+    // تحديث نص الفترة في الواجهة
+    const weekRangeEl = document.getElementById('sla-week-range');
+    if (weekRangeEl) {
+      const startDate = week.startDate.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const endDate = week.endDate.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      weekRangeEl.textContent = `من ${startDate} إلى ${endDate}`;
+    }
+    
+    let qs = `?start=${week.start}&end=${week.end}`;
+    if (hospitalId) {
+      qs += `&hospitalId=${encodeURIComponent(hospitalId)}`;
+    }
+
+    // ⚠️ انتبهي: هذا الـ API لازم نضيفه في الباك إند (مشروح تحت)
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/sla-delays${qs}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
+    const json = await resp.json();
+    if (!json.success || !json.data) {
+      const parent = document.getElementById('sla-delay-chart')?.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات لتأخر البلاغات</div>';
+      }
+      return;
+    }
+
+    const d = json.data;
+
+    const labels = [
+      'سوء تعامل متأخرة',
+      'سوء تعامل ضمن الوقت',
+      'بلاغات أخرى متأخرة',
+      'بلاغات أخرى ضمن الوقت'
+    ];
+
+    const values = [
+      Number(d.bad_behavior_late || 0),
+      Number(d.bad_behavior_ok || 0),
+      Number(d.other_late || 0),
+      Number(d.other_ok || 0),
+    ];
+
+    // تدمير أي رسم سابق على نفس الـ canvas
+    Chart.helpers.each(Chart.instances, (inst) => {
+      if (inst.canvas && inst.canvas.id === 'sla-delay-chart') {
+        inst.destroy();
+      }
+    });
+
+    const ctx = document.getElementById('sla-delay-chart');
+    if (!ctx) return;
+
+    const chartInstance = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'عدد البلاغات',
+          data: values,
+          // الأحمر للمتأخرة – غيرها أزرق/أخضر
+          backgroundColor: (ctx) => {
+            const i = ctx.dataIndex;
+            if (i === 0 || i === 2) return '#EF4444';   // متأخرة (سوء تعامل / أخرى) — أحمر
+            if (i === 1) return '#10B981';              // سوء تعامل ضمن الوقت — أخضر
+            return '#1D4ED8';                           // أخرى ضمن الوقت — أزرق
+          },
+          borderRadius: 8,
+          barThickness: 30
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: async (evt, elements) => {
+          console.log('Chart onClick triggered', { 
+            elements, 
+            length: elements?.length,
+            chart: 'sla-delay-chart'
+          });
+          
+          if (!elements || !elements.length) {
+            console.log('No element clicked - clicking empty area');
+            return;
+          }
+
+          const element = elements[0];
+          const index = element.index;
+          const datasetIndex = element.datasetIndex;
+          
+          console.log('Chart clicked details:', {
+            index,
+            datasetIndex,
+            label: labels[index],
+            value: values[index]
+          });
+
+          const filters = ['bad_late', 'bad_ok', 'other_late', 'other_ok'];
+          const selectedFilter = filters[index];
+
+          console.log('Selected filter:', selectedFilter);
+
+          if (selectedFilter) {
+            try {
+              console.log('Calling showDelayedComplaints with filter:', selectedFilter);
+              await showDelayedComplaints(selectedFilter);
+            } catch (error) {
+              console.error('Error in showDelayedComplaints:', error);
+              alert('حدث خطأ أثناء فتح البلاغات: ' + error.message);
+            }
+          } else {
+            console.warn('No filter found for index:', index);
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (c) => `${c.label}: ${c.formattedValue} بلاغ`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#374151', font: { family: 'Tajawal', size: 12 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E5E7EB' },
+            ticks: { color: '#374151', font: { family: 'Tajawal', size: 12 } }
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط تأخر البلاغات:', error);
+    const ctx = document.getElementById('sla-delay-chart');
+    if (ctx) {
+      const parent = ctx.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">تعذر تحميل البيانات</div>';
+      }
+    }
+  }
+}
+
+/**
+ * عرض البلاغات المتأخرة في المودال
+ */
+async function showDelayedComplaints(filterType) {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    // تحميل المستخدم إذا مو محمّل
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+
+    // إذا مو مدير تجمع: نثبت المستشفى حق المستخدم
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون فلتر = جميع المستشفيات
+      hospitalId = null;
+    }
+
+    // تحديد فترة الأسبوع (الأربعاء → الخميس)
+    const week = getWeekRange();
+    
+    let qs = `filter=${filterType}&start=${week.start}&end=${week.end}`;
+    if (hospitalId) {
+      qs += `&hospitalId=${encodeURIComponent(hospitalId)}`;
+    }
+    
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/sla-delays/list?${qs}`);
+    
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    }
+
+    const data = await resp.json();
+
+    if (!data.success) {
+      alert('خطأ في تحميل البيانات');
+      return;
+    }
+
+    const list = data.complaints || [];
+
+    const modal = document.getElementById('department-complaints-modal');
+    const container = document.getElementById('department-complaints-list');
+    const title = document.getElementById('department-modal-info');
+
+    if (!modal || !container || !title) {
+      console.error('Modal elements not found', { modal: !!modal, container: !!container, title: !!title });
+      return;
+    }
+
+    console.log('Opening modal for filter:', filterType, 'complaints count:', list.length);
+    
+    // إزالة hidden class وإظهار المودال (نفس طريقة openDepartmentComplaintsModal)
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    
+    // دالة إغلاق الـ modal (نفس طريقة openDepartmentComplaintsModal)
+    const closeModal = () => {
+      console.log('Closing modal');
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+    };
+    
+    // إضافة event listener لإغلاق الـ modal (نفس طريقة openDepartmentComplaintsModal)
+    const closeBtn = document.getElementById('department-modal-close');
+    if (closeBtn) {
+      closeBtn.onclick = closeModal;
+    }
+    
+    // إغلاق عند النقر خارج الـ modal (نفس طريقة openDepartmentComplaintsModal)
+    const handleModalClick = (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    };
+    modal.addEventListener('click', handleModalClick);
+
+    // تحديد العنوان حسب نوع الفلتر
+    const filterLabels = {
+      'bad_late': 'سوء تعامل متأخرة (> 24 ساعة)',
+      'bad_ok': 'سوء تعامل ضمن الوقت',
+      'other_late': 'بلاغات أخرى متأخرة (> 48 ساعة)',
+      'other_ok': 'بلاغات أخرى ضمن الوقت'
+    };
+
+    title.textContent = `${filterLabels[filterType] || 'البلاغات'} - عدد البلاغات: ${list.length}`;
+
+    container.innerHTML = '';
+
+    if (!list.length) {
+      container.innerHTML = `<div class="text-center text-gray-500 py-6">لا يوجد بلاغات</div>`;
+      return;
+    }
+
+    list.forEach(item => {
+      const createdAt = new Date(item.CreatedAt);
+      const dateStr = createdAt.toLocaleString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      container.innerHTML += `
+        <div class="p-4 border rounded-lg bg-gray-50 hover:bg-gray-100 transition mb-3">
+          <div class="font-bold mb-2 text-[#002B5B]">رقم البلاغ: ${item.TicketNo || 'N/A'}</div>
+          <div class="text-sm text-gray-700 mb-1">
+            <span class="font-semibold">المستشفى:</span> ${item.HospitalName || 'غير محدد'}
+          </div>
+          <div class="text-sm text-gray-700 mb-1">
+            <span class="font-semibold">القسم:</span> ${item.DepartmentName || '—'}
+          </div>
+          <div class="text-sm text-gray-700 mb-1">
+            <span class="font-semibold">التصنيف:</span> ${item.TypeName || 'غير محدد'}
+          </div>
+          <div class="text-sm text-gray-700 mb-1">
+            <span class="font-semibold">الحالة:</span> ${item.StatusCode || 'غير محدد'}
+          </div>
+          <div class="text-xs text-gray-500 mt-2">
+            <span class="font-semibold">تاريخ الإنشاء:</span> ${dateStr}
+          </div>
+        </div>
+      `;
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في عرض البلاغات المتأخرة:', err);
+    alert('حدث خطأ أثناء تحميل البلاغات');
   }
 }
 
