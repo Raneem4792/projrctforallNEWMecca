@@ -14,7 +14,7 @@ const router = express.Router();
 
 const CENTRAL_DB_HOST = process.env.CENTRAL_DB_HOST || 'localhost';
 const CENTRAL_DB_USER = process.env.CENTRAL_DB_USER || 'root';
-const CENTRAL_DB_PASS = process.env.CENTRAL_DB_PASS || 'SamarAmer12345@';
+const CENTRAL_DB_PASS = process.env.CENTRAL_DB_PASS || 'Raneem11';
 
 // ✅ إعداد multer لقراءة FormData والمرفقات
 const upload = multer({

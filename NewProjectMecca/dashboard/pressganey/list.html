@@ -192,7 +192,7 @@
     </div>
 
     <!-- 🔹 بطاقات الأقسام الإضافية -->
-    <div class="grid md:grid-cols-3 gap-6 mb-8">
+    <div id="departments-cards-container" class="grid md:grid-cols-3 gap-6 mb-8">
       <!-- بطاقة أقسام التنويم -->
       <div class="bg-white shadow rounded-lg p-6">
         <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">أقسام التنويم</h3>
@@ -258,7 +258,7 @@
       </div>
 
       <!-- بطاقة إضافة قسم جديد -->
-      <div class="bg-blue-50 border-2 border-dashed border-blue-400 shadow rounded-lg p-6 cursor-pointer hover:bg-blue-100 transition-colors flex flex-col items-center justify-center min-h-[180px]">
+      <div id="add-department-card" class="bg-blue-50 border-2 border-dashed border-blue-400 shadow rounded-lg p-6 cursor-pointer hover:bg-blue-100 transition-colors flex flex-col items-center justify-center min-h-[180px]">
         <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mb-3">
           <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -340,6 +340,67 @@
   <!-- Toast -->
   <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
     <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <!-- Modal إضافة قسم جديد -->
+  <div id="add-department-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" style="display: none;">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-200">
+        <h3 class="text-xl font-bold" style="color:#002B5B">إضافة قسم جديد</h3>
+        <button id="close-department-modal" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
+          ×
+        </button>
+      </div>
+      
+      <!-- Content -->
+      <div class="p-6">
+        <form id="add-department-form">
+          <div class="mb-4">
+            <label for="department-name-ar" class="block text-sm font-medium text-gray-700 mb-2">
+              اسم القسم (عربي) <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="department-name-ar" 
+              name="NameAr"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="أدخل اسم القسم بالعربية"
+            />
+          </div>
+
+          <div class="mb-4">
+            <label for="department-name-en" class="block text-sm font-medium text-gray-700 mb-2">
+              اسم القسم (إنجليزي) <span class="text-gray-400">(اختياري)</span>
+            </label>
+            <input 
+              type="text" 
+              id="department-name-en" 
+              name="NameEn"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter department name in English"
+            />
+          </div>
+
+          <div class="flex items-center justify-end gap-3 mt-6">
+            <button 
+              type="button" 
+              id="cancel-department-btn"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              إلغاء
+            </button>
+            <button 
+              type="submit" 
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              إضافة القسم
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- نظام حماية الصفحات -->
@@ -451,6 +512,312 @@
         }
       }
     });
+
+    // إضافة قسم جديد
+    const addDeptCard = document.getElementById('add-department-card');
+    const addDeptModal = document.getElementById('add-department-modal');
+    const closeDeptModal = document.getElementById('close-department-modal');
+    const cancelDeptBtn = document.getElementById('cancel-department-btn');
+    const addDeptForm = document.getElementById('add-department-form');
+
+    console.log('🔍 [Add Department] العناصر:', {
+      card: !!addDeptCard,
+      modal: !!addDeptModal,
+      form: !!addDeptForm
+    });
+
+    // فتح Modal
+    if (addDeptCard) {
+      addDeptCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('✅ [Add Department] تم النقر على بطاقة إضافة قسم');
+        if (addDeptModal) {
+          addDeptModal.style.display = 'flex'; // إضافة style مباشر أولاً
+          addDeptModal.classList.remove('hidden');
+          addDeptModal.classList.add('flex');
+          setTimeout(() => {
+            document.getElementById('department-name-ar')?.focus();
+          }, 100);
+        } else {
+          console.error('❌ [Add Department] Modal غير موجود');
+        }
+      });
+    } else {
+      console.error('❌ [Add Department] بطاقة إضافة قسم غير موجودة');
+    }
+
+    // إغلاق Modal
+    const closeModal = () => {
+      if (addDeptModal) {
+        addDeptModal.classList.add('hidden');
+        addDeptModal.classList.remove('flex');
+        addDeptModal.style.display = 'none'; // إضافة style مباشر للتأكد من الإغلاق
+        addDeptForm?.reset();
+        console.log('✅ [Add Department] تم إغلاق Modal');
+      }
+    };
+
+    if (closeDeptModal) {
+      closeDeptModal.addEventListener('click', closeModal);
+    }
+
+    if (cancelDeptBtn) {
+      cancelDeptBtn.addEventListener('click', closeModal);
+    }
+
+    // إغلاق عند النقر خارج Modal
+    if (addDeptModal) {
+      addDeptModal.addEventListener('click', (e) => {
+        if (e.target === addDeptModal) {
+          closeModal();
+        }
+      });
+    }
+
+    // دالة toast محلية (إذا لم تكن متاحة من pressganey.js)
+    const showToast = (msg, type = 'info') => {
+      if (typeof toast === 'function') {
+        toast(msg, type);
+      } else {
+        // استخدام alert كبديل
+        alert(msg);
+        console.log(`[Toast ${type}]:`, msg);
+      }
+    };
+
+    // إرسال النموذج
+    if (addDeptForm) {
+      addDeptForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('✅ [Add Department] تم إرسال النموذج');
+
+        const hid = effectiveHospitalId();
+        console.log('🏥 [Add Department] Hospital ID:', hid);
+        
+        if (!hid) {
+          showToast('يجب اختيار المستشفى أولاً', 'error');
+          return;
+        }
+
+        const nameAr = document.getElementById('department-name-ar')?.value?.trim();
+        const nameEn = document.getElementById('department-name-en')?.value?.trim();
+
+        console.log('📝 [Add Department] البيانات:', { nameAr, nameEn });
+
+        if (!nameAr) {
+          showToast('اسم القسم (عربي) مطلوب', 'error');
+          return;
+        }
+
+        const submitBtn = addDeptForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn?.textContent;
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'جاري الإضافة...';
+        }
+
+        try {
+          const apiBase = typeof API_BASE !== 'undefined'
+            ? API_BASE
+            : (localStorage.getItem('apiBase') || (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3001' : ''));
+
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+          
+          const response = await fetch(`${apiBase}/api/admin/departments?hospitalId=${encodeURIComponent(hid)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+              'x-hospital-id': String(hid) // إضافة في header أيضاً
+            },
+            body: JSON.stringify({
+              HospitalID: hid, // إضافة HospitalID في body (مطلوب من validation)
+              NameAr: nameAr,
+              NameEn: nameEn || nameAr,
+              ParentDepartmentID: null
+            })
+          });
+
+          const data = await response.json();
+          console.log('📥 [Add Department] استجابة API:', data);
+
+          if (response.ok && data.success) {
+            showToast('تم إضافة القسم بنجاح ✅', 'success');
+            closeModal();
+            // إعادة تحميل الأقسام وعرضها
+            await loadAndDisplayDepartments();
+            // إعادة تحميل البيانات الأخرى
+            setTimeout(() => {
+              if (typeof loadData === 'function') {
+                loadData();
+              }
+            }, 500);
+          } else {
+            throw new Error(data.message || 'فشل في إضافة القسم');
+          }
+        } catch (err) {
+          console.error('❌ [Add Department] خطأ في إضافة القسم:', err);
+          showToast('خطأ في إضافة القسم: ' + err.message, 'error');
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText || 'إضافة القسم';
+          }
+        }
+      });
+    }
+
+    // دالة للحصول على hospitalId (من pressganey.js)
+    function effectiveHospitalId() {
+      try {
+        const u = JSON.parse(localStorage.getItem('userData') || '{}');
+        const q = new URLSearchParams(location.search);
+        const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
+        const fromLS = Number(localStorage.getItem('selectedHospitalId') || localStorage.getItem('hospitalId') || 0);
+        const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
+        return fromUrl || fromLS || fromUser || null;
+      } catch {
+        return null;
+      }
+    }
+
+    // دالة لجلب الأقسام وعرضها
+    async function loadAndDisplayDepartments() {
+      try {
+        const hid = effectiveHospitalId();
+        if (!hid) {
+          console.warn('⚠️ [Load Departments] لا يوجد hospitalId');
+          return;
+        }
+
+        const apiBase = typeof API_BASE !== 'undefined'
+          ? API_BASE
+          : (localStorage.getItem('apiBase') || (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3001' : ''));
+
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+
+        const response = await fetch(`${apiBase}/api/admin/departments?hospitalId=${encodeURIComponent(hid)}`, {
+          headers: {
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            'x-hospital-id': String(hid)
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const departments = data.items || data.data || [];
+
+        console.log(`📋 [Load Departments] تم جلب ${departments.length} قسم`);
+
+        // عرض الأقسام كبطاقات
+        displayDepartmentsAsCards(departments);
+
+      } catch (err) {
+        console.error('❌ [Load Departments] خطأ في جلب الأقسام:', err);
+      }
+    }
+
+    // دالة لعرض الأقسام كبطاقات
+    function displayDepartmentsAsCards(departments) {
+      // الأقسام الثابتة المعرفة مسبقاً
+      const staticDepartments = {
+        'العيادات الخارجية': 'outpatient',
+        'الأشعة': 'radiology',
+        'الطب المنزلي': 'homeMedicine',
+        'أقسام التنويم': 'inpatient',
+        'الطوارئ': 'emergency',
+        'الأسنان': 'dentistry',
+        'بنك الدم': 'bloodBank',
+        'الوفيات': 'mortality'
+      };
+
+      // إنشاء Set للأقسام الثابتة
+      const staticNames = new Set(Object.keys(staticDepartments));
+
+      // تصفية الأقسام الجديدة (غير موجودة في القائمة الثابتة)
+      const newDepartments = departments.filter(dept => {
+        const nameAr = (dept.NameAr || '').trim();
+        return nameAr && !staticNames.has(nameAr);
+      });
+
+      console.log(`🆕 [Display Departments] ${newDepartments.length} قسم جديد للعرض`);
+
+      // الحصول على container البطاقات
+      const cardsContainer = document.getElementById('departments-cards-container');
+      if (!cardsContainer) {
+        console.error('❌ [Display Departments] لم يتم العثور على container البطاقات');
+        return;
+      }
+
+      // إزالة البطاقات القديمة للأقسام الجديدة (إن وجدت)
+      newDepartments.forEach(dept => {
+        const existingCard = document.getElementById(`dept-card-${dept.DepartmentID}`);
+        if (existingCard) {
+          existingCard.remove();
+        }
+      });
+
+      // إضافة بطاقات جديدة للأقسام
+      newDepartments.forEach(dept => {
+        const cardId = `dept-card-${dept.DepartmentID}`;
+        const nameAr = dept.NameAr || 'قسم بدون اسم';
+        
+        // إنشاء بطاقة جديدة
+        const card = document.createElement('div');
+        card.id = cardId;
+        card.className = 'bg-white shadow rounded-lg p-6';
+        card.innerHTML = `
+          <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">${nameAr}</h3>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="text-gray-700">راضي</span>
+              </div>
+              <span id="${cardId}-satisfied" class="font-bold text-gray-800">0%</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <span class="text-gray-700">غير راضي</span>
+              </div>
+              <span id="${cardId}-notSatisfied" class="font-bold text-gray-800">0%</span>
+            </div>
+          </div>
+        `;
+
+        // إدراج البطاقة قبل بطاقة "إضافة قسم جديد"
+        const addCard = document.getElementById('add-department-card');
+        if (addCard && addCard.parentElement) {
+          addCard.parentElement.insertBefore(card, addCard);
+        } else {
+          cardsContainer.appendChild(card);
+        }
+      });
+    }
+
+    // تحميل الأقسام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        loadAndDisplayDepartments();
+      }, 1000);
+    });
+
+    // إعادة تحميل الأقسام عند تغيير المستشفى
+    const hospitalSelect = document.getElementById('pressganey-hospital-select');
+    if (hospitalSelect) {
+      hospitalSelect.addEventListener('change', () => {
+        setTimeout(() => {
+          loadAndDisplayDepartments();
+        }, 500);
+      });
+    }
   </script>
 </body>
 </html>

@@ -639,6 +639,8 @@ async function reloadFilteredData(hospitalId) {
     // 6) تحديث الرسوم البيانية الجديدة
     await loadStatusChart();
     await loadCategoriesChart();
+    await loadSubcategoriesChart();
+    await loadSlaDelayChart();
 
     // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -2892,6 +2894,8 @@ async function initializeDashboard() {
     // 🔹 تحميل الرسوم البيانية الجديدة (تعمل مع أو بدون تصفية)
     await loadStatusChart();
     await loadCategoriesChart();
+    await loadSubcategoriesChart();
+    await loadSlaDelayChart();
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -3463,8 +3467,16 @@ async function loadCategoriesChart() {
     // 🗂️ التصنيفات تأتي من جدول complaint_types مباشرة (TypeName)
     // لا نحتاج لتحويل لأن API يرجع TypeName العربي مباشرة
 
+    // 🎨 ألوان متدرجة للتصنيفات (كل تصنيف لون مختلف)
+    const colorPalette = [
+      '#3B82F6', '#0FA47A', '#F59E0B', '#8B5CF6', '#06B6D4',
+      '#DC2626', '#14B8A6', '#6366F1', '#F97316', '#0EA5E9',
+      '#EC4899', '#84CC16', '#A855F7', '#22D3EE', '#F43F5E'
+    ];
+
     const labels = json.data.map(c => c.Category || 'غير محدد');
     const values = json.data.map(c => Number(c.Total) || 0);
+    const colors = json.data.map((c, index) => colorPalette[index % colorPalette.length]);
 
     // 🧹 تدمير أي رسم سابق
     Chart.helpers.each(Chart.instances, (inst) => {
@@ -3484,46 +3496,48 @@ async function loadCategoriesChart() {
       total: Number(c.Total) || 0
     }));
 
+    // ألوان احترافية موحدة
+    const professionalColors = [
+      "#1D4ED8", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444",
+      "#6366F1", "#EC4899", "#14B8A6", "#A855F7", "#F97316",
+      "#22C55E", "#0EA5E9", "#2DD4BF", "#94A3B8"
+    ];
+
     const chartInstance = new Chart(ctx.getContext('2d'), {
-      type: 'bar',
+      type: 'doughnut',
       data: {
         labels,
         datasets: [{
-          label: 'عدد البلاغات',
           data: values,
-          backgroundColor: '#0EA5E9',
-          borderRadius: 6,
-          maxBarThickness: 18,
-          categoriesData
+          backgroundColor: professionalColors.slice(0, labels.length),
+          borderColor: '#ffffff',
+          borderWidth: 1,
+          hoverOffset: 12,
+          categoriesData: categoriesData // حفظ البيانات للاستخدام في onClick
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        indexAxis: 'y',
+        cutout: "55%",
         plugins: {
           legend: {
-            display: false,
+            position: 'right',
+            labels: {
+              boxWidth: 12,
+              padding: 10,
+              font: { family: 'Tajawal', size: 13 },
+              color: '#374151',
+            },
           },
           tooltip: {
             callbacks: {
               label: (ctx) => {
-                return `${ctx.label}: ${ctx.formattedValue}`;
+                const total = values.reduce((sum, v) => sum + v, 0);
+                const val = ctx.parsed || 0;
+                const percent = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return `${ctx.label}: ${val} (${percent}%)`;
               },
-            },
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grid: { display: false },
-            ticks: { color: '#374151' },
-          },
-          y: {
-            grid: { display: false },
-            ticks: {
-              color: '#374151',
-              font: { family: 'Tajawal', size: 12 }
             },
           },
         },
@@ -3551,6 +3565,463 @@ async function loadCategoriesChart() {
     });
   } catch (error) {
     console.error('❌ خطأ في تحميل مخطط التصنيفات:', error);
+  }
+}
+
+/**
+ * تحميل ورسم مخطط التصنيفات الفرعية
+ */
+async function loadSubcategoriesChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+    
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
+    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
+    
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/subcategories${qs}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    
+    const json = await resp.json();
+
+    if (!json.success || !json.data || !json.data.length) {
+      const parent = document.getElementById('subcategories-chart')?.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات للتصنيفات الفرعية</div>';
+      }
+      return;
+    }
+
+    const labels = json.data.map(s => s.SubCategory || 'غير محدد');
+    const values = json.data.map(s => Number(s.Total) || 0);
+
+    // 🧹 تدمير أي رسم سابق
+    Chart.helpers.each(Chart.instances, (inst) => {
+      if (inst.canvas && inst.canvas.id === 'subcategories-chart') {
+        inst.destroy();
+      }
+    });
+
+    const ctx = document.getElementById('subcategories-chart');
+    if (!ctx) return;
+
+    // حفظ البيانات الكاملة للتصنيفات الفرعية للاستخدام في onClick
+    const subcategoriesData = json.data.map(s => ({
+      label: s.SubCategory || 'غير محدد',
+      id: s.SubTypeID || null,
+      total: Number(s.Total) || 0
+    }));
+
+    const chartInstance = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'عدد البلاغات',
+          data: values,
+          backgroundColor: '#0EA5E9',
+          borderRadius: 6,
+          maxBarThickness: 18,
+          subcategoriesData: subcategoriesData // حفظ البيانات للاستخدام في onClick
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y', // رسم أفقي
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.formattedValue}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { display: false },
+            ticks: { color: '#374151' },
+          },
+          y: {
+            grid: { display: false },
+            ticks: { 
+              color: '#374151', 
+              font: { family: 'Tajawal', size: 12 } 
+            },
+          },
+        },
+        onClick: (evt, elements) => {
+          if (!elements || elements.length === 0) return;
+          
+          // الحصول على العنصر الذي تم النقر عليه
+          const element = elements[0];
+          const dataset = chartInstance.data.datasets[0];
+          const subcategoryData = dataset.subcategoriesData?.[element.index];
+          
+          if (subcategoryData) {
+            // الانتقال إلى صفحة تفاصيل التصنيف الفرعي
+            // استخدام SubTypeID إذا كان موجوداً، وإلا SubCategory
+            const type = subcategoryData.id?.toString() || subcategoryData.label;
+            const label = subcategoryData.label;
+            const url = `classification-details.html?type=${encodeURIComponent(type)}&label=${encodeURIComponent(label)}`;
+            console.log(`🔗 الانتقال إلى صفحة تفاصيل التصنيف الفرعي: ${url}`, subcategoryData);
+            window.location.href = url;
+          } else {
+            console.warn('⚠️ لم يتم العثور على بيانات التصنيف الفرعي للعنصر:', element);
+          }
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط التصنيفات الفرعية:', error);
+  }
+}
+
+/**
+ * تحديد فترة الأسبوع (الأربعاء → الخميس - 8 أيام)
+ * @returns {Object} { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }
+ */
+function getWeekRange() {
+  const today = new Date();
+  const day = today.getDay(); // 0 = الأحد ... 3 = الأربعاء
+
+  // نخلي بداية الأسبوع يوم الأربعاء
+  // إذا كان اليوم >= الأربعاء (3)، نطرح الفرق
+  // وإلا نرجع للأسبوع الماضي
+  let diff;
+  if (day >= 3) {
+    diff = day - 3;
+  } else {
+    diff = 7 - (3 - day);
+  }
+
+  const start = new Date(today);
+  start.setDate(today.getDate() - diff);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 8); // إلى الخميس (الأسبوع التالي)
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10)
+  };
+}
+
+/**
+ * مخطط تأخر معالجة البلاغات:
+ * - سوء تعامل متأخرة (أحمر بعد 24 ساعة)
+ * - سوء تعامل ضمن الوقت
+ * - بلاغات أخرى متأخرة (أحمر بعد 48 ساعة)
+ * - بلاغات أخرى ضمن الوقت
+ * يعرض فقط بلاغات الأسبوع الحالي (الأربعاء → الخميس)
+ */
+async function loadSlaDelayChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    // تحميل المستخدم إذا مو محمّل
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+
+    // إذا مو مدير تجمع: نثبت المستشفى حق المستخدم
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون فلتر = جميع المستشفيات
+      hospitalId = null;
+    }
+
+    // تحديد فترة الأسبوع (الأربعاء → الخميس)
+    const week = getWeekRange();
+
+    // تحديث نص فترة الأسبوع في العنوان
+    const weekRangeElement = document.getElementById('sla-week-range');
+    if (weekRangeElement) {
+      const startDate = new Date(week.start).toLocaleDateString('ar-SA', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const endDate = new Date(week.end).toLocaleDateString('ar-SA', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      weekRangeElement.textContent = `فترة الأسبوع: ${startDate} - ${endDate}`;
+    }
+
+    // بناء query string مع hospitalId وفترة الأسبوع
+    const qsParams = new URLSearchParams();
+    if (hospitalId) {
+      qsParams.append('hospitalId', hospitalId);
+    }
+    qsParams.append('start', week.start);
+    qsParams.append('end', week.end);
+    const qs = `?${qsParams.toString()}`;
+
+    // ⚠️ انتبهي: هذا الـ API لازم نضيفه في الباك إند (مشروح تحت)
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/sla-delays${qs}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
+    const json = await resp.json();
+    if (!json.success || !json.data) {
+      const parent = document.getElementById('sla-delay-chart')?.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات لتأخر البلاغات</div>';
+      }
+      return;
+    }
+
+    const d = json.data;
+
+    const labels = [
+      'سوء تعامل متأخرة',
+      'سوء تعامل ضمن الوقت',
+      'بلاغات أخرى متأخرة',
+      'بلاغات أخرى ضمن الوقت'
+    ];
+
+    const values = [
+      Number(d.bad_behavior_late || 0),
+      Number(d.bad_behavior_ok || 0),
+      Number(d.other_late || 0),
+      Number(d.other_ok || 0),
+    ];
+
+    // تدمير أي رسم سابق على نفس الـ canvas
+    Chart.helpers.each(Chart.instances, (inst) => {
+      if (inst.canvas && inst.canvas.id === 'sla-delay-chart') {
+        inst.destroy();
+      }
+    });
+
+    const ctx = document.getElementById('sla-delay-chart');
+    if (!ctx) return;
+
+    new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'عدد البلاغات',
+          data: values,
+          // الأحمر للمتأخرة – غيرها أزرق/أخضر
+          backgroundColor: (ctx) => {
+            const i = ctx.dataIndex;
+            if (i === 0 || i === 2) return '#EF4444';   // متأخرة (سوء تعامل / أخرى) — أحمر
+            if (i === 1) return '#10B981';              // سوء تعامل ضمن الوقت — أخضر
+            return '#1D4ED8';                           // أخرى ضمن الوقت — أزرق
+          },
+          borderRadius: 8,
+          barThickness: 30
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (c) => `${c.label}: ${c.formattedValue} بلاغ`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#374151', font: { family: 'Tajawal', size: 12 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E5E7EB' },
+            ticks: { color: '#374151', font: { family: 'Tajawal', size: 12 } }
+          }
+        },
+        onClick: async (evt, elements) => {
+          if (!elements || elements.length === 0) return;
+
+          const index = elements[0].index;
+          const filters = ['bad_late', 'bad_ok', 'other_late', 'other_ok'];
+          const selectedFilter = filters[index];
+
+          if (selectedFilter) {
+            await showDelayedComplaints(selectedFilter);
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط تأخر البلاغات:', error);
+  }
+}
+
+/**
+ * عرض البلاغات المتأخرة في المودال
+ * @param {string} filterType - نوع الفلتر: 'bad_late', 'bad_ok', 'other_late', 'other_ok'
+ */
+async function showDelayedComplaints(filterType) {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    // تحميل المستخدم إذا مو محمّل
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+
+    // إذا مو مدير تجمع: نثبت المستشفى حق المستخدم
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون فلتر = جميع المستشفيات
+      hospitalId = null;
+    }
+
+    const modal = document.getElementById('department-complaints-modal');
+    const container = document.getElementById('department-complaints-list');
+    const title = document.getElementById('department-modal-info');
+    const closeBtn = document.getElementById('department-modal-close');
+
+    if (!modal || !container) {
+      console.error('❌ المودال غير موجود');
+      return;
+    }
+
+    // إظهار المودال
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    // تحديث العنوان
+    const filterLabels = {
+      'bad_late': 'سوء تعامل متأخرة (> 24 ساعة)',
+      'bad_ok': 'سوء تعامل ضمن الوقت',
+      'other_late': 'بلاغات أخرى متأخرة (> 48 ساعة)',
+      'other_ok': 'بلاغات أخرى ضمن الوقت'
+    };
+
+    if (title) {
+      title.textContent = `جاري تحميل البلاغات...`;
+    }
+
+    // عرض حالة التحميل
+    container.innerHTML = '<div class="text-center text-gray-500 py-8">جاري تحميل البلاغات...</div>';
+
+    // تحديد فترة الأسبوع (الأربعاء → الخميس)
+    const week = getWeekRange();
+
+    // جلب البيانات
+    const qs = new URLSearchParams({ 
+      filter: filterType,
+      start: week.start,
+      end: week.end
+    });
+    if (hospitalId) {
+      qs.append('hospitalId', hospitalId);
+    }
+
+    const resp = await authFetch(`${API_BASE}/api/dashboard/total/sla-delays/list?${qs.toString()}`);
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    }
+
+    const data = await resp.json();
+
+    if (!data.success) {
+      container.innerHTML = '<div class="text-center text-red-500 py-8">خطأ في تحميل البيانات</div>';
+      return;
+    }
+
+    const list = data.complaints || [];
+
+    // تحديث العنوان بعد جلب البيانات
+    if (title) {
+      title.textContent = `${filterLabels[filterType] || 'البلاغات'} - عدد البلاغات: ${list.length}`;
+    }
+
+    // مسح المحتوى السابق
+    container.innerHTML = '';
+
+    if (!list.length) {
+      container.innerHTML = '<div class="text-center text-gray-500 py-8">لا يوجد بلاغات</div>';
+      return;
+    }
+
+    // عرض البلاغات
+    list.forEach(item => {
+      const createdAt = new Date(item.CreatedAt).toLocaleString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const hospitalInfo = item.HospitalName ? `<div class="text-sm text-blue-600 mb-1">المستشفى: ${item.HospitalName}</div>` : '';
+
+      container.innerHTML += `
+        <div class="p-4 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+          ${hospitalInfo}
+          <div class="font-bold mb-1" style="color:#002B5B">رقم البلاغ: ${item.TicketNo || item.ComplaintID}</div>
+          <div class="text-sm text-gray-700 mb-1">القسم: ${item.DepartmentName || '—'}</div>
+          <div class="text-sm text-gray-700 mb-1">التصنيف: ${item.TypeName || '—'}</div>
+          <div class="text-sm text-gray-700 mb-1">الحالة: ${item.StatusCode || '—'}</div>
+          <div class="text-xs text-gray-500 mt-2">تاريخ الإنشاء: ${createdAt}</div>
+        </div>
+      `;
+    });
+
+    // ربط زر الإغلاق
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      };
+    }
+
+    // إغلاق عند النقر خارج المودال
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    };
+
+  } catch (err) {
+    console.error('❌ خطأ في عرض البلاغات المتأخرة:', err);
+    const container = document.getElementById('department-complaints-list');
+    if (container) {
+      container.innerHTML = '<div class="text-center text-red-500 py-8">حدث خطأ في تحميل البيانات</div>';
+    }
   }
 }
 
