@@ -3384,26 +3384,24 @@ async function loadStatusChart() {
     if (!ctx) return;
 
     new Chart(ctx.getContext('2d'), {
-      type: 'pie',
+      type: 'bar',
       data: {
         labels,
         datasets: [{
+          label: 'عدد البلاغات',
           data: values,
           backgroundColor: colors,
-          borderColor: '#ffffff',
-          borderWidth: 2,
+          borderRadius: 6,
+          maxBarThickness: 18,
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        indexAxis: 'y', // رسم أفقي مثل رسمة التصنيفات
         plugins: {
           legend: {
-            position: 'right',
-            labels: {
-              font: { family: 'Tajawal', size: 13 },
-              color: '#374151',
-            },
+            display: false,
           },
           tooltip: {
             callbacks: {
@@ -3415,7 +3413,37 @@ async function loadStatusChart() {
               },
             },
           },
+          datalabels: {
+            anchor: 'end',
+            align: 'end',
+            color: '#0f172a',
+            font: { size: 12, weight: 'bold', family: 'Tajawal' },
+            formatter: value => value > 0 ? value : ''
+          },
         },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(148, 163, 184, 0.15)',
+            },
+            ticks: {
+              color: '#475569',
+              font: { size: 12, family: 'Tajawal' },
+              precision: 0,
+            },
+          },
+          y: {
+            grid: {
+              display: false,
+            },
+            ticks: {
+              color: '#1f2937',
+              font: { size: 12, family: 'Tajawal' },
+            },
+          },
+        },
+        plugins: [ChartDataLabels],
       },
     });
   } catch (error) {
