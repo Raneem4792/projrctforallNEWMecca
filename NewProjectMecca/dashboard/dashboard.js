@@ -639,7 +639,6 @@ async function reloadFilteredData(hospitalId) {
     // 6) تحديث الرسوم البيانية الجديدة
     await loadStatusChart();
     await loadCategoriesChart();
-    await loadSubcategoriesChart();
 
     // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -2893,7 +2892,6 @@ async function initializeDashboard() {
     // 🔹 تحميل الرسوم البيانية الجديدة (تعمل مع أو بدون تصفية)
     await loadStatusChart();
     await loadCategoriesChart();
-    await loadSubcategoriesChart();
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -3465,16 +3463,8 @@ async function loadCategoriesChart() {
     // 🗂️ التصنيفات تأتي من جدول complaint_types مباشرة (TypeName)
     // لا نحتاج لتحويل لأن API يرجع TypeName العربي مباشرة
 
-    // 🎨 ألوان متدرجة للتصنيفات (كل تصنيف لون مختلف)
-    const colorPalette = [
-      '#3B82F6', '#0FA47A', '#F59E0B', '#8B5CF6', '#06B6D4',
-      '#DC2626', '#14B8A6', '#6366F1', '#F97316', '#0EA5E9',
-      '#EC4899', '#84CC16', '#A855F7', '#22D3EE', '#F43F5E'
-    ];
-
     const labels = json.data.map(c => c.Category || 'غير محدد');
     const values = json.data.map(c => Number(c.Total) || 0);
-    const colors = json.data.map((c, index) => colorPalette[index % colorPalette.length]);
 
     // 🧹 تدمير أي رسم سابق
     Chart.helpers.each(Chart.instances, (inst) => {
@@ -3494,48 +3484,46 @@ async function loadCategoriesChart() {
       total: Number(c.Total) || 0
     }));
 
-    // ألوان احترافية موحدة
-    const professionalColors = [
-      "#1D4ED8", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444",
-      "#6366F1", "#EC4899", "#14B8A6", "#A855F7", "#F97316",
-      "#22C55E", "#0EA5E9", "#2DD4BF", "#94A3B8"
-    ];
-
     const chartInstance = new Chart(ctx.getContext('2d'), {
-      type: 'doughnut',
+      type: 'bar',
       data: {
         labels,
         datasets: [{
+          label: 'عدد البلاغات',
           data: values,
-          backgroundColor: professionalColors.slice(0, labels.length),
-          borderColor: '#ffffff',
-          borderWidth: 1,
-          hoverOffset: 12,
-          categoriesData: categoriesData // حفظ البيانات للاستخدام في onClick
+          backgroundColor: '#0EA5E9',
+          borderRadius: 6,
+          maxBarThickness: 18,
+          categoriesData
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: "55%",
+        indexAxis: 'y',
         plugins: {
           legend: {
-            position: 'right',
-            labels: {
-              boxWidth: 12,
-              padding: 10,
-              font: { family: 'Tajawal', size: 13 },
-              color: '#374151',
-            },
+            display: false,
           },
           tooltip: {
             callbacks: {
               label: (ctx) => {
-                const total = values.reduce((sum, v) => sum + v, 0);
-                const val = ctx.parsed || 0;
-                const percent = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                return `${ctx.label}: ${val} (${percent}%)`;
+                return `${ctx.label}: ${ctx.formattedValue}`;
               },
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { display: false },
+            ticks: { color: '#374151' },
+          },
+          y: {
+            grid: { display: false },
+            ticks: {
+              color: '#374151',
+              font: { family: 'Tajawal', size: 12 }
             },
           },
         },
@@ -3563,133 +3551,6 @@ async function loadCategoriesChart() {
     });
   } catch (error) {
     console.error('❌ خطأ في تحميل مخطط التصنيفات:', error);
-  }
-}
-
-/**
- * تحميل ورسم مخطط التصنيفات الفرعية
- */
-async function loadSubcategoriesChart() {
-  try {
-    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-      ? 'http://localhost:3001' : '';
-
-    // التحقق من دور المستخدم
-    if (!currentUser) await loadCurrentUser();
-    const isCluster = App.isClusterManager();
-    
-    const urlParams = new URLSearchParams(location.search);
-    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
-    
-    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
-    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
-    if (!hospitalId && !isCluster) {
-      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
-    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
-      // مدير تجمع بدون تصفية = جميع المستشفيات
-      hospitalId = null;
-    }
-    
-    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
-
-    const resp = await authFetch(`${API_BASE}/api/dashboard/total/subcategories${qs}`);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-    
-    const json = await resp.json();
-
-    if (!json.success || !json.data || !json.data.length) {
-      const parent = document.getElementById('subcategories-chart')?.parentElement;
-      if (parent) {
-        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات للتصنيفات الفرعية</div>';
-      }
-      return;
-    }
-
-    const labels = json.data.map(s => s.SubCategory || 'غير محدد');
-    const values = json.data.map(s => Number(s.Total) || 0);
-
-    // 🧹 تدمير أي رسم سابق
-    Chart.helpers.each(Chart.instances, (inst) => {
-      if (inst.canvas && inst.canvas.id === 'subcategories-chart') {
-        inst.destroy();
-      }
-    });
-
-    const ctx = document.getElementById('subcategories-chart');
-    if (!ctx) return;
-
-    // حفظ البيانات الكاملة للتصنيفات الفرعية للاستخدام في onClick
-    const subcategoriesData = json.data.map(s => ({
-      label: s.SubCategory || 'غير محدد',
-      id: s.SubTypeID || null,
-      total: Number(s.Total) || 0
-    }));
-
-    const chartInstance = new Chart(ctx.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'عدد البلاغات',
-          data: values,
-          backgroundColor: '#0EA5E9',
-          borderRadius: 6,
-          maxBarThickness: 18,
-          subcategoriesData: subcategoriesData // حفظ البيانات للاستخدام في onClick
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y', // رسم أفقي
-        plugins: {
-          legend: {
-            display: false,
-          },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.label}: ${ctx.formattedValue}`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grid: { display: false },
-            ticks: { color: '#374151' },
-          },
-          y: {
-            grid: { display: false },
-            ticks: { 
-              color: '#374151', 
-              font: { family: 'Tajawal', size: 12 } 
-            },
-          },
-        },
-        onClick: (evt, elements) => {
-          if (!elements || elements.length === 0) return;
-          
-          // الحصول على العنصر الذي تم النقر عليه
-          const element = elements[0];
-          const dataset = chartInstance.data.datasets[0];
-          const subcategoryData = dataset.subcategoriesData?.[element.index];
-          
-          if (subcategoryData) {
-            // الانتقال إلى صفحة تفاصيل التصنيف الفرعي
-            // استخدام SubTypeID إذا كان موجوداً، وإلا SubCategory
-            const type = subcategoryData.id?.toString() || subcategoryData.label;
-            const label = subcategoryData.label;
-            const url = `classification-details.html?type=${encodeURIComponent(type)}&label=${encodeURIComponent(label)}`;
-            console.log(`🔗 الانتقال إلى صفحة تفاصيل التصنيف الفرعي: ${url}`, subcategoryData);
-            window.location.href = url;
-          } else {
-            console.warn('⚠️ لم يتم العثور على بيانات التصنيف الفرعي للعنصر:', element);
-          }
-        },
-      },
-    });
-  } catch (error) {
-    console.error('❌ خطأ في تحميل مخطط التصنيفات الفرعية:', error);
   }
 }
 

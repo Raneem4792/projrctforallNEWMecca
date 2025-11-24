@@ -8,6 +8,19 @@ import { attachHospitalPool } from '../middleware/hospitalPool.js';
 
 const router = express.Router();
 
+const formatStatusList = (statuses = []) =>
+  statuses
+    .filter(Boolean)
+    .map((code) => `'${code.toUpperCase()}'`)
+    .join(', ');
+
+const STATUS_GROUPS = {
+  open: formatStatusList(['OPEN', 'مفتوح', 'WAITING', 'بانتظار الرد', 'PENDING']),
+  inProgress: formatStatusList(['IN_PROGRESS', 'قيد المعالجة', 'PROCESSING']),
+  closed: formatStatusList(['CLOSED', 'RESOLVED', 'مغلق', 'مغلقة', 'محلول', 'محلولة', 'COMPLETED', 'مكتمل']),
+  delayed: formatStatusList(['DELAYED', 'OVERDUE', 'LATE', 'متأخر', 'متأخرة'])
+};
+
 // ====== Helper: category CASE (نعيده هنا لاستخدامه عدة مرات)
 const CATEGORY_SQL = `
   CASE
@@ -721,6 +734,159 @@ router.get('/complaint-types/by-hospital', async (req, res) => {
     });
   }
 });
+
+// ========== GET /api/dashboard/total/complaints/subtypes ==========
+router.get(
+  '/complaints/subtypes',
+  requireAuth,
+  requirePermission('DASH_CHART_TOP_CLINICS'),
+  async (req, res) => {
+    try {
+      const typeParam = (req.query?.type || '').trim();
+      if (!typeParam) {
+        return res.status(400).json({
+          success: false,
+          message: 'type parameter is required'
+        });
+      }
+
+      const hospitalId = req.query?.hospitalId ? Number(req.query.hospitalId) : null;
+      const hospitalWhereClause = hospitalId
+        ? 'WHERE IsActive = 1 AND HospitalID = ?'
+        : 'WHERE IsActive = 1';
+      const hospitalParams = hospitalId ? [hospitalId] : [];
+
+      const [allHospitals] = await pool.query(
+        `
+        SELECT HospitalID, NameAr AS HospitalName, COALESCE(FacilityType, 'hospital') AS FacilityType
+        FROM hospitals
+        ${hospitalWhereClause}
+        ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
+        `,
+        hospitalParams
+      );
+
+      if (!allHospitals.length) {
+        return res.json({
+          success: true,
+          data: [],
+          perHospital: [],
+          type: typeParam,
+          hospitals: 0
+        });
+      }
+
+      const { getHospitalPool } = await import('../config/db.js');
+
+      const typeFilter = /^\d+$/.test(typeParam)
+        ? {
+            clause: '(ct.ComplaintTypeID = ? OR st.SubTypeID = ?)',
+            params: [Number(typeParam), Number(typeParam)]
+          }
+        : {
+            clause:
+              '(ct.TypeCode = ? OR ct.TypeName = ? OR st.SubTypeName = ? OR st.SubTypeNameEn = ?)',
+            params: [typeParam, typeParam, typeParam, typeParam]
+          };
+
+      const aggregatedMap = new Map();
+
+      for (const hospital of allHospitals) {
+        try {
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          const [rows] = await hospitalPool.query(
+            `
+            SELECT
+              st.SubTypeID,
+              st.SubTypeName,
+              COUNT(*) AS TotalCount,
+              SUM(CASE WHEN UPPER(COALESCE(c.StatusCode, '')) IN (${STATUS_GROUPS.open}) THEN 1 ELSE 0 END) AS OpenCount,
+              SUM(CASE WHEN UPPER(COALESCE(c.StatusCode, '')) IN (${STATUS_GROUPS.inProgress}) THEN 1 ELSE 0 END) AS InProgressCount,
+              SUM(CASE WHEN UPPER(COALESCE(c.StatusCode, '')) IN (${STATUS_GROUPS.closed}) THEN 1 ELSE 0 END) AS ClosedCount,
+              SUM(CASE WHEN UPPER(COALESCE(c.StatusCode, '')) IN (${STATUS_GROUPS.delayed}) THEN 1 ELSE 0 END) AS DelayedCount
+            FROM complaints c
+            INNER JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+            INNER JOIN complaint_types ct ON ct.ComplaintTypeID = st.ComplaintTypeID
+            WHERE (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+              AND ${typeFilter.clause}
+            GROUP BY st.SubTypeID, st.SubTypeName
+            HAVING TotalCount > 0
+            ORDER BY TotalCount DESC
+          `,
+            [...typeFilter.params]
+          );
+
+          rows.forEach((row) => {
+            const key =
+              row.SubTypeID ||
+              row.SubTypeName ||
+              `sub-${hospital.HospitalID}-${row.SubTypeName || 'unknown'}`;
+
+            if (!aggregatedMap.has(key)) {
+              aggregatedMap.set(key, {
+                SubTypeID: row.SubTypeID,
+                SubTypeName: row.SubTypeName || 'غير محدد',
+                Open: 0,
+                Closed: 0,
+                InProgress: 0,
+                Delayed: 0,
+                Total: 0,
+                Hospitals: []
+              });
+            }
+
+            const entry = aggregatedMap.get(key);
+            const hospitalStats = {
+              HospitalID: hospital.HospitalID,
+              HospitalName: hospital.HospitalName,
+              FacilityType: hospital.FacilityType || 'hospital',
+              Total: Number(row.TotalCount || 0),
+              Open: Number(row.OpenCount || 0),
+              Closed: Number(row.ClosedCount || 0),
+              InProgress: Number(row.InProgressCount || 0),
+              Delayed: Number(row.DelayedCount || 0)
+            };
+
+            entry.Hospitals.push(hospitalStats);
+            entry.Open += hospitalStats.Open;
+            entry.Closed += hospitalStats.Closed;
+            entry.InProgress += hospitalStats.InProgress;
+            entry.Delayed += hospitalStats.Delayed;
+            entry.Total += hospitalStats.Total;
+          });
+        } catch (error) {
+          console.error(
+            `خطأ في جلب التصنيفات الفرعية للتصنيف ${typeParam} من المستشفى ${hospital.HospitalID}:`,
+            error.message
+          );
+        }
+      }
+
+      const aggregated = Array.from(aggregatedMap.values())
+        .map((item) => ({
+          ...item,
+          Hospitals: item.Hospitals.sort((a, b) =>
+            a.HospitalName.localeCompare(b.HospitalName, 'ar')
+          )
+        }))
+        .sort((a, b) => b.Total - a.Total);
+
+      res.json({
+        success: true,
+        type: typeParam,
+        hospitals: allHospitals.length,
+        data: aggregated
+      });
+    } catch (error) {
+      console.error('GET /dashboard/total/complaints/subtypes', error);
+      res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: error.message
+      });
+    }
+  }
+);
 
 // ========== GET /api/dashboard/total/daily-complaints ==========
 // 📊 إحصائية البلاغات اليومية (Daily Complaints)
