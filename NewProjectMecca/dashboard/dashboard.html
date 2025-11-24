@@ -234,26 +234,13 @@
      =============================== -->
 <section id="categories-section" class="py-10">
   <div class="container mx-auto px-4">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      
-      <!-- التصنيفات الرئيسية -->
-      <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
-        <h3 class="font-bold text-xl mb-2" style="color:#002B5B">التصنيفات</h3>
-        <p class="text-xs text-gray-500 text-center mb-2">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
-        <div class="h-96">
-          <canvas id="categories-chart"></canvas>
-        </div>
+    <!-- التصنيفات الرئيسية -->
+    <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
+      <h3 class="font-bold text-xl mb-2" style="color:#002B5B">التصنيفات</h3>
+      <p class="text-xs text-gray-500 text-center mb-2">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
+      <div class="h-96">
+        <canvas id="categories-chart"></canvas>
       </div>
-
-      <!-- التصنيفات الفرعية -->
-      <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
-        <h3 class="font-bold text-xl mb-2" style="color:#002B5B">التصنيفات الفرعية</h3>
-        <p class="text-xs text-gray-500 text-center mb-2">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
-        <div class="h-96">
-          <canvas id="subcategories-chart"></canvas>
-        </div>
-      </div>
-
     </div>
 
     <!-- حالة البلاغ -->
@@ -264,25 +251,6 @@
 
       <div style="height:350px;">
         <canvas id="status-chart"></canvas>
-      </div>
-    </div>
-
-    <!-- البلاغات المتأخرة حسب الوقت (سوء تعامل 24 ساعة / الباقي 48 ساعة) -->
-    <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mt-6">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B">البلاغات المتأخرة حسب الوقت</h3>
-        <div class="flex flex-col items-end">
-          <span class="text-xs text-gray-500">
-            سوء تعامل &gt; 24 ساعة — باقي البلاغات &gt; 48 ساعة
-          </span>
-          <span id="sla-week-range" class="text-xs text-blue-600 mt-1">
-            جاري التحميل...
-          </span>
-        </div>
-      </div>
-
-      <div style="height:350px;">
-        <canvas id="sla-delay-chart"></canvas>
       </div>
     </div>
   </div>

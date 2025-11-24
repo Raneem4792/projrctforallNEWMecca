@@ -129,12 +129,11 @@
         <h2 class="text-xl font-bold text-[#002B5B]">التصنيفات الفرعية</h2>
         <div id="subTypesMeta" class="text-sm text-gray-500"></div>
       </div>
-      <div id="subTypesContainer" class="grid gap-6 lg:grid-cols-2">
-        <div class="col-span-full text-center text-gray-500 text-sm">
-          جاري تحميل التصنيفات الفرعية...
-        </div>
+      <div id="subTypesContainer" class="grid lg:grid-cols-2 gap-6">
+        <!-- يتم تعبئتها ديناميكياً -->
       </div>
     </section>
+
   </main>
 
   <script>
@@ -160,10 +159,6 @@
       ? `يعرض هذا التقرير توزيع بلاغات التصنيف "${labelParam}" على مستوى المستشفيات`
       : 'اختر تصنيفاً من لوحة التحكم لعرض تفاصيله هنا.';
 
-    const subTypesSection = document.getElementById('subTypesSection');
-    const subTypesMeta = document.getElementById('subTypesMeta');
-    const subTypesContainer = document.getElementById('subTypesContainer');
-    const subTypeCharts = new Map();
 
     if (!typeParam) {
       hospitalMeta.textContent = '';
@@ -184,7 +179,6 @@
         </tr>`;
     } else {
       loadClassificationDetails();
-      loadSubTypes();
     }
 
     async function loadClassificationDetails() {
@@ -317,194 +311,9 @@
             <td colspan="2" class="py-6 text-red-600">تعذر تحميل البيانات، حاول مجدداً لاحقاً.</td>
           </tr>`;
       }
-    }
-
-    async function loadSubTypes() {
-      if (!typeParam || !subTypesSection) return;
-      try {
-        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-          ? 'http://localhost:3001'
-          : '';
-        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-
-        subTypesMeta.textContent = 'جاري تحميل البيانات...';
-        if (subTypesContainer) {
-          subTypesContainer.innerHTML = `
-            <div class="col-span-full text-center text-gray-500 text-sm">
-              جاري تحميل التصنيفات الفرعية...
-            </div>`;
-        }
-
-        let apiUrl = `${API_BASE}/api/dashboard/total/complaints/subtypes?type=${encodeURIComponent(typeParam)}`;
-        const urlParams = new URLSearchParams(window.location.search);
-        const hospitalId = urlParams.get('hospitalId');
-        if (hospitalId) {
-          apiUrl += `&hospitalId=${encodeURIComponent(hospitalId)}`;
-        }
-
-        const res = await fetch(apiUrl, { headers });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const json = await res.json();
-        const list = Array.isArray(json?.data) ? json.data : [];
-
-        if (!list.length) {
-          subTypesMeta.textContent = 'لا توجد بيانات للتصنيفات الفرعية';
-          subTypesContainer.innerHTML = `
-            <div class="col-span-full text-center text-gray-500">
-              لا توجد بيانات متاحة للتصنيفات الفرعية لهذا التصنيف.
-            </div>`;
-          subTypesSection.classList.remove('hidden');
-          return;
-        }
-
-        subTypesSection.classList.remove('hidden');
-        subTypesMeta.textContent = `عدد التصنيفات الفرعية: ${list.length}`;
-        renderSubTypes(list);
-      } catch (error) {
-        console.error('خطأ في تحميل التصنيفات الفرعية:', error);
-        if (subTypesContainer) {
-          subTypesContainer.innerHTML = `
-            <div class="col-span-full text-center text-red-600">
-              تعذر تحميل التصنيفات الفرعية، حاول لاحقاً.
-            </div>`;
-        }
-        if (subTypesSection) subTypesSection.classList.remove('hidden');
-        subTypesMeta.textContent = 'حدث خطأ أثناء تحميل البيانات';
-      }
-    }
-
-    function renderSubTypes(list) {
-      if (!subTypesContainer) return;
-      subTypesContainer.innerHTML = '';
-
-      // تدمير الرسوم السابقة
-      subTypeCharts.forEach(chart => chart.destroy());
-      subTypeCharts.clear();
-
-      list.forEach((item, index) => {
-        const chartId = `subTypeChart_${index}_${Date.now()}`;
-        const hospitals = Array.isArray(item.Hospitals) ? item.Hospitals : [];
-        const card = document.createElement('div');
-        card.className = 'p-5 border rounded-2xl shadow bg-white';
-
-        const totalHospitals = hospitals.length;
-        const totalComplaints = Number(item.Total || 0);
-
-        const hospitalCards = totalHospitals
-          ? hospitals.map(h => `
-              <div class="border border-gray-100 rounded-2xl p-4 bg-gray-50">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="font-semibold text-[#002B5B] text-sm">${h.HospitalName}</div>
-                  <div class="text-xs text-gray-500">الإجمالي: ${h.Total}</div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                  <div class="bg-sky-50 rounded-lg p-2 flex flex-col items-center">
-                    <span class="text-[11px] text-gray-500">مفتوح</span>
-                    <strong class="text-sky-600 text-base">${h.Open}</strong>
-                  </div>
-                  <div class="bg-emerald-50 rounded-lg p-2 flex flex-col items-center">
-                    <span class="text-[11px] text-gray-500">مغلق</span>
-                    <strong class="text-emerald-600 text-base">${h.Closed}</strong>
-                  </div>
-                  <div class="bg-amber-50 rounded-lg p-2 flex flex-col items-center">
-                    <span class="text-[11px] text-gray-500">قيد الإجراء</span>
-                    <strong class="text-amber-600 text-base">${h.InProgress}</strong>
-                  </div>
-                  <div class="bg-rose-50 rounded-lg p-2 flex flex-col items-center">
-                    <span class="text-[11px] text-gray-500">متأخر</span>
-                    <strong class="text-rose-600 text-base">${h.Delayed}</strong>
-                  </div>
-                </div>
-              </div>
-            `).join('')
-          : `<div class="col-span-full text-center text-gray-500">لا توجد بيانات مستشفيات لهذا التصنيف.</div>`;
-
-        card.innerHTML = `
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h3 class="font-bold text-[#002B5B] text-lg">${item.SubTypeName || 'تصنيف فرعي'}</h3>
-              <p class="text-sm text-gray-500">إجمالي البلاغات: ${totalComplaints} | عدد المستشفيات: ${totalHospitals}</p>
-            </div>
-            <span class="text-sm text-gray-500">ID: ${item.SubTypeID ?? '—'}</span>
-          </div>
-          <div class="relative h-56" id="${chartId}-wrapper">
-            <canvas id="${chartId}" height="220"></canvas>
-          </div>
-          <div class="mt-4 grid gap-4 md:grid-cols-2">${hospitalCards}</div>
-        `;
-        subTypesContainer.appendChild(card);
-
-        requestAnimationFrame(() => drawSubChart(chartId, hospitals));
-      });
-    }
-
-    function drawSubChart(id, hospitals = []) {
-      const canvas = document.getElementById(id);
-      if (!canvas) return;
-
-      const ctx = canvas.getContext('2d');
-
-      if (subTypeCharts.has(id)) {
-        subTypeCharts.get(id).destroy();
-      }
-
-      if (!hospitals.length) {
-        const wrapper = document.getElementById(`${id}-wrapper`);
-        if (wrapper) {
-          wrapper.innerHTML = `
-            <div class="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
-              لا توجد بلاغات مستشفى لعرضها في الرسم البياني.
-            </div>`;
-        }
-        return;
-      }
-
-      const labels = hospitals.map(h => h.HospitalName);
-      const totals = hospitals.map(h => Number(h.Total) || 0);
-
-      const chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            data: totals,
-            backgroundColor: '#0ea5e9',
-            borderRadius: 10,
-            barThickness: 28
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: ctx => `${ctx.label}: ${ctx.formattedValue}`
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: {
-                color: '#475569',
-                font: { family: 'Tajawal', size: 12 },
-                autoSkip: false
-              }
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(148, 163, 184, 0.2)' },
-              ticks: { color: '#475569', precision: 0, font: { family: 'Tajawal', size: 12 } }
-            }
-          }
-        }
-      });
-
-      subTypeCharts.set(id, chart);
+      
+      // جلب التصنيفات الفرعية بعد تحميل البيانات الرئيسية
+      loadSubTypes();
     }
 
     function renderHospitalCharts(hospitals) {
@@ -880,6 +689,215 @@
       const hospitalId = item.hospitalId ? `&hospitalId=${encodeURIComponent(item.hospitalId)}` : '';
       const url = `open.html?type=${encodeURIComponent(typeParam)}&label=${encodeURIComponent(labelParam)}${hospitalId}`;
       window.location.href = url;
+    }
+
+    // ========== جلب وعرض التصنيفات الفرعية ==========
+    let subTypeChartInstances = [];
+
+    async function loadSubTypes() {
+      if (!typeParam) return;
+
+      try {
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+          ? 'http://localhost:3001'
+          : '';
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        // جلب معلومات المستخدم لتحديد دور المستخدم
+        const urlParams = new URLSearchParams(window.location.search);
+        let hospitalId = urlParams.get('hospitalId');
+        
+        let currentUser = null;
+        let isClusterManager = false;
+        let userHospitalId = null;
+        
+        try {
+          const userRes = await fetch(`${API_BASE}/api/auth/me`, { headers });
+          if (userRes.ok) {
+            currentUser = await userRes.json();
+            isClusterManager = !!(currentUser?.RoleID === 1 || currentUser?.IsClusterManager === true);
+            userHospitalId = currentUser?.HospitalID || currentUser?.hospitalId || null;
+          }
+        } catch (error) {
+          console.warn('تحذير: لم يتم تحميل بيانات المستخدم:', error);
+        }
+
+        // بناء URL مع hospitalId حسب دور المستخدم
+        let apiUrl = `${API_BASE}/api/dashboard/total/complaints/subtypes?type=${encodeURIComponent(typeParam)}`;
+        
+        if (!hospitalId) {
+          if (!isClusterManager && userHospitalId) {
+            hospitalId = userHospitalId;
+            apiUrl += `&hospitalId=${encodeURIComponent(hospitalId)}`;
+          }
+        } else {
+          apiUrl += `&hospitalId=${encodeURIComponent(hospitalId)}`;
+        }
+
+        const res = await fetch(apiUrl, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+        const list = Array.isArray(json?.data) ? json.data : [];
+
+        if (list.length === 0) {
+          document.getElementById('subTypesSection')?.classList.add('hidden');
+          return;
+        }
+
+        document.getElementById('subTypesSection')?.classList.remove('hidden');
+        const subTypesMeta = document.getElementById('subTypesMeta');
+        if (subTypesMeta) {
+          subTypesMeta.textContent = `عدد التصنيفات الفرعية: ${list.length}`;
+        }
+
+        renderSubTypes(list);
+      } catch (err) {
+        console.error('خطأ في تحميل التصنيفات الفرعية:', err);
+        document.getElementById('subTypesSection')?.classList.add('hidden');
+      }
+    }
+
+    function renderSubTypes(list) {
+      const container = document.getElementById('subTypesContainer');
+      if (!container) return;
+
+      // تدمير الرسوم السابقة
+      subTypeChartInstances.forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      subTypeChartInstances = [];
+
+      container.innerHTML = '';
+
+      list.forEach((item, index) => {
+        const id = `subChart_${index}`;
+        const cardId = `subCard_${index}`;
+        const hospitalsList = Array.isArray(item.Hospitals) ? item.Hospitals : [];
+
+        // إنشاء HTML للكارت
+        container.innerHTML += `
+          <div id="${cardId}" class="p-5 border rounded-2xl shadow bg-white hover:shadow-lg transition">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold text-[#002B5B] text-lg">${item.SubTypeName}</h3>
+            </div>
+            
+            <!-- الرسم البياني -->
+            <div class="relative mb-6" style="min-height: 250px;">
+              <canvas id="${id}"></canvas>
+            </div>
+            
+            <!-- تفاصيل المستشفيات -->
+            <div id="hospitalsDetails_${index}" class="mt-4 space-y-3">
+              ${hospitalsList.length > 0 ? hospitalsList.map((hospital, hIndex) => `
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-lg">🏥</span>
+                    <h4 class="font-semibold text-[#002B5B]">${hospital.HospitalName}</h4>
+                    <span class="text-xs text-gray-500">(إجمالي: ${hospital.Total || 0})</span>
+                  </div>
+                  <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div class="p-2 bg-blue-50 rounded">
+                      <div class="text-gray-600 mb-1">مفتوح</div>
+                      <strong class="text-blue-600 text-sm">${hospital.Open || 0}</strong>
+                    </div>
+                    <div class="p-2 bg-green-50 rounded">
+                      <div class="text-gray-600 mb-1">مغلق</div>
+                      <strong class="text-green-600 text-sm">${hospital.Closed || 0}</strong>
+                    </div>
+                    <div class="p-2 bg-yellow-50 rounded">
+                      <div class="text-gray-600 mb-1">قيد الإجراء</div>
+                      <strong class="text-yellow-600 text-sm">${hospital.InProgress || 0}</strong>
+                    </div>
+                    <div class="p-2 bg-red-50 rounded">
+                      <div class="text-gray-600 mb-1">متأخر</div>
+                      <strong class="text-red-600 text-sm">${hospital.Delayed || 0}</strong>
+                    </div>
+                  </div>
+                </div>
+              `).join('') : '<p class="text-gray-500 text-sm text-center">لا توجد بيانات للمستشفيات</p>'}
+            </div>
+          </div>
+        `;
+
+        // رسم الرسم البياني بعد إنشاء الكارت
+        setTimeout(() => drawSubChart(id, item, index), 100);
+      });
+    }
+
+    function drawSubChart(id, item, index) {
+      const ctx = document.getElementById(id)?.getContext('2d');
+      if (!ctx) return;
+
+      const hospitals = Array.isArray(item.Hospitals) ? item.Hospitals : [];
+      
+      if (hospitals.length === 0) {
+        // إذا لم توجد مستشفيات، نعرض رسالة
+        return;
+      }
+
+      // إعداد البيانات للرسم البياني
+      const labels = hospitals.map(h => h.HospitalName);
+      const totals = hospitals.map(h => h.Total || 0);
+
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'عدد البلاغات',
+            data: totals,
+            backgroundColor: '#2D75C7',
+            borderRadius: 8,
+            borderSkipped: false,
+            barThickness: 40
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'x',
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#0f172a',
+              font: { size: 12, weight: 'bold' },
+              formatter: value => value > 0 ? value : ''
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `عدد البلاغات: ${ctx.formattedValue}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                color: '#1f2937',
+                font: { size: 11 },
+                maxRotation: 45,
+                minRotation: 45
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(148, 163, 184, 0.15)' },
+              ticks: {
+                color: '#475569',
+                font: { size: 11 },
+                precision: 0
+              }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+
+      subTypeChartInstances[index] = chart;
     }
   </script>
 </body>

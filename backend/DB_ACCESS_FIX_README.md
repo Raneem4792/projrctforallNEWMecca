@@ -21,7 +21,7 @@ ER_ACCESS_DENIED_ERROR: Access denied for user ''@'localhost' (using password: N
 قم بتشغيل السكربت التالي على القاعدة المركزية:
 
 ```bash
-mysql -u root -p hospitals_mecca4 < backend/sql/cleanup_hospitals_db_config.sql
+mysql -u root -p hospitals_mecca3 < backend/sql/cleanup_hospitals_db_config.sql
 ```
 
 أو قم بتشغيله يدوياً من Workbench/phpMyAdmin.
@@ -30,7 +30,7 @@ mysql -u root -p hospitals_mecca4 < backend/sql/cleanup_hospitals_db_config.sql
 
 1. **تأكد من تشغيل السكربت**: 
    ```bash
-   mysql -u root -p hospitals_mecca4 < backend/sql/cleanup_hospitals_db_config.sql
+   mysql -u root -p hospitals_mecca3 < backend/sql/cleanup_hospitals_db_config.sql
    ```
 
 2. **أعد تشغيل السيرفر**:
