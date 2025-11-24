@@ -1,5 +1,15 @@
 // public/submit-complaint/submit-complaint.js
 
+// قائمة التصنيفات اللي تعتبر بلاغها "عاجل" تلقائياً
+const URGENT_TYPES = [
+  "سوء معاملة",
+  "سوء معامله",
+  "سوء تعامل",
+  "الأدوية",
+  "الادوية",
+  "مشاكل الأدوية"
+];
+
 // عناصر الصفحة
 const els = {
   form: document.getElementById('complaintForm') || document.querySelector('form'),
@@ -831,7 +841,50 @@ function buildFormData() {
     fd.append('ProcessingDuration', processingDuration);
   }
   
-  // تم حذف إرسال PriorityCode - يتم تحديده تلقائياً في الباك-إند
+  // *********************
+  // تحديد الأولوية تلقائياً حسب نوع الشكوى
+  // *********************
+  
+  let priority = "MEDIUM"; // القيمة الافتراضية
+  
+  try {
+    // اسم التصنيف الرئيسي
+    const selectedTypeText =
+      els.complaintType?.options[els.complaintType.selectedIndex]?.textContent?.trim() || "";
+    
+    // اسم التصنيف الفرعي (إذا كان موجوداً)
+    const selectedSubTypeText =
+      (els.subType && els.subType.options && els.subType.selectedIndex >= 0)
+        ? els.subType.options[els.subType.selectedIndex]?.textContent?.trim() || ""
+        : "";
+    
+    // لو أي واحد منهم موجود ضمن القائمة — يكون عاجل
+    const isUrgentType = URGENT_TYPES.some(t => selectedTypeText.includes(t));
+    const isUrgentSubType = selectedSubTypeText && URGENT_TYPES.some(t => selectedSubTypeText.includes(t));
+    
+    if (isUrgentType || isUrgentSubType) {
+      priority = "URGENT";
+      console.log('🚨 [Auto Priority] تم تعيين الأولوية إلى URGENT', {
+        type: selectedTypeText,
+        subType: selectedSubTypeText || '(غير محدد)',
+        reason: isUrgentType ? 'التصنيف الرئيسي' : 'التصنيف الفرعي'
+      });
+    } else {
+      console.log('ℹ️ [Auto Priority] الأولوية الافتراضية: MEDIUM', {
+        type: selectedTypeText,
+        subType: selectedSubTypeText || '(غير محدد)'
+      });
+    }
+    
+    // إضافة PriorityCode إلى الفورم
+    fd.append("PriorityCode", priority);
+    
+  } catch (e) {
+    console.warn("⚠️ [Auto Priority] خطأ أثناء تحديد الأولوية:", e);
+    // في حالة الخطأ، نستخدم القيمة الافتراضية
+    fd.append("PriorityCode", "MEDIUM");
+  }
+  
   fd.append('SubmissionType', '937');
   
   // المرفقات العادية
@@ -1410,14 +1463,30 @@ function setupPriorityPreview() {
         }
         
         const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
-        const res = await fetch('http://localhost:3001/api/utils/priority-detect', {
+        const hospitalId = getCurrentHospitalId();
+        
+        // بناء URL مع hospitalId في query parameter
+        // API_BASE معرف في أعلى الملف كـ 'http://localhost:3001/api'
+        const apiBase = API_BASE.replace('/api', ''); // إزالة '/api' لأننا نضيفه لاحقاً
+        
+        const url = `${apiBase}/api/utils/priority-detect${hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : ''}`;
+        
+        const res = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            ...(hospitalId ? { 'x-hospital-id': String(hospitalId) } : {})
           },
           body: JSON.stringify({ description })
         });
+        
+        if (!res.ok) {
+          // إذا فشل الطلب، لا نعرض خطأ (لأننا نحدد الأولوية محلياً بناءً على التصنيف)
+          console.warn('⚠️ [Priority Preview] فشل في جلب معاينة الأولوية:', res.status);
+          previewEl.textContent = 'الأولوية المتوقعة: —';
+          return;
+        }
         
         const data = await res.json();
         if (data.success) {
@@ -1453,7 +1522,8 @@ function setupPriorityPreview() {
           previewEl.className = 'text-sm text-gray-600 mt-2 block';
         }
       } catch (error) {
-        console.warn('خطأ في معاينة الأولوية:', error);
+        // لا نعرض خطأ للمستخدم (لأننا نحدد الأولوية محلياً بناءً على التصنيف)
+        console.warn('⚠️ [Priority Preview] خطأ في معاينة الأولوية (سيتم تحديدها تلقائياً عند الإرسال):', error.message);
         previewEl.textContent = 'الأولوية المتوقعة: —';
         previewEl.className = 'text-sm text-gray-600 mt-2 block';
       }
