@@ -18,8 +18,8 @@ if (missingVars.length > 0) {
   console.error('\nأضف هذه المتغيرات إلى ملف .env:');
   console.error('CENTRAL_DB_HOST=127.0.0.1');
   console.error('CENTRAL_DB_USER=root');
-  console.error('CENTRAL_DB_PASS=SamarAmer12345@');
-  console.error('CENTRAL_DB_NAME=hospitals_mecca3\n');
+  console.error('CENTRAL_DB_PASS=Raneem11');
+  console.error('CENTRAL_DB_NAME=hospitals_mecca4\n');
   // لا نوقف التطبيق، فقط تحذير
 }
 
@@ -76,6 +76,7 @@ import { fileURLToPath } from 'url';
 import improvementPressganeyRoutes from './routes/improvementPressganey.routes.js';
 import iconsRoutes from './routes/icons.routes.js';
 import dashboardUrgentRoutes from './routes/dashboardUrgent.js';
+import employeeTargetsRoutes from './routes/employeeTargets.js';
 import { getCentralPool } from './db/centralPool.js';
 
 // تأكيد تحميل reports routes
@@ -274,6 +275,7 @@ app.use('/api/logs', logsRoutes);
 app.use('/api/trash', trashRoutes);
 app.use('/api/dashboard/total', dashboardTotalRouter);
 app.use('/api/dashboard/urgent', dashboardUrgentRoutes);
+app.use('/api/complaints', employeeTargetsRoutes);
 app.use('/api/departments', departmentsNewRoutes);
 app.use('/api/complaints-list', complaintsListRoutes);
 app.use('/api', hospitalTripsRoutes);

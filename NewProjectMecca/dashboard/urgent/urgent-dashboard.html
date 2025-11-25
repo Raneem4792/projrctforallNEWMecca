@@ -123,7 +123,7 @@
           </p>
 
           <div class="relative" style="height:380px;" dir="ltr">
-            <canvas id="chartMistreatmentTime" style="cursor: pointer;"></canvas>
+            <canvas id="chartMistreatmentTime"></canvas>
           </div>
         </div>
       </div>
@@ -201,25 +201,6 @@
           <p class="text-sm text-gray-500 mb-4">
             يعرض الموظفين الذين وردت عليهم أكبر عدد من بلاغات سوء التعامل
           </p>
-          <div class="flex flex-wrap items-center gap-4 mb-4">
-            <div class="flex items-center gap-2">
-              <label for="mistreatmentEmployeesHospital" class="text-sm text-gray-600">المستشفى:</label>
-              <select id="mistreatmentEmployeesHospital"
-                class="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
-                <option value="all">جميع المستشفيات</option>
-              </select>
-            </div>
-            <div class="flex items-center gap-2">
-              <label for="mistreatmentEmployeesCount" class="text-sm text-gray-600">Top:</label>
-              <select id="mistreatmentEmployeesCount"
-                class="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
-                <option value="5">5</option>
-                <option value="8" selected>8</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-              </select>
-            </div>
-          </div>
           <div class="relative w-full h-[320px]" data-top-employees-wrapper dir="ltr">
             <canvas id="chartTopEmployeesMistreatment" class="h-full w-full"></canvas>
             <div id="topEmployeesMistreatmentEmpty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-gray-400 text-sm">
@@ -234,6 +215,36 @@
       </div>
     </section>
   </main>
+
+  <!-- Modal لعرض معلومات الموظف -->
+  <div id="employeeDetailsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="employee-modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <!-- Overlay -->
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeEmployeeDetailsModal()"></div>
+
+      <!-- Modal panel -->
+      <div class="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full" dir="rtl">
+        <div class="bg-white px-6 pt-6 pb-4">
+          <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
+            <h3 class="text-2xl font-bold" id="employee-modal-title" style="color:#002B5B">
+              تفاصيل الموظف
+            </h3>
+            <button onclick="closeEmployeeDetailsModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+              <span class="sr-only">إغلاق</span>
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Employee Details Content -->
+          <div id="employeeDetailsContent" class="space-y-4">
+            <!-- سيتم ملؤها بـ JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal لعرض قائمة البلاغات -->
   <div id="complaintsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">

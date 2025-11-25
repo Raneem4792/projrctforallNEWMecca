@@ -168,6 +168,8 @@ function renderError(message) {
   containers.forEach(c => (c.textContent = message));
 }
 
+
+
 let employeesMistreatmentAll = [];
 let employeesMistreatmentByHospital = new Map();
 let topEmployeesChart = null;
@@ -248,6 +250,21 @@ function renderTopEmployeesChart() {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
+      onClick: (event, elements) => {
+        if (elements && elements.length > 0) {
+          const element = elements[0];
+          const index = element.index;
+          const employeeName = labels[index];
+          const complaintCount = values[index];
+          
+          // فتح modal تفاصيل الموظف
+          openEmployeeDetailsModal(employeeName, complaintCount);
+        }
+      },
+      onHover: (event, elements) => {
+        // تغيير شكل المؤشر عند التمرير
+        event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+      },
       plugins: {
         legend: { display: false },
         title: {
@@ -259,7 +276,8 @@ function renderTopEmployeesChart() {
         },
         tooltip: {
           callbacks: {
-            label: (ctx) => ` ${ctx.label} : ${ctx.raw} بلاغ `
+            label: (ctx) => ` ${ctx.label} : ${ctx.raw} بلاغ `,
+            afterBody: () => 'انقر لعرض التفاصيل'
           }
         }
       },
@@ -301,11 +319,17 @@ async function loadUrgent() {
     }
 
     const data = await response.json();
+    console.log('📊 Received data:', data);
+    
     const hospitals = safeArray(data.hospitals);
     const employees = safeArray(data.employees);
     const weekly = safeArray(data.weekly);
     const departments = safeArray(data.departments);
     const mistreatmentTime = safeArray(data.mistreatmentClosingTime);
+    
+    console.log('🏥 Hospitals:', hospitals.length);
+    console.log('👥 Employees:', employees.length);
+    console.log('⏱️ Mistreatment time data:', mistreatmentTime.length);
 
     // تسجيل للتشخيص
     if (mistreatmentTime.length > 0) {
@@ -365,18 +389,6 @@ async function loadUrgent() {
       }
     });
 
-    createChart('chartEmployees', {
-      type: 'bar',
-      data: {
-        labels: employees.map(e => e.name || 'غير معروف'),
-        datasets: stylizeBarDatasets([{
-          label: 'بلاغات',
-          data: employees.map(e => e.count ?? 0),
-          backgroundColor: '#ef4444'
-        }])
-      },
-      options: buildBarOptions({ horizontal: true })
-    });
 
     createChart('chartUrgentOpenClosed', {
       type: 'bar',
@@ -415,162 +427,161 @@ async function loadUrgent() {
       }
     });
 
-    createChart('chartWeekly', {
-      type: 'line',
-      data: {
-        labels: weekly.map(d => d.day || ''),
-        datasets: [{
-          label: 'بلاغات حرجة',
-          data: weekly.map(d => d.count ?? 0),
-          borderColor: '#b91c1c',
-          tension: 0.45
-        }]
-      }
-    });
 
-    createChart('chartDepartments', {
-      type: 'bar',
-      data: {
-        labels: departments.map(d => d.name || 'غير محدد'),
-        datasets: stylizeBarDatasets([{
-          label: 'عدد البلاغات الحرجة',
-          data: departments.map(d => d.count ?? 0),
-          backgroundColor: '#f87171'
-        }])
-      },
-      options: buildBarOptions()
-    });
 
     if (mistreatmentTime.length) {
-      const mistreatmentChart = createChart('chartMistreatmentTime', {
+      const cleanData = mistreatmentTime.map(h => ({
+        name: h.name || 'غير محدد',
+        count: Number(h.count) || 0,
+        avgHours: Number(h.avgHours) || 0,
+        id: h.id
+      }));
+
+      createChart('chartMistreatmentTime', {
         type: 'bar',
         data: {
-          labels: mistreatmentTime.map(h => h.name || 'غير محدد'),
+          labels: cleanData.map(h => h.name),
           datasets: [
             {
               label: 'عدد بلاغات سوء التعامل',
-              data: mistreatmentTime.map(h => h.count ?? 0),
-              backgroundColor: '#dc2626',
-              yAxisID: 'y'
+              data: cleanData.map(h => h.count),
+              backgroundColor: 'rgba(220, 38, 38, 0.8)',
+              borderColor: '#dc2626',
+              borderWidth: 2,
+              borderRadius: 8,
+              borderSkipped: false,
+              yAxisID: 'y',
+              barThickness: 40,
+              maxBarThickness: 50
             },
             {
-              label: 'متوسط زمن الإغلاق بالساعات',
-              data: mistreatmentTime.map(h => h.avgHours ?? 0),
-              borderColor: '#f59e0b',
-              backgroundColor: '#f59e0b',
+              label: 'متوسط زمن الإغلاق (ساعة)',
+              data: cleanData.map(h => h.avgHours),
               type: 'line',
-              yAxisID: 'y1',
-              tension: 0.35,
-              fill: false,
-              borderWidth: 3,
-              pointRadius: 6,
-              pointHoverRadius: 8,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderWidth: 4,
               pointBackgroundColor: '#f59e0b',
-              datalabels: {
-                align: 'top',
-                anchor: 'end',
-                color: '#f59e0b',
-                font: { family: FONT_FAMILY, weight: 'bold', size: 14 },
-                formatter: (value) => (value ? `${value} س` : '')
-              }
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 3,
+              pointRadius: 8,
+              pointHoverRadius: 12,
+              tension: 0.4,
+              fill: true,
+              yAxisID: 'y1'
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
           onClick: (event, elements) => {
             if (elements && elements.length > 0) {
-              // الحصول على الفهرس من أول عنصر تم النقر عليه
               const element = elements[0];
               const index = element.index;
-              const hospital = mistreatmentTime[index];
+              const hospital = cleanData[index];
               if (hospital && hospital.id) {
                 openComplaintsModal(hospital.id, hospital.name);
               }
             }
           },
           onHover: (event, elements) => {
-            // تغيير شكل المؤشر عند التمرير
             event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
           },
           plugins: {
             legend: {
               position: 'top',
               labels: {
-                font: { family: FONT_FAMILY, weight: 600 },
-                color: '#0f172a'
+                font: { family: FONT_FAMILY, size: 14, weight: 600 },
+                color: '#1f2937',
+                padding: 20,
+                usePointStyle: true,
+                pointStyle: 'rectRounded'
               }
             },
             tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              titleColor: '#ffffff',
+              bodyColor: '#ffffff',
+              borderColor: '#374151',
+              borderWidth: 1,
+              cornerRadius: 12,
+              displayColors: true,
               callbacks: {
-                label: (ctx) => {
-                  const value = ctx.datasetIndex === 0
-                    ? formatArabicNumber(ctx.raw)
-                    : `${Number(ctx.raw ?? 0).toFixed(1)} ساعة`;
-                  return ` ${ctx.dataset.label}: ${value} `;
+                title: (tooltipItems) => {
+                  return `🏥 ${tooltipItems[0].label}`;
                 },
-                afterBody: (items) => {
-                  return 'انقر لعرض البلاغات';
-                }
-              }
-            },
-            datalabels: {
-              color: '#0f172a',
-              font: { family: FONT_FAMILY, weight: 600, size: 12 },
-              align: (ctx) => (ctx.dataset.type === 'line' ? 'top' : 'end'),
-              anchor: (ctx) => (ctx.dataset.type === 'line' ? 'end' : 'end'),
-              formatter: (value, ctx) => {
-                if (ctx.dataset.type === 'line') {
-                  const val = Number(value ?? 0);
-                  return val ? `${val.toFixed(1)}س` : '';
-                }
-                return value ? formatArabicNumber(value) : '';
+                label: (ctx) => {
+                  if (ctx.datasetIndex === 0) {
+                    return `🔴 عدد البلاغات: ${formatArabicNumber(ctx.raw)}`;
+                  }
+                  return `⏱️ متوسط الإغلاق: ${Number(ctx.raw).toFixed(1)} ساعة`;
+                },
+                afterBody: () => '👆 انقر لعرض تفاصيل البلاغات'
               }
             }
           },
           scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                color: '#374151',
+                font: { family: FONT_FAMILY, size: 12, weight: 600 },
+                maxRotation: 45,
+                minRotation: 0
+              }
+            },
             y: {
               beginAtZero: true,
-              grid: { color: GRID_COLOR, drawBorder: false },
+              position: 'left',
+              grid: { 
+                color: 'rgba(156, 163, 175, 0.3)',
+                drawBorder: false 
+              },
               ticks: {
-                color: '#475569',
-                font: { family: FONT_FAMILY },
-                precision: 0
+                color: '#dc2626',
+                font: { family: FONT_FAMILY, size: 11, weight: 600 },
+                stepSize: 1,
+                callback: function(value) {
+                  return formatArabicNumber(value);
+                }
               },
               title: {
                 display: true,
-                text: 'عدد البلاغات',
-                color: '#0f172a',
-                font: { family: FONT_FAMILY, weight: 600 }
+                text: '🔴 عدد البلاغات',
+                color: '#dc2626',
+                font: { family: FONT_FAMILY, size: 14, weight: 'bold' },
+                padding: { bottom: 10 }
               }
             },
             y1: {
-              position: 'right',
               beginAtZero: true,
-              max: 48,
+              position: 'right',
               grid: { drawOnChartArea: false },
               ticks: {
-                color: '#f97316',
-                font: { family: FONT_FAMILY },
-                stepSize: 4,
-                callback: (value) => `${value} س`
+                color: '#f59e0b',
+                font: { family: FONT_FAMILY, size: 11, weight: 600 },
+                stepSize: 2,
+                callback: function(value) {
+                  return `${value}س`;
+                }
               },
               title: {
                 display: true,
-                text: 'متوسط الساعات',
-                color: '#f97316',
-                font: { family: FONT_FAMILY, weight: 600 }
+                text: '⏱️ متوسط الإغلاق (ساعة)',
+                color: '#f59e0b',
+                font: { family: FONT_FAMILY, size: 14, weight: 'bold' },
+                padding: { bottom: 10 }
               }
-            },
-            x: {
-              ticks: {
-                color: '#0f172a',
-                font: { family: FONT_FAMILY, weight: 600 }
-              },
-              grid: { display: false }
             }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
           }
         }
       });
@@ -1192,12 +1203,359 @@ async function loadAllUrgentComplaintsByStatus(statusType) {
   }
 }
 
+// ========================================
+// Modal تفاصيل الموظف
+// ========================================
+
+async function openEmployeeDetailsModal(employeeName, complaintCount) {
+  const modal = document.getElementById('employeeDetailsModal');
+  const content = document.getElementById('employeeDetailsContent');
+  
+  // إظهار الـ Modal
+  modal.classList.remove('hidden');
+  
+  // إظهار حالة التحميل
+  content.innerHTML = `
+    <div class="border-l-4 border-red-500 bg-gray-50 p-4 mb-4">
+      <h4 class="text-xl font-bold text-gray-800 mb-1">${employeeName}</h4>
+      <p class="text-sm text-gray-600">بيانات الموظف المبلغ عليه</p>
+    </div>
+    
+    <div class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600"></div>
+      <p class="mt-4 text-gray-600">جاري تحميل البلاغات...</p>
+    </div>
+  `;
+  
+  try {
+    // جلب بلاغات الموظف
+    const complaints = await loadEmployeeComplaints(employeeName);
+    
+    // إنشاء محتوى تفاصيل الموظف مع البلاغات
+    content.innerHTML = `
+      <div class="border-l-4 border-red-500 bg-gray-50 p-4 mb-4">
+        <h4 class="text-xl font-bold text-gray-800 mb-1">${employeeName}</h4>
+        <p class="text-sm text-gray-600">بيانات الموظف المبلغ عليه</p>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2 mb-4">
+        <div class="border border-gray-200 rounded-lg p-4">
+          <h5 class="font-semibold text-gray-700 mb-2">عدد البلاغات</h5>
+          <p class="text-2xl font-bold text-red-600">${complaintCount}</p>
+          <p class="text-sm text-gray-500">بلاغ سوء تعامل</p>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-4">
+          <h5 class="font-semibold text-gray-700 mb-2">مستوى الأولوية</h5>
+          <p class="text-lg font-bold ${complaintCount >= 5 ? 'text-red-600' : complaintCount >= 3 ? 'text-yellow-600' : 'text-green-600'}">
+            ${complaintCount >= 5 ? 'عالي جداً' : complaintCount >= 3 ? 'عالي' : 'متوسط'}
+          </p>
+          <p class="text-sm text-gray-500">حسب عدد البلاغات</p>
+        </div>
+      </div>
+
+      <div class="border border-gray-200 rounded-lg p-4 mb-4">
+        <h5 class="font-semibold text-gray-700 mb-3">الإحصائيات</h5>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">نسبة البلاغات من الإجمالي:</span>
+            <span class="font-medium text-gray-800" id="employeePercentage">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">الترتيب بين الموظفين:</span>
+            <span class="font-medium text-gray-800" id="employeeRank">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">حالة المتابعة:</span>
+            <span class="font-medium ${complaintCount >= 3 ? 'text-red-600' : 'text-green-600'}">
+              ${complaintCount >= 3 ? 'يحتاج متابعة' : 'طبيعي'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="border border-gray-200 rounded-lg p-4 mb-4">
+        <h5 class="font-semibold text-gray-700 mb-2">جميع البلاغات المسجلة ضد هذا الموظف</h5>
+        <p class="text-xs text-gray-500 mb-3">عرض جميع البلاغات (مفتوحة ومغلقة) المسجلة ضد الموظف: ${employeeName}</p>
+        <div class="max-h-60 overflow-y-auto space-y-3">
+          ${complaints.length > 0 ? `
+            <div class="text-xs text-blue-600 mb-2 font-medium">
+              تم العثور على ${complaints.length} بلاغ مسجل ضد هذا الموظف
+            </div>
+          ` + complaints.map((complaint, index) => `
+            <div class="border border-gray-100 rounded-lg p-3 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all duration-200" 
+                 onclick="openComplaintDetailsFromEmployee('${complaint.ticket}', '${complaint.id}')">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-gray-800">${complaint.ticket || `بلاغ #${index + 1}`}</span>
+                  ${complaint.priority && (complaint.priority.toUpperCase() === 'URGENT' || complaint.priority.toUpperCase() === 'HIGH') ? 
+                    '<span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-600">عاجل</span>' : ''}
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs px-2 py-1 rounded-full ${getStatusColor(complaint.status)}">
+                    ${getStatusText(complaint.status)}
+                  </span>
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600 mb-2">${complaint.description || 'لا يوجد وصف'}</p>
+              <div class="flex justify-between text-xs text-gray-500">
+                <span>المستشفى: ${complaint.hospitalName || 'غير محدد'}</span>
+                <span>${formatDate(complaint.createdAt) || 'تاريخ غير محدد'}</span>
+              </div>
+              <div class="text-xs text-blue-600 mt-2 font-medium">انقر لعرض التفاصيل</div>
+            </div>
+          `).join('') : '<p class="text-gray-500 text-center py-4">لا توجد بلاغات مسجلة ضد هذا الموظف في النظام</p>'}
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeEmployeeDetailsModal()" 
+          class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+          إغلاق
+        </button>
+      </div>
+    `;
+    
+    // حساب النسبة والترتيب
+    calculateEmployeeStats(employeeName, complaintCount);
+    
+  } catch (error) {
+    console.error('خطأ في تحميل بلاغات الموظف:', error);
+    content.innerHTML = `
+      <div class="border-l-4 border-red-500 bg-gray-50 p-4 mb-4">
+        <h4 class="text-xl font-bold text-gray-800 mb-1">${employeeName}</h4>
+        <p class="text-sm text-gray-600">بيانات الموظف المبلغ عليه</p>
+      </div>
+      
+      <div class="text-center py-8">
+        <p class="text-red-600">حدث خطأ في تحميل البلاغات</p>
+        <button onclick="closeEmployeeDetailsModal()" 
+          class="mt-4 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+          إغلاق
+        </button>
+      </div>
+    `;
+  }
+}
+
+function closeEmployeeDetailsModal() {
+  const modal = document.getElementById('employeeDetailsModal');
+  modal.classList.add('hidden');
+}
+
+function calculateEmployeeStats(employeeName, complaintCount) {
+  // حساب النسبة من إجمالي البلاغات
+  const totalComplaints = employeesMistreatmentAll.reduce((sum, emp) => sum + (emp.count || 0), 0);
+  const percentage = totalComplaints > 0 ? ((complaintCount / totalComplaints) * 100).toFixed(1) : 0;
+  
+  // حساب الترتيب
+  const sortedEmployees = [...employeesMistreatmentAll].sort((a, b) => (b.count || 0) - (a.count || 0));
+  const rank = sortedEmployees.findIndex(emp => (emp.label || emp.name) === employeeName) + 1;
+  
+  // تحديث القيم
+  setTimeout(() => {
+    const percentageEl = document.getElementById('employeePercentage');
+    const rankEl = document.getElementById('employeeRank');
+    
+    if (percentageEl) percentageEl.textContent = `${percentage}%`;
+    if (rankEl) rankEl.textContent = `#${rank} من ${sortedEmployees.length}`;
+  }, 100);
+}
+
+async function loadEmployeeComplaints(employeeName) {
+  try {
+    console.log(`🎯 البحث عن بلاغات الموظف: "${employeeName}"`);
+    
+    // جلب البلاغات من جدول complaint_targets
+    const response = await authFetch(`${API_BASE}/api/complaints/employee-targets?employeeName=${encodeURIComponent(employeeName)}`);
+    
+    if (!response.ok) {
+      // إذا لم يوجد API مخصص، استخدم الطريقة القديمة
+      console.log('⚠️ API مخصص غير متوفر، استخدام الطريقة البديلة...');
+      return await loadEmployeeComplaintsLegacy(employeeName);
+    }
+
+    const data = await response.json();
+    const employeeTargets = safeArray(data.items || data.targets || []);
+
+    console.log(`📊 تم جلب ${employeeTargets.length} بلاغ من جدول complaint_targets`);
+
+    if (employeeTargets.length === 0) {
+      console.log('📭 لا توجد بلاغات في جدول complaint_targets، جرب الطريقة البديلة...');
+      return await loadEmployeeComplaintsLegacy(employeeName);
+    }
+
+    // تنسيق البيانات من جدول complaint_targets
+    const complaints = employeeTargets.map(target => ({
+      ticket: target.TicketNumber || target.ticket || '',
+      description: target.Description || target.description || '',
+      status: target.StatusCode || target.status || 'open',
+      hospitalName: target.HospitalName || target.hospitalName || '',
+      createdAt: target.CreatedAt || target.createdAt || '',
+      id: target.ComplaintID || target.id,
+      priority: target.PriorityCode || target.priority || '',
+      targetEmployeeName: target.TargetEmployeeName,
+      targetDepartmentName: target.TargetDepartmentName
+    }));
+
+    console.log(`✅ تم العثور على ${complaints.length} بلاغ للموظف ${employeeName}`);
+
+    // ترتيب حسب التاريخ (الأحدث أولاً)
+    return complaints.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  } catch (error) {
+    console.error('خطأ في loadEmployeeComplaints:', error);
+    // في حالة الخطأ، جرب الطريقة القديمة
+    return await loadEmployeeComplaintsLegacy(employeeName);
+  }
+}
+
+// الطريقة القديمة كـ fallback
+async function loadEmployeeComplaintsLegacy(employeeName) {
+  try {
+    console.log('🔄 استخدام الطريقة القديمة لجلب البلاغات...');
+    
+    // جلب جميع البلاغات من API (مفتوحة ومغلقة)
+    const response = await authFetch(`${API_BASE}/api/complaints/history?status=ALL&pageSize=500`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const allComplaints = safeArray(data.items || []);
+
+    console.log(`📊 تم جلب ${allComplaints.length} بلاغ من النظام`);
+
+    // فلترة البلاغات الخاصة بالموظف المحدد
+    const employeeComplaints = allComplaints.filter(complaint => {
+      const targetEmployee = complaint.targetEmployeeName || complaint.TargetEmployeeName || '';
+      
+      // مطابقة دقيقة أو جزئية
+      const exactMatch = targetEmployee.trim().toLowerCase() === employeeName.trim().toLowerCase();
+      const partialMatch = targetEmployee.toLowerCase().includes(employeeName.toLowerCase());
+      
+      return exactMatch || partialMatch;
+    });
+
+    console.log(`🔍 تم العثور على ${employeeComplaints.length} بلاغ للموظف ${employeeName}`);
+
+    // تنسيق البيانات
+    return employeeComplaints
+      .map(complaint => ({
+        ticket: complaint.ticket || complaint.TicketNumber || '',
+        description: complaint.Description || complaint.description || '',
+        status: complaint.status || complaint.StatusCode || 'open',
+        hospitalName: complaint.hospitalName || complaint.HospitalName || '',
+        createdAt: complaint.createdAt || complaint.CreatedAt || '',
+        id: complaint.id || complaint.ComplaintID,
+        priority: complaint.priority || complaint.PriorityCode || ''
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  } catch (error) {
+    console.error('خطأ في loadEmployeeComplaintsLegacy:', error);
+    throw error;
+  }
+}
+
+function getStatusColor(status) {
+  const statusLower = (status || '').toLowerCase();
+  const colors = {
+    'open': 'bg-blue-100 text-blue-800',
+    'closed': 'bg-gray-100 text-gray-800',
+    'in_progress': 'bg-yellow-100 text-yellow-800',
+    'resolved': 'bg-green-100 text-green-800',
+    'مفتوح': 'bg-blue-100 text-blue-800',
+    'مغلق': 'bg-gray-100 text-gray-800',
+    'قيد المعالجة': 'bg-yellow-100 text-yellow-800',
+    'محلول': 'bg-green-100 text-green-800'
+  };
+  return colors[statusLower] || 'bg-gray-100 text-gray-800';
+}
+
+function getStatusText(status) {
+  const statusLower = (status || '').toLowerCase();
+  const texts = {
+    'open': 'مفتوح',
+    'closed': 'مغلق',
+    'in_progress': 'قيد المعالجة',
+    'resolved': 'محلول',
+    'مفتوح': 'مفتوح',
+    'مغلق': 'مغلق',
+    'قيد المعالجة': 'قيد المعالجة',
+    'محلول': 'محلول'
+  };
+  return texts[statusLower] || status || 'غير محدد';
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    return dateString;
+  }
+}
+
+function openComplaintDetailsFromEmployee(ticket, complaintId) {
+  // إغلاق modal الموظف
+  closeEmployeeDetailsModal();
+  
+  // التأكد من وجود رقم البلاغ
+  if (!ticket) {
+    console.error('لا يمكن فتح التفاصيل: لا يوجد رقم البلاغ');
+    alert('خطأ: لا يمكن العثور على رقم البلاغ');
+    return;
+  }
+
+  // بناء رابط صفحة complaint-details.html
+  // المسار النسبي: من dashboard/urgent/ إلى public/complaints/history/
+  let detailsUrl = '../../public/complaints/history/complaint-details.html';
+  const params = new URLSearchParams();
+  params.set('ticket', ticket);
+  
+  if (complaintId) {
+    params.set('id', String(complaintId));
+  }
+
+  detailsUrl += '?' + params.toString();
+  
+  console.log('🔗 فتح صفحة تفاصيل البلاغ:', detailsUrl);
+  
+  // الانتقال لصفحة التفاصيل
+  window.location.href = detailsUrl;
+}
+
+function viewEmployeeComplaints(employeeName) {
+  // إغلاق modal الحالي
+  closeEmployeeDetailsModal();
+  
+  // هنا يمكن إضافة وظيفة لعرض البلاغات الخاصة بالموظف
+  // يمكن فتح modal جديد أو الانتقال لصفحة أخرى
+  console.log(`عرض بلاغات الموظف: ${employeeName}`);
+  alert(`سيتم عرض بلاغات الموظف: ${employeeName}\n(هذه الوظيفة يمكن تطويرها لاحقاً)`);
+}
+
 // جعل الدوال متاحة بشكل عام
 window.openComplaintsModal = openComplaintsModal;
 window.closeComplaintsModal = closeComplaintsModal;
 window.openUrgentComplaintsModal = openUrgentComplaintsModal;
 window.openMedicineComplaintsModal = openMedicineComplaintsModal;
 window.openAllUrgentComplaintsModal = openAllUrgentComplaintsModal;
+window.openEmployeeDetailsModal = openEmployeeDetailsModal;
+window.closeEmployeeDetailsModal = closeEmployeeDetailsModal;
+window.viewEmployeeComplaints = viewEmployeeComplaints;
+window.openComplaintDetailsFromEmployee = openComplaintDetailsFromEmployee;
 
 document.addEventListener('DOMContentLoaded', loadUrgent);
 
