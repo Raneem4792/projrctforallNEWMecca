@@ -143,9 +143,8 @@ async function withHospitalPool(req, res, handler) {
 router.get('/hospital/:hospitalId/trips', requireAuth, (req, res) => {
   withHospitalPool(req, res, async (pool) => {
     const [rows] = await pool.query(`
-      SELECT TripID, TripName
+      SELECT TripID, TripName, IFNULL(IsAvailable,0) AS IsAvailable
       FROM treatment_trips
-      WHERE IFNULL(IsAvailable,0) = 1
       ORDER BY TripID
     `);
     res.json({ data: rows || [] });
@@ -169,9 +168,8 @@ router.post('/hospital/trips/update', requireAuth, (req, res) => {
 router.get('/hospital/:hospitalId/zones', requireAuth, (req, res) => {
   withHospitalPool(req, res, async (pool) => {
     const [rows] = await pool.query(`
-      SELECT ZoneID, ZoneName
+      SELECT ZoneID, ZoneName, IFNULL(IsAvailable,0) AS IsAvailable
       FROM zones
-      WHERE IFNULL(IsAvailable,0) = 1
       ORDER BY ZoneID
     `);
     res.json({ data: rows || [] });
