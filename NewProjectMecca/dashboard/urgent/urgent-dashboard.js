@@ -307,6 +307,16 @@ async function loadUrgent() {
     const departments = safeArray(data.departments);
     const mistreatmentTime = safeArray(data.mistreatmentClosingTime);
 
+    // تسجيل للتشخيص
+    if (mistreatmentTime.length > 0) {
+      console.log('📊 بيانات mistreatmentClosingTime:', mistreatmentTime.map(h => ({
+        name: h.name,
+        count: h.count,
+        closedCount: h.closedCount,
+        avgHours: h.avgHours
+      })));
+    }
+
     renderKpiValue('kpi-total', data.totalUrgent ?? 0);
     renderKpiValue('kpi-time', `${data.avgClosureHours ?? 0} ساعة`);
     renderKpiValue('kpi-closure', `${data.closureRate ?? 0}%`);
@@ -316,7 +326,7 @@ async function loadUrgent() {
 
     const hospitalLabels = hospitals.map(h => h.name || 'غير محدد');
     const hospitalCounts = hospitals.map(h => h.count ?? 0);
-    createChart('chartHospitals', {
+    const hospitalsChart = createChart('chartHospitals', {
       type: 'bar',
       data: {
         labels: hospitalLabels,
@@ -326,7 +336,33 @@ async function loadUrgent() {
           backgroundColor: '#dc2626'
         }])
       },
-      options: buildBarOptions()
+      options: {
+        ...buildBarOptions(),
+        onClick: (event, elements) => {
+          if (elements && elements.length > 0) {
+            const element = elements[0];
+            const index = element.index;
+            const hospital = hospitals[index];
+            if (hospital && hospital.id) {
+              openUrgentComplaintsModal(hospital.id, hospital.name);
+            }
+          }
+        },
+        onHover: (event, elements) => {
+          // تغيير شكل المؤشر عند التمرير
+          event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        },
+        plugins: {
+          ...buildBarOptions().plugins,
+          tooltip: {
+            ...buildBarOptions().plugins?.tooltip,
+            callbacks: {
+              ...buildBarOptions().plugins?.tooltip?.callbacks,
+              afterBody: () => 'انقر لعرض البلاغات'
+            }
+          }
+        }
+      }
     });
 
     createChart('chartEmployees', {
@@ -351,7 +387,32 @@ async function loadUrgent() {
           backgroundColor: ['#10b981', '#dc2626']
         }])
       },
-      options: buildBarOptions()
+      options: {
+        ...buildBarOptions(),
+        onClick: async (event, elements) => {
+          if (elements && elements.length > 0) {
+            const element = elements[0];
+            const index = element.index; // 0 = مغلقة، 1 = مفتوحة
+            const isClosed = index === 0;
+            
+            // فتح Modal مع جميع البلاغات المغلقة أو المفتوحة من جميع المستشفيات
+            await openAllUrgentComplaintsModal(isClosed ? 'closed' : 'open');
+          }
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        },
+        plugins: {
+          ...buildBarOptions().plugins,
+          tooltip: {
+            ...buildBarOptions().plugins?.tooltip,
+            callbacks: {
+              ...buildBarOptions().plugins?.tooltip?.callbacks,
+              afterBody: () => 'انقر لعرض البلاغات'
+            }
+          }
+        }
+      }
     });
 
     createChart('chartWeekly', {
@@ -381,7 +442,7 @@ async function loadUrgent() {
     });
 
     if (mistreatmentTime.length) {
-      createChart('chartMistreatmentTime', {
+      const mistreatmentChart = createChart('chartMistreatmentTime', {
         type: 'bar',
         data: {
           labels: mistreatmentTime.map(h => h.name || 'غير محدد'),
@@ -394,15 +455,24 @@ async function loadUrgent() {
             },
             {
               label: 'متوسط زمن الإغلاق بالساعات',
-              data: mistreatmentTime.map(h => Number(h.avgHours ?? 0)),
+              data: mistreatmentTime.map(h => h.avgHours ?? 0),
               borderColor: '#f59e0b',
               backgroundColor: '#f59e0b',
               type: 'line',
               yAxisID: 'y1',
               tension: 0.35,
               fill: false,
-              pointRadius: 4,
-              pointBackgroundColor: '#f59e0b'
+              borderWidth: 3,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: '#f59e0b',
+              datalabels: {
+                align: 'top',
+                anchor: 'end',
+                color: '#f59e0b',
+                font: { family: FONT_FAMILY, weight: 'bold', size: 14 },
+                formatter: (value) => (value ? `${value} س` : '')
+              }
             }
           ]
         },
@@ -410,6 +480,21 @@ async function loadUrgent() {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
+          onClick: (event, elements) => {
+            if (elements && elements.length > 0) {
+              // الحصول على الفهرس من أول عنصر تم النقر عليه
+              const element = elements[0];
+              const index = element.index;
+              const hospital = mistreatmentTime[index];
+              if (hospital && hospital.id) {
+                openComplaintsModal(hospital.id, hospital.name);
+              }
+            }
+          },
+          onHover: (event, elements) => {
+            // تغيير شكل المؤشر عند التمرير
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          },
           plugins: {
             legend: {
               position: 'top',
@@ -425,6 +510,9 @@ async function loadUrgent() {
                     ? formatArabicNumber(ctx.raw)
                     : `${Number(ctx.raw ?? 0).toFixed(1)} ساعة`;
                   return ` ${ctx.dataset.label}: ${value} `;
+                },
+                afterBody: (items) => {
+                  return 'انقر لعرض البلاغات';
                 }
               }
             },
@@ -461,7 +549,7 @@ async function loadUrgent() {
             y1: {
               position: 'right',
               beginAtZero: true,
-              suggestedMax: 48,
+              max: 48,
               grid: { drawOnChartArea: false },
               ticks: {
                 color: '#f97316',
@@ -489,7 +577,7 @@ async function loadUrgent() {
     }
 
     // (1) مقارنة سوء التعامل + الأدوية لكل مستشفى
-    createChart('chartSubPerHospital', {
+    const subTypesChart = createChart('chartSubPerHospital', {
       type: 'bar',
       data: {
         labels: data.subTypesByHospital.map(h => h.name),
@@ -506,7 +594,40 @@ async function loadUrgent() {
           }
         ])
       },
-      options: buildBarOptions({ showLegend: true, legendPosition: 'top' })
+      options: {
+        ...buildBarOptions({ showLegend: true, legendPosition: 'top' }),
+        onClick: (event, elements) => {
+          if (elements && elements.length > 0) {
+            const element = elements[0];
+            const index = element.index; // فهرس المستشفى
+            const datasetIndex = element.datasetIndex; // 0 لسوء التعامل، 1 للأدوية
+            const hospital = data.subTypesByHospital[index];
+            
+            if (hospital && hospital.id) {
+              if (datasetIndex === 0) {
+                // سوء تعامل
+                openComplaintsModal(hospital.id, hospital.name);
+              } else if (datasetIndex === 1) {
+                // بلاغات الأدوية
+                openMedicineComplaintsModal(hospital.id, hospital.name);
+              }
+            }
+          }
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        },
+        plugins: {
+          ...buildBarOptions({ showLegend: true, legendPosition: 'top' }).plugins,
+          tooltip: {
+            ...buildBarOptions({ showLegend: true, legendPosition: 'top' }).plugins?.tooltip,
+            callbacks: {
+              ...buildBarOptions({ showLegend: true, legendPosition: 'top' }).plugins?.tooltip?.callbacks,
+              afterBody: () => 'انقر لعرض البلاغات'
+            }
+          }
+        }
+      }
     });
 
     // (2) أعلى المستشفيات في سوء التعامل
@@ -524,7 +645,32 @@ async function loadUrgent() {
           backgroundColor: '#dc2626'
         }])
       },
-      options: buildBarOptions({ horizontal: true })
+      options: {
+        ...buildBarOptions({ horizontal: true }),
+        onClick: (event, elements) => {
+          if (elements && elements.length > 0) {
+            const element = elements[0];
+            const index = element.index;
+            const hospital = sortedMistreatment[index];
+            if (hospital && hospital.id) {
+              openComplaintsModal(hospital.id, hospital.name);
+            }
+          }
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        },
+        plugins: {
+          ...buildBarOptions({ horizontal: true }).plugins,
+          tooltip: {
+            ...buildBarOptions({ horizontal: true }).plugins?.tooltip,
+            callbacks: {
+              ...buildBarOptions({ horizontal: true }).plugins?.tooltip?.callbacks,
+              afterBody: () => 'انقر لعرض البلاغات'
+            }
+          }
+        }
+      }
     });
 
     // (3) أعلى المستشفيات في بلاغات الأدوية
@@ -542,7 +688,32 @@ async function loadUrgent() {
           backgroundColor: '#f59e0b'
         }])
       },
-      options: buildBarOptions({ horizontal: true })
+      options: {
+        ...buildBarOptions({ horizontal: true }),
+        onClick: (event, elements) => {
+          if (elements && elements.length > 0) {
+            const element = elements[0];
+            const index = element.index;
+            const hospital = sortedMedicine[index];
+            if (hospital && hospital.id) {
+              openMedicineComplaintsModal(hospital.id, hospital.name);
+            }
+          }
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        },
+        plugins: {
+          ...buildBarOptions({ horizontal: true }).plugins,
+          tooltip: {
+            ...buildBarOptions({ horizontal: true }).plugins?.tooltip,
+            callbacks: {
+              ...buildBarOptions({ horizontal: true }).plugins?.tooltip?.callbacks,
+              afterBody: () => 'انقر لعرض البلاغات'
+            }
+          }
+        }
+      }
     });
 
     // (4) أكثر الموظفين تكرارًا في بلاغات سوء التعامل
@@ -575,6 +746,458 @@ async function loadUrgent() {
     renderError('لم يتم تحميل بيانات البلاغات الحرجة. يرجى المحاولة لاحقاً.');
   }
 }
+
+// ========================================
+// Modal البلاغات
+// ========================================
+
+async function openComplaintsModal(hospitalId, hospitalName) {
+  const modal = document.getElementById('complaintsModal');
+  const modalTitleElement = document.getElementById('modal-title');
+  const modalTitle = document.getElementById('modal-hospital-name');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  // تغيير عنوان الـ Modal لبلاغات سوء التعامل
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML = 'بلاغات سوء التعامل - <span id="modal-hospital-name"></span>';
+  }
+
+  // إظهار الـ Modal
+  modal.classList.remove('hidden');
+  // تحديث اسم المستشفى بعد إعادة إنشاء span
+  const updatedTitle = document.getElementById('modal-hospital-name');
+  if (updatedTitle) {
+    updatedTitle.textContent = hospitalName || 'غير محدد';
+  }
+
+  // إخفاء المحتوى وإظهار التحميل
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    // جلب البلاغات
+    const complaints = await loadComplaintsForHospital(hospitalId);
+    
+    // إخفاء التحميل
+    loading.classList.add('hidden');
+
+    if (!complaints || complaints.length === 0) {
+      empty.classList.remove('hidden');
+    } else {
+      content.classList.remove('hidden');
+      renderComplaintsList(complaints);
+    }
+  } catch (error) {
+    console.error('خطأ في جلب البلاغات:', error);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
+}
+
+function closeComplaintsModal() {
+  const modal = document.getElementById('complaintsModal');
+  modal.classList.add('hidden');
+}
+
+async function loadComplaintsForHospital(hospitalId) {
+  try {
+    // استخدام API history مع فلاتر
+    const response = await authFetch(
+      `${API_BASE}/api/complaints/history?hospitalId=${hospitalId}&pageSize=100`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const allComplaints = safeArray(data.items || []);
+
+    // فلترة بلاغات سوء التعامل (ComplaintTypeID = 3 أو 17 أو SubTypeID = 15)
+    const mistreatmentComplaints = allComplaints.filter(complaint => {
+      const typeId = complaint.type || complaint.ComplaintTypeID;
+      const subTypeId = complaint.subTypeId || complaint.SubTypeID;
+      return typeId === 3 || typeId === 17 || subTypeId === 15;
+    });
+
+    return mistreatmentComplaints;
+  } catch (error) {
+    console.error('خطأ في loadComplaintsForHospital:', error);
+    throw error;
+  }
+}
+
+function renderComplaintsList(complaints) {
+  const list = document.getElementById('complaints-list');
+  list.innerHTML = '';
+
+  if (complaints.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'text-center py-8 text-gray-500';
+    emptyDiv.textContent = 'لا توجد بلاغات';
+    list.appendChild(emptyDiv);
+    return;
+  }
+
+  complaints.forEach((complaint, index) => {
+    const item = document.createElement('div');
+    item.className = 'border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all bg-white';
+    item.onclick = () => openComplaintDetails(complaint);
+
+    const ticket = complaint.ticket || complaint.TicketNumber || `#${complaint.id || complaint.ComplaintID}`;
+    const patientName = complaint.fullName || complaint.PatientFullName || 'غير محدد';
+    const status = (complaint.status || complaint.StatusCode || 'open').toLowerCase();
+    const createdAt = complaint.createdAt || complaint.CreatedAt || '';
+    const description = complaint.Description || complaint.description || '';
+    const priority = complaint.priority || complaint.PriorityCode || 'MEDIUM';
+
+    const statusColors = {
+      'open': 'bg-blue-100 text-blue-800',
+      'closed': 'bg-gray-100 text-gray-800',
+      'in_progress': 'bg-yellow-100 text-yellow-800',
+      'resolved': 'bg-green-100 text-green-800',
+      'مفتوح': 'bg-blue-100 text-blue-800',
+      'مغلق': 'bg-gray-100 text-gray-800',
+      'قيد المعالجة': 'bg-yellow-100 text-yellow-800',
+      'محلول': 'bg-green-100 text-green-800'
+    };
+
+    const statusText = {
+      'open': 'مفتوح',
+      'closed': 'مغلق',
+      'in_progress': 'قيد المعالجة',
+      'resolved': 'محلول',
+      'مفتوح': 'مفتوح',
+      'مغلق': 'مغلق',
+      'قيد المعالجة': 'قيد المعالجة',
+      'محلول': 'محلول'
+    };
+
+    const statusClass = statusColors[status] || 'bg-gray-100 text-gray-800';
+    const statusLabel = statusText[status] || status;
+
+    const priorityBadge = priority && priority.toUpperCase() === 'URGENT' 
+      ? '<span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-800 mr-2">عاجل</span>'
+      : '';
+
+    item.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="font-bold text-gray-900" style="color:#002B5B">${ticket}</span>
+            ${priorityBadge}
+            <span class="text-xs px-2 py-1 rounded-full ${statusClass}">${statusLabel}</span>
+          </div>
+          <p class="text-sm font-medium text-gray-800 mb-1">${patientName}</p>
+          ${description ? `<p class="text-xs text-gray-600 mb-2 line-clamp-2">${description.substring(0, 100)}${description.length > 100 ? '...' : ''}</p>` : ''}
+          ${createdAt ? `<p class="text-xs text-gray-500 flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            ${createdAt}
+          </p>` : ''}
+        </div>
+        <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </div>
+    `;
+
+    list.appendChild(item);
+  });
+}
+
+function openComplaintDetails(complaint) {
+  // إغلاق الـ Modal أولاً
+  closeComplaintsModal();
+
+  // فتح صفحة تفاصيل البلاغ - استخدام complaint-details.html
+  const ticket = complaint.ticket || complaint.TicketNumber || '';
+  const hospitalId = complaint.hospitalId || complaint.HospitalID || complaint.hospitalId;
+
+  // التأكد من وجود ticket (مطلوب لصفحة complaint-details.html)
+  if (!ticket) {
+    console.error('لا يمكن فتح التفاصيل: لا يوجد رقم البلاغ (TicketNumber)');
+    alert('خطأ: لا يمكن العثور على رقم البلاغ');
+    return;
+  }
+
+  // بناء رابط صفحة complaint-details.html
+  // المسار النسبي: من dashboard/urgent/ إلى public/complaints/history/
+  let detailsUrl = '../../public/complaints/history/complaint-details.html';
+  const params = new URLSearchParams();
+  params.set('ticket', ticket);
+  
+  if (hospitalId) {
+    params.set('hid', String(hospitalId));
+  }
+
+  detailsUrl += '?' + params.toString();
+  
+  console.log('🔗 فتح صفحة تفاصيل البلاغ:', detailsUrl);
+  
+  // الانتقال لصفحة التفاصيل
+  window.location.href = detailsUrl;
+}
+
+// ========================================
+// Modal البلاغات الحرجة (لرسم المستشفيات)
+// ========================================
+
+async function openUrgentComplaintsModal(hospitalId, hospitalName) {
+  const modal = document.getElementById('complaintsModal');
+  const modalTitleElement = document.getElementById('modal-title');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  // تغيير عنوان الـ Modal للبلاغات الحرجة
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML = 'البلاغات الحرجة - <span id="modal-hospital-name"></span>';
+  }
+
+  // إظهار الـ Modal
+  modal.classList.remove('hidden');
+  // تحديث اسم المستشفى بعد إعادة إنشاء span
+  const updatedTitle = document.getElementById('modal-hospital-name');
+  if (updatedTitle) {
+    updatedTitle.textContent = hospitalName || 'غير محدد';
+  }
+
+  // إخفاء المحتوى وإظهار التحميل
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    // جلب البلاغات الحرجة
+    const complaints = await loadUrgentComplaintsForHospital(hospitalId);
+    
+    // إخفاء التحميل
+    loading.classList.add('hidden');
+
+    if (!complaints || complaints.length === 0) {
+      empty.classList.remove('hidden');
+    } else {
+      content.classList.remove('hidden');
+      renderComplaintsList(complaints);
+    }
+  } catch (error) {
+    console.error('خطأ في جلب البلاغات الحرجة:', error);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
+}
+
+async function loadUrgentComplaintsForHospital(hospitalId) {
+  try {
+    // استخدام API history مع فلاتر للبلاغات الحرجة
+    const response = await authFetch(
+      `${API_BASE}/api/complaints/history?hospitalId=${hospitalId}&pageSize=100`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const allComplaints = safeArray(data.items || []);
+
+    // فلترة البلاغات الحرجة (PriorityCode = URGENT, CRITICAL, HIGH)
+    const urgentComplaints = allComplaints.filter(complaint => {
+      const priority = (complaint.priority || complaint.PriorityCode || '').toUpperCase();
+      return priority === 'URGENT' || priority === 'CRITICAL' || priority === 'HIGH';
+    });
+
+    return urgentComplaints;
+  } catch (error) {
+    console.error('خطأ في loadUrgentComplaintsForHospital:', error);
+    throw error;
+  }
+}
+
+// ========================================
+// Modal بلاغات الأدوية
+// ========================================
+
+async function openMedicineComplaintsModal(hospitalId, hospitalName) {
+  const modal = document.getElementById('complaintsModal');
+  const modalTitleElement = document.getElementById('modal-title');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  // تغيير عنوان الـ Modal لبلاغات الأدوية
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML = 'بلاغات الأدوية - <span id="modal-hospital-name"></span>';
+  }
+
+  // إظهار الـ Modal
+  modal.classList.remove('hidden');
+  // تحديث اسم المستشفى بعد إعادة إنشاء span
+  const updatedTitle = document.getElementById('modal-hospital-name');
+  if (updatedTitle) {
+    updatedTitle.textContent = hospitalName || 'غير محدد';
+  }
+
+  // إخفاء المحتوى وإظهار التحميل
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    // جلب بلاغات الأدوية
+    const complaints = await loadMedicineComplaintsForHospital(hospitalId);
+    
+    // إخفاء التحميل
+    loading.classList.add('hidden');
+
+    if (!complaints || complaints.length === 0) {
+      empty.classList.remove('hidden');
+    } else {
+      content.classList.remove('hidden');
+      renderComplaintsList(complaints);
+    }
+  } catch (error) {
+    console.error('خطأ في جلب بلاغات الأدوية:', error);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
+}
+
+async function loadMedicineComplaintsForHospital(hospitalId) {
+  try {
+    // استخدام API history مع فلاتر لبلاغات الأدوية
+    const response = await authFetch(
+      `${API_BASE}/api/complaints/history?hospitalId=${hospitalId}&pageSize=100`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const allComplaints = safeArray(data.items || []);
+
+    // فلترة بلاغات الأدوية (ComplaintTypeID = 6)
+    const medicineComplaints = allComplaints.filter(complaint => {
+      const typeId = complaint.type || complaint.ComplaintTypeID;
+      return typeId === 6;
+    });
+
+    return medicineComplaints;
+  } catch (error) {
+    console.error('خطأ في loadMedicineComplaintsForHospital:', error);
+    throw error;
+  }
+}
+
+// ========================================
+// Modal جميع البلاغات المغلقة/المفتوحة
+// ========================================
+
+async function openAllUrgentComplaintsModal(statusType) {
+  const modal = document.getElementById('complaintsModal');
+  const modalTitleElement = document.getElementById('modal-title');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  // تغيير عنوان الـ Modal
+  const statusLabel = statusType === 'closed' ? 'المغلقة' : 'المفتوحة';
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML = `جميع البلاغات الحرجة ${statusLabel} - <span id="modal-hospital-name">جميع المستشفيات</span>`;
+  }
+
+  // إظهار الـ Modal
+  modal.classList.remove('hidden');
+
+  // إخفاء المحتوى وإظهار التحميل
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    // جلب جميع البلاغات المغلقة أو المفتوحة من جميع المستشفيات
+    const complaints = await loadAllUrgentComplaintsByStatus(statusType);
+    
+    // إخفاء التحميل
+    loading.classList.add('hidden');
+
+    if (!complaints || complaints.length === 0) {
+      empty.classList.remove('hidden');
+    } else {
+      content.classList.remove('hidden');
+      renderComplaintsList(complaints);
+    }
+  } catch (error) {
+    console.error('خطأ في جلب البلاغات:', error);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
+}
+
+async function loadAllUrgentComplaintsByStatus(statusType) {
+  try {
+    // استخدام API history بدون فلترة hospitalId للحصول على جميع البلاغات
+    // نستخدم ALL للحصول على جميع البلاغات ثم نفلترها
+    const response = await authFetch(
+      `${API_BASE}/api/complaints/history?status=ALL&pageSize=200`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const allComplaints = safeArray(data.items || []);
+
+    // فلترة البلاغات الحرجة حسب الحالة المطلوبة
+    const urgentComplaints = allComplaints.filter(complaint => {
+      const priority = (complaint.priority || complaint.PriorityCode || '').toUpperCase();
+      const isUrgent = priority === 'URGENT' || priority === 'CRITICAL' || priority === 'HIGH';
+      
+      if (!isUrgent) return false;
+      
+      // فلترة حسب الحالة المطلوبة
+      const status = (complaint.status || complaint.StatusCode || '').toUpperCase();
+      const isClosed = status === 'CLOSED' || status === 'RESOLVED' || status === 'CANCELLED';
+      
+      if (statusType === 'closed') {
+        return isClosed;
+      } else {
+        return !isClosed;
+      }
+    });
+
+    return urgentComplaints;
+  } catch (error) {
+    console.error('خطأ في loadAllUrgentComplaintsByStatus:', error);
+    throw error;
+  }
+}
+
+// جعل الدوال متاحة بشكل عام
+window.openComplaintsModal = openComplaintsModal;
+window.closeComplaintsModal = closeComplaintsModal;
+window.openUrgentComplaintsModal = openUrgentComplaintsModal;
+window.openMedicineComplaintsModal = openMedicineComplaintsModal;
+window.openAllUrgentComplaintsModal = openAllUrgentComplaintsModal;
 
 document.addEventListener('DOMContentLoaded', loadUrgent);
 

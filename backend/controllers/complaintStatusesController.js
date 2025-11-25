@@ -54,7 +54,7 @@ export const updateComplaintStatus = async (req, res) => {
     }
 
     const [[complaint]] = await conn.query(
-      `SELECT ComplaintID FROM complaints WHERE ComplaintID = ?`,
+      `SELECT ComplaintID, CreatedAt, StatusCode FROM complaints WHERE ComplaintID = ?`,
       [complaintId]
     );
     if (!complaint) {
@@ -63,12 +63,44 @@ export const updateComplaintStatus = async (req, res) => {
 
     await conn.beginTransaction();
 
-    await conn.query(
-      `UPDATE complaints
-       SET StatusCode = ?, UpdatedAt = CURRENT_TIMESTAMP
-       WHERE ComplaintID = ?`,
-      [statusCode, complaintId]
-    );
+    // تحديد إذا كانت الحالة الجديدة هي إغلاق
+    // استخدام uppercase للمقارنة لضمان التعامل مع جميع أشكال الحالة
+    const statusCodeUpper = String(statusCode || '').toUpperCase();
+    const closedStatuses = ['CLOSED', 'RESOLVED', 'CANCELLED'];
+    const isClosing = closedStatuses.includes(statusCodeUpper);
+    const complaintStatusCodeUpper = String(complaint.StatusCode || '').toUpperCase();
+    const wasAlreadyClosed = closedStatuses.includes(complaintStatusCodeUpper);
+
+    // حساب ActualClosingHours إذا تم الإغلاق لأول مرة
+    let actualClosingHours = null;
+    // نحسب فقط إذا كانت الحالة الجديدة "مغلق" ولم يكن "مغلقاً" من قبل
+    if (isClosing && !wasAlreadyClosed) {
+      const createdAt = new Date(complaint.CreatedAt);
+      const now = new Date();
+      // حساب الفرق بالساعات (مع التقريب للأعلى لضمان عدم وجود 0 ساعة)
+      // مثلاً: 15 دقيقة تُحسب كساعة واحدة لضمان ظهورها في التقارير
+      const hours = Math.ceil((now - createdAt) / (1000 * 60 * 60));
+      actualClosingHours = hours > 0 ? hours : 1; 
+    }
+
+    // تحديث حالة البلاغ مع ActualClosingHours إذا لزم الأمر
+    if (actualClosingHours !== null) {
+      await conn.query(
+        `UPDATE complaints
+         SET StatusCode = ?, 
+             UpdatedAt = CURRENT_TIMESTAMP,
+             ActualClosingHours = ?
+         WHERE ComplaintID = ?`,
+        [statusCode, actualClosingHours, complaintId]
+      );
+    } else {
+      await conn.query(
+        `UPDATE complaints
+         SET StatusCode = ?, UpdatedAt = CURRENT_TIMESTAMP
+         WHERE ComplaintID = ?`,
+        [statusCode, complaintId]
+      );
+    }
 
     if (note && note.trim() !== '') {
       await conn.query(

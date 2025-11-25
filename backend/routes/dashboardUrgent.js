@@ -62,34 +62,99 @@ router.get('/all', requireAuth, async (req, res) => {
           medicine: Number(subCounts.medicine || 0)
         });
 
-        // سوء التعامل + متوسط زمن الإغلاق (للرسم المفقود)
+        // --- تشخيص: طباعة عينة من حالات بلاغات سوء التعامل ---
+        const [sampleComplaints] = await hospitalPool.query(`
+          SELECT ComplaintID, StatusCode, ActualClosingHours, CreatedAt, UpdatedAt 
+          FROM complaints c 
+          WHERE (c.ComplaintTypeID = 3 OR c.SubTypeID = 15) 
+            AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+          LIMIT 5
+        `);
+        if (sampleComplaints.length > 0) {
+          console.log(`🔍 [${hospital.HospitalName}] عينة بلاغات سوء التعامل:`, sampleComplaints.map(c => ({
+            id: c.ComplaintID,
+            status: c.StatusCode,
+            hours: c.ActualClosingHours,
+            created: c.CreatedAt
+          })));
+        }
+        // -------------------------------------------------------
+
+        // سوء التعامل + متوسط زمن الإغلاق (مع إجمالي ومغلق)
+        // ملاحظة: هذا الاستعلام يشمل جميع بلاغات سوء التعامل (حرجة وغير حرجة)
         const [[mistreatmentTimeRow]] = await hospitalPool.query(`
           SELECT
-            COUNT(*) AS count,
-            AVG(CASE 
-                  WHEN ProcessingDurationHours IS NOT NULL THEN ProcessingDurationHours
-                END) AS avgHours
+            COUNT(*) AS totalMistreatment,
+            SUM(
+              CASE 
+                WHEN UPPER(c.StatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+                     OR c.StatusCode LIKE '%مغلق%' OR c.StatusCode LIKE '%مغلقة%'
+                     OR c.StatusCode LIKE '%محلول%' OR c.StatusCode LIKE '%مكتمل%'
+                     OR c.StatusCode LIKE '%منتهي%'
+                THEN 1 ELSE 0
+              END
+            ) AS closedMistreatment,
+            AVG(
+              CASE
+                WHEN UPPER(c.StatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+                     OR c.StatusCode LIKE '%مغلق%' OR c.StatusCode LIKE '%مغلقة%'
+                     OR c.StatusCode LIKE '%محلول%' OR c.StatusCode LIKE '%مكتمل%'
+                     OR c.StatusCode LIKE '%منتهي%'
+                THEN COALESCE(
+                  c.ActualClosingHours,
+                  TIMESTAMPDIFF(
+                    HOUR,
+                    c.CreatedAt,
+                    COALESCE(
+                      h_close.ChangedAt,
+                      c.UpdatedAt,
+                      NOW()
+                    )
+                  )
+                )
+                ELSE NULL
+              END
+            ) AS avgHours
           FROM complaints c
-          WHERE ${urgentCondition('c')}
-            AND (ComplaintTypeID = 3 OR SubTypeID = 15)
+          LEFT JOIN (
+            SELECT 
+              h.ComplaintID,
+              MAX(h.ChangedAt) AS ChangedAt
+            FROM complaint_status_history h
+            WHERE UPPER(h.NewStatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+               OR h.NewStatusCode LIKE '%مغلق%' OR h.NewStatusCode LIKE '%مغلقة%'
+               OR h.NewStatusCode LIKE '%محلول%' OR h.NewStatusCode LIKE '%مكتمل%'
+            GROUP BY h.ComplaintID
+          ) h_close ON h_close.ComplaintID = c.ComplaintID
+          WHERE (c.ComplaintTypeID = 3 OR c.SubTypeID = 15)
             AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
         `);
+
+        const avgHoursValue = mistreatmentTimeRow?.avgHours !== null && mistreatmentTimeRow?.avgHours !== undefined
+          ? Number(mistreatmentTimeRow.avgHours)
+          : 0;
+
+        // تسجيل للتشخيص (يمكن إزالته لاحقاً)
+        if (mistreatmentTimeRow?.closedMistreatment > 0 && avgHoursValue === 0) {
+          console.log(`⚠️ [${hospital.HospitalName}] بلاغات مغلقة: ${mistreatmentTimeRow.closedMistreatment}, لكن avgHours = ${mistreatmentTimeRow.avgHours}`);
+        }
 
         mistreatmentClosingTime.push({
           id: hospital.HospitalID,
           name: hospital.HospitalName,
-          count: Number(mistreatmentTimeRow?.count || 0),
-          avgHours: Number(mistreatmentTimeRow?.avgHours || 0)
+          count: Number(mistreatmentTimeRow?.totalMistreatment || 0),
+          closedCount: Number(mistreatmentTimeRow?.closedMistreatment || 0),
+          avgHours: avgHoursValue
         });
 
         // أ) إحصائيات عامة للمستشفى
         const [[stats]] = await hospitalPool.query(`
           SELECT 
             COUNT(*) AS total,
-            SUM(CASE WHEN StatusCode IN ('CLOSED','Closed','closed','مغلق','مغلقة','محلول','مكتمل') THEN 1 ELSE 0 END) AS closed,
-            SUM(CASE WHEN StatusCode NOT IN ('CLOSED','Closed','closed','مغلق','مغلقة','محلول','مكتمل') THEN 1 ELSE 0 END) AS open,
-            SUM(CASE WHEN StatusCode IN ('CLOSED','Closed','closed','مغلق','مغلقة','محلول','مكتمل') AND ProcessingDurationHours IS NOT NULL THEN ProcessingDurationHours ELSE 0 END) AS durationSum,
-            SUM(CASE WHEN StatusCode IN ('CLOSED','Closed','closed','مغلق','مغلقة','محلول','مكتمل') AND ProcessingDurationHours IS NOT NULL THEN 1 ELSE 0 END) AS durationCount,
+            SUM(CASE WHEN UPPER(StatusCode) IN ('CLOSED','RESOLVED','CANCELLED') THEN 1 ELSE 0 END) AS closed,
+            SUM(CASE WHEN UPPER(StatusCode) NOT IN ('CLOSED','RESOLVED','CANCELLED') THEN 1 ELSE 0 END) AS open,
+            SUM(CASE WHEN UPPER(StatusCode) IN ('CLOSED','RESOLVED','CANCELLED') AND ProcessingDurationHours IS NOT NULL THEN ProcessingDurationHours ELSE 0 END) AS durationSum,
+            SUM(CASE WHEN UPPER(StatusCode) IN ('CLOSED','RESOLVED','CANCELLED') AND ProcessingDurationHours IS NOT NULL THEN 1 ELSE 0 END) AS durationCount,
             SUM(CASE WHEN ComplaintTypeID = 3 OR SubTypeID = 15 THEN 1 ELSE 0 END) AS mistreatment,
             SUM(CASE WHEN ComplaintTypeID = 6 THEN 1 ELSE 0 END) AS medicine
           FROM complaints c
@@ -121,7 +186,7 @@ router.get('/all', requireAuth, async (req, res) => {
           SELECT
             SUM(
               CASE 
-                WHEN StatusCode IN ('CLOSED','Closed','closed','مغلق','مغلقة','محلول','مكتمل')
+                WHEN UPPER(StatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
                      AND (
                         (ComplaintTypeID = 3 AND TIMESTAMPDIFF(HOUR, CreatedAt, NOW()) > 24)
                         OR
@@ -132,7 +197,7 @@ router.get('/all', requireAuth, async (req, res) => {
             ) AS closedUrgent,
             SUM(
               CASE 
-                WHEN StatusCode NOT IN ('CLOSED','Closed','closed','مغلق','مغلقة','محلول','مكتمل')
+                WHEN UPPER(StatusCode) NOT IN ('CLOSED','RESOLVED','CANCELLED')
                      AND (
                         (ComplaintTypeID = 3 AND TIMESTAMPDIFF(HOUR, CreatedAt, NOW()) > 24)
                         OR
