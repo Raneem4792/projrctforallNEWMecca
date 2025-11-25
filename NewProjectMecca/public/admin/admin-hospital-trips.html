@@ -83,7 +83,23 @@
           <i class="fas fa-route text-emerald-500"></i>
           الرحلات العلاجية
         </h2>
-        <button id="btnSaveTrips" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">حفظ</button>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:items-center">
+          <div class="flex items-center gap-2 w-full sm:w-64">
+            <input
+              type="text"
+              id="newTripInput"
+              placeholder="اسم رحلة جديدة"
+              class="flex-1 rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <button
+              id="btnAddTrip"
+              class="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition whitespace-nowrap"
+            >
+              إضافة
+            </button>
+          </div>
+          <button id="btnSaveTrips" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition whitespace-nowrap">حفظ</button>
+        </div>
       </div>
       <table id="tripsTable" class="styled-table">
         <thead>
@@ -104,7 +120,23 @@
           <i class="fas fa-map-marked-alt text-indigo-500"></i>
           النطاقات
         </h2>
-        <button id="btnSaveZones" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">حفظ</button>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:items-center">
+          <div class="flex items-center gap-2 w-full sm:w-64">
+            <input
+              type="text"
+              id="newZoneInput"
+              placeholder="اسم نطاق جديد"
+              class="flex-1 rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <button
+              id="btnAddZone"
+              class="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition whitespace-nowrap"
+            >
+              إضافة
+            </button>
+          </div>
+          <button id="btnSaveZones" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition whitespace-nowrap">حفظ</button>
+        </div>
       </div>
       <table id="zonesTable" class="styled-table">
         <thead>
@@ -192,7 +224,11 @@
       hospitalNameDisplay: document.getElementById('hospitalNameDisplay'),
       hospitalSelectWrapper: document.getElementById('hospitalSelectWrapper'),
       tripBody: document.getElementById('tripBody'),
-      zoneBody: document.getElementById('zoneBody')
+      zoneBody: document.getElementById('zoneBody'),
+      newTripInput: document.getElementById('newTripInput'),
+      btnAddTrip: document.getElementById('btnAddTrip'),
+      newZoneInput: document.getElementById('newZoneInput'),
+      btnAddZone: document.getElementById('btnAddZone')
     };
 
     const hospitalsMap = new Map();
@@ -298,9 +334,7 @@
         const hidSegment = encodeURIComponent(currentHospitalId);
         const headers = { 'X-Hospital-Id': currentHospitalId };
 
-        const [trips, zones, hospitalTripsResp, hospitalZonesResp] = await Promise.all([
-          fetchJSON(`${API_BASE}/api/trips/list`),
-          fetchJSON(`${API_BASE}/api/zones/list`),
+        const [hospitalTripsResp, hospitalZonesResp] = await Promise.all([
           fetchJSON(`${API_BASE}/api/hospital/${hidSegment}/trips`, { headers }),
           fetchJSON(`${API_BASE}/api/hospital/${hidSegment}/zones`, { headers })
         ]);
@@ -308,9 +342,9 @@
         const hospitalTrips = Array.isArray(hospitalTripsResp?.data) ? hospitalTripsResp.data : Array.isArray(hospitalTripsResp) ? hospitalTripsResp : [];
         const hospitalZones = Array.isArray(hospitalZonesResp?.data) ? hospitalZonesResp.data : Array.isArray(hospitalZonesResp) ? hospitalZonesResp : [];
 
-        const tripRows = trips.map(t => {
+        const tripRows = hospitalTrips.map(t => {
           const name = t.TripName || t.tripName || '';
-          const checked = hospitalTrips.some(x => (x.TripName || x.tripName) === name);
+          const checked = Boolean(t.IsAvailable || t.isAvailable);
           selectedTrips.set(name, checked);
           return `
             <tr>
@@ -318,11 +352,11 @@
               <td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleTrip('${name.replace(/'/g, "\\'")}', this.checked)"></td>
             </tr>`;
         }).join('');
-        els.tripBody.innerHTML = tripRows || '<tr><td colspan="2">لا توجد رحلات</td></tr>';
+        els.tripBody.innerHTML = tripRows || '<tr><td colspan="2">لا توجد رحلات مسجلة في قاعدة البيانات</td></tr>';
 
-        const zoneRows = zones.map(z => {
+        const zoneRows = hospitalZones.map(z => {
           const name = z.ZoneName || z.zoneName || '';
-          const checked = hospitalZones.some(x => (x.ZoneName || x.zoneName) === name);
+          const checked = Boolean(z.IsAvailable || z.isAvailable);
           selectedZones.set(name, checked);
           return `
             <tr>
@@ -330,7 +364,7 @@
               <td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleZone('${name.replace(/'/g, "\\'")}', this.checked)"></td>
             </tr>`;
         }).join('');
-        els.zoneBody.innerHTML = zoneRows || '<tr><td colspan="2">لا توجد نطاقات</td></tr>';
+        els.zoneBody.innerHTML = zoneRows || '<tr><td colspan="2">لا توجد نطاقات مسجلة في قاعدة البيانات</td></tr>';
 
         updateHospitalDisplay();
       } catch (err) {
@@ -390,6 +424,34 @@
       }
     }
 
+    async function addNewTrip() {
+      if (!currentHospitalId) {
+        alert('يرجى اختيار المستشفى أولاً');
+        return;
+      }
+      const name = els.newTripInput?.value?.trim();
+      if (!name) {
+        alert('يرجى إدخال اسم الرحلة');
+        return;
+      }
+      try {
+        await fetchJSON(`${API_BASE}/api/hospital/trips/update`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Hospital-Id': currentHospitalId
+          },
+          body: JSON.stringify({ TripName: name, IsAvailable: true })
+        });
+        els.newTripInput.value = '';
+        await loadData();
+        alert('تمت إضافة الرحلة بنجاح');
+      } catch (err) {
+        console.error('❌ إضافة رحلة جديدة:', err);
+        alert('فشل إضافة الرحلة: ' + err.message);
+      }
+    }
+
     async function saveZones() {
       if (!currentHospitalId) {
         alert('يرجى اختيار المستشفى أولاً');
@@ -414,11 +476,45 @@
       }
     }
 
+    async function addNewZone() {
+      if (!currentHospitalId) {
+        alert('يرجى اختيار المستشفى أولاً');
+        return;
+      }
+      const name = els.newZoneInput?.value?.trim();
+      if (!name) {
+        alert('يرجى إدخال اسم النطاق');
+        return;
+      }
+      try {
+        await fetchJSON(`${API_BASE}/api/hospital/zones/update`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Hospital-Id': currentHospitalId
+          },
+          body: JSON.stringify({ ZoneName: name, IsAvailable: true })
+        });
+        els.newZoneInput.value = '';
+        await loadData();
+        alert('تمت إضافة النطاق بنجاح');
+      } catch (err) {
+        console.error('❌ إضافة نطاق جديد:', err);
+        alert('فشل إضافة النطاق: ' + err.message);
+      }
+    }
+
     if (document.getElementById('btnSaveTrips')) {
       document.getElementById('btnSaveTrips').addEventListener('click', saveTrips);
     }
     if (document.getElementById('btnSaveZones')) {
       document.getElementById('btnSaveZones').addEventListener('click', saveZones);
+    }
+    if (els.btnAddTrip) {
+      els.btnAddTrip.addEventListener('click', addNewTrip);
+    }
+    if (els.btnAddZone) {
+      els.btnAddZone.addEventListener('click', addNewZone);
     }
 
     loadHospitals();
