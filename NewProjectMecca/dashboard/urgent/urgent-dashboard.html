@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>البلاغات الحرجة – لوحة التحكم</title>
+
+  <!-- خط Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Theme controller -->
+  <script src="../../public/assets/js/theme.js"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+  <!-- نفس ملفات CSS للوحة -->
+  <link rel="stylesheet" href="../../public/assets/css/styles.css" />
+  <link rel="stylesheet" href="../dashboard.css" />
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- 🔵 HEADER مطابق للداشبورد -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color:#002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <img src="../../public/assets/img/logo3.png" class="h-16" />
+
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200">لوحة البلاغات</a>
+          <span class="text-white font-bold border-b border-white pb-1">البلاغات الحرجة</span>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-20">
+
+    <!-- 🔴 عنوان -->
+    <section class="pt-4 pb-6 mesh-gradient">
+      <div class="container mx-auto px-4 text-center">
+        <h2 class="text-3xl font-bold mb-3" style="color:#002B5B">البلاغات الحرجة</h2>
+        <div class="w-24 h-1 mx-auto mb-4" style="background:linear-gradient(90deg,#e11d48,#b91c1c)"></div>
+        <p class="text-xl text-gray-600">تحليل البلاغات الحرجة على مستوى التجمع الصحي</p>
+      </div>
+    </section>
+
+    <!-- 🔵 كروت KPI بنفس كروت dashboard -->
+    <section>
+      <div class="container mx-auto px-4">
+        <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3">
+
+          <div class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
+              <span class="text-white text-xl">🔴</span>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">إجمالي البلاغات الحرجة</div>
+              <div id="kpi-total" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-yellow-600 flex items-center justify-center">
+              <span class="text-white text-xl">⏱</span>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">متوسط زمن الإغلاق</div>
+              <div id="kpi-time" class="text-lg font-bold" style="color:#002B5B">0 ساعة</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center">
+              <span class="text-white text-xl">✔</span>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">معدل إغلاق البلاغات</div>
+              <div id="kpi-closure" class="text-lg font-bold" style="color:#002B5B">0%</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 🏥 البلاغات الحرجة حسب المستشفى -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-2xl font-semibold" style="color:#002B5B">البلاغات حسب المستشفى</h3>
+              <p class="text-sm text-gray-500">مقارنة البلاغات الحرجة لكل مستشفى داخل التجمع</p>
+            </div>
+            <span class="text-sm font-medium px-3 py-1 rounded-full bg-red-100 text-red-600">Critical</span>
+          </div>
+
+          <div class="relative max-w-4xl mx-auto" dir="ltr">
+            <canvas id="chartHospitals" class="w-full h-[320px]"></canvas>
+            <p class="chart-error text-center text-red-600 mt-4"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 📊 بلاغات سوء التعامل مقابل زمن الإغلاق -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+            بلاغات سوء التعامل ومتوسط زمن الإغلاق لكل مستشفى
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">
+            مقارنة بين عدد بلاغات سوء التعامل ومتوسط زمن إغلاقها بالساعات
+          </p>
+
+          <div class="relative" style="height:380px;" dir="ltr">
+            <canvas id="chartMistreatmentTime"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🎯 مخططات مقسّمة بصفين -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="grid gap-6 lg:grid-cols-2">
+          <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+              مقارنة سوء التعامل وبلاغات الأدوية حسب المستشفى
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+              يوضح عدد بلاغات سوء التعامل مقابل بلاغات الأدوية في كل مستشفى
+            </p>
+            <div dir="ltr">
+              <canvas id="chartSubPerHospital" class="w-full h-[320px]"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+              أعلى المستشفيات في بلاغات سوء التعامل
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+              ترتيب المستشفيات حسب عدد بلاغات سوء التعامل
+            </p>
+            <div dir="ltr">
+              <canvas id="chartTopMistreatment" class="w-full h-[320px]"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🎯 الصف الثاني للمخططات -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="grid gap-6 lg:grid-cols-2">
+          <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+              أعلى المستشفيات في بلاغات الأدوية
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+              ترتيب المستشفيات حسب عدد بلاغات الأدوية
+            </p>
+            <div dir="ltr">
+              <canvas id="chartTopMedicine" class="w-full h-[320px]"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+              نسبة البلاغات المغلقة مقابل المفتوحة
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+              مقارنة بين البلاغات الحرجة المغلقة والبلاغات الحرجة المفتوحة في جميع المستشفيات
+            </p>
+            <div class="relative w-full" dir="ltr">
+              <canvas id="chartUrgentOpenClosed" class="w-full h-[320px]"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🎯 (4) أكثر الموظفين تكرارًا في بلاغات سوء التعامل -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+            أكثر الموظفين تكرارًا في بلاغات سوء التعامل
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">
+            يعرض الموظفين الذين وردت عليهم أكبر عدد من بلاغات سوء التعامل
+          </p>
+          <div class="flex flex-wrap items-center gap-4 mb-4">
+            <div class="flex items-center gap-2">
+              <label for="mistreatmentEmployeesHospital" class="text-sm text-gray-600">المستشفى:</label>
+              <select id="mistreatmentEmployeesHospital"
+                class="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+                <option value="all">جميع المستشفيات</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="mistreatmentEmployeesCount" class="text-sm text-gray-600">Top:</label>
+              <select id="mistreatmentEmployeesCount"
+                class="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+                <option value="5">5</option>
+                <option value="8" selected>8</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+              </select>
+            </div>
+          </div>
+          <div class="relative w-full h-[320px]" data-top-employees-wrapper dir="ltr">
+            <canvas id="chartTopEmployeesMistreatment" class="h-full w-full"></canvas>
+            <div id="topEmployeesMistreatmentEmpty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-gray-400 text-sm">
+              <span class="text-base font-medium mb-1">لا توجد بيانات لبلاغات سوء التعامل</span>
+              <span class="text-xs text-gray-500">جرّب تغيير التصفية أو تأكد من توافر البلاغات.</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">
+            يتم ترتيب القائمة تنازليًا حسب عدد بلاغات سوء التعامل لكل موظف.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="urgent-dashboard.js"></script>
+</body>
+
+</html>
+

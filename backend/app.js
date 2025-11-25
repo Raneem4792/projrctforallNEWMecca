@@ -75,6 +75,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import improvementPressganeyRoutes from './routes/improvementPressganey.routes.js';
 import iconsRoutes from './routes/icons.routes.js';
+import dashboardUrgentRoutes from './routes/dashboardUrgent.js';
 import { getCentralPool } from './db/centralPool.js';
 
 // تأكيد تحميل reports routes
@@ -272,6 +273,7 @@ app.use('/api/users', userRoutes); // /api/users/...
 app.use('/api/logs', logsRoutes);
 app.use('/api/trash', trashRoutes);
 app.use('/api/dashboard/total', dashboardTotalRouter);
+app.use('/api/dashboard/urgent', dashboardUrgentRoutes);
 app.use('/api/departments', departmentsNewRoutes);
 app.use('/api/complaints-list', complaintsListRoutes);
 app.use('/api', hospitalTripsRoutes);

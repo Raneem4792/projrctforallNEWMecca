@@ -247,6 +247,39 @@
           </div>
         </div>
 
+        <!-- Service - البلاغات الحرجة -->
+        <div id="cardUrgent" 
+             class="card-hover bg-white dark:bg-gray-800 rounded-xl p-7 shadow-lg border border-gray-100 dark:border-gray-700"
+             style="display:none"
+             tabindex="0" role="button"
+             aria-label="البلاغات الحرجة"
+             onclick="window.location.href='../dashboard/urgent/urgent-dashboard.html'">
+
+          <div class="service-icon w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <div class="dynamic-icon hidden w-12 h-12 flex items-center justify-center" data-key="urgentComplaints"></div>
+
+            <!-- fallback icon -->
+            <svg class="icon-fallback w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M12 3a9 9 0 100 18 9 9 0 000-18z"/>
+            </svg>
+          </div>
+
+          <h3 id="serviceUrgent-title" 
+              class="dynamic-title text-xl font-bold text-gray-900 dark:text-white mb-2 text-center" 
+              data-key="urgentComplaints">البلاغات الحرجة</h3>
+
+          <p id="serviceUrgent-desc" class="text-gray-600 dark:text-gray-300 text-center">
+            عرض وتحليل بلاغات الطوارئ الحرجة
+          </p>
+
+          <div class="text-center mt-3">
+            <span id="serviceUrgent-action" class="text-red-600 dark:text-red-400 text-sm font-medium">
+              افتح لوحة البلاغات الحرجة ↗
+            </span>
+          </div>
+        </div>
+
         <!-- Service 11 - تقارير برسجيني -->
         <div id="cardPressGaney" class="card-hover bg-white dark:bg-gray-800 rounded-xl p-7 shadow-lg border border-gray-100 dark:border-gray-700"
              tabindex="0" role="button" aria-label="تقارير برسجيني"
@@ -741,6 +774,7 @@
     const cardImprovements = $('#cardImprovements');
     const cardImports = $('#cardImports');
     const cardMystery = $('#cardMystery');
+    const cardUrgent = $('#cardUrgent');
     const cardPressGaney = $('#cardPressGaney');
     const cardArchive = $('#cardArchive');
     const cardClusterCreate = $('#cardClusterCreate');
@@ -773,7 +807,7 @@
 
         if (isClusterAdmin) {
           // أظهر كل شيء (ما عدا الأرشيف - يعتمد على الصلاحيات)
-          [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardPressGaney, cardClusterCreate, cardClusterList]
+          [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardUrgent, cardPressGaney, cardClusterCreate, cardClusterList]
             .forEach(el => el && (el.style.display = ''));
           if (cardAdmin) cardAdmin.classList.remove('hidden');
           
@@ -812,6 +846,12 @@
             cardMystery.style.display = 'none';
             console.log('🔒 تم إخفاء بطاقة الزائر السري (لا توجد صلاحية MYSTERY_MODULE)');
           }
+        }
+
+        // البلاغات الحرجة: تظهر فقط لصلاحية urgentModule أو مدير التجمع
+        const canSeeUrgent = payload.urgentModule === true || isClusterAdmin;
+        if (cardUrgent) {
+          cardUrgent.style.display = canSeeUrgent ? '' : 'none';
         }
 
         // 🔒 التحكم في ظهور بطاقة برسجيني حسب الصلاحيات
@@ -912,7 +952,7 @@
           const isClusterAdmin = (userData.RoleID === 1) || (userData.scope === 'central') || (userData.HospitalID == null);
           if (isClusterAdmin) {
             // مدير التجمع: أظهر كل شيء (ما عدا الأرشيف - يعتمد على الصلاحيات)
-            [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardPressGaney, cardClusterCreate, cardClusterList]
+            [cardSubmit, cardTrack, cardHistory, cardAdmin, cardImprovements, cardImports, cardMystery, cardUrgent, cardPressGaney, cardClusterCreate, cardClusterList]
               .forEach(el => el && (el.style.display = ''));
             if (cardAdmin) cardAdmin.classList.remove('hidden');
             
@@ -930,6 +970,7 @@
             if (cardClusterList) cardClusterList.style.display = 'none';
             if (cardClusterCreate) cardClusterCreate.style.display = 'none';
             if (cardArchive) cardArchive.style.display = 'none';
+            if (cardUrgent) cardUrgent.style.display = 'none';
             
             // ✅ إظهار "عرض بلاغات إدارة التجمع" فقط إذا عنده صلاحية العرض
             if (fallbackPerms.clusterView === true) {
@@ -944,6 +985,11 @@
             // ✅ إظهار أيقونة الأرشيف فقط إذا عنده صلاحية العرض
             if (fallbackPerms.archiveView === true) {
               if (cardArchive) cardArchive.style.display = '';
+            }
+
+            // ✅ إظهار البلاغات الحرجة إذا كانت الصلاحية محفوظة
+            if (fallbackPerms.urgentModule === true && cardUrgent) {
+              cardUrgent.style.display = '';
             }
           }
         } catch {}
