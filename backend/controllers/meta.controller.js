@@ -157,40 +157,66 @@ export async function getComplaintStatuses(req, res) {
 export async function getComplaintTypes(req, res) {
   try {
     const { hospitalId } = req.query;
-    const { HospitalID } = req.user;
+    const { HospitalID, RoleID } = req.user;
 
-    // التحقق من أن المستخدم يطلب بيانات من مستشفاه فقط
-    if (Number(hospitalId) !== Number(HospitalID)) {
+    // التحقق من صلاحيات مدير التجمع (RoleID === 1 أو 4)
+    const isClusterManager = RoleID === 1 || RoleID === 4;
+    
+    // تحديد المستشفى الهدف
+    let targetHospitalId = null;
+    if (hospitalId) {
+      targetHospitalId = Number(hospitalId);
+    } else {
+      targetHospitalId = Number(HospitalID);
+    }
+
+    // التحقق من الصلاحيات: الموظف العادي فقط يمكنه رؤية مستشفاه
+    if (!isClusterManager && Number(targetHospitalId) !== Number(HospitalID)) {
       return res.status(403).json({
         ok: false,
         error: 'غير مسموح بالوصول لهذا المستشفى'
       });
     }
 
-    const tenant = await getTenantPoolByHospitalId(HospitalID);
+    // إذا كان مدير تجمع ولم يحدد مستشفى، نستخدم مستشفاه (أو يمكن إرجاع جميع التصنيفات)
+    if (isClusterManager && !hospitalId && HospitalID) {
+      targetHospitalId = Number(HospitalID);
+    }
+    
+    // التأكد من وجود targetHospitalId
+    if (!targetHospitalId || isNaN(targetHospitalId)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'يجب تحديد معرف المستشفى'
+      });
+    }
 
+    const tenant = await getTenantPoolByHospitalId(targetHospitalId);
+
+    // استخدام ComplaintTypeID بدلاً من TypeID للحفاظ على التوافق
     const [types] = await tenant.query(`
       SELECT 
-        TypeID,
-        NameAr,
-        NameEn,
-        Description,
-        IsActive
+        ComplaintTypeID AS id,
+        ComplaintTypeID AS TypeID,
+        ComplaintTypeID AS ComplaintTypeID,
+        TypeName AS nameAr,
+        TypeName AS NameAr,
+        TypeNameEn AS nameEn,
+        TypeNameEn AS NameEn,
+        TypeCode,
+        1 AS IsActive
       FROM complaint_types 
-      WHERE HospitalID = ? AND IsActive = 1
-      ORDER BY NameAr ASC
-    `, [HospitalID]);
+      ORDER BY TypeName ASC
+    `);
 
-    res.json({
-      ok: true,
-      data: types
-    });
+    res.json(types);
 
   } catch (error) {
     console.error('خطأ في الحصول على أنواع البلاغات:', error);
     res.status(500).json({
       ok: false,
-      error: 'خطأ في الحصول على أنواع البلاغات'
+      error: 'خطأ في الحصول على أنواع البلاغات',
+      message: error.message
     });
   }
 }

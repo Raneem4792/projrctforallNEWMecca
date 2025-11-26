@@ -175,10 +175,6 @@
           <label id="category-label" class="block text-[11px] text-gray-500 mb-1">التصنيف</label>
           <select id="fType" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm focus:ring-2 focus:ring-blue-200">
             <option value="ALL" id="category-all">الكل</option>
-            <option id="category-1">المواعيد</option>
-            <option id="category-2">الأدوية</option>
-            <option id="category-3">الوثائق و السجلات</option>
-            <option id="category-4">الأمن والسلامة</option>
           </select>
         </div>
         <div>
@@ -195,9 +191,9 @@
     <!-- عدّاد مختصر -->
     <section class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
       <div class="card !py-4 text-center"><div id="total-results-label" class="text-sm text-gray-500">إجمالي النتائج</div><div id="kpiTotal" class="text-2xl font-extrabold text-[#002B5B]">0</div></div>
-      <div class="card !py-4 text-center"><div id="open-label" class="text-sm text-gray-500">مفتوحة</div><div id="kpiOpen" class="text-2xl font-extrabold text-blue-600">0</div></div>
-      <div class="card !py-4 text-center"><div id="closed-label" class="text-sm text-gray-500">مغلقة</div><div id="kpiClosed" class="text-2xl font-extrabold text-emerald-600">0</div></div>
-      <div class="card !py-4 text-center"><div id="critical-label" class="text-sm text-gray-500 dark:text-gray-300">حرجة</div><div id="kpiCritical" class="text-2xl font-extrabold text-gray-900 dark:text-white">0</div></div>
+      <div id="kpiCardOpen" class="card !py-4 text-center cursor-pointer hover:shadow-md transition-all" style="cursor: pointer;"><div id="open-label" class="text-sm text-gray-500">مفتوحة</div><div id="kpiOpen" class="text-2xl font-extrabold text-blue-600">0</div></div>
+      <div id="kpiCardClosed" class="card !py-4 text-center cursor-pointer hover:shadow-md transition-all" style="cursor: pointer;"><div id="closed-label" class="text-sm text-gray-500">مغلقة</div><div id="kpiClosed" class="text-2xl font-extrabold text-emerald-600">0</div></div>
+      <div id="kpiCardCritical" class="card !py-4 text-center cursor-pointer hover:shadow-md transition-all" style="cursor: pointer;"><div id="critical-label" class="text-sm text-gray-500 dark:text-gray-300">حرجة</div><div id="kpiCritical" class="text-2xl font-extrabold text-red-600">0</div></div>
     </section>
 
     <!-- النتائج (كروت) -->

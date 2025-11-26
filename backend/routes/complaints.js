@@ -496,13 +496,14 @@ router.get('/history', requireAuth, async (req, res) => {
     const file     = (req.query.file   || '').trim();
     const ticket   = (req.query.ticket || '').trim();
     const status   = (req.query.status || 'ALL').toUpperCase();
+    const type     = (req.query.type   || 'ALL').trim();
     const from     = (req.query.from   || '').trim();
     const to       = (req.query.to     || '').trim();
     const assigned = (req.query.assigned || '').trim().toLowerCase();
 
     // لوج تشخيصي مفصل
     console.log(`📋 [HISTORY] البحث | hasUser: ${!!req.user} | hospitalId: ${req.user?.HospitalID || req.user?.hospitalId || 'none'} | queryHospitalId: ${req.query.hospitalId || 'none'} | page: ${page}`);
-    console.log(`📋 [HISTORY] الفلاتر:`, { name, mobile, file, ticket, status, from, to, assigned });
+    console.log(`📋 [HISTORY] الفلاتر:`, { name, mobile, file, ticket, status, type, from, to, assigned });
 
     // جلب خريطة المستشفيات من القاعدة المركزية (مرة واحدة)
     const hospitalsMap = await getHospitalsMap();
@@ -567,7 +568,19 @@ router.get('/history', requireAuth, async (req, res) => {
     if (mobile) { where.push('c.PatientMobile = ?'); params.push(mobile); }
     if (file)   { where.push('c.FileNumber = ?'); params.push(file); }
     if (ticket) { where.push('c.TicketNumber = ?'); params.push(ticket); }
-    if (status !== 'ALL') { where.push('c.StatusCode = ?'); params.push(status); }
+    if (status !== 'ALL') {
+      // استخدام المقارنة case-insensitive لدعم جميع أشكال الحالة
+      // الحالات في قاعدة البيانات: 'OPEN', 'CLOSED', 'IN_PROGRESS', إلخ
+      where.push(`UPPER(TRIM(c.StatusCode)) = UPPER(TRIM(?))`);
+      params.push(status);
+    }
+    if (type && type !== 'ALL') { 
+      const typeId = parseInt(type, 10);
+      if (!isNaN(typeId)) {
+        where.push('c.ComplaintTypeID = ?'); 
+        params.push(typeId);
+      }
+    }
     if (from)   { where.push('DATE(c.CreatedAt) >= ?'); params.push(from); }
     if (to)     { where.push('DATE(c.CreatedAt) <= ?'); params.push(to); }
     
@@ -691,11 +704,24 @@ router.get('/history', requireAuth, async (req, res) => {
       ) last_assign ON last_assign.ComplaintID = c.ComplaintID
       WHERE 1=1 ${whereSql}
     `;
+    // استعلام KPIs محسّن - يحسب الإحصائيات بناءً على الحالات والأولويات الفعلية
+    // مع تطبيق نفس الفلاتر المطبقة على items
     const sqlKPIs  = `
       SELECT
-        SUM(c.StatusCode='OPEN')         AS openCount,
-        SUM(c.StatusCode='CLOSED')       AS closedCount,
-        SUM(c.StatusCode='CRITICAL')     AS criticalCount
+        COUNT(*) AS totalCount,
+        SUM(CASE 
+          WHEN UPPER(TRIM(c.StatusCode)) NOT IN ('CLOSED', 'RESOLVED', 'COMPLETED', 'مغلق', 'مغلقة', 'محلول', 'محلولة', 'مكتمل', 'مكتملة')
+          THEN 1 ELSE 0 
+        END) AS openCount,
+        SUM(CASE 
+          WHEN UPPER(TRIM(c.StatusCode)) IN ('CLOSED', 'RESOLVED', 'COMPLETED', 'مغلق', 'مغلقة', 'محلول', 'محلولة', 'مكتمل', 'مكتملة')
+          THEN 1 ELSE 0 
+        END) AS closedCount,
+        SUM(CASE 
+          WHEN UPPER(TRIM(c.PriorityCode)) IN ('URGENT', 'CRITICAL', 'HIGH')
+             OR TRIM(c.PriorityCode) IN ('حرجة', 'حرج', 'عاجلة', 'عاجل', 'عالية', 'عاليه')
+          THEN 1 ELSE 0 
+        END) AS criticalCount
       FROM complaints c
       /* آخر إسناد */
       LEFT JOIN (
@@ -786,7 +812,7 @@ router.get('/history', requireAuth, async (req, res) => {
         const startIndex = offset;
         const endIndex = startIndex + pageSize;
         items = allItems.slice(startIndex, endIndex);
-        total = allItems.length; // إجمالي من جميع المستشفيات
+        total = allTotal; // إجمالي من جميع المستشفيات (من sqlCount وليس من allItems.length)
         kpis = allKpis;
         source = 'all-hospitals';
         
@@ -883,6 +909,7 @@ router.get('/history', requireAuth, async (req, res) => {
             console.log(`📋 [HISTORY] البحث في ${allHospitals.length} مستشفى كبديل احتياطي`);
             
             const allItems = [];
+            let allTotal = 0;
             let allKpis = { open: 0, closed: 0, critical: 0 };
             
             // البحث في كل مستشفى
@@ -900,6 +927,7 @@ router.get('/history', requireAuth, async (req, res) => {
                 });
 
                 const [hospitalRows] = await hospitalPool.query(sqlHospital, [...params, 1000, 0]);
+                const [[hospitalCount]] = await hospitalPool.query(sqlCount, params);
                 const [[hospitalKpis]] = await hospitalPool.query(sqlKPIs, params);
 
                 if (hospitalRows.length > 0) {
@@ -912,6 +940,7 @@ router.get('/history', requireAuth, async (req, res) => {
                   }));
                   
                   allItems.push(...enrichedRows);
+                  allTotal += hospitalCount?.cnt || 0;
                   allKpis.open += Number(hospitalKpis?.openCount || 0);
                   allKpis.closed += Number(hospitalKpis?.closedCount || 0);
                   allKpis.critical += Number(hospitalKpis?.criticalCount || 0);
@@ -931,11 +960,11 @@ router.get('/history', requireAuth, async (req, res) => {
               const startIndex = offset;
               const endIndex = startIndex + pageSize;
               items = allItems.slice(startIndex, endIndex);
-              total = allItems.length;
+              total = allTotal; // استخدام allTotal من sqlCount وليس allItems.length
               kpis = allKpis;
               source = 'all-hospitals-fallback';
               
-              console.log(`📊 [HISTORY] تم العثور على ${items.length} نتيجة من جميع المستشفيات كبديل احتياطي`);
+              console.log(`📊 [HISTORY] تم العثور على ${items.length} نتيجة من ${total} إجمالي (من جميع المستشفيات كبديل احتياطي)`);
             }
             
           } catch (error) {

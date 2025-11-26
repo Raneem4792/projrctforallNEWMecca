@@ -42,6 +42,79 @@ let page = 1;
 let lastResponse = { items: [], total: 0, pages: 1, kpis: {open:0, closed:0, critical:0} };
 let assignedOnly = false;
 
+// ===== دالة تحميل التصنيفات من قاعدة البيانات =====
+async function loadComplaintTypes() {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // تحديد hospitalId: من القائمة المنسدلة لمدير التجمع، أو من localStorage للموظفين
+    let hospitalId = localStorage.getItem('hospitalId');
+    const hospitalSelect = document.getElementById('hospitalSelect');
+    if (hospitalSelect && hospitalSelect.value && hospitalSelect.value !== 'ALL') {
+      hospitalId = hospitalSelect.value;
+    }
+    
+    // بناء URL لجلب التصنيفات
+    let url = `${API_BASE}/api/meta/complaint-types`;
+    if (hospitalId && hospitalId !== 'ALL') {
+      url += `?hospitalId=${encodeURIComponent(hospitalId)}`;
+    }
+    
+    const headers = { 'Accept': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const types = await response.json();
+    
+    // ملء القائمة المنسدلة بالتصنيفات
+    const fTypeSelect = els.fType;
+    if (fTypeSelect) {
+      // حفظ القيمة الحالية
+      const currentValue = fTypeSelect.value;
+      
+      // مسح الخيارات القديمة (ما عدا "الكل")
+      while (fTypeSelect.options.length > 1) {
+        fTypeSelect.remove(1);
+      }
+      
+      // إضافة التصنيفات من قاعدة البيانات
+      if (Array.isArray(types)) {
+        types.forEach(type => {
+          const option = document.createElement('option');
+          option.value = type.id || type.ComplaintTypeID;
+          option.textContent = type.nameAr || type.TypeName || type.name || 'غير محدد';
+          option.id = `category-${type.id || type.ComplaintTypeID}`;
+          fTypeSelect.appendChild(option);
+        });
+        
+        console.log(`✅ تم تحميل ${types.length} تصنيف من قاعدة البيانات`);
+      } else {
+        // إذا كانت النتيجة object واحد
+        console.warn('⚠️ النتيجة ليست array:', types);
+      }
+      
+      // استعادة القيمة الحالية إذا كانت موجودة
+      if (currentValue && currentValue !== 'ALL') {
+        const optionExists = Array.from(fTypeSelect.options).some(opt => opt.value === currentValue);
+        if (optionExists) {
+          fTypeSelect.value = currentValue;
+        } else {
+          fTypeSelect.value = 'ALL'; // إذا لم يعد التصنيف موجوداً
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ خطأ في جلب التصنيفات:', error);
+    // في حالة الخطأ، نترك القائمة المنسدلة كما هي (فارغة ما عدا "الكل")
+  }
+}
+
 // ===== دالة تحميل المستشفيات لمدير التجمع =====
 async function loadHospitalsForCluster() {
   try {
@@ -144,7 +217,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // ربط تغيير المستشفى
         const hospitalSelect = document.getElementById('hospitalSelect');
         if (hospitalSelect) {
-          hospitalSelect.addEventListener('change', () => {
+          hospitalSelect.addEventListener('change', async () => {
+            // تحديث التصنيفات عند تغيير المستشفى
+            await loadComplaintTypes();
             page = 1;
             runSearch();
           });
@@ -204,6 +279,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // ربط الكروت للفلترة عند الضغط عليها
+  const kpiCardOpen = document.getElementById('kpiCardOpen');
+  const kpiCardClosed = document.getElementById('kpiCardClosed');
+  const kpiCardCritical = document.getElementById('kpiCardCritical');
+
+  if (kpiCardOpen) {
+    kpiCardOpen.addEventListener('click', () => {
+      els.fStatus.value = 'OPEN';
+      page = 1;
+      runSearch();
+    });
+  }
+
+  if (kpiCardClosed) {
+    kpiCardClosed.addEventListener('click', () => {
+      els.fStatus.value = 'CLOSED';
+      page = 1;
+      runSearch();
+    });
+  }
+
+  if (kpiCardCritical) {
+    kpiCardCritical.addEventListener('click', () => {
+      els.fStatus.value = 'CRITICAL';
+      page = 1;
+      runSearch();
+    });
+  }
+
+  // تحميل التصنيفات من قاعدة البيانات
+  await loadComplaintTypes();
+  
   // تحميل البيانات تلقائياً عند فتح الصفحة
   console.log('🚀 تحميل البيانات تلقائياً عند فتح الصفحة');
   runSearch();
@@ -627,7 +734,9 @@ async function runSearch() {
       params.set('priority', 'urgent');
       console.log('🔄 status=CRITICAL → priority=urgent');
     } else if (chosenStatus !== 'ALL') {
-      params.set('status', chosenStatus);
+      // إرسال الحالة بشكل uppercase لضمان التوافق مع قاعدة البيانات
+      params.set('status', chosenStatus.toUpperCase());
+      console.log(`✅ إرسال فلتر الحالة: ${chosenStatus.toUpperCase()}`);
     }
     
     // لا نرسل hospitalId - السيرفر يحدده من التوكن
@@ -724,14 +833,14 @@ async function runSearch() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.message || 'خطأ في البيانات');
 
-    // حساب عدد البلاغات العاجلة من العناصر الظاهرة في الصفحة الحالية
-    const urgentCount = (data.items || []).filter(
-      i => String(i.priority || '').toUpperCase() === 'URGENT'
-    ).length;
-
-    // ضَمّن kpis ثم خذ الأكبر (الذي يعكس الواقع في الواجهة)
-    if (!data.kpis) data.kpis = { open: 0, closed: 0, critical: 0 };
-    data.kpis.critical = Math.max(Number(data.kpis.critical || 0), urgentCount);
+    // التأكد من وجود KPIs من الـ API (تعكس جميع البلاغات المطابقة للفلاتر وليس فقط الصفحة الحالية)
+    if (!data.kpis) {
+      data.kpis = { open: 0, closed: 0, critical: 0 };
+      console.warn('⚠️ [KPIs] لا توجد KPIs من الـ API');
+    }
+    
+    // KPIs تأتي من الـ API وتتضمن جميع البلاغات المطابقة للفلاتر
+    // لا نحتاج لحسابها من العناصر الظاهرة في الصفحة الحالية
 
     lastResponse = data;
     updateKPIs(data);
