@@ -1937,3 +1937,9 @@ VALUES
 ('العيادات الافتراضية', 0);
 
 
+ALTER TABLE complaints 
+ADD COLUMN  ActualClosingHours INT NULL 
+COMMENT 'الوقت الفعلي للإغلاق بالساعات (من CreatedAt إلى لحظة الإغلاق)' 
+AFTER ProcessingDurationHours;
+
+

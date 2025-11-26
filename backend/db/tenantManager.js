@@ -30,7 +30,7 @@ export async function getTenantPoolByHospitalId(hospitalId) {
   // ✅ نظّف قيَم المركزي والبيئة معًا
   const host = clean(cfg.DbHost) || clean(process.env.DB_HOST) || '127.0.0.1';
   const user = clean(cfg.DbUser) || clean(process.env.DB_USER) || 'root';
-  const password = clean(cfg.DbPass) || clean(process.env.DB_PASS) || 'Raneem11';
+  const password = clean(cfg.DbPass) || clean(process.env.DB_PASS) || 'SamarAmer12345@';
   const database = clean(cfg.DbName);
   if (!database) throw new Error(`Missing DbName for hospital ${hospitalId}`);
 

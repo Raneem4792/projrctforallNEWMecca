@@ -904,9 +904,15 @@ router.post(
       let duplicates = 0;
       let errors = 0;
       const duplicateDetails = [];
+      const skippedDetails = [];
+      const errorDetails = [];
 
-      const mainCache = new Map();
+      const mainCache = new Map(); // cache للـ IDs
       const subCache = new Map();
+      
+      // Cache للتصنيفات المطبعة (normalized) - يتم تحميلها مرة واحدة فقط
+      let normalizedMainTypes = null; // Map: normalizedName -> { ComplaintTypeID, TypeName }
+      let normalizedSubTypes = new Map(); // Map: mainId -> Map: normalizedName -> { SubTypeID, SubTypeName }
       const timestampSupport = {
         complaint_types: null,
         complaint_subtypes: null
@@ -927,12 +933,21 @@ router.post(
         }
       };
 
-      for (const row of rows) {
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const row = rows[rowIndex];
+        const rowNumber = rowIndex + 2; // +2 لأن أول صف هو الرؤوس
         const mainName = pickColumnValue(row, CATEGORY_MAIN_HEADERS);
         const subName = pickColumnValue(row, CATEGORY_SUB_HEADERS);
 
         if (!mainName || !subName) {
           skipped++;
+          skippedDetails.push({ 
+            row: rowNumber,
+            reason: !mainName && !subName ? 'التصنيف الرئيسي والفرعي فارغان' : 
+                   !mainName ? 'التصنيف الرئيسي فارغ' : 'التصنيف الفرعي فارغ',
+            main: mainName || '(فارغ)',
+            sub: subName || '(فارغ)'
+          });
           continue;
         }
 
@@ -940,57 +955,211 @@ router.post(
         const subKey = `${mainKey}::${subName.toLowerCase()}`;
         if (subCache.has(subKey)) {
           skipped++;
+          skippedDetails.push({ 
+            row: rowNumber,
+            reason: 'مكرر داخل نفس الملف',
+            main: mainName,
+            sub: subName
+          });
           continue;
         }
 
         try {
+          // ---- التحقق من وجود التصنيف الرئيسي باستخدام Normalization ----
           let mainId = mainCache.get(mainKey);
           if (!mainId) {
-            const [existingMain] = await tenantPool.query(
-              'SELECT ComplaintTypeID FROM complaint_types WHERE TypeName = ? LIMIT 1',
-              [mainName]
-            );
-
-            if (existingMain.length) {
-              mainId = existingMain[0].ComplaintTypeID;
-              await touchTimestamp('complaint_types', 'ComplaintTypeID', mainId);
-            } else {
-              const [insertMain] = await tenantPool.query(
-                'INSERT INTO complaint_types (TypeName) VALUES (?)',
-                [mainName]
+            // تطبيع اسم التصنيف الرئيسي
+            const cleanMainName = mainName.trim();
+            const normalizedMainName = normalizeAr(cleanMainName);
+            
+            // تحميل جميع التصنيفات الرئيسية مرة واحدة فقط (lazy loading)
+            if (normalizedMainTypes === null) {
+              const [allMainTypes] = await tenantPool.query(
+                `SELECT ComplaintTypeID, TypeName FROM complaint_types`
               );
-              mainId = insertMain.insertId;
-              inserted++;
+              normalizedMainTypes = new Map();
+              for (const row of allMainTypes) {
+                const normalized = normalizeAr(row.TypeName);
+                if (!normalizedMainTypes.has(normalized)) {
+                  normalizedMainTypes.set(normalized, {
+                    ComplaintTypeID: row.ComplaintTypeID,
+                    TypeName: row.TypeName
+                  });
+                }
+              }
+            }
+            
+            // البحث في التصنيفات المطبعة
+            const foundMain = normalizedMainTypes.get(normalizedMainName);
+            
+            if (foundMain) {
+              // التصنيف الرئيسي موجود مسبقاً في قاعدة البيانات (بعد التطبيع)
+              mainId = foundMain.ComplaintTypeID;
+              await touchTimestamp('complaint_types', 'ComplaintTypeID', mainId);
+              // لا نضيفه مرة أخرى - فقط نستخدم ID الموجود
+            } else {
+              // التصنيف الرئيسي غير موجود → محاولة إضافته
+              try {
+                const [insertMain] = await tenantPool.query(
+                  'INSERT INTO complaint_types (TypeName) VALUES (?)',
+                  [cleanMainName]
+                );
+                mainId = insertMain.insertId;
+                inserted++; // ← زيادة عداد الإضافات
+                
+                // إضافة التصنيف الجديد للـ cache
+                normalizedMainTypes.set(normalizedMainName, {
+                  ComplaintTypeID: mainId,
+                  TypeName: cleanMainName
+                });
+              } catch (insertError) {
+                // إذا فشل الإدراج بسبب duplicate entry (UNIQUE constraint)
+                if (insertError.code === 'ER_DUP_ENTRY' || insertError.errno === 1062) {
+                  // إعادة تحميل التصنيفات والبحث مرة أخرى
+                  const [allMainTypes] = await tenantPool.query(
+                    `SELECT ComplaintTypeID, TypeName FROM complaint_types`
+                  );
+                  normalizedMainTypes = new Map();
+                  for (const row of allMainTypes) {
+                    const normalized = normalizeAr(row.TypeName);
+                    if (!normalizedMainTypes.has(normalized)) {
+                      normalizedMainTypes.set(normalized, {
+                        ComplaintTypeID: row.ComplaintTypeID,
+                        TypeName: row.TypeName
+                      });
+                    }
+                  }
+                  
+                  const retryFound = normalizedMainTypes.get(normalizedMainName);
+                  if (retryFound) {
+                    mainId = retryFound.ComplaintTypeID;
+                    // لا نضيفه - موجود مسبقاً
+                  } else {
+                    throw insertError;
+                  }
+                } else {
+                  throw insertError;
+                }
+              }
             }
             mainCache.set(mainKey, mainId);
           }
 
-          const [existingSub] = await tenantPool.query(
-            `SELECT SubTypeID FROM complaint_subtypes WHERE ComplaintTypeID = ? AND SubTypeName = ? LIMIT 1`,
-            [mainId, subName]
-          );
-
-          if (existingSub.length) {
-            duplicates++;
-            duplicateDetails.push({ main: mainName, sub: subName });
-            subCache.set(subKey, true);
-            continue;
-          } else {
-            await tenantPool.query(
-              `INSERT INTO complaint_subtypes (ComplaintTypeID, SubTypeName) VALUES (?, ?)`,
-              [mainId, subName]
+          // ---- التحقق من وجود التصنيف الفرعي باستخدام Normalization ----
+          // تطبيع اسم التصنيف الفرعي
+          const cleanSubName = subName.trim();
+          const normalizedSubName = normalizeAr(cleanSubName);
+          
+          // تحميل جميع التصنيفات الفرعية لهذا التصنيف الرئيسي (lazy loading)
+          if (!normalizedSubTypes.has(mainId)) {
+            const [allSubTypes] = await tenantPool.query(
+              `SELECT SubTypeID, SubTypeName FROM complaint_subtypes WHERE ComplaintTypeID = ?`,
+              [mainId]
             );
-            inserted++;
+            const subMap = new Map();
+            for (const row of allSubTypes) {
+              const normalized = normalizeAr(row.SubTypeName);
+              if (!subMap.has(normalized)) {
+                subMap.set(normalized, {
+                  SubTypeID: row.SubTypeID,
+                  SubTypeName: row.SubTypeName
+                });
+              }
+            }
+            normalizedSubTypes.set(mainId, subMap);
           }
+          
+          // البحث في التصنيفات الفرعية المطبعة
+          const subMap = normalizedSubTypes.get(mainId);
+          const foundSub = subMap.get(normalizedSubName);
 
-          subCache.set(subKey, true);
+          if (foundSub) {
+            // التصنيف الفرعي موجود مسبقاً في قاعدة البيانات (بعد التطبيع) → يعتبر مكرر
+            duplicates++;
+            duplicateDetails.push({ 
+              main: mainName, 
+              sub: cleanSubName, 
+              row: rowNumber,
+              reason: 'التصنيف الفرعي موجود مسبقاً في قاعدة البيانات'
+            });
+            subCache.set(subKey, true);
+          } else {
+            // التصنيف الفرعي غير موجود → إضافته
+            try {
+              await tenantPool.query(
+                `INSERT INTO complaint_subtypes (ComplaintTypeID, SubTypeName)
+                 VALUES (?, ?)`,
+                [mainId, cleanSubName]
+              );
+              inserted++; // ← تحتسب كإضافة جديدة
+              subCache.set(subKey, true);
+              
+              // إضافة التصنيف الفرعي الجديد للـ cache
+              subMap.set(normalizedSubName, {
+                SubTypeID: null, // سيتم ملؤه لاحقاً إذا احتجنا
+                SubTypeName: cleanSubName
+              });
+            } catch (insertError) {
+              // إذا فشل الإدراج بسبب duplicate entry (UNIQUE constraint)
+              if (insertError.code === 'ER_DUP_ENTRY' || insertError.errno === 1062) {
+                // إعادة تحميل التصنيفات الفرعية والبحث مرة أخرى
+                const [allSubTypes] = await tenantPool.query(
+                  `SELECT SubTypeID, SubTypeName FROM complaint_subtypes WHERE ComplaintTypeID = ?`,
+                  [mainId]
+                );
+                const newSubMap = new Map();
+                for (const row of allSubTypes) {
+                  const normalized = normalizeAr(row.SubTypeName);
+                  if (!newSubMap.has(normalized)) {
+                    newSubMap.set(normalized, {
+                      SubTypeID: row.SubTypeID,
+                      SubTypeName: row.SubTypeName
+                    });
+                  }
+                }
+                normalizedSubTypes.set(mainId, newSubMap);
+                
+                const retryFound = newSubMap.get(normalizedSubName);
+                if (retryFound) {
+                  duplicates++;
+                  duplicateDetails.push({ 
+                    main: mainName, 
+                    sub: cleanSubName,
+                    row: rowNumber,
+                    reason: 'التصنيف الفرعي موجود (تم منع الإضافة بواسطة قاعدة البيانات)'
+                  });
+                  subCache.set(subKey, true);
+                } else {
+                  throw insertError;
+                }
+              } else {
+                throw insertError;
+              }
+            }
+          }
         } catch (error) {
           errors++;
-          console.error('Import categories row failed:', { error: error.message, row });
+          errorDetails.push({ 
+            row: rowNumber,
+            error: error.message,
+            main: mainName || '(غير محدد)',
+            sub: subName || '(غير محدد)'
+          });
+          console.error('Import categories row failed:', { error: error.message, row, rowNumber });
         }
       }
 
-      res.json({ inserted, updated, skipped, duplicates, errors, duplicateDetails });
+      res.json({ 
+        inserted, 
+        updated, 
+        skipped, 
+        duplicates, 
+        errors, 
+        duplicateDetails,
+        skippedDetails,
+        errorDetails,
+        total: rows.length
+      });
     } catch (err) {
       console.error('POST /api/imports/categories failed:', err);
       res.status(500).json({ message: 'خطأ أثناء استيراد التصنيفات', details: err.message });

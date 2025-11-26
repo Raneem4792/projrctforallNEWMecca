@@ -372,9 +372,17 @@
         const st=$('#fStatus')?.value; if(st && st!=='ALL') params.set('status',st);
         const pr=$('#fPriority')?.value; if(pr && pr!=='ALL') params.set('priority',pr);
 
-        // ✅ لمدير التجمع: لا نرسل hospitalId (ليعرض جميع المستشفيات)
-        // ✅ للموظف العادي: نرسل hospitalId
-        if (!isClusterManager()) {
+        // ✅ لمدير التجمع: نستخدم hospitalId من القائمة المنسدلة إذا كان محددًا
+        // ✅ للموظف العادي: نرسل hospitalId من بيانات المستخدم
+        if (isClusterManager()) {
+          const selectedHospitalId = getCurrentFilterHospitalId();
+          if (selectedHospitalId) {
+            params.set('hospitalId', selectedHospitalId);
+            console.log('👑 [mystery-complaints] Cluster Manager - Selected Hospital ID:', selectedHospitalId);
+          } else {
+            console.log('👑 [mystery-complaints] Cluster Manager - showing all hospitals');
+          }
+        } else {
           const hid = getHospitalIdFromClient();
           if(hid) {
             params.set('hospitalId', hid);
@@ -382,8 +390,6 @@
           } else {
             console.warn('⚠️ [mystery-complaints] No Hospital ID found in localStorage');
           }
-        } else {
-          console.log('👑 [mystery-complaints] Cluster Manager - showing all hospitals');
         }
 
         const url = `${API_BASE}/api/mystery-complaints?${params.toString()}`;
@@ -489,9 +495,57 @@
       kpiCriticalEl.textContent = critical;
     }
 
+    // ✅ تحميل قائمة المستشفيات لمدير التجمع
+    async function loadHospitalsForClusterManager() {
+      if (!isClusterManager()) return;
+      
+      const clusterBar = document.getElementById('clusterBar');
+      const hospitalSelect = document.getElementById('hospitalSelect');
+      if (!clusterBar || !hospitalSelect) return;
+      
+      // إظهار الشريط
+      clusterBar.classList.remove('hidden');
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/central/hospitals?active=1`, {
+          headers: { 'Authorization': `Bearer ${token||''}` }
+        });
+        if (!res.ok) return;
+        
+        const list = await res.json();
+        list.sort((a,b)=>(a.SortOrder??999)-(b.SortOrder??999) || (a.NameAr||'').localeCompare(b.NameAr||'', 'ar'));
+        
+        // إضافة خيار "الكل"
+        hospitalSelect.innerHTML = '<option value="">الكل</option>';
+        
+        // إضافة المستشفيات
+        list.forEach(h => {
+          const opt = document.createElement('option');
+          opt.value = h.HospitalID;
+          opt.textContent = `${h.NameAr || h.NameEn}${h.Code ? ` (${h.Code})` : ''}`;
+          hospitalSelect.appendChild(opt);
+        });
+        
+        // استرجاع آخر اختيار إن وُجد
+        const saved = localStorage.getItem('mysteryComplaintsHospitalId');
+        if (saved) hospitalSelect.value = saved;
+        
+        // إضافة event listener عند تغيير المستشفى
+        hospitalSelect.addEventListener('change', () => {
+          localStorage.setItem('mysteryComplaintsHospitalId', hospitalSelect.value || '');
+          fetchList(); // إعادة تحميل البيانات
+        });
+      } catch (err) {
+        console.error('خطأ في تحميل قائمة المستشفيات:', err);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async ()=>{
       // فحص الصلاحيات قبل التحميل
       if(await guardMysteryList()){
+        // تحميل قائمة المستشفيات لمدير التجمع
+        await loadHospitalsForClusterManager();
+        
         // تحميل أولي
         fetchList();
         // أزرار التصفية

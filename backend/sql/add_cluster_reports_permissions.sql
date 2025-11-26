@@ -1,5 +1,5 @@
 -- إضافة صلاحيات بلاغات إدارة التجمع
--- يتم تنفيذها في قاعدة البيانات المركزية (hospitals_mecca4)
+-- يتم تنفيذها في قاعدة البيانات المركزية (hospitals_mecca3)
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('CLUSTER_REPORT_CREATE',   'تقديم بلاغ إدارة التجمع',              'cluster_reports'),

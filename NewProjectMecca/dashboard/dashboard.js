@@ -64,8 +64,21 @@ if (typeof App.loadHospitalsSelectForMystery !== 'function') {
 
 if (typeof App.renderMysteryByDepartment !== 'function') {
   App.renderMysteryByDepartment = async function () {
-    const canvas = document.getElementById('mystery-depts');
-    if (!canvas) return;
+    // البحث عن الـ canvas - إذا لم يكن موجودًا، نحاول إنشاؤه
+    let canvas = document.getElementById('mystery-depts');
+    if (!canvas) {
+      // البحث عن الـ wrapper وإعادة إنشاء الـ canvas
+      const wrapper = document.querySelector('#mystery-section div[style*="height"]');
+      if (wrapper) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'mystery-depts';
+        wrapper.innerHTML = ''; // مسح المحتوى القديم
+        wrapper.appendChild(canvas);
+      } else {
+        console.warn('Mystery canvas wrapper not found');
+        return;
+      }
+    }
 
     await window.loadCurrentUser?.();
     const me = App.getCurrentUser();
@@ -75,28 +88,46 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
 
     const params = new URLSearchParams();
 
-    // التحقق من وجود تصفية نشطة أولاً
-    const filteredId = window.filteredHospitalId;
-    if (filteredId) {
-      params.set('hospitalId', filteredId);
-      console.log('🔍 التصفية النشطة - استخدام hospitalId المفلتر للزائر السري:', filteredId);
-    } else if (App.isClusterManager()) {
-      const hid = document.getElementById('mystery-hospital-select')?.value || localStorage.getItem('mysteryDashHospitalId');
-      if (!hid) {
-        // رسالة توجيهية
-        const wrap = canvas.parentElement;
-        if (wrap) {
-          wrap.innerHTML = `<div class="text-center py-10 text-gray-600">
-          اختر مستشفى من القائمة لعرض بيانات الزائر السري.
-        </div>`;
+    // أولوية: إذا كان مدير تجمع، استخدم القائمة المنسدلة أولاً (إذا كانت موجودة)
+    if (App.isClusterManager()) {
+      const selectValue = document.getElementById('mystery-hospital-select')?.value;
+      if (selectValue) {
+        params.set('hospitalId', selectValue);
+        console.log('🔍 استخدام hospitalId من القائمة المنسدلة للزائر السري:', selectValue);
+      } else {
+        // إذا لم يكن هناك اختيار من القائمة، استخدم localStorage أو التصفية النشطة
+        const saved = localStorage.getItem('mysteryDashHospitalId');
+        const filteredId = window.filteredHospitalId;
+        const hid = saved || filteredId;
+        if (hid) {
+          params.set('hospitalId', hid);
+          console.log('🔍 استخدام hospitalId من localStorage أو التصفية النشطة:', hid);
         } else {
-          console.warn('Mystery canvas is missing a wrapper element.');
+          // رسالة توجيهية - إخفاء الـ canvas وعرض الرسالة
+          const wrap = canvas.parentElement;
+          if (wrap) {
+            canvas.style.display = 'none';
+            const existingMsg = wrap.querySelector('.mystery-select-msg');
+            if (existingMsg) existingMsg.remove();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'mystery-select-msg text-center py-10 text-gray-600';
+            msgDiv.textContent = 'اختر مستشفى من القائمة لعرض بيانات الزائر السري.';
+            wrap.appendChild(msgDiv);
+          } else {
+            console.warn('Mystery canvas is missing a wrapper element.');
+          }
+          return;
         }
-        return;
       }
-      params.set('hospitalId', hid);
-    } else if (me?.HospitalID) {
-      params.set('hospitalId', me.HospitalID);
+    } else {
+      // إذا لم يكن مدير تجمع، استخدم التصفية النشطة أو مستشفى المستخدم
+      const filteredId = window.filteredHospitalId;
+      if (filteredId) {
+        params.set('hospitalId', filteredId);
+        console.log('🔍 التصفية النشطة - استخدام hospitalId المفلتر للزائر السري:', filteredId);
+      } else if (me?.HospitalID) {
+        params.set('hospitalId', me.HospitalID);
+      }
     }
 
     const url = `${API_BASE}/api/dashboard/mystery/by-department?${params.toString()}`;
@@ -106,13 +137,23 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
 
     if (!res.ok) {
       console.warn('Mystery API failed', res.status, url);
+      // تدمير أي charts موجودة أولاً
+      Chart.helpers.each(Chart.instances, inst => {
+        if (inst.canvas && inst.canvas.id === 'mystery-depts') inst.destroy();
+      });
+      
       const wrap = canvas.parentElement;
       if (wrap) {
-        wrap.innerHTML =
-          `<div class="text-center py-8">
-             <div class="text-red-600 text-lg mb-2">تعذّر تحميل بيانات الزائر السري</div>
-             <div class="text-gray-600">تحقّق من الصلاحيات/المسار</div>
-           </div>`;
+        canvas.style.display = 'none';
+        const existingMsg = wrap.querySelector('.mystery-error-msg');
+        if (existingMsg) existingMsg.remove();
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'mystery-error-msg text-center py-8';
+        msgDiv.innerHTML = `
+          <div class="text-red-600 text-lg mb-2">تعذّر تحميل بيانات الزائر السري</div>
+          <div class="text-gray-600">تحقّق من الصلاحيات/المسار</div>
+        `;
+        wrap.appendChild(msgDiv);
       } else {
         console.warn('Mystery canvas is missing a wrapper element.');
       }
@@ -121,15 +162,38 @@ if (typeof App.renderMysteryByDepartment !== 'function') {
 
     const js = await res.json();
     const rows = js?.data || [];
+    
+    // تدمير أي charts موجودة أولاً
+    Chart.helpers.each(Chart.instances, inst => {
+      if (inst.canvas && inst.canvas.id === 'mystery-depts') inst.destroy();
+    });
+    
     if (!rows.length) {
+      // إخفاء الـ canvas وعرض رسالة "لا توجد بيانات" بدلاً من حذفه
       const wrap = canvas.parentElement;
       if (wrap) {
-        wrap.innerHTML = `<div class="text-center py-8 text-gray-600">لا توجد بيانات</div>`;
+        // إخفاء الـ canvas
+        canvas.style.display = 'none';
+        
+        // إزالة أي رسالة سابقة
+        const existingMsg = wrap.querySelector('.mystery-no-data-msg');
+        if (existingMsg) existingMsg.remove();
+        
+        // إضافة رسالة جديدة
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'mystery-no-data-msg text-center py-8 text-gray-600';
+        msgDiv.textContent = 'لا توجد بيانات';
+        wrap.appendChild(msgDiv);
       } else {
         console.warn('Mystery canvas is missing a wrapper element.');
       }
       return;
     }
+    
+    // إظهار الـ canvas وإزالة رسالة "لا توجد بيانات" إذا كانت موجودة
+    canvas.style.display = 'block';
+    const existingMsg = canvas.parentElement?.querySelector('.mystery-no-data-msg');
+    if (existingMsg) existingMsg.remove();
 
     const labels = rows.map(r => r.DepartmentName);
     const open   = rows.map(r => Number(r.OpenCount||0));

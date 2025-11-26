@@ -260,12 +260,59 @@
           </form>
 
           <div id="categoriesResults" class="hidden mt-4 p-4 bg-gray-50 border rounded-lg">
-            <h3 id="catResultsTitle" class="text-sm font-semibold">نتائج الاستيراد:</h3>
-            <p><span id="catLabelInserted">تمت الإضافة:</span> <span id="catInsert">0</span></p>
-            <p><span id="catLabelUpdated">تم التحديث:</span> <span id="catUpdate">0</span></p>
-            <p><span id="catLabelSkipped">تم التخطي:</span> <span id="catSkip">0</span></p>
-            <p><span id="catLabelDuplicates">المكررة:</span> <span id="catDup">0</span></p>
-            <p><span id="catLabelErrors">الأخطاء:</span> <span id="catErr">0</span></p>
+            <h3 id="catResultsTitle" class="text-sm font-semibold mb-3">نتائج الاستيراد:</h3>
+            
+            <!-- الإحصائيات -->
+            <div class="space-y-1 text-xs text-gray-700 mb-4">
+              <div class="flex justify-between">
+                <span>إجمالي الصفوف:</span>
+                <span id="catTotal" class="font-semibold">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-green-600">✓ تمت الإضافة:</span>
+                <span id="catInsert" class="font-semibold text-green-600">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-blue-600">🔄 تم التحديث:</span>
+                <span id="catUpdate" class="font-semibold text-blue-600">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-yellow-600">⊘ تم التخطي:</span>
+                <span id="catSkip" class="font-semibold text-yellow-600">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-orange-600">🔄 المكررة:</span>
+                <span id="catDup" class="font-semibold text-orange-600">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-red-600">✗ الأخطاء:</span>
+                <span id="catErr" class="font-semibold text-red-600">0</span>
+              </div>
+            </div>
+
+            <!-- تفاصيل المكررة -->
+            <div id="catDuplicatesDetails" class="hidden mt-3">
+              <h4 class="text-xs font-semibold text-orange-600 mb-2">التصنيفات المكررة:</h4>
+              <div class="max-h-32 overflow-y-auto text-xs space-y-1">
+                <div id="catDuplicatesList"></div>
+              </div>
+            </div>
+
+            <!-- تفاصيل المتخطاة -->
+            <div id="catSkippedDetails" class="hidden mt-3">
+              <h4 class="text-xs font-semibold text-yellow-600 mb-2">الصفوف المتخطاة:</h4>
+              <div class="max-h-32 overflow-y-auto text-xs space-y-1">
+                <div id="catSkippedList"></div>
+              </div>
+            </div>
+
+            <!-- تفاصيل الأخطاء -->
+            <div id="catErrorsDetails" class="hidden mt-3">
+              <h4 class="text-xs font-semibold text-red-600 mb-2">تفاصيل الأخطاء:</h4>
+              <div class="max-h-32 overflow-y-auto text-xs space-y-1">
+                <div id="catErrorsList"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -517,33 +564,24 @@
           // تحميل قائمة المستشفيات
           await loadHospitalsForMysterySelect();
         } else {
-          // موظف مستشفى: إخفاء القائمة وإظهار اسم المستشفى
+          // موظف مستشفى: إظهار القائمة مع قيمة افتراضية
           mysteryExtra.style.display = 'block';
-          hospitalSelect.style.display = 'none';
+          hospitalSelect.style.display = 'block';
           if (hospitalNote) hospitalNote.style.display = 'none';
           
-          // جلب اسم المستشفى
-          const hospitalName = localStorage.getItem('hospitalNameAr') || 'مستشفى غير محدد';
+          // تحميل قائمة المستشفيات للموظف أيضاً (لكن مع قيمة افتراضية)
+          await loadHospitalsForMysterySelect();
           
-          // إنشاء label لعرض اسم المستشفى
-          const autoLabel = document.createElement('div');
-          autoLabel.className = 'text-gray-700 mt-2 font-semibold';
-          autoLabel.innerHTML = `📍 المستشفى: <span class="text-blue-600">${hospitalName}</span>`;
-          
-          // إدراج Label قبل select
-          if (hospitalSelect.parentNode) {
-            hospitalSelect.parentNode.insertBefore(autoLabel, hospitalSelect);
+          // تعيين قيمة افتراضية للموظف
+          if (userHospitalId) {
+            hospitalSelect.value = userHospitalId;
           }
           
-          // حفظ HospitalID في متغير عام
-          window.currentMysteryHospitalId = userHospitalId;
-          
-          console.log('[initMysteryHospitalField] Saved hospitalId for employee:', window.currentMysteryHospitalId);
+          console.log('[initMysteryHospitalField] Set default hospitalId for employee:', userHospitalId);
           
           // إذا لم يكن هناك HospitalID، أظهر تحذير
           if (!userHospitalId) {
             console.error('[initMysteryHospitalField] ⚠️ HospitalID is null for non-cluster manager user!');
-            autoLabel.innerHTML += ' <span class="text-red-600 text-xs">⚠️ تحذير: لم يتم تحديد المستشفى</span>';
           }
         }
       } catch (err) {
@@ -605,43 +643,12 @@
             return;
           }
           
-        // التحقق من المستشفى
-        let selectedHospitalId;
-        if (isClusterManager()) {
-          selectedHospitalId = document.getElementById('mysteryHospitalId')?.value;
-          if (!selectedHospitalId) {
-            status.textContent='الرجاء اختيار المستشفى (لأنك مدير التجمع).';
-            status.className='text-red-600 text-sm';
-            return;
-          }
-        } else {
-          selectedHospitalId = window.currentMysteryHospitalId;
-          if (!selectedHospitalId) {
-            // محاولة أخيرة: جلب من localStorage
-            try {
-              const userDataStr = localStorage.getItem('userData');
-              if (userDataStr) {
-                const userData = JSON.parse(userDataStr);
-                selectedHospitalId = userData?.HospitalID || userData?.hospitalId || null;
-              }
-            } catch (e) {
-              console.warn('Failed to get hospitalId from localStorage:', e);
-            }
-            
-            if (!selectedHospitalId) {
-              const storedHospId = localStorage.getItem('hospitalId');
-              if (storedHospId) {
-                selectedHospitalId = parseInt(storedHospId, 10);
-              }
-            }
-            
-            if (!selectedHospitalId) {
-              status.textContent='خطأ: لم يتم تحديد المستشفى تلقائياً. يرجى تحديث الصفحة أو الاتصال بالدعم.';
-              status.className='text-red-600 text-sm';
-              console.error('[wireForm] HospitalID is missing for employee user');
-              return;
-            }
-          }
+        // التحقق من المستشفى - دائماً من السلكت فقط
+        let selectedHospitalId = document.getElementById('mysteryHospitalId')?.value;
+        if (!selectedHospitalId) {
+          status.textContent='يجب اختيار المستشفى قبل رفع الملف.';
+          status.className='text-red-600 text-sm';
+          return;
         }
         }
         
@@ -659,40 +666,10 @@
           fd.append('dateFrom', dateFrom);
           fd.append('dateTo', dateTo);
           
-          // إضافة معرف المستشفى
-          let selectedHospitalId;
-          if (isClusterManager()) {
-            selectedHospitalId = document.getElementById('mysteryHospitalId')?.value;
-          } else {
-            selectedHospitalId = window.currentMysteryHospitalId;
-            
-            // محاولة أخيرة إذا لم يكن موجوداً
-            if (!selectedHospitalId) {
-              try {
-                const userDataStr = localStorage.getItem('userData');
-                if (userDataStr) {
-                  const userData = JSON.parse(userDataStr);
-                  selectedHospitalId = userData?.HospitalID || userData?.hospitalId || null;
-                }
-              } catch (e) {
-                console.warn('Failed to get hospitalId from localStorage in FormData:', e);
-              }
-              
-              if (!selectedHospitalId) {
-                const storedHospId = localStorage.getItem('hospitalId');
-                if (storedHospId) {
-                  selectedHospitalId = parseInt(storedHospId, 10);
-                }
-              }
-            }
-          }
-          
-          if (selectedHospitalId) {
-            fd.append('hospitalId', selectedHospitalId);
-            console.log('[wireForm] Sending hospitalId:', selectedHospitalId);
-          } else {
-            console.error('[wireForm] ⚠️ No hospitalId to send!');
-          }
+          // إضافة معرف المستشفى - دائماً من السلكت فقط (تم التحقق منه سابقاً)
+          let selectedHospitalId = document.getElementById('mysteryHospitalId')?.value;
+          fd.append('hospitalId', selectedHospitalId);
+          console.log('[wireForm] Sending hospitalId:', selectedHospitalId);
         }
         
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -1338,48 +1315,17 @@
       const dateFrom = qs('#mysteryFrom')?.value;
       const dateTo = qs('#mysteryTo')?.value;
 
-      // المستشفى: إن كنتِ مدير التجمع نقرأه من السلكت، غير ذلك من المتغير العام
-      let hospitalId;
-      if (isClusterManager()) {
-        hospitalId = qs('#mysteryHospitalId')?.value;
-      } else {
-        hospitalId = window.currentMysteryHospitalId;
-        
-        // محاولة أخيرة: جلب من localStorage
-        if (!hospitalId) {
-          try {
-            const userDataStr = localStorage.getItem('userData');
-            if (userDataStr) {
-              const userData = JSON.parse(userDataStr);
-              hospitalId = userData?.HospitalID || userData?.hospitalId || null;
-            }
-          } catch (e) {
-            console.warn('[saveMysterySummary] Failed to get hospitalId from localStorage:', e);
-          }
-          
-          if (!hospitalId) {
-            const storedHospId = localStorage.getItem('hospitalId');
-            if (storedHospId) {
-              hospitalId = parseInt(storedHospId, 10);
-            }
-          }
-        }
-      }
+      // المستشفى: دائماً من السلكت فقط
+      let hospitalId = qs('#mysteryHospitalId')?.value;
 
       if (!ticket || !dateFrom || !dateTo) {
         statusEl.textContent = 'رقم التذكرة و(من/إلى) إلزامية.';
         statusEl.className = 'mt-2 text-sm text-red-600';
         return;
       }
-      if (isClusterManager() && !hospitalId) {
-        statusEl.textContent = 'اختر المستشفى (لأنك مدير التجمع).';
+      if (!hospitalId) {
+        statusEl.textContent = 'يجب اختيار المستشفى قبل الحفظ.';
         statusEl.className = 'mt-2 text-sm text-red-600';
-        return;
-      }
-      if (!isClusterManager() && !hospitalId) {
-        statusEl.textContent = 'خطأ: لم يتم تحديد المستشفى تلقائياً. يرجى تحديث الصفحة أو الاتصال بالدعم.';
-        statusEl.className = 'mt-2 text-sm text-red-600';
-        console.error('[saveMysterySummary] HospitalID is missing for employee user');
         return;
       }
       if (!rawText) {
@@ -1534,13 +1480,60 @@
           statusEl.textContent = 'تم بنجاح!';
           statusEl.className = 'text-green-600';
 
+          // تحديث العدادات
+          document.getElementById('catTotal').textContent = data.total ?? 0;
           insertEl.textContent = data.inserted ?? 0;
           updateEl.textContent = data.updated ?? 0;
-          skipEl.textContent = data.skipped ?? 0;
           skipEl.textContent = data.skipped ?? 0;
           const dupEl = document.getElementById('catDup');
           if (dupEl) dupEl.textContent = data.duplicates ?? 0;
           errEl.textContent = data.errors ?? 0;
+
+          // عرض تفاصيل المكررة
+          const dupDetailsDiv = document.getElementById('catDuplicatesDetails');
+          const dupListDiv = document.getElementById('catDuplicatesList');
+          if (data.duplicateDetails && data.duplicateDetails.length > 0) {
+            dupDetailsDiv.classList.remove('hidden');
+            dupListDiv.innerHTML = data.duplicateDetails.slice(0, 20).map(item => 
+              `<div class="p-1 bg-orange-50 rounded text-gray-700">• ${item.main} → ${item.sub}</div>`
+            ).join('');
+            if (data.duplicateDetails.length > 20) {
+              dupListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.duplicateDetails.length - 20} أخرى</div>`;
+            }
+          } else {
+            dupDetailsDiv.classList.add('hidden');
+          }
+
+          // عرض تفاصيل المتخطاة
+          const skippedDetailsDiv = document.getElementById('catSkippedDetails');
+          const skippedListDiv = document.getElementById('catSkippedList');
+          if (data.skippedDetails && data.skippedDetails.length > 0) {
+            skippedDetailsDiv.classList.remove('hidden');
+            skippedListDiv.innerHTML = data.skippedDetails.slice(0, 20).map(item => 
+              `<div class="p-1 bg-yellow-50 rounded text-gray-700">• صف ${item.row}: ${item.reason} (${item.main} → ${item.sub})</div>`
+            ).join('');
+            if (data.skippedDetails.length > 20) {
+              skippedListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.skippedDetails.length - 20} أخرى</div>`;
+            }
+          } else {
+            skippedDetailsDiv.classList.add('hidden');
+          }
+
+          // عرض تفاصيل الأخطاء
+          const errorsDetailsDiv = document.getElementById('catErrorsDetails');
+          const errorsListDiv = document.getElementById('catErrorsList');
+          if (data.errorDetails && data.errorDetails.length > 0) {
+            errorsDetailsDiv.classList.remove('hidden');
+            errorsListDiv.innerHTML = data.errorDetails.slice(0, 10).map(item => 
+              `<div class="p-1 bg-red-50 rounded text-gray-700">• صف ${item.row}: ${item.error} (${item.main} → ${item.sub})</div>`
+            ).join('');
+            if (data.errorDetails.length > 10) {
+              errorsListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.errorDetails.length - 10} أخرى</div>`;
+            }
+          } else {
+            errorsDetailsDiv.classList.add('hidden');
+          }
+
           resultsBox.classList.remove('hidden');
         } catch (error) {
           statusEl.textContent = 'فشل الرفع: ' + error.message;
