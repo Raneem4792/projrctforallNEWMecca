@@ -22,13 +22,13 @@
         <div class="flex items-center">
           <img src="../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
         </div>
-        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="index.html" class="text-white hover:text-blue-200">الرئيسية</a>
-          <a href="../dashboard/dashboard.html" class="text-white hover:text-blue-200">لوحة التحكم</a>
-          <a href="about-system.html" class="text-white hover:text-blue-200">حول النظام</a>
-          <a href="help.html" class="text-white hover:text-blue-200">المساعدة</a>
-          <a href="contact.html" class="text-white font-bold border-b-2 border-white">اتصل بنا</a>
-          <a href="#" class="text-white hover:text-blue-200 flex items-center">🌐 English</a>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-6">
+          <a href="index.html" class="text-white hover:text-blue-200" data-i18n-key="nav-home">الرئيسية</a>
+          <a href="../dashboard/dashboard.html" class="text-white hover:text-blue-200" data-i18n-key="nav-dashboard">لوحة التحكم</a>
+          <a href="about-system.html" class="text-white hover:text-blue-200" data-i18n-key="nav-about">حول النظام</a>
+          <a href="help.html" class="text-white hover:text-blue-200" data-i18n-key="nav-help">المساعدة</a>
+          <a href="contact.html" class="text-white font-bold border-b-2 border-white" data-i18n-key="nav-contact">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 flex items-center gap-1" data-i18n-key="language-button">🌐 English</button>
         </nav>
       </div>
     </div>
@@ -38,12 +38,12 @@
   <section class="hero-gradient pt-28 pb-10">
     <div class="container mx-auto px-4">
       <nav class="text-sm text-gray-500 mb-3">
-        <a href="index.html" class="hover:underline">الرئيسية</a>
+        <a href="index.html" class="hover:underline" data-i18n-key="breadcrumb-home">الرئيسية</a>
         <span class="mx-1">/</span>
-        <span class="text-gray-700">اتصل بنا</span>
+        <span class="text-gray-700" data-i18n-key="breadcrumb-contact">اتصل بنا</span>
       </nav>
-      <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">تواصل معنا</h1>
-      <p class="text-gray-600 max-w-2xl">
+      <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2" data-i18n-key="hero-title">تواصل معنا</h1>
+      <p class="text-gray-600 max-w-2xl" data-i18n-key="hero-description">
         يسعدنا استقبال استفساراتك واقتراحاتك المتعلقة بنظام البلاغات. فريق الدعم متوفر على مدار الساعة لخدمتك.
       </p>
     </div>
@@ -58,9 +58,9 @@
             <path stroke-width="2" d="M3 5a2 2 0 012-2h3l2 5-3 1a11 11 0 005 5l1-3 5 2v3a2 2 0 01-2 2h-1C9.7 21 3 14.3 3 6V5z"/>
           </svg>
         </div>
-        <h3 class="font-bold text-gray-900 mb-1">الدعم الهاتفي</h3>
-        <p class="text-gray-600">0559735137 (24/7)</p>
-        <p class="text-gray-600">0542282550 (24/7)</p>
+        <h3 class="font-bold text-gray-900 mb-1" data-i18n-key="card-phone-title">الدعم الهاتفي</h3>
+        <p class="text-gray-600" data-i18n-key="card-phone-line1">0559735137 (24/7)</p>
+        <p class="text-gray-600" data-i18n-key="card-phone-line2">0542282550 (24/7)</p>
       </div>
 
       <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
@@ -69,8 +69,8 @@
             <path stroke-width="2" d="M3 8l7.9 4.26a2 2 0 002.2 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
         </div>
-        <h3 class="font-bold text-gray-900 mb-1">البريد الإلكتروني</h3>
-        <p class="text-gray-600">support@makkahhealth.gov.sa</p>
+        <h3 class="font-bold text-gray-900 mb-1" data-i18n-key="card-email-title">البريد الإلكتروني</h3>
+        <p class="text-gray-600" data-i18n-key="card-email-line">support@makkahhealth.gov.sa</p>
       </div>
 
       <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
@@ -79,8 +79,8 @@
             <path stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
         </div>
-        <h3 class="font-bold text-gray-900 mb-1">ساعات العمل</h3>
-        <p class="text-gray-600">الدعم متاح على مدار الساعة (24/7)</p>
+        <h3 class="font-bold text-gray-900 mb-1" data-i18n-key="card-hours-title">ساعات العمل</h3>
+        <p class="text-gray-600" data-i18n-key="card-hours-line">الدعم متاح على مدار الساعة (24/7)</p>
       </div>
     </div>
   </section>
@@ -90,41 +90,41 @@
     <div class="container mx-auto px-4 grid lg:grid-cols-2 gap-8">
       <!-- الفورم -->
       <section class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">أرسل رسالة</h2>
+        <h2 class="text-2xl font-bold text-gray-900 mb-4" data-i18n-key="form-title">أرسل رسالة</h2>
         <form id="contactForm" class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-700 mb-1">الاسم الكامل</label>
+            <label class="block text-sm text-gray-700 mb-1" data-i18n-key="form-fullname-label">الاسم الكامل</label>
             <input type="text" name="fullName" required class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div class="grid md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm text-gray-700 mb-1">البريد الإلكتروني</label>
+              <label class="block text-sm text-gray-700 mb-1" data-i18n-key="form-email-label">البريد الإلكتروني</label>
               <input type="email" name="email" required class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="block text-sm text-gray-700 mb-1">رقم الجوال (اختياري)</label>
+              <label class="block text-sm text-gray-700 mb-1" data-i18n-key="form-phone-label">رقم الجوال (اختياري)</label>
               <input type="tel" name="phone" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
           <div>
-            <label class="block text-sm text-gray-700 mb-1">الموضوع</label>
+            <label class="block text-sm text-gray-700 mb-1" data-i18n-key="form-subject-label">الموضوع</label>
             <input type="text" name="subject" required class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
-            <label class="block text-sm text-gray-700 mb-1">الرسالة</label>
+            <label class="block text-sm text-gray-700 mb-1" data-i18n-key="form-message-label">الرسالة</label>
             <textarea name="message" rows="5" required class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
           <div class="flex items-center gap-3">
-            <button type="submit" class="cta-button text-white px-6 py-3 rounded-xl">إرسال</button>
-            <span class="text-sm text-gray-500">سيتم الرد خلال 24 ساعة كحد أقصى</span>
+            <button type="submit" class="cta-button text-white px-6 py-3 rounded-xl" data-i18n-key="form-submit">إرسال</button>
+            <span class="text-sm text-gray-500" data-i18n-key="form-note">سيتم الرد خلال 24 ساعة كحد أقصى</span>
           </div>
         </form>
       </section>
 
       <!-- الخريطة / العنوان -->
       <aside class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">موقع الإدارة</h2>
-        <p class="text-gray-600 mb-4">تجمع مكة المكرمة الصحي – الإدارة العامة</p>
+        <h2 class="text-2xl font-bold text-gray-900 mb-4" data-i18n-key="location-title">موقع الإدارة</h2>
+        <p class="text-gray-600 mb-4" data-i18n-key="location-desc">تجمع مكة المكرمة الصحي – الإدارة العامة</p>
         <!-- Placeholder خريطة — يمكنك استبدال src بخريطة Google الفعلية -->
         <div class="rounded-xl overflow-hidden border border-gray-200">
           <iframe title="خريطة تقريبية" src="https://maps.google.com/maps?q=Mecca&t=&z=12&ie=UTF8&iwloc=&output=embed"
@@ -134,11 +134,11 @@
         <div class="mt-6 space-y-2 text-sm text-gray-700">
           <div class="flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 5h18M9 3v4m6-4v4M4 9h16v11a2 2 0 01-2 2H6a2 2 0 01-2-2V9z"/></svg>
-            <span>الأحد – الخميس: 8 صباحًا – 4 مساءً (الحضور)، الدعم الفني: 24/7</span>
+            <span data-i18n-key="location-hours">الأحد – الخميس: 8 صباحًا – 4 مساءً (الحضور)، الدعم الفني: 24/7</span>
           </div>
           <div class="flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h2"/><path stroke-width="2" d="M12 12v6m-3-3h6"/></svg>
-            <span>لطلبات التكامل والواجهات البرمجية API: it@makkahhealth.gov.sa</span>
+            <span data-i18n-key="location-api">لطلبات التكامل والواجهات البرمجية API: it@makkahhealth.gov.sa</span>
           </div>
         </div>
       </aside>
@@ -146,7 +146,7 @@
   </main>
 
   <!-- بانر -->
-  <div class="bg-gray-600 text-white py-2 text-center text-sm">منصة رسمية للتجمع الصحي بمكة المكرمة</div>
+  <div class="bg-gray-600 text-white py-2 text-center text-sm" data-i18n-key="banner-text">منصة رسمية للتجمع الصحي بمكة المكرمة</div>
 
   <!-- Footer - التذييل -->
   <footer class="bg-gray-900 text-white py-14">
@@ -161,58 +161,187 @@
               </svg>
             </div>
             <div>
-              <div class="font-bold">تجمع مكة الصحي</div>
-              <div class="text-sm text-gray-300">نظام البلاغات</div>
+              <div class="font-bold" data-i18n-key="footer-org-name">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300" data-i18n-key="footer-system-name">نظام البلاغات</div>
             </div>
           </div>
-          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+          <p class="text-gray-300 text-sm" data-i18n-key="footer-description">منصة رسمية لتقديم ومتابعة البلاغات</p>
         </div>
 
         <!-- Column 2 - العمود الثاني -->
         <div>
-          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-links-title">روابط سريعة</h3>
           <ul class="space-y-2 text-sm">
-            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
-            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
-            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
-            <li><a href="#" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+            <li><a href="index.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-home">الرئيسية</a></li>
+            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-submit">تقديم بلاغ</a></li>
+            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-track">متابعة بلاغ</a></li>
+            <li><a href="help.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-faq">الأسئلة الشائعة</a></li>
           </ul>
         </div>
 
         <!-- Column 3 - العمود الثالث -->
         <div>
-          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-contact-title">معلومات التواصل</h3>
           <div class="space-y-2 text-sm text-gray-300">
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <span>رقم الدعم: 0559735137</span>
+              <span data-i18n-key="footer-support-number">رقم الدعم: 0559735137</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <span>support@makkahhealth.gov.sa</span>
+              <span data-i18n-key="footer-support-email">support@makkahhealth.gov.sa</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <span>ساعات العمل: 24/7</span>
+              <span data-i18n-key="footer-working-hours">ساعات العمل: 24/7</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300" data-i18n-key="footer-rights">
         © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
       </div>
     </div>
   </footer>
+
+  <script>
+    const contactTranslations = {
+      ar: {
+        'language-button': '🌐 English',
+        'nav-home': 'الرئيسية',
+        'nav-dashboard': 'لوحة التحكم',
+        'nav-about': 'حول النظام',
+        'nav-help': 'المساعدة',
+        'nav-contact': 'اتصل بنا',
+        'breadcrumb-home': 'الرئيسية',
+        'breadcrumb-contact': 'اتصل بنا',
+        'hero-title': 'تواصل معنا',
+        'hero-description': 'يسعدنا استقبال استفساراتك واقتراحاتك المتعلقة بنظام البلاغات. فريق الدعم متوفر على مدار الساعة لخدمتك.',
+        'card-phone-title': 'الدعم الهاتفي',
+        'card-phone-line1': '0559735137 (24/7)',
+        'card-phone-line2': '0542282550 (24/7)',
+        'card-email-title': 'البريد الإلكتروني',
+        'card-email-line': 'support@makkahhealth.gov.sa',
+        'card-hours-title': 'ساعات العمل',
+        'card-hours-line': 'الدعم متاح على مدار الساعة (24/7)',
+        'form-title': 'أرسل رسالة',
+        'form-fullname-label': 'الاسم الكامل',
+        'form-email-label': 'البريد الإلكتروني',
+        'form-phone-label': 'رقم الجوال (اختياري)',
+        'form-subject-label': 'الموضوع',
+        'form-message-label': 'الرسالة',
+        'form-submit': 'إرسال',
+        'form-note': 'سيتم الرد خلال 24 ساعة كحد أقصى',
+        'location-title': 'موقع الإدارة',
+        'location-desc': 'تجمع مكة المكرمة الصحي – الإدارة العامة',
+        'location-hours': 'الأحد – الخميس: 8 صباحًا – 4 مساءً (الحضور)، الدعم الفني: 24/7',
+        'location-api': 'لطلبات التكامل والواجهات البرمجية API: it@makkahhealth.gov.sa',
+        'banner-text': 'منصة رسمية للتجمع الصحي بمكة المكرمة',
+        'footer-org-name': 'تجمع مكة الصحي',
+        'footer-system-name': 'نظام البلاغات',
+        'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+        'footer-links-title': 'روابط سريعة',
+        'footer-link-home': 'الرئيسية',
+        'footer-link-submit': 'تقديم بلاغ',
+        'footer-link-track': 'متابعة بلاغ',
+        'footer-link-faq': 'الأسئلة الشائعة',
+        'footer-contact-title': 'معلومات التواصل',
+        'footer-support-number': 'رقم الدعم: 0559735137',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'ساعات العمل: 24/7',
+        'footer-rights': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة',
+        'form-success': 'تم إرسال رسالتك بنجاح، سنعاود الاتصال بك قريبًا.'
+      },
+      en: {
+        'language-button': '🌐 العربية',
+        'nav-home': 'Home',
+        'nav-dashboard': 'Dashboard',
+        'nav-about': 'About System',
+        'nav-help': 'Help',
+        'nav-contact': 'Contact Us',
+        'breadcrumb-home': 'Home',
+        'breadcrumb-contact': 'Contact Us',
+        'hero-title': 'Get in Touch',
+        'hero-description': 'We welcome your inquiries and suggestions about the complaint system. Our support team is available 24/7 to help you.',
+        'card-phone-title': 'Phone Support',
+        'card-phone-line1': '0559735137 (24/7)',
+        'card-phone-line2': '0542282550 (24/7)',
+        'card-email-title': 'Email',
+        'card-email-line': 'support@makkahhealth.gov.sa',
+        'card-hours-title': 'Working Hours',
+        'card-hours-line': 'Support available around the clock (24/7)',
+        'form-title': 'Send a Message',
+        'form-fullname-label': 'Full Name',
+        'form-email-label': 'Email',
+        'form-phone-label': 'Mobile (optional)',
+        'form-subject-label': 'Subject',
+        'form-message-label': 'Message',
+        'form-submit': 'Send',
+        'form-note': 'We respond within 24 hours maximum',
+        'location-title': 'Administration Location',
+        'location-desc': 'Makkah Health Cluster – HQ',
+        'location-hours': 'Sunday–Thursday: 8 AM – 4 PM (in person), technical support: 24/7',
+        'location-api': 'Integration/API requests: it@makkahhealth.gov.sa',
+        'banner-text': 'Official platform for the Makkah Health Cluster',
+        'footer-org-name': 'Makkah Health Cluster',
+        'footer-system-name': 'Complaint System',
+        'footer-description': 'Official platform to submit and track complaints',
+        'footer-links-title': 'Quick Links',
+        'footer-link-home': 'Home',
+        'footer-link-submit': 'Submit Complaint',
+        'footer-link-track': 'Track Complaint',
+        'footer-link-faq': 'FAQ',
+        'footer-contact-title': 'Contact Information',
+        'footer-support-number': 'Support: 0559735137',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'Working Hours: 24/7',
+        'footer-rights': '© 2025 Makkah Health Cluster – All rights reserved',
+        'form-success': 'Your message was sent successfully. We will get back to you shortly.'
+      }
+    };
+
+    let currentContactLanguage = localStorage.getItem('contactLanguage') || 'ar';
+
+    function translateContact(key, fallback = '') {
+      return contactTranslations[currentContactLanguage]?.[key] ?? contactTranslations.ar[key] ?? fallback ?? key;
+    }
+
+    function applyContactTranslation(lang) {
+      const dict = contactTranslations[lang] || contactTranslations.ar;
+      currentContactLanguage = lang;
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+
+      document.querySelectorAll('[data-i18n-key]').forEach((el) => {
+        const key = el.dataset.i18nKey;
+        if (dict[key]) el.textContent = dict[key];
+      });
+    }
+
+    function initContactTranslation() {
+      applyContactTranslation(currentContactLanguage);
+      const toggle = document.getElementById('languageToggle');
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          const nextLang = currentContactLanguage === 'ar' ? 'en' : 'ar';
+          localStorage.setItem('contactLanguage', nextLang);
+          applyContactTranslation(nextLang);
+        });
+      }
+    }
+
+    initContactTranslation();
+  </script>
 
   <!-- سكربتات المشروع + معالجة ارسال الفورم (واجهة فقط) -->
   <script src="index.js"></script>
@@ -220,7 +349,7 @@
     document.getElementById('contactForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       // هنا فقط واجهة — استدعِ API لاحقًا إذا رغبت
-      showSuccessMessage('تم إرسال رسالتك بنجاح، سنعاود الاتصال بك قريبًا.');
+      showSuccessMessage(translateContact('form-success', 'تم إرسال رسالتك بنجاح، سنعاود الاتصال بك قريبًا.'));
       e.target.reset();
     });
   </script>

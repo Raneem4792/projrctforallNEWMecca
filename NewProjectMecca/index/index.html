@@ -543,7 +543,7 @@
         'nav-about': 'حول النظام',
         'nav-help': 'المساعدة',
         'nav-contact': 'اتصل بنا',
-        'language-button': '🌐 English',
+        'languageToggle': '🌐 English',
         
         // القسم الرئيسي
         'hero-title': 'منصة رسمية لتقديم ومتابعة البلاغات',
@@ -558,6 +558,7 @@
         'service1-action': 'ابدأ الآن ↗',
         'service2-desc': 'تتبّع حالة البلاغ',
         'service2-action': 'ابدأ الآن ↗',
+        'service3-title': 'سجل البلاغات',
         'service3-desc': 'عرض بلاغاتك السابقة',
         'service4-desc': 'إدارة المستشفيات والمستشفى',
         'service5-desc': 'اعرض، عدّل، وأنشئ مشروع تحسيني',
@@ -568,12 +569,16 @@
         'service7-action': 'افتح الصفحة ↗',
         'service8-desc': 'رفع وحفظ الملفات في الأرشيف',
         'service8-action': 'افتح الأرشيف ↗',
+        'service9-title': 'بلاغ إدارة التجمع (جديد)',
         'service9-desc': 'سجّل ملاحظة ميدانية مع مرفقات',
         'service9-action': 'ابدأ ↗',
         'service10-desc': 'عرض وفلترة البلاغات',
         'service10-action': 'افتح الصفحة ↗',
         'service11-desc': 'تحليل نتائج تجربة المريض',
         'service11-action': 'افتح لوحة برسجيني ↗',
+        'serviceUrgent-title': 'البلاغات الحرجة',
+        'serviceUrgent-desc': 'عرض وتحليل بلاغات الطوارئ الحرجة',
+        'serviceUrgent-action': 'افتح لوحة البلاغات الحرجة ↗',
         
         // المميزات
         'why-choose-title': 'لماذا تختار نظام البلاغات؟',
@@ -619,7 +624,7 @@
         'nav-about': 'About System',
         'nav-help': 'Help',
         'nav-contact': 'Contact Us',
-        'language-button': '🌐 العربية',
+        'languageToggle': '🌐 العربية',
         
         // القسم الرئيسي
         'hero-title': 'Official Platform for Filing and Tracking Complaints',
@@ -634,6 +639,7 @@
         'service1-action': 'Start Now ↗',
         'service2-desc': 'Monitor complaint status',
         'service2-action': 'Start Now ↗',
+        'service3-title': 'Complaints History',
         'service3-desc': 'View your previous complaints',
         'service4-desc': 'Manage hospitals and hospital operations',
         'service5-desc': 'View, edit, and create improvement projects',
@@ -644,12 +650,16 @@
         'service7-action': 'Open page ↗',
         'service8-desc': 'Upload and store files in archive',
         'service8-action': 'Open Archive ↗',
+        'service9-title': 'Cluster Management Report (New)',
         'service9-desc': 'Record a field observation with attachments',
         'service9-action': 'Start ↗',
         'service10-desc': 'View and filter complaints',
         'service10-action': 'Open page ↗',
         'service11-desc': 'Patient experience results analysis',
         'service11-action': 'Open Press Ganey Dashboard ↗',
+        'serviceUrgent-title': 'Urgent Complaints',
+        'serviceUrgent-desc': 'Analyze critical emergency complaints',
+        'serviceUrgent-action': 'Open Urgent Dashboard ↗',
         
         // المميزات
         'why-choose-title': 'Why Choose Our Complaint System?',
@@ -688,6 +698,50 @@
       }
     };
 
+    // ترجمات العناوين الديناميكية (تعتمد على data-key)
+    const dynamicTitleTranslations = {
+      newComplaint: {
+        ar: 'تقديم بلاغ جديد',
+        en: 'Submit New Complaint'
+      },
+      followup: {
+        ar: 'متابعة بلاغ',
+        en: 'Track Complaint'
+      },
+      improvement: {
+        ar: 'المشاريع التحسينية',
+        en: 'Improvement Projects'
+      },
+      admin: {
+        ar: 'الإدارة',
+        en: 'Administration'
+      },
+      excel: {
+        ar: 'إرفاق الإكسل',
+        en: 'Excel Import'
+      },
+      mystery: {
+        ar: 'بلاغات الزائر السري',
+        en: 'Mystery Complaints'
+      },
+      urgentComplaints: {
+        ar: 'البلاغات الحرجة',
+        en: 'Urgent Complaints'
+      },
+      pressganey: {
+        ar: 'برسجيني (Press Ganey)',
+        en: 'Press Ganey Reports'
+      },
+      archive: {
+        ar: 'أرشيف المرفقات',
+        en: 'Attachments Archive'
+      },
+      cluster: {
+        ar: 'بلاغات إدارة التجمع',
+        en: 'Cluster Management Complaints'
+      }
+    };
+
     // الحالة الحالية للغة
     let currentLanguage = 'ar';
 
@@ -703,7 +757,7 @@
       const elements = translations[lang];
       if (!elements) return;
 
-      // تطبيق الترجمة على جميع العناصر
+      // تطبيق الترجمة على جميع العناصر الثابتة
       Object.keys(elements).forEach(id => {
         const element = document.getElementById(id);
         if (!element) return;
@@ -712,6 +766,16 @@
           return;
         }
         element.textContent = elements[id];
+      });
+
+      // تطبيق الترجمة على العناصر الديناميكية (باستخدام data-key)
+      const dynamicTitleElements = document.querySelectorAll('[data-dynamic-title="true"], .dynamic-title[data-key]');
+      dynamicTitleElements.forEach(element => {
+        const key = element.dataset.key;
+        const translation = dynamicTitleTranslations[key]?.[lang];
+        if (translation) {
+          element.textContent = translation;
+        }
       });
 
       // تغيير اتجاه النص

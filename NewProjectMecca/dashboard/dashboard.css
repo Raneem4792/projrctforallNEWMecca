@@ -1021,3 +1021,34 @@ select {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ================================
+   جعل النص أبيض في الوضع الداكن
+=================================*/
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark p,
+.dark span,
+.dark a,
+.dark label,
+.dark th,
+.dark td {
+    color: #fff !important;
+}
+
+/* لجعل النصوص داخل شارتات Chart.js واضحة */
+.dark .chartjs-render-monitor {
+    color: #fff !important;
+}
+
+/* الليجند داخل الرسوم البيانية */
+.dark .legend,
+.dark .legend-label,
+.dark .legend-text {
+    color: #fff !important;
+}

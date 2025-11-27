@@ -41,15 +41,15 @@
         
         <!-- Navigation - قائمة التنقل -->
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
-          <a href="hospitals.html" class="text-white hover:text-blue-200 transition-colors">المستشفيات</a>
-          <a href="reports.html" class="text-white hover:text-blue-200 transition-colors">التقارير والإحصائيات</a>
-          <a href="../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
-          <a href="../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
-          <a href="../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
-          <a href="#" class="text-white hover:text-blue-200 transition-colors flex items-center">
+          <a href="../index/index.html" id="nav-home" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-home">الرئيسية</a>
+          <a href="hospitals.html" id="nav-hospitals" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-hospitals">المستشفيات</a>
+          <a href="reports.html" id="nav-reports" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-reports">التقارير والإحصائيات</a>
+          <a href="../index/about-system.html" id="nav-about" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-about">حول النظام</a>
+          <a href="../index/help.html" id="nav-help" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-help">المساعدة</a>
+          <a href="../index/contact.html" id="nav-contact" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-contact">اتصل بنا</a>
+          <button id="langToggle" class="text-white hover:text-blue-200 transition-colors flex items-center" data-i18n-key="languageToggle">
             🌐 English
-          </a>
+          </button>
         </nav>
         
         <!-- Mobile menu button - زر القائمة للموبايل -->
@@ -68,9 +68,9 @@
     <section class="pt-4 pb-4 mesh-gradient">
       <div class="container mx-auto px-4">
         <div class="text-center mb-6">
-          <h2 class="text-3xl font-bold mb-4" style="color:#002B5B;">الإحصائيات الرئيسية</h2>
+          <h2 class="text-3xl font-bold mb-4" style="color:#002B5B;" data-i18n-key="main-stats-title">الإحصائيات الرئيسية</h2>
           <div class="w-24 h-1 mx-auto mb-4" style="background:linear-gradient(90deg,#004A9F,#0FA47A)"></div>
-          <p class="text-xl text-gray-600">نظرة شاملة على أداء النظام</p>
+          <p class="text-xl text-gray-600" data-i18n-key="main-stats-subtitle">نظرة شاملة على أداء النظام</p>
         </div>
 
         <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3 justify-center">
@@ -82,7 +82,7 @@
               </svg>
             </div>
             <div>
-              <div class="text-xs text-gray-500">إجمالي البلاغات</div>
+              <div class="text-xs text-gray-500" data-i18n-key="metric-total">إجمالي البلاغات</div>
               <div id="card-total" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </div>
@@ -95,7 +95,7 @@
               </svg>
             </div>
             <div>
-              <div class="text-xs text-gray-500">بلاغات مفتوحة</div>
+              <div class="text-xs text-gray-500" data-i18n-key="metric-open">بلاغات مفتوحة</div>
               <div id="card-open" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </div>
@@ -108,7 +108,7 @@
               </svg>
             </div>
             <div>
-              <div class="text-xs text-gray-500">بلاغات مغلقة</div>
+              <div class="text-xs text-gray-500" data-i18n-key="metric-closed">بلاغات مغلقة</div>
               <div id="card-closed" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </div>
@@ -121,7 +121,7 @@
               </svg>
             </div>
             <div>
-              <div class="text-xs text-gray-500">بلاغات حرجة</div>
+              <div class="text-xs text-gray-500" data-i18n-key="metric-critical">بلاغات حرجة</div>
               <div id="card-critical" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </a>
@@ -134,7 +134,7 @@
               </svg>
             </div>
             <div>
-              <div class="text-xs text-gray-500">معدل الإغلاق</div>
+              <div class="text-xs text-gray-500" data-i18n-key="metric-resolution">معدل الإغلاق</div>
               <div id="card-resolution" class="text-lg font-bold" style="color:#002B5B">0%</div>
             </div>
           </div>
@@ -147,7 +147,7 @@
               </svg>
             </div>
             <div>
-              <div class="text-xs text-gray-500">عدد المستشفيات</div>
+              <div class="text-xs text-gray-500" data-i18n-key="metric-hospitals-count">عدد المستشفيات</div>
               <div id="card-hospitals" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </div>
@@ -161,12 +161,12 @@
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div class="flex items-center gap-3">
-            <h3 id="hospital-export-title" class="text-xl font-bold" style="color:#002B5B;">تقرير المستشفى</h3>
+            <h3 id="hospital-export-title" class="text-xl font-bold" style="color:#002B5B;" data-i18n-key="hospital-report-title">تقرير المستشفى</h3>
             <select id="export-period-select" class="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="1">آخر شهر</option>
-              <option value="3">آخر 3 أشهر</option>
-              <option value="6">آخر 6 أشهر</option>
-              <option value="12" selected>آخر سنة</option>
+              <option value="1" data-i18n-option="period-1">آخر شهر</option>
+              <option value="3" data-i18n-option="period-3">آخر 3 أشهر</option>
+              <option value="6" data-i18n-option="period-6">آخر 6 أشهر</option>
+              <option value="12" data-i18n-option="period-12" selected>آخر سنة</option>
             </select>
           </div>
           <div class="flex gap-3">
@@ -174,13 +174,13 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              <span>تصدير Excel</span>
+              <span data-i18n-key="export-excel">تصدير Excel</span>
             </button>
             <button id="export-pdf-btn" class="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
               </svg>
-              <span>تصدير PDF</span>
+              <span data-i18n-key="export-pdf">تصدير PDF</span>
             </button>
           </div>
         </div>
@@ -193,20 +193,20 @@
     <section id="health-facilities-charts" class="pt-4 pb-10">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-3xl font-bold" style="color:#002B5B">المرافق الصحية</h2>
+          <h2 class="text-3xl font-bold" style="color:#002B5B" data-i18n="health_facilities" data-i18n-key="section-facilities-title">المرافق الصحية</h2>
         </div>
 
         <!-- المستشفيات والمراكز الصحية -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- المستشفيات -->
           <div data-perm="DASH_CHART_TOP_CLINICS" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
-            <h3 class="font-bold mb-3 text-center" style="color:#002B5B">المستشفيات</h3>
+            <h3 class="font-bold mb-3 text-center" style="color:#002B5B" data-i18n="hospitals" data-i18n-key="card-hospitals-title">المستشفيات</h3>
             <div style="height:400px"><canvas id="hospitals-chart"></canvas></div>
           </div>
           
           <!-- المراكز الصحية -->
           <div data-perm="DASH_CHART_TOP_CLINICS" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
-            <h3 class="font-bold mb-3 text-center" style="color:#002B5B">المراكز الصحية</h3>
+            <h3 class="font-bold mb-3 text-center" style="color:#002B5B" data-i18n="health_centers" data-i18n-key="card-centers-title">المراكز الصحية</h3>
             <div style="height:400px"><canvas id="centers-chart"></canvas></div>
           </div>
         </div>
@@ -219,11 +219,11 @@
     <section id="facility-filter-section" class="mt-6">
       <div class="container mx-auto px-4">
         <!-- قائمة المستشفيات -->
-        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المستشفيات</h3>
+        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;" data-i18n-key="filter-hospitals-title">المستشفيات</h3>
         <div id="hospital-filter-list" class="flex flex-wrap gap-3 mb-6"></div>
 
         <!-- قائمة المراكز الصحية -->
-        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;">المراكز الصحية</h3>
+        <h3 class="text-xl font-bold mb-3" style="color:#002B5B;" data-i18n-key="filter-centers-title">المراكز الصحية</h3>
         <div id="center-filter-list" class="flex flex-wrap gap-3"></div>
       </div>
     </section>
@@ -236,8 +236,8 @@
   <div class="container mx-auto px-4">
     <!-- التصنيفات الرئيسية -->
     <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
-      <h3 class="font-bold text-xl mb-2" style="color:#002B5B">التصنيفات</h3>
-      <p class="text-xs text-gray-500 text-center mb-2">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
+      <h3 class="font-bold text-xl mb-2" style="color:#002B5B" data-i18n-key="categories-title">التصنيفات</h3>
+      <p class="text-xs text-gray-500 text-center mb-2" data-i18n-key="categories-hint">اضغط على أي جزء لعرض البلاغات بالتفصيل</p>
       <div class="h-96">
         <canvas id="categories-chart"></canvas>
       </div>
@@ -246,7 +246,7 @@
     <!-- حالة البلاغ -->
     <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mt-6">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B">حالة البلاغ</h3>
+        <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="status-title">حالة البلاغ</h3>
       </div>
 
       <div style="height:350px;">
@@ -257,9 +257,9 @@
     <!-- البلاغات المتأخرة حسب الوقت (سوء تعامل 24 ساعة / الباقي 48 ساعة) -->
     <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mt-6">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B">البلاغات المتأخرة حسب الوقت</h3>
+        <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="sla-title">البلاغات المتأخرة حسب الوقت</h3>
         <div class="flex flex-col items-end">
-          <span class="text-xs text-gray-500">
+          <span class="text-xs text-gray-500" data-i18n-key="sla-legend">
             سوء تعامل &gt; 24 ساعة — باقي البلاغات &gt; 48 ساعة
           </span>
           <span id="sla-week-range" class="text-xs text-blue-600 mt-1">جاري التحميل...</span>
@@ -277,12 +277,12 @@
       <div class="container mx-auto px-4">
         <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-bold text-xl" style="color:#002B5B">الزائر السري — حسب الأقسام</h3>
+            <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="mystery-title">الزائر السري — حسب الأقسام</h3>
 
             <!-- يظهر فقط لمدير التجمع -->
             <div id="mystery-hospital-wrap" class="hidden">
               <select id="mystery-hospital-select" class="border rounded-lg px-3 py-1.5 text-sm">
-                <option value="">اختر المستشفى…</option>
+                <option value="" data-i18n-option="mystery-select-hospital">اختر المستشفى…</option>
               </select>
             </div>
 
@@ -298,7 +298,7 @@
       <div class="container mx-auto px-4">
         <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="font-bold text-xl" style="color:#002B5B">تكرار الشكاوى حسب رقم الهوية</h3>
+            <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="patient-frequency-title">تكرار الشكاوى حسب رقم الهوية</h3>
           </div>
           
           <!-- الجدول -->
@@ -306,14 +306,14 @@
             <table id="patient-frequency-table" class="min-w-full text-sm text-center border-collapse">
               <thead>
                 <tr class="bg-gray-100 text-gray-700">
-                  <th class="py-3 px-4 border font-semibold">الهويه</th>
-                  <th class="py-3 px-4 border font-semibold">التكرار</th>
-                  <th class="py-3 px-4 border font-semibold">اسم المستشفى</th>
+                  <th class="py-3 px-4 border font-semibold" data-i18n-key="patient-id-header">الهويه</th>
+                  <th class="py-3 px-4 border font-semibold" data-i18n-key="patient-frequency-header">التكرار</th>
+                  <th class="py-3 px-4 border font-semibold" data-i18n-key="patient-hospital-header">اسم المستشفى</th>
                 </tr>
               </thead>
               <tbody id="patient-frequency-tbody" class="bg-white">
                 <tr>
-                  <td colspan="3" class="py-8 text-gray-500">جاري تحميل البيانات...</td>
+                  <td colspan="3" class="py-8 text-gray-500" data-i18n-key="loading-text">جاري تحميل البيانات...</td>
                 </tr>
               </tbody>
             </table>
@@ -328,12 +328,12 @@
               <button id="patient-frequency-prev" 
                       class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled>
-                <
+                <span aria-hidden="true">&lt;</span>
               </button>
               <button id="patient-frequency-next" 
                       class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled>
-                >
+                <span aria-hidden="true">&gt;</span>
               </button>
             </div>
           </div>
@@ -347,7 +347,7 @@
         <!-- Header -->
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 class="text-xl font-bold" style="color:#002B5B">شكاوى الشخص</h3>
+            <h3 class="text-xl font-bold" style="color:#002B5B" data-i18n-key="patient-modal-title">شكاوى الشخص</h3>
             <p id="patient-modal-info" class="text-sm text-gray-600 mt-1"></p>
           </div>
           <button id="patient-modal-close" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
@@ -358,7 +358,7 @@
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-6">
           <div id="patient-complaints-list" class="space-y-3">
-            <div class="text-center text-gray-500 py-8">جاري تحميل الشكاوى...</div>
+            <div class="text-center text-gray-500 py-8" data-i18n-key="loading-complaints">جاري تحميل الشكاوى...</div>
           </div>
         </div>
       </div>
@@ -370,7 +370,7 @@
         <!-- Header -->
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 class="text-xl font-bold" style="color:#002B5B">بلاغات القسم</h3>
+            <h3 class="text-xl font-bold" style="color:#002B5B" data-i18n-key="department-modal-title">بلاغات القسم</h3>
             <p id="department-modal-info" class="text-sm text-gray-600 mt-1"></p>
           </div>
           <button id="department-modal-close" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
@@ -381,7 +381,7 @@
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-6">
           <div id="department-complaints-list" class="space-y-3">
-            <div class="text-center text-gray-500 py-8">جاري تحميل البلاغات...</div>
+            <div class="text-center text-gray-500 py-8" data-i18n-key="loading-reports">جاري تحميل البلاغات...</div>
           </div>
         </div>
       </div>
@@ -393,7 +393,7 @@
     <section id="weekly-937-board" class="py-10">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-3xl font-bold" style="color:#002B5B">لوحة البيانات خلال أسبوع</h2>
+          <h2 class="text-3xl font-bold" style="color:#002B5B" data-i18n-key="weekly-board-title">لوحة البيانات خلال أسبوع</h2>
           <div id="weekly-period" class="text-sm text-gray-500">
             الفترة: جاري التحميل...
           </div>
@@ -406,13 +406,14 @@
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-4xl font-extrabold" style="color:#002B5B" id="wk-total">0</div>
-                <div class="text-sm text-gray-500">مجموع الشكاوى</div>
+                <div class="text-sm text-gray-500" data-i18n-key="weekly-total-label">مجموع الشكاوى</div>
               </div>
               <div class="flex items-center gap-2 text-sm">
                 
                 <!-- زر مشروع تحسيني -->
                 <button id="btnAddImprovement"
-                        class="px-5 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-all">
+                        class="px-5 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-all"
+                        data-i18n-key="btn-add-improvement">
                   + مشروع تحسيني
                 </button>
               </div>
@@ -421,9 +422,9 @@
             <div class="mt-6">
               <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm w-full">
                 <div class="flex items-center justify-between mb-3">
-                  <h3 class="font-bold text-lg" style="color:#002B5B">أعلى العيادات حسب المستشفى</h3>
+                  <h3 class="font-bold text-lg" style="color:#002B5B" data-i18n-key="weekly-top-clinics-title">أعلى العيادات حسب المستشفى</h3>
                   <select id="weekly-hospital-filter" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="min-width: 200px;">
-                    <option value="">جميع المستشفيات</option>
+                    <option value="" data-i18n-option="weekly-all-hospitals">جميع المستشفيات</option>
                   </select>
                 </div>
 
@@ -436,7 +437,7 @@
 
         <!-- الأسفل: خط الاتجاه اليومي -->
         <div data-perm="DASH_CHART_DAILY_TREND" class="bg-white rounded-xl p-6 shadow border border-gray-100 hidden">
-          <h3 class="font-bold mb-3" style="color:#002B5B">الشكوى اليومية</h3>
+          <h3 class="font-bold mb-3" style="color:#002B5B" data-i18n-key="daily-trend-title">الشكوى اليومية</h3>
           <div style="height:240px"><canvas id="wk-trend"></canvas></div>
         </div>
       </div>
@@ -449,20 +450,23 @@
           <div class="flex items-center gap-3">
             <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-red-100 text-red-700">🔴</span>
             <div>
-              <h3 class="text-lg font-bold text-red-700">تنبيه: بلاغات حرجة</h3>
+              <h3 class="text-lg font-bold text-red-700" data-i18n-key="urgent-alert-title">تنبيه: بلاغات حرجة</h3>
               <p class="text-sm text-gray-600">
-                لديك <span id="red-total" class="font-bold text-red-700">0</span> بلاغات حمراء تحتاج متابعة فورية.
+                <span data-i18n-key="urgent-alert-desc-prefix">لديك</span>
+                <span id="red-total" class="font-bold text-red-700">0</span>
+                <span data-i18n-key="urgent-alert-desc-suffix">بلاغات حمراء تحتاج متابعة فورية.</span>
               </p>
             </div>
           </div>
 
           <div class="flex items-center gap-2">
-            <button id="filter-red" class="filter-btn px-4 py-2 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
+            <button id="filter-red" class="filter-btn px-4 py-2 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100" data-i18n-key="urgent-filter-btn">
               عرض المستشفيات ذات البلاغات الحمراء
             </button>
 
             <a href="critical.html"
-               class="filter-btn px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 hover:bg-red-50">
+               class="filter-btn px-4 py-2 rounded-full bg-white text-red-700 border border-red-200 hover:bg-red-50"
+               data-i18n-key="urgent-view-more">
               عرض المزيد
             </a>
           </div>
@@ -477,7 +481,7 @@
     <section class="py-16 hospital-detail" id="hospital-detail">
       <div class="container mx-auto px-4">
         <div class="mb-12">
-          <button id="back-btn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all mb-6">
+          <button id="back-btn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all mb-6" data-i18n-key="back-to-list">
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             العودة للقائمة الرئيسية
           </button>
@@ -499,7 +503,7 @@
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
             </div>
             <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-total">0</div>
-            <div class="text-gray-600 font-medium">إجمالي البلاغات</div>
+            <div class="text-gray-600 font-medium" data-i18n-key="hospital-total-label">إجمالي البلاغات</div>
           </div>
 
           <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
@@ -507,7 +511,7 @@
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-open">0</div>
-            <div class="text-gray-600 font-medium">مفتوحة</div>
+            <div class="text-gray-600 font-medium" data-i18n-key="hospital-open-label">مفتوحة</div>
           </div>
 
           <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
@@ -515,7 +519,7 @@
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-closed">0</div>
-            <div class="text-gray-600 font-medium">مغلقة</div>
+            <div class="text-gray-600 font-medium" data-i18n-key="hospital-closed-label">مغلقة</div>
           </div>
 
           <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100 text-center">
@@ -523,7 +527,7 @@
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
             </div>
             <div class="text-3xl font-bold mb-2" style="color:#002B5B;" id="hospital-rate">0%</div>
-            <div class="text-gray-600 font-medium">معدل الحل</div>
+            <div class="text-gray-600 font-medium" data-i18n-key="hospital-rate-label">معدل الحل</div>
           </div>
         </div>
 
@@ -534,7 +538,7 @@
               <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center ml-4">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10"/></svg>
               </div>
-              <h3 class="text-2xl font-bold" style="color:#002B5B;">اتجاه البلاغات الشهرية</h3>
+              <h3 class="text-2xl font-bold" style="color:#002B5B;" data-i18n-key="hospital-chart-title">اتجاه البلاغات الشهرية</h3>
             </div>
             <div style="height:350px"><canvas id="hospitalChart"></canvas></div>
           </div>
@@ -544,7 +548,7 @@
               <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center ml-4">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13"/></svg>
               </div>
-              <h3 class="text-2xl font-bold" style="color:#002B5B;">البلاغات الحديثة</h3>
+              <h3 class="text-2xl font-bold" style="color:#002B5B;" data-i18n-key="recent-reports-title">البلاغات الحديثة</h3>
             </div>
             <div class="space-y-4" id="recent-reports"></div>
           </div>
@@ -566,62 +570,62 @@
               </svg>
             </div>
             <div>
-              <div class="font-bold">تجمع مكة الصحي</div>
-              <div class="text-sm text-gray-300">نظام البلاغات</div>
+              <div class="font-bold" data-i18n-key="footer-org-name">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300" data-i18n-key="footer-system-name">نظام البلاغات</div>
             </div>
           </div>
-          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+          <p class="text-gray-300 text-sm" data-i18n-key="footer-description">منصة رسمية لتقديم ومتابعة البلاغات</p>
         </div>
 
         <!-- Column 2 - العمود الثاني -->
         <div>
-          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-links-title">روابط سريعة</h3>
           <ul class="space-y-2 text-sm">
-            <li><a href="../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
-            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
-            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
-            <li><a href="../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+            <li><a href="../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-home">الرئيسية</a></li>
+            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-submit">تقديم بلاغ</a></li>
+            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-track">متابعة بلاغ</a></li>
+            <li><a href="../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-faq">الأسئلة الشائعة</a></li>
           </ul>
         </div>
 
         <!-- Column 3 - العمود الثالث -->
         <div>
-          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-contact-title">معلومات التواصل</h3>
           <div class="space-y-2 text-sm text-gray-300">
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <span>رقم الدعم: 0559735137</span>
+              <span data-i18n-key="footer-support-number">رقم الدعم: 0559735137</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <span>رقم الدعم: 0542282550</span>
+              <span data-i18n-key="footer-support-number-2">رقم الدعم: 0542282550</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <span>support@makkahhealth.gov.sa</span>
+              <span data-i18n-key="footer-support-email">support@makkahhealth.gov.sa</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <span>ساعات العمل: 24/7</span>
+              <span data-i18n-key="footer-working-hours">ساعات العمل: 24/7</span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
-        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+        <span data-i18n-key="footer-copyright">© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
       </div>
     </div>
   </footer>
@@ -637,6 +641,214 @@
       // الانتقال لصفحة إضافة المشروع 937
       window.location.href = 'improvements/improvement_937.html';
     });
+  </script>
+
+  <!-- نظام الترجمة للوحة التحكم -->
+  <script>
+    const dashboardTranslations = {
+      ar: {
+        'languageToggle': '🌐 English',
+        'nav-home': 'الرئيسية',
+        'nav-hospitals': 'المستشفيات',
+        'nav-reports': 'التقارير والإحصائيات',
+        'nav-about': 'حول النظام',
+        'nav-help': 'المساعدة',
+        'nav-contact': 'اتصل بنا',
+        'main-stats-title': 'الإحصائيات الرئيسية',
+        'main-stats-subtitle': 'نظرة شاملة على أداء النظام',
+        'metric-total': 'إجمالي البلاغات',
+        'metric-open': 'بلاغات مفتوحة',
+        'metric-closed': 'بلاغات مغلقة',
+        'metric-critical': 'بلاغات حرجة',
+        'metric-resolution': 'معدل الإغلاق',
+        'metric-hospitals-count': 'عدد المستشفيات',
+        'hospital-report-title': 'تقرير المستشفى',
+        'export-excel': 'تصدير Excel',
+        'export-pdf': 'تصدير PDF',
+        'period-1': 'آخر شهر',
+        'period-3': 'آخر 3 أشهر',
+        'period-6': 'آخر 6 أشهر',
+        'period-12': 'آخر سنة',
+        'section-facilities-title': 'المرافق الصحية',
+        'card-hospitals-title': 'المستشفيات',
+        'card-centers-title': 'المراكز الصحية',
+        'filter-hospitals-title': 'المستشفيات',
+        'filter-centers-title': 'المراكز الصحية',
+        'categories-title': 'التصنيفات',
+        'categories-hint': 'اضغط على أي جزء لعرض البلاغات بالتفصيل',
+        'status-title': 'حالة البلاغ',
+        'sla-title': 'البلاغات المتأخرة حسب الوقت',
+        'sla-legend': 'سوء تعامل > 24 ساعة — باقي البلاغات > 48 ساعة',
+        'loading-text': 'جاري التحميل...',
+        'mystery-title': 'الزائر السري — حسب الأقسام',
+        'mystery-select-hospital': 'اختر المستشفى…',
+        'patient-frequency-title': 'تكرار الشكاوى حسب رقم الهوية',
+        'patient-id-header': 'الهويه',
+        'patient-frequency-header': 'التكرار',
+        'patient-hospital-header': 'اسم المستشفى',
+        'patient-modal-title': 'شكاوى الشخص',
+        'loading-complaints': 'جاري تحميل الشكاوى...',
+        'department-modal-title': 'بلاغات القسم',
+        'loading-reports': 'جاري تحميل البلاغات...',
+        'weekly-board-title': 'لوحة البيانات خلال أسبوع',
+        'weekly-total-label': 'مجموع الشكاوى',
+        'btn-add-improvement': '+ مشروع تحسيني',
+        'weekly-top-clinics-title': 'أعلى العيادات حسب المستشفى',
+        'weekly-all-hospitals': 'جميع المستشفيات',
+        'daily-trend-title': 'الشكوى اليومية',
+        'urgent-alert-title': 'تنبيه: بلاغات حرجة',
+        'urgent-alert-desc-prefix': 'لديك',
+        'urgent-alert-desc-suffix': 'بلاغات حمراء تحتاج متابعة فورية.',
+        'urgent-filter-btn': 'عرض المستشفيات ذات البلاغات الحمراء',
+        'urgent-view-more': 'عرض المزيد',
+        'back-to-list': 'العودة للقائمة الرئيسية',
+        'hospital-total-label': 'إجمالي البلاغات',
+        'hospital-open-label': 'مفتوحة',
+        'hospital-closed-label': 'مغلقة',
+        'hospital-rate-label': 'معدل الحل',
+        'hospital-chart-title': 'اتجاه البلاغات الشهرية',
+        'recent-reports-title': 'البلاغات الحديثة',
+        'footer-org-name': 'تجمع مكة الصحي',
+        'footer-system-name': 'نظام البلاغات',
+        'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+        'footer-links-title': 'روابط سريعة',
+        'footer-link-home': 'الرئيسية',
+        'footer-link-submit': 'تقديم بلاغ',
+        'footer-link-track': 'متابعة بلاغ',
+        'footer-link-faq': 'الأسئلة الشائعة',
+        'footer-contact-title': 'معلومات التواصل',
+        'footer-support-number': 'رقم الدعم: 0559735137',
+        'footer-support-number-2': 'رقم الدعم: 0542282550',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'ساعات العمل: 24/7',
+        'footer-copyright': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة'
+      },
+      en: {
+        'languageToggle': '🌐 العربية',
+        'nav-home': 'Home',
+        'nav-hospitals': 'Hospitals',
+        'nav-reports': 'Reports & Analytics',
+        'nav-about': 'About System',
+        'nav-help': 'Help',
+        'nav-contact': 'Contact Us',
+        'main-stats-title': 'Key Statistics',
+        'main-stats-subtitle': 'A holistic view of system performance',
+        'metric-total': 'Total Complaints',
+        'metric-open': 'Open Complaints',
+        'metric-closed': 'Closed Complaints',
+        'metric-critical': 'Critical Complaints',
+        'metric-resolution': 'Closure Rate',
+        'metric-hospitals-count': 'Hospitals Count',
+        'hospital-report-title': 'Hospital Report',
+        'export-excel': 'Export Excel',
+        'export-pdf': 'Export PDF',
+        'period-1': 'Last Month',
+        'period-3': 'Last 3 Months',
+        'period-6': 'Last 6 Months',
+        'period-12': 'Last Year',
+        'section-facilities-title': 'Health Facilities',
+        'card-hospitals-title': 'Hospitals',
+        'card-centers-title': 'Health Centers',
+        'filter-hospitals-title': 'Hospitals',
+        'filter-centers-title': 'Health Centers',
+        'categories-title': 'Categories',
+        'categories-hint': 'Click any slice to view detailed complaints',
+        'status-title': 'Complaint Status',
+        'sla-title': 'Overdue Complaints by Time',
+        'sla-legend': 'Misconduct > 24h — Other Complaints > 48h',
+        'loading-text': 'Loading...',
+        'mystery-title': 'Mystery Shopper — By Departments',
+        'mystery-select-hospital': 'Select hospital…',
+        'patient-frequency-title': 'Complaint Frequency by ID',
+        'patient-id-header': 'ID',
+        'patient-frequency-header': 'Frequency',
+        'patient-hospital-header': 'Hospital Name',
+        'patient-modal-title': 'Individual Complaints',
+        'loading-complaints': 'Loading complaints...',
+        'department-modal-title': 'Department Complaints',
+        'loading-reports': 'Loading reports...',
+        'weekly-board-title': 'Weekly Insights Board',
+        'weekly-total-label': 'Total Complaints',
+        'btn-add-improvement': '+ Improvement Project',
+        'weekly-top-clinics-title': 'Top Clinics per Hospital',
+        'weekly-all-hospitals': 'All Hospitals',
+        'daily-trend-title': 'Daily Complaints Trend',
+        'urgent-alert-title': 'Alert: Critical Complaints',
+        'urgent-alert-desc-prefix': 'You have',
+        'urgent-alert-desc-suffix': 'critical complaints requiring immediate action.',
+        'urgent-filter-btn': 'Show hospitals with critical complaints',
+        'urgent-view-more': 'View More',
+        'back-to-list': 'Back to main list',
+        'hospital-total-label': 'Total Complaints',
+        'hospital-open-label': 'Open',
+        'hospital-closed-label': 'Closed',
+        'hospital-rate-label': 'Resolution Rate',
+        'hospital-chart-title': 'Monthly Complaints Trend',
+        'recent-reports-title': 'Recent Complaints',
+        'footer-org-name': 'Makkah Health Cluster',
+        'footer-system-name': 'Complaint System',
+        'footer-description': 'Official platform to file and track complaints',
+        'footer-links-title': 'Quick Links',
+        'footer-link-home': 'Home',
+        'footer-link-submit': 'Submit Complaint',
+        'footer-link-track': 'Track Complaint',
+        'footer-link-faq': 'FAQ',
+        'footer-contact-title': 'Contact Information',
+        'footer-support-number': 'Support: 0559735137',
+        'footer-support-number-2': 'Support: 0542282550',
+        'footer-support-email': 'support@makkahhealth.gov.sa',
+        'footer-working-hours': 'Working Hours: 24/7',
+        'footer-copyright': '© 2025 Makkah Health Cluster – All Rights Reserved'
+      }
+    };
+
+    function applyDashboardTranslation(lang) {
+      const dict = dashboardTranslations[lang];
+      if (!dict) return;
+
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+
+      document.querySelectorAll('[data-i18n-key]').forEach(el => {
+        const key = el.dataset.i18nKey;
+        if (!key) return;
+        if (dict[key] !== undefined) {
+          el.textContent = dict[key];
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-option]').forEach(option => {
+        const key = option.dataset.i18nOption;
+        if (!key) return;
+        if (dict[key] !== undefined) {
+          option.textContent = dict[key];
+        }
+      });
+    }
+
+    (function initDashboardTranslation() {
+      const saved = localStorage.getItem('dashboardLanguage') || 'ar';
+      applyDashboardTranslation(saved);
+
+      const toggleBtn = document.getElementById('langToggle') || document.getElementById('languageToggle');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          const nextLang = (localStorage.getItem('dashboardLanguage') || 'ar') === 'ar' ? 'en' : 'ar';
+          localStorage.setItem('dashboardLanguage', nextLang);
+          applyDashboardTranslation(nextLang);
+
+          // إعادة رسم الرسوم البيانية بعد إكمال تحديث DOM واتجاه الصفحة
+          setTimeout(() => {
+            if (typeof reloadAllCharts === 'function') {
+              reloadAllCharts();
+            }
+            if (typeof reloadWeeklyPage === 'function') {
+              reloadWeeklyPage();
+            }
+          }, 200);
+        });
+      }
+    })();
   </script>
 </body>
 </html>

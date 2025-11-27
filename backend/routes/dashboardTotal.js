@@ -98,7 +98,7 @@ router.get('/by-hospital',
     
     // بناء SQL query مع فلترة
     let hospitalQuery = `
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder, 
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder, 
              COALESCE(FacilityType, 'Hospital') AS FacilityType
       FROM hospitals 
       WHERE IsActive = 1
@@ -150,6 +150,7 @@ router.get('/by-hospital',
         counts.push({
           HospitalID: hospital.HospitalID,
           HospitalName: hospital.HospitalName,
+          HospitalNameEn: hospital.HospitalNameEn,
           critical_count: parseInt(stat.critical_count || 0),
           complaint_count: parseInt(stat.complaint_count || 0),
           suggestion_count: parseInt(stat.suggestion_count || 0),
@@ -163,6 +164,7 @@ router.get('/by-hospital',
         counts.push({
           HospitalID: hospital.HospitalID,
           HospitalName: hospital.HospitalName,
+          HospitalNameEn: hospital.HospitalNameEn,
           critical_count: 0,
           complaint_count: 0,
           suggestion_count: 0,
@@ -225,6 +227,7 @@ router.get('/by-hospital',
       return {
         HospitalID: hospital.HospitalID,
         HospitalName: hospital.HospitalName,
+        HospitalNameEn: hospital.HospitalNameEn,
         FacilityType: hospital.FacilityType || 'Hospital', // إرجاع نوع المنشأة
         counts: {
           // مجاميع حسب الأولوية (قد يكون بعضها صفر/NULL)
@@ -507,7 +510,7 @@ router.get('/complaint-types', async (req, res) => {
     const hospitalParams = hospitalId ? [hospitalId] : [];
 
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder,
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder,
              COALESCE(FacilityType, 'hospital') AS FacilityType
       FROM hospitals
       ${hospitalWhereClause}
@@ -609,7 +612,7 @@ router.get('/complaint-types/by-hospital', async (req, res) => {
     const hospitalParams = hospitalId ? [hospitalId] : [];
 
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder,
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder,
              COALESCE(FacilityType, 'hospital') AS FacilityType
       FROM hospitals
       ${hospitalWhereClause}
@@ -692,6 +695,7 @@ router.get('/complaint-types/by-hospital', async (req, res) => {
         results.push({
           HospitalID: hospital.HospitalID,
           HospitalName: hospital.HospitalName,
+          HospitalNameEn: hospital.HospitalNameEn,
           FacilityType: hospital.FacilityType || 'hospital',
           TotalCount: total
         });
@@ -700,6 +704,7 @@ router.get('/complaint-types/by-hospital', async (req, res) => {
         results.push({
           HospitalID: hospital.HospitalID,
           HospitalName: hospital.HospitalName,
+          HospitalNameEn: hospital.HospitalNameEn,
           TotalCount: 0,
           error: error.message
         });
@@ -819,7 +824,7 @@ router.get('/open-reports', async (req, res) => {
   try {
     // جلب جميع المستشفيات النشطة أولاً
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -910,7 +915,7 @@ router.get('/closed-reports', async (req, res) => {
   try {
     // جلب جميع المستشفيات النشطة أولاً
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1002,7 +1007,7 @@ router.get('/all-reports', async (req, res) => {
   try {
     // جلب جميع المستشفيات النشطة أولاً
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1368,7 +1373,7 @@ router.get('/critical-ratio-by-hospital',
   try {
     // جلب جميع المستشفيات النشطة أولاً
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1403,6 +1408,7 @@ router.get('/critical-ratio-by-hospital',
         criticalRatioData.push({
           HospitalID: hospital.HospitalID,
           HospitalName: hospital.HospitalName,
+          HospitalNameEn: hospital.HospitalNameEn,
           totalComplaints: totalComplaints,
           criticalComplaints: criticalComplaints,
           criticalPercentage: criticalPercentage
@@ -1456,7 +1462,7 @@ router.get('/funnel-by-hospital',
   try {
     // جلب جميع المستشفيات النشطة أولاً
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder
       FROM hospitals 
       WHERE IsActive = 1
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1526,7 +1532,7 @@ router.get('/funnel-by-hospital',
 router.get('/hospitals', async (req, res) => {
   try {
     const [rows] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
       FROM hospitals
       WHERE IsActive = 1
       ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1742,7 +1748,7 @@ router.get('/reports-by-type',
     else if (userHospitalId > 0) {
       console.log('👤 موظف عادي - جلب بيانات مستشفى واحد فقط:', userHospitalId);
       const [userHospital] = await pool.query(`
-        SELECT HospitalID, NameAr AS HospitalName
+        SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
         FROM hospitals
         WHERE HospitalID = ? AND IsActive = 1
       `, [userHospitalId]);
@@ -1844,7 +1850,7 @@ router.get('/critical-ratio',
     else if (userHospitalId > 0) {
       console.log('👤 موظف عادي - جلب بيانات مستشفى واحد فقط:', userHospitalId);
       const [userHospital] = await pool.query(`
-        SELECT HospitalID, NameAr AS HospitalName
+        SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
         FROM hospitals
         WHERE HospitalID = ? AND IsActive = 1
       `, [userHospitalId]);
@@ -1888,6 +1894,7 @@ router.get('/critical-ratio',
         results.push({
           hospitalId: hospital.HospitalID,
           hospitalName: hospital.HospitalName,
+          hospitalNameEn: hospital.HospitalNameEn,
           totalReports: totalReports,
           criticalReports: criticalReports,
           criticalRatio: criticalRatio
@@ -1956,7 +1963,7 @@ router.get('/critical-reports',
     const NOT_DELETED = `(c.IsDeleted = 0 OR c.IsDeleted IS NULL)`;
 
     // دالة تساعدنا نقرأ من مستشفى واحد
-    async function fetchOneHospital(hId, hospitalName=null) {
+    async function fetchOneHospital(hId, hospitalName=null, hospitalNameEn=null) {
       const { getHospitalPool } = await import('../config/db.js');
       const pool = await getHospitalPool(hId);           // ← هنا دائمًا hId رقم صحيح
       // ما نسوي JOIN على hospitals لو القاعدة قاعدة مستشفى
@@ -1990,7 +1997,10 @@ router.get('/critical-reports',
       const [rows] = await pool.query(sql);
 
       // إن كنا على قاعدة مستشفى والاسم مفقود، نحط الاسم الممرّر (إن وُجد)
-      if (hospitalName) rows.forEach(r => r.HospitalName = hospitalName);
+      if (hospitalName) rows.forEach(r => {
+        r.HospitalName = hospitalName;
+        r.HospitalNameEn = hospitalNameEn;
+      });
       return rows;
     }
 
@@ -1998,16 +2008,17 @@ router.get('/critical-reports',
     if (isCluster && !hospitalId) {
       const { centralDb } = await import('../config/db.js');
       const [hospitals] = await centralDb.query(
-        `SELECT HospitalID, NameAr FROM hospitals WHERE IsActive = 1`
+        `SELECT HospitalID, NameAr, NameEn FROM hospitals WHERE IsActive = 1`
       );
 
       const all = [];
       for (const h of hospitals) {
         try {
-          const rows = await fetchOneHospital(h.HospitalID, h.NameAr);
+          const rows = await fetchOneHospital(h.HospitalID, h.NameAr, h.NameEn);
           rows.forEach(r => {
             r.HospitalID = h.HospitalID;
             r.HospitalName = r.HospitalName || h.NameAr;
+            r.HospitalNameEn = r.HospitalNameEn || h.NameEn;
             all.push(r);
           });
         } catch (e) {
@@ -2145,7 +2156,7 @@ router.get('/status',
     const hospitalParams = hospitalId ? [hospitalId] : [];
     
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
       FROM hospitals
       ${hospitalWhereClause}
       ORDER BY NameAr ASC
@@ -2307,7 +2318,7 @@ router.get('/categories',
     const hospitalParams = hospitalId ? [hospitalId] : [];
     
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
       FROM hospitals
       ${hospitalWhereClause}
       ORDER BY NameAr ASC
@@ -2333,25 +2344,28 @@ router.get('/categories',
           SELECT 
             ct.ComplaintTypeID,
             ct.TypeName AS Category,
+            ct.TypeNameEn AS CategoryEn,
             ct.TypeCode AS CategoryCode,
             COUNT(c.ComplaintID) AS Total
           FROM complaints c
           INNER JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
           WHERE (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
             AND ct.TypeName IS NOT NULL
-          GROUP BY ct.ComplaintTypeID, ct.TypeName, ct.TypeCode
+          GROUP BY ct.ComplaintTypeID, ct.TypeName, ct.TypeNameEn, ct.TypeCode
           HAVING Total > 0
         `);
         
         // تجميع الإحصائيات حسب اسم التصنيف (مع حفظ TypeCode و ComplaintTypeID)
         categoryStats.forEach(stat => {
           const category = stat.Category || 'غير محدد';
+          const categoryEn = stat.CategoryEn || '';
           const categoryCode = stat.CategoryCode || '';
           const complaintTypeID = stat.ComplaintTypeID || null;
           
           if (!categoryMap.has(category)) {
             categoryMap.set(category, {
               Category: category,
+              CategoryEn: categoryEn,
               CategoryCode: categoryCode,
               ComplaintTypeID: complaintTypeID,
               Total: 0
@@ -2363,6 +2377,9 @@ router.get('/categories',
           // تحديث TypeCode و ComplaintTypeID إذا كانت غير موجودة
           if (!existing.CategoryCode && categoryCode) {
             existing.CategoryCode = categoryCode;
+          }
+          if (!existing.CategoryEn && categoryEn) {
+            existing.CategoryEn = categoryEn;
           }
           if (!existing.ComplaintTypeID && complaintTypeID) {
             existing.ComplaintTypeID = complaintTypeID;
@@ -2377,6 +2394,7 @@ router.get('/categories',
     const data = Array.from(categoryMap.values())
       .map(item => ({
         Category: item.Category,
+        CategoryEn: item.CategoryEn,
         CategoryCode: item.CategoryCode,
         ComplaintTypeID: item.ComplaintTypeID,
         Total: Number(item.Total)
@@ -2414,7 +2432,7 @@ router.get('/subcategories',
     const hospitalParams = hospitalId ? [hospitalId] : [];
     
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
       FROM hospitals
       ${hospitalWhereClause}
       ORDER BY NameAr ASC
@@ -2517,7 +2535,7 @@ router.get('/classifications-with-status',
     const hospitalParams = hospitalId ? [hospitalId] : [];
     
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn
       FROM hospitals
       ${hospitalWhereClause}
       ORDER BY NameAr ASC
@@ -2751,6 +2769,9 @@ router.get('/patient-frequency',
     
     const [allHospitals] = await pool.query(hospitalQuery, queryParams);
     
+    // خريطة المستشفيات للوصول السريع
+    const hospitalsMap = new Map(allHospitals.map(h => [h.HospitalID, { NameAr: h.NameAr, NameEn: h.NameEn }]));
+    
     // تجميع البيانات من جميع المستشفيات
     const frequencyMap = new Map(); // key: `${PatientIDNumber}|||${HospitalID}`
     
@@ -2776,6 +2797,8 @@ router.get('/patient-frequency',
         // إضافة البيانات إلى الخريطة
         for (const row of rows) {
           const key = `${row.PatientIDNumber}|||${hospital.HospitalID}`;
+          const hospitalInfo = hospitalsMap.get(hospital.HospitalID);
+          
           if (frequencyMap.has(key)) {
             // هذا لا يجب أن يحدث لأن كل مستشفى له قاعدة بيانات منفصلة
             frequencyMap.get(key).frequency += Number(row.frequency);
@@ -2783,7 +2806,8 @@ router.get('/patient-frequency',
             frequencyMap.set(key, {
               PatientIDNumber: row.PatientIDNumber,
               HospitalID: hospital.HospitalID,
-              HospitalName: hospital.NameAr || hospital.NameEn,
+              HospitalName: hospitalInfo ? hospitalInfo.NameAr : hospital.NameAr,
+              HospitalNameEn: hospitalInfo ? hospitalInfo.NameEn : hospital.NameEn,
               frequency: Number(row.frequency)
             });
           }
@@ -3056,16 +3080,21 @@ router.get('/patient-complaints',
       WHERE HospitalID = ?
     `, [targetHospitalId]);
     
+    const hospNameAr = hospitalInfo[0]?.NameAr || 'غير محدد';
+    const hospNameEn = hospitalInfo[0]?.NameEn;
+
     res.json({
       success: true,
       data: complaints.map(c => ({
         ...c,
-        HospitalName: hospitalInfo[0]?.NameAr || hospitalInfo[0]?.NameEn || 'غير محدد'
+        HospitalName: hospNameAr,
+        HospitalNameEn: hospNameEn
       })),
       total: complaints.length,
       patientIDNumber,
       hospitalId: targetHospitalId,
-      hospitalName: hospitalInfo[0]?.NameAr || hospitalInfo[0]?.NameEn || 'غير محدد'
+      hospitalName: hospNameAr,
+      hospitalNameEn: hospNameEn
     });
     
   } catch (error) {
@@ -3215,7 +3244,7 @@ router.get('/complaints/subtypes', async (req, res) => {
 
     // جلب جميع المستشفيات النشطة
     const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName, SortOrder,
+      SELECT HospitalID, NameAr AS HospitalName, NameEn AS HospitalNameEn, SortOrder,
              COALESCE(FacilityType, 'hospital') AS FacilityType
       FROM hospitals
       ${hospitalWhereClause}

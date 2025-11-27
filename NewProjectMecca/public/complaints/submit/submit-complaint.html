@@ -107,7 +107,7 @@
             <!-- ✅ لمدير التجمع: قائمة منسدلة (select) -->
             <div id="hospitalSelectContainer" style="display:none">
               <select id="hospitalSelect" name="HospitalID" class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400">
-                <option value="">اختر المستشفى...</option>
+                <option value="" id="hospital-select-placeholder">اختر المستشفى...</option>
                 <!-- سيتم ملؤها ديناميكياً -->
               </select>
             </div>
@@ -138,6 +138,8 @@
               <!-- 🔍 مربع البحث عن التصنيف -->
               <input type="text" id="typeSearch" 
                      placeholder="بحث عن تصنيف..."
+                     data-placeholder-ar="بحث عن تصنيف..."
+                     data-placeholder-en="Search for a category..."
                      class="w-full mb-2 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400" />
 
               <!-- قائمة التصنيفات -->
@@ -163,13 +165,13 @@
             <label id="processing-duration-label">⏳ مدة معالجة البلاغ</label>
             <select id="processingDuration" name="ProcessingDuration" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
               <option value="" id="processing-duration-placeholder">اختر المدة...</option>
-              <option value="24">24 ساعة</option>
-              <option value="48">48 ساعة</option>
-              <option value="72">3 أيام</option>
-              <option value="168">أسبوع</option>
-              <option value="720">شهر</option>
+              <option value="24" id="processing-option-24">24 ساعة</option>
+              <option value="48" id="processing-option-48">48 ساعة</option>
+              <option value="72" id="processing-option-72">3 أيام</option>
+              <option value="168" id="processing-option-168">أسبوع</option>
+              <option value="720" id="processing-option-720">شهر</option>
             </select>
-            <small class="text-xs text-gray-500 mt-1 block">المدة المتوقعة لمعالجة هذا البلاغ</small>
+            <small id="processing-duration-help" class="text-xs text-gray-500 mt-1 block">المدة المتوقعة لمعالجة هذا البلاغ</small>
           </div>
         </div>
       </section>
@@ -180,34 +182,34 @@
           <span class="icon">👥</span><h2 id="employee-target-title">بلاغ على موظف؟ (اختياري)</h2>
         </div>
 
-        <label class="flex items-center gap-2 mb-3 cursor-pointer">
+        <label class="flex items-center gap-2 mb-3 cursor-pointer" id="employee-toggle-label">
           <input type="checkbox" id="isEmployeeTarget" class="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500" />
-          <span class="text-gray-700 font-medium">تفعيل إدخال بيانات الموظف</span>
+          <span id="employee-toggle-text" class="text-gray-700 font-medium">تفعيل إدخال بيانات الموظف</span>
         </label>
 
         <div id="employeeTargetFields" class="grid md:grid-cols-2 gap-4" style="display:none">
           <!-- بحث الموظف (اختياري) -->
           <div class="field md:col-span-2">
-            <label>ابحث بالاسم أو الرقم الوظيفي (اختياري)</label>
+            <label id="employee-search-label">ابحث بالاسم أو الرقم الوظيفي (اختياري)</label>
             <input type="text" id="employeeSearch" placeholder="مثال: سمر عامر / 58" data-placeholder-ar="مثال: سمر عامر / 58" data-placeholder-en="Example: Samar Amer / 58">
             <div id="employeeResults" class="files-list mt-2" style="display:none"></div>
-            <small class="text-gray-500 block mt-1">تقدري تختاري من النتائج أو تعبّي يدويًا أدناه.</small>
+            <small id="employee-search-hint" class="text-gray-500 block mt-1">تقدري تختاري من النتائج أو تعبّي يدويًا أدناه.</small>
           </div>
 
           <div class="field">
-            <label>رقم الموظف</label>
+            <label id="employee-id-label">رقم الموظف</label>
             <input type="text" id="TargetEmployeeID" placeholder="اختياري" data-placeholder-ar="اختياري" data-placeholder-en="Optional">
           </div>
           <div class="field">
-            <label>اسم الموظف</label>
+            <label id="employee-name-label">اسم الموظف</label>
             <input type="text" id="TargetEmployeeName" placeholder="اختياري" data-placeholder-ar="اختياري" data-placeholder-en="Optional">
           </div>
           <div class="field">
-            <label>رقم القسم</label>
+            <label id="employee-deptid-label">رقم القسم</label>
             <input type="text" id="TargetDepartmentID" placeholder="اختياري" data-placeholder-ar="اختياري" data-placeholder-en="Optional">
           </div>
           <div class="field">
-            <label>اسم القسم</label>
+            <label id="employee-deptname-label">اسم القسم</label>
             <input type="text" id="TargetDepartmentName" placeholder="اختياري" data-placeholder-ar="اختياري" data-placeholder-en="Optional">
           </div>
         </div>
@@ -464,6 +466,7 @@
         // بيانات الزيارة
         'visit-data-title': 'بيانات الزيارة',
         'hospital-name-label': 'اسم المستشفى',
+        'hospital-select-placeholder': 'اختر المستشفى...',
         'visit-date-label': 'تاريخ الزيارة',
         'department-label': 'القسم',
         
@@ -476,9 +479,22 @@
         'complaint-description-label': 'وصف البلاغ',
         'processing-duration-label': '⏳ مدة معالجة البلاغ',
         'processing-duration-placeholder': 'اختر المدة...',
+        'processing-duration-help': 'المدة المتوقعة لمعالجة هذا البلاغ',
+        'processing-option-24': '24 ساعة',
+        'processing-option-48': '48 ساعة',
+        'processing-option-72': '3 أيام',
+        'processing-option-168': 'أسبوع',
+        'processing-option-720': 'شهر',
         
         // بلاغ على موظف
         'employee-target-title': 'بلاغ على موظف؟ (اختياري)',
+        'employee-toggle-text': 'تفعيل إدخال بيانات الموظف',
+        'employee-search-label': 'ابحث بالاسم أو الرقم الوظيفي (اختياري)',
+        'employee-search-hint': 'تقدري تختاري من النتائج أو تعبّي يدويًا أدناه.',
+        'employee-id-label': 'رقم الموظف',
+        'employee-name-label': 'اسم الموظف',
+        'employee-deptid-label': 'رقم القسم',
+        'employee-deptname-label': 'اسم القسم',
         
         // المرفقات
         'attachments-title': 'المرفقات',
@@ -531,6 +547,7 @@
         // بيانات الزيارة
         'visit-data-title': 'Visit Information',
         'hospital-name-label': 'Hospital Name',
+        'hospital-select-placeholder': 'Select hospital...',
         'visit-date-label': 'Visit Date',
         'department-label': 'Department',
         
@@ -543,9 +560,22 @@
         'complaint-description-label': 'Complaint Description',
         'processing-duration-label': '⏳ Processing Duration',
         'processing-duration-placeholder': 'Select duration...',
+        'processing-duration-help': 'Expected SLA for this complaint',
+        'processing-option-24': '24 hours',
+        'processing-option-48': '48 hours',
+        'processing-option-72': '3 days',
+        'processing-option-168': '1 week',
+        'processing-option-720': '1 month',
         
         // بلاغ على موظف
         'employee-target-title': 'Complaint Against Employee? (Optional)',
+        'employee-toggle-text': 'Enable employee fields',
+        'employee-search-label': 'Search by name or employee ID (optional)',
+        'employee-search-hint': 'Pick from the results or fill the fields manually.',
+        'employee-id-label': 'Employee ID',
+        'employee-name-label': 'Employee Name',
+        'employee-deptid-label': 'Department ID',
+        'employee-deptname-label': 'Department Name',
         
         // المرفقات
         'attachments-title': 'Attachments',
