@@ -39,6 +39,9 @@ router.get('/all', requireAuth, async (req, res) => {
     const employeesMistreatmentOverall = new Map();
     const employeesMistreatmentByHospital = new Map();
     const mistreatmentClosingTime = [];
+    const mistreatmentSlaList = [];
+    const labSlaList = [];
+    const harassmentList = [];
 
     // 2. التكرار على كل مستشفى وجمع البيانات
     for (const hospital of allHospitals) {
@@ -48,7 +51,7 @@ router.get('/all', requireAuth, async (req, res) => {
         // سوء تعامل + أدوية لكل مستشفى
         const [[subCounts]] = await hospitalPool.query(`
           SELECT
-            SUM(CASE WHEN ComplaintTypeID = 3 OR SubTypeID = 15 THEN 1 ELSE 0 END) AS mistreatment,
+            SUM(CASE WHEN (ComplaintTypeID IN (17) OR SubTypeID IN (15, 29, 8)) THEN 1 ELSE 0 END) AS mistreatment,
             SUM(CASE WHEN ComplaintTypeID = 6 THEN 1 ELSE 0 END) AS medicine
           FROM complaints c
           WHERE ${urgentCondition('c')}
@@ -66,7 +69,8 @@ router.get('/all', requireAuth, async (req, res) => {
         const [sampleComplaints] = await hospitalPool.query(`
           SELECT ComplaintID, StatusCode, ActualClosingHours, CreatedAt, UpdatedAt 
           FROM complaints c 
-          WHERE (c.ComplaintTypeID = 3 OR c.SubTypeID = 15) 
+          WHERE (c.ComplaintTypeID IN (17) OR c.SubTypeID IN (15, 29, 8))
+            AND UPPER(c.PriorityCode) IN ('URGENT','CRITICAL','HIGH')
             AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
           LIMIT 5
         `);
@@ -81,7 +85,7 @@ router.get('/all', requireAuth, async (req, res) => {
         // -------------------------------------------------------
 
         // سوء التعامل + متوسط زمن الإغلاق (مع إجمالي ومغلق)
-        // ملاحظة: هذا الاستعلام يشمل جميع بلاغات سوء التعامل (حرجة وغير حرجة)
+        // ملاحظة: هذا الاستعلام يشمل فقط بلاغات سوء التعامل الحرجة
         const [[mistreatmentTimeRow]] = await hospitalPool.query(`
           SELECT
             COUNT(*) AS totalMistreatment,
@@ -108,7 +112,11 @@ router.get('/all', requireAuth, async (req, res) => {
                     COALESCE(
                       h_close.ChangedAt,
                       c.UpdatedAt,
-                      NOW()
+                      CASE 
+                        WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                        THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                        ELSE NOW()
+                      END
                     )
                   )
                 )
@@ -126,7 +134,8 @@ router.get('/all', requireAuth, async (req, res) => {
                OR h.NewStatusCode LIKE '%محلول%' OR h.NewStatusCode LIKE '%مكتمل%'
             GROUP BY h.ComplaintID
           ) h_close ON h_close.ComplaintID = c.ComplaintID
-          WHERE (c.ComplaintTypeID = 3 OR c.SubTypeID = 15)
+          WHERE (c.ComplaintTypeID IN (17) OR c.SubTypeID IN (15, 29, 8))
+            AND UPPER(c.PriorityCode) IN ('URGENT','CRITICAL','HIGH')
             AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
         `);
 
@@ -147,6 +156,245 @@ router.get('/all', requireAuth, async (req, res) => {
           avgHours: avgHoursValue
         });
 
+        // حساب سوء التعامل خلال 24 ساعة والمتجاوز
+        // الحل النهائي: استخدام ActualClosingHours + فلترة البلاغات الحرجة + تعريف دقيق لسوء التعامل
+        const [[mistreatmentSLA]] = await hospitalPool.query(`
+          SELECT
+            SUM(
+              CASE 
+                WHEN 
+                  (
+                    c.ComplaintTypeID IN (17)
+                    OR c.SubTypeID IN (15, 29, 8)
+                  )
+                  AND UPPER(c.PriorityCode) IN ('URGENT','CRITICAL','HIGH')
+                  AND UPPER(c.StatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+                  AND TIMESTAMPDIFF(
+                    HOUR,
+                    c.CreatedAt,
+                    COALESCE(
+                      h_close.ChangedAt,
+                      c.UpdatedAt,
+                      CASE 
+                        WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                        THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                        ELSE NOW()
+                      END
+                    )
+                  ) <= 24
+                THEN 1 ELSE 0 
+              END
+            ) AS within24,
+            
+            SUM(
+              CASE 
+                WHEN 
+                  (
+                    c.ComplaintTypeID IN (17)
+                    OR c.SubTypeID IN (15, 29, 8)
+                  )
+                  AND UPPER(c.PriorityCode) IN ('URGENT','CRITICAL','HIGH')
+                  AND (
+                    UPPER(c.StatusCode) NOT IN ('CLOSED','RESOLVED','CANCELLED')
+                    OR TIMESTAMPDIFF(
+                      HOUR,
+                      c.CreatedAt,
+                      COALESCE(
+                        h_close.ChangedAt,
+                        c.UpdatedAt,
+                        CASE 
+                          WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                          THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                          ELSE NOW()
+                        END
+                      )
+                    ) > 24
+                  )
+                THEN 1 ELSE 0 
+              END
+            ) AS over24
+          FROM complaints c
+          LEFT JOIN (
+            SELECT 
+              h.ComplaintID,
+              MAX(h.ChangedAt) AS ChangedAt
+            FROM complaint_status_history h
+            WHERE UPPER(h.NewStatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+               OR h.NewStatusCode LIKE '%مغلق%' OR h.NewStatusCode LIKE '%مغلقة%'
+               OR h.NewStatusCode LIKE '%محلول%' OR h.NewStatusCode LIKE '%مكتمل%'
+            GROUP BY h.ComplaintID
+          ) h_close ON h_close.ComplaintID = c.ComplaintID
+          WHERE (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+        `);
+
+        mistreatmentSlaList.push({
+          id: hospital.HospitalID,
+          name: hospital.HospitalName,
+          within24: Number(mistreatmentSLA?.within24 || 0),
+          over24: Number(mistreatmentSLA?.over24 || 0)
+        });
+
+        // 🔬 حساب SLA المختبرات (بدون شرط الأولوية الحرجة - لأن بلاغات المختبر غالباً ليست حرجة)
+        const [[labSLA]] = await hospitalPool.query(`
+          SELECT
+            SUM(
+              CASE 
+                WHEN 
+                  (
+                    (st.SubTypeName LIKE '%تحاليل%' 
+                     OR st.SubTypeName LIKE '%الفحوصات%'
+                     OR st.SubTypeName LIKE '%مخبري%'
+                     OR st.SubTypeName LIKE '%مختبر%')
+                    OR c.ComplaintTypeID = 16
+                  )
+                  AND UPPER(c.StatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+                  AND TIMESTAMPDIFF(
+                    HOUR, 
+                    c.CreatedAt, 
+                    COALESCE(
+                      h_close.ChangedAt,
+                      c.UpdatedAt,
+                      CASE 
+                        WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                        THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                        ELSE NOW()
+                      END
+                    )
+                  ) <= 24
+                THEN 1 ELSE 0 
+              END
+            ) AS within24,
+            
+            SUM(
+              CASE 
+                WHEN 
+                  (
+                    (st.SubTypeName LIKE '%تحاليل%' 
+                     OR st.SubTypeName LIKE '%الفحوصات%'
+                     OR st.SubTypeName LIKE '%مخبري%'
+                     OR st.SubTypeName LIKE '%مختبر%')
+                    OR c.ComplaintTypeID = 16
+                  )
+                  AND (
+                    UPPER(c.StatusCode) NOT IN ('CLOSED','RESOLVED','CANCELLED')
+                    OR TIMESTAMPDIFF(
+                      HOUR, 
+                      c.CreatedAt, 
+                      COALESCE(
+                        h_close.ChangedAt,
+                        c.UpdatedAt,
+                        CASE 
+                          WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                          THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                          ELSE NOW()
+                        END
+                      )
+                    ) > 24
+                  )
+                THEN 1 ELSE 0
+              END
+            ) AS over24
+          FROM complaints c
+          LEFT JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+          LEFT JOIN (
+            SELECT 
+              h.ComplaintID,
+              MAX(h.ChangedAt) AS ChangedAt
+            FROM complaint_status_history h
+            WHERE UPPER(h.NewStatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+               OR h.NewStatusCode LIKE '%مغلق%' OR h.NewStatusCode LIKE '%مغلقة%'
+               OR h.NewStatusCode LIKE '%محلول%' OR h.NewStatusCode LIKE '%مكتمل%'
+            GROUP BY h.ComplaintID
+          ) h_close ON h_close.ComplaintID = c.ComplaintID
+          WHERE 
+            (
+              (st.SubTypeName LIKE '%تحاليل%' 
+               OR st.SubTypeName LIKE '%الفحوصات%'
+               OR st.SubTypeName LIKE '%مخبري%'
+               OR st.SubTypeName LIKE '%مختبر%')
+              OR c.ComplaintTypeID = 16
+            )
+            AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+        `);
+
+        labSlaList.push({
+          id: hospital.HospitalID,
+          name: hospital.HospitalName,
+          within24: Number(labSLA?.within24 || 0),
+          over24: Number(labSLA?.over24 || 0)
+        });
+
+        // 🔍 بلاغات التحرش حسب الوصف
+        const [[harassmentSLA]] = await hospitalPool.query(`
+          SELECT
+            SUM(
+              CASE 
+                WHEN 
+                  c.Description LIKE '%تحرش%'
+                  AND UPPER(c.StatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+                  AND TIMESTAMPDIFF(
+                    HOUR,
+                    c.CreatedAt,
+                    COALESCE(
+                      h_close.ChangedAt,
+                      c.UpdatedAt,
+                      CASE 
+                        WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                        THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                        ELSE NOW()
+                      END
+                    )
+                  ) <= 24
+                THEN 1 ELSE 0 
+              END
+            ) AS within24,
+            
+            SUM(
+              CASE 
+                WHEN 
+                  c.Description LIKE '%تحرش%'
+                  AND (
+                    UPPER(c.StatusCode) NOT IN ('CLOSED','RESOLVED','CANCELLED')
+                    OR TIMESTAMPDIFF(
+                      HOUR,
+                      c.CreatedAt,
+                      COALESCE(
+                        h_close.ChangedAt,
+                        c.UpdatedAt,
+                        CASE 
+                          WHEN c.ActualClosingHours IS NOT NULL AND c.ActualClosingHours > 0
+                          THEN DATE_ADD(c.CreatedAt, INTERVAL c.ActualClosingHours HOUR)
+                          ELSE NOW()
+                        END
+                      )
+                    ) > 24
+                  )
+                THEN 1 ELSE 0 
+              END
+            ) AS over24
+          FROM complaints c
+          LEFT JOIN (
+            SELECT 
+              h.ComplaintID,
+              MAX(h.ChangedAt) AS ChangedAt
+            FROM complaint_status_history h
+            WHERE UPPER(h.NewStatusCode) IN ('CLOSED','RESOLVED','CANCELLED')
+               OR h.NewStatusCode LIKE '%مغلق%' OR h.NewStatusCode LIKE '%مغلقة%'
+               OR h.NewStatusCode LIKE '%محلول%' OR h.NewStatusCode LIKE '%مكتمل%'
+            GROUP BY h.ComplaintID
+          ) h_close ON h_close.ComplaintID = c.ComplaintID
+          WHERE 
+            c.Description LIKE '%تحرش%'
+            AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+        `);
+
+        harassmentList.push({
+          id: hospital.HospitalID,
+          name: hospital.HospitalName,
+          within24: Number(harassmentSLA?.within24 || 0),
+          over24: Number(harassmentSLA?.over24 || 0)
+        });
+
         // أ) إحصائيات عامة للمستشفى
         const [[stats]] = await hospitalPool.query(`
           SELECT 
@@ -155,7 +403,7 @@ router.get('/all', requireAuth, async (req, res) => {
             SUM(CASE WHEN UPPER(StatusCode) NOT IN ('CLOSED','RESOLVED','CANCELLED') THEN 1 ELSE 0 END) AS open,
             SUM(CASE WHEN UPPER(StatusCode) IN ('CLOSED','RESOLVED','CANCELLED') AND ProcessingDurationHours IS NOT NULL THEN ProcessingDurationHours ELSE 0 END) AS durationSum,
             SUM(CASE WHEN UPPER(StatusCode) IN ('CLOSED','RESOLVED','CANCELLED') AND ProcessingDurationHours IS NOT NULL THEN 1 ELSE 0 END) AS durationCount,
-            SUM(CASE WHEN ComplaintTypeID = 3 OR SubTypeID = 15 THEN 1 ELSE 0 END) AS mistreatment,
+            SUM(CASE WHEN (ComplaintTypeID IN (17) OR SubTypeID IN (15, 29, 8)) THEN 1 ELSE 0 END) AS mistreatment,
             SUM(CASE WHEN ComplaintTypeID = 6 THEN 1 ELSE 0 END) AS medicine
           FROM complaints c
           WHERE ${urgentCondition('c')}
@@ -263,7 +511,8 @@ router.get('/all', requireAuth, async (req, res) => {
           FROM complaint_targets ct
           JOIN complaints c ON c.ComplaintID = ct.ComplaintID
           WHERE 
-              (c.ComplaintTypeID = 3 OR c.SubTypeID = 15)
+              (c.ComplaintTypeID IN (17) OR c.SubTypeID IN (15, 29, 8))
+              AND UPPER(c.PriorityCode) IN ('URGENT','CRITICAL','HIGH')
               AND ct.TargetEmployeeName IS NOT NULL
               AND ct.TargetEmployeeName <> ''
               AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
@@ -375,11 +624,124 @@ router.get('/all', requireAuth, async (req, res) => {
       closedUrgent: closedUrgentSla,
       openUrgent: openUrgentSla,
       subTypesByHospital: subPerHospital,
-      mistreatmentClosingTime
+      mistreatmentClosingTime,
+      mistreatmentSla: mistreatmentSlaList,
+      labSla: labSlaList,
+      harassment: harassmentList
     });
 
   } catch (error) {
     console.error('GET /api/dashboard/urgent/all failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'internal error'
+    });
+  }
+});
+
+// ========== GET /api/dashboard/urgent/harassment/details/:hospitalId ==========
+router.get('/harassment/details/:hospitalId', requireAuth, async (req, res) => {
+  try {
+    const hospitalId = req.params.hospitalId;
+    const { getHospitalPool } = await import('../config/db.js');
+    const hospitalPool = await getHospitalPool(hospitalId);
+
+    const [rows] = await hospitalPool.query(`
+      SELECT 
+        ComplaintID,
+        TicketNumber,
+        PatientFullName,
+        ComplaintTypeID,
+        SubTypeID,
+        PriorityCode,
+        StatusCode,
+        ActualClosingHours,
+        CreatedAt,
+        Description
+      FROM complaints
+      WHERE 
+        Description LIKE '%تحرش%'
+        AND (IsDeleted = 0 OR IsDeleted IS NULL)
+      ORDER BY CreatedAt DESC
+    `);
+
+    res.json({
+      success: true,
+      items: rows
+    });
+  } catch (err) {
+    console.error('GET /api/dashboard/urgent/harassment/details/:hospitalId', err);
+    res.json({
+      success: false,
+      message: err.message
+    });
+  }
+});
+
+// ========== GET /api/dashboard/urgent/937-sla ==========
+router.get('/937-sla', requireAuth, async (req, res) => {
+  try {
+    const { getHospitalPool } = await import('../config/db.js');
+    
+    // جلب جميع المستشفيات النشطة
+    const [allHospitals] = await pool.query(`
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals 
+      WHERE IsActive = 1
+    `);
+
+    let lt24 = 0;
+    let btw24_48 = 0;
+    let btw48_72 = 0;
+    let gt72 = 0;
+
+    // جمع البيانات من جميع المستشفيات
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        const [[stats]] = await hospitalPool.query(`
+          SELECT 
+            SUM(CASE 
+              WHEN ActualClosingHours IS NOT NULL AND ActualClosingHours <= 24 THEN 1
+              ELSE 0 END
+            ) AS lt24,
+            SUM(CASE 
+              WHEN ActualClosingHours IS NOT NULL AND ActualClosingHours > 24 AND ActualClosingHours <= 48 THEN 1
+              ELSE 0 END
+            ) AS btw24_48,
+            SUM(CASE 
+              WHEN ActualClosingHours IS NOT NULL AND ActualClosingHours > 48 AND ActualClosingHours <= 72 THEN 1
+              ELSE 0 END
+            ) AS btw48_72,
+            SUM(CASE 
+              WHEN ActualClosingHours IS NOT NULL AND ActualClosingHours > 72 THEN 1
+              ELSE 0 END
+            ) AS gt72
+          FROM complaints
+          WHERE SubmissionType = '937'
+            AND (IsDeleted = 0 OR IsDeleted IS NULL)
+            AND ActualClosingHours IS NOT NULL
+        `);
+
+        lt24 += Number(stats?.lt24 || 0);
+        btw24_48 += Number(stats?.btw24_48 || 0);
+        btw48_72 += Number(stats?.btw48_72 || 0);
+        gt72 += Number(stats?.gt72 || 0);
+      } catch (err) {
+        console.error(`Error processing 937 SLA for hospital ${hospital.HospitalID}:`, err.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      lt24,
+      btw24_48,
+      btw48_72,
+      gt72
+    });
+  } catch (error) {
+    console.error('GET /api/dashboard/urgent/937-sla failed:', error);
     res.status(500).json({
       success: false,
       message: 'internal error'

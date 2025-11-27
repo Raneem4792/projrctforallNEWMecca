@@ -254,20 +254,15 @@
       </div>
     </div>
 
-    <!-- البلاغات المتأخرة حسب الوقت (سوء تعامل 24 ساعة / الباقي 48 ساعة) -->
+    <!-- بلاغات 937 حسب الفئات الزمنية -->
     <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mt-6">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="sla-title">البلاغات المتأخرة حسب الوقت</h3>
-        <div class="flex flex-col items-end">
-          <span class="text-xs text-gray-500" data-i18n-key="sla-legend">
-            سوء تعامل &gt; 24 ساعة — باقي البلاغات &gt; 48 ساعة
-          </span>
-          <span id="sla-week-range" class="text-xs text-blue-600 mt-1">جاري التحميل...</span>
-        </div>
+        <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="sla-937-title">بلاغات 937 حسب الزمن</h3>
+        <p class="text-xs text-gray-500" data-i18n-key="sla-937-subtitle">انقر على أي عمود لعرض البلاغات في هذه الفئة الزمنية</p>
       </div>
 
       <div style="height:350px;">
-        <canvas id="sla-delay-chart"></canvas>
+        <canvas id="chart937Sla"></canvas>
       </div>
     </div>
   </div>
@@ -382,6 +377,50 @@
         <div class="flex-1 overflow-y-auto p-6">
           <div id="department-complaints-list" class="space-y-3">
             <div class="text-center text-gray-500 py-8" data-i18n-key="loading-reports">جاري تحميل البلاغات...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal لعرض قائمة بلاغات 937 -->
+    <div id="complaintsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeComplaintsModal()"></div>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" dir="rtl">
+          <div class="bg-white px-6 pt-6 pb-4">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
+              <h3 class="text-2xl font-bold" id="modal-title" style="color:#002B5B">
+                بلاغات 937
+              </h3>
+              <button onclick="closeComplaintsModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+                <span class="sr-only">إغلاق</span>
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Loading state -->
+            <div id="complaintsModalLoading" class="text-center py-12">
+              <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600"></div>
+              <p class="mt-4 text-gray-600">جاري تحميل البلاغات...</p>
+            </div>
+
+            <!-- Empty state -->
+            <div id="complaintsModalEmpty" class="hidden text-center py-12">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p class="mt-4 text-gray-600">لا توجد بلاغات في هذه الفئة الزمنية</p>
+            </div>
+
+            <!-- Complaints list -->
+            <div id="complaintsModalContent" class="hidden max-h-96 overflow-y-auto pr-2">
+              <div class="space-y-3" id="complaints-list"></div>
+            </div>
           </div>
         </div>
       </div>

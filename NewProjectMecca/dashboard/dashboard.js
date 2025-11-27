@@ -742,7 +742,7 @@ async function reloadFilteredData(hospitalId) {
     // 6) تحديث الرسوم البيانية الجديدة
     await loadStatusChart();
     await loadCategoriesChart();
-    await loadSLADelayChart();
+    await load937SLAChart();
 
     // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -2992,7 +2992,7 @@ function reloadAllCharts() {
   loadCentersChart();
   loadCategoriesChart();
   loadStatusChart();
-  loadSLADelayChart();
+  load937SLAChart();
   renderWeeklyBoardCharts();
 
     if (typeof App.renderMysteryByDepartment === 'function') {
@@ -3093,7 +3093,7 @@ async function initializeDashboard() {
     // 🔹 تحميل الرسوم البيانية الجديدة (تعمل مع أو بدون تصفية)
     await loadStatusChart();
     await loadCategoriesChart();
-    await loadSLADelayChart();
+    await load937SLAChart();
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -3135,8 +3135,23 @@ async function initializeDashboard() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // التأكد من إغلاق Modal البلاغات عند تحميل الصفحة
+  const complaintsModal = document.getElementById('complaintsModal');
+  if (complaintsModal) {
+    complaintsModal.classList.add('hidden');
+    complaintsModal.style.display = 'none'; // حماية إضافية
+  }
+  
   renderWeeklyBoardCharts();
   await initializeDashboard();
+  
+  // حماية إضافية: التأكد من إغلاق Modal بعد تحميل البيانات
+  setTimeout(() => {
+    if (complaintsModal && !complaintsModal.classList.contains('hidden')) {
+      complaintsModal.classList.add('hidden');
+      complaintsModal.style.display = 'none';
+    }
+  }, 1000);
 });
 
 // ========================================
@@ -3709,191 +3724,157 @@ function getWeekRange() {
   };
 }
 
+// Flag لمنع فتح Modal تلقائياً عند التهيئة
+let chart937Initialized = false;
+
 /**
- * مخطط تأخر معالجة البلاغات:
- * - سوء تعامل متأخرة (أحمر بعد 24 ساعة)
- * - سوء تعامل ضمن الوقت
- * - بلاغات أخرى متأخرة (أحمر بعد 48 ساعة)
- * - بلاغات أخرى ضمن الوقت
+ * مخطط بلاغات 937 حسب الفئات الزمنية:
+ * - أقل من 24 ساعة
+ * - من 24 إلى 48 ساعة
+ * - من 48 إلى 72 ساعة
+ * - أكثر من 72 ساعة
  */
-async function loadSLADelayChart() {
+async function load937SLAChart() {
   try {
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
       ? 'http://localhost:3001'
       : '';
 
-    // تحميل المستخدم إذا مو محمّل
-    if (!currentUser) await loadCurrentUser();
-    const isCluster = App.isClusterManager();
-
-    const urlParams = new URLSearchParams(location.search);
-    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
-
-    // إذا مو مدير تجمع: نثبت المستشفى حق المستخدم
-    if (!hospitalId && !isCluster) {
-      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
-    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
-      // مدير تجمع بدون فلتر = جميع المستشفيات
-      hospitalId = null;
-    }
-
-    // تحديد فترة الأسبوع (الأربعاء → الخميس)
-    const week = getWeekRange();
-    
-    // تحديث نص الفترة في الواجهة
-    const weekRangeEl = document.getElementById('sla-week-range');
-    if (weekRangeEl) {
-      const startDate = week.startDate.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      const endDate = week.endDate.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      weekRangeEl.textContent = `من ${startDate} إلى ${endDate}`;
-    }
-    
-    let qs = `?start=${week.start}&end=${week.end}`;
-    if (hospitalId) {
-      qs += `&hospitalId=${encodeURIComponent(hospitalId)}`;
-    }
-
-    // ⚠️ انتبهي: هذا الـ API لازم نضيفه في الباك إند (مشروح تحت)
-    const resp = await authFetch(`${API_BASE}/api/dashboard/total/sla-delays${qs}`);
+    const resp = await authFetch(`${API_BASE}/api/dashboard/urgent/937-sla`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
-    const json = await resp.json();
-    if (!json.success || !json.data) {
-      const parent = document.getElementById('sla-delay-chart')?.parentElement;
+    const data = await resp.json();
+    if (!data.success) {
+      const parent = document.getElementById('chart937Sla')?.parentElement;
       if (parent) {
-        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات لتأخر البلاغات</div>';
+        parent.innerHTML = '<div class="text-center text-gray-500 p-6">لا توجد بيانات لبلاغات 937</div>';
       }
       return;
     }
 
-    const d = json.data;
-
-    const isEnglish = getDashboardLang() === 'en';
-
-    const labels = isEnglish
-      ? [
-          'Bad behavior (late)',
-          'Bad behavior (on time)',
-          'Other complaints (late)',
-          'Other complaints (on time)'
-        ]
-      : [
-          'سوء تعامل متأخرة',
-          'سوء تعامل ضمن الوقت',
-          'بلاغات أخرى متأخرة',
-          'بلاغات أخرى ضمن الوقت'
-        ];
-
-    const values = [
-      Number(d.bad_behavior_late || 0),
-      Number(d.bad_behavior_ok || 0),
-      Number(d.other_late || 0),
-      Number(d.other_ok || 0),
+    const labels = [
+      'أقل من 24 ساعة',
+      '24-48 ساعة',
+      '48-72 ساعة',
+      'أكثر من 72 ساعة'
     ];
 
-    const ctx = document.getElementById('sla-delay-chart');
+    const values = [
+      Number(data.lt24 || 0),
+      Number(data.btw24_48 || 0),
+      Number(data.btw48_72 || 0),
+      Number(data.gt72 || 0)
+    ];
+
+    const ctx = document.getElementById('chart937Sla');
     if (!ctx) return;
 
-    if (window.slaChartInstance) {
-      window.slaChartInstance.destroy();
+    // تدمير الرسم البياني السابق إذا كان موجوداً
+    if (window.chart937Sla && typeof window.chart937Sla.destroy === 'function') {
+      try {
+        window.chart937Sla.destroy();
+      } catch (err) {
+        console.warn('خطأ في تدمير الرسم البياني السابق:', err);
+      }
     }
+    window.chart937Sla = null;
+    
+    // إعادة تعيين الـ flag
+    chart937Initialized = false;
 
-    const chartInstance = new Chart(ctx.getContext('2d'), {
+    // تهيئة الرسم البياني مع تأخير بسيط لتفعيل الـ flag
+    setTimeout(() => {
+      chart937Initialized = true;
+    }, 1000);
+    
+    window.chart937Sla = new Chart(ctx.getContext('2d'), {
       type: 'bar',
       data: {
-        labels,
+        labels: labels,
         datasets: [{
           label: 'عدد البلاغات',
           data: values,
-          // الأحمر للمتأخرة – غيرها أزرق/أخضر
-          backgroundColor: (ctx) => {
-            const i = ctx.dataIndex;
-            if (i === 0 || i === 2) return '#EF4444';   // متأخرة (سوء تعامل / أخرى) — أحمر
-            if (i === 1) return '#10B981';              // سوء تعامل ضمن الوقت — أخضر
-            return '#1D4ED8';                           // أخرى ضمن الوقت — أزرق
-          },
-          borderRadius: 8,
-          barThickness: 30
+          backgroundColor: [
+            '#10B981', // <24h - أخضر
+            '#3B82F6', // 24-48 - أزرق
+            '#F59E0B', // 48-72 - برتقالي
+            '#EF4444'  // >72 - أحمر
+          ],
+          borderRadius: 12,
+          barThickness: 40,
+          maxBarThickness: 50
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: true
+        },
         onClick: async (evt, elements) => {
-          console.log('Chart onClick triggered', { 
-            elements, 
-            length: elements?.length,
-            chart: 'sla-delay-chart'
-          });
-          
-          if (!elements || !elements.length) {
-            console.log('No element clicked - clicking empty area');
+          // حماية قوية: منع الفتح التلقائي عند التهيئة
+          if (!chart937Initialized) {
+            // محاولة تفعيل الـ flag إذا مر وقت كافٍ
+            setTimeout(() => { chart937Initialized = true; }, 100);
             return;
           }
-
-          const element = elements[0];
-          const index = element.index;
-          const datasetIndex = element.datasetIndex;
           
-          console.log('Chart clicked details:', {
-            index,
-            datasetIndex,
-            label: labels[index],
-            value: values[index]
-          });
+          // التأكد من وجود عناصر تم الضغط عليها
+          if (!elements || elements.length === 0) return;
+          
+          // التحقق من الحدث الأصلي
+          const nativeEvent = evt.native;
+          if (!nativeEvent) return;
 
-          const filters = ['bad_late', 'bad_ok', 'other_late', 'other_ok'];
-          const selectedFilter = filters[index];
-
-          console.log('Selected filter:', selectedFilter);
-
-          if (selectedFilter) {
-            try {
-              console.log('Calling showDelayedComplaints with filter:', selectedFilter);
-              await showDelayedComplaints(selectedFilter);
-            } catch (error) {
-              console.error('Error in showDelayedComplaints:', error);
-              alert('حدث خطأ أثناء فتح البلاغات: ' + error.message);
-            }
-          } else {
-            console.warn('No filter found for index:', index);
-          }
+          // التأكد من نوع الحدث (click, mouseup, pointerup)
+          const eventType = nativeEvent.type;
+          if (eventType !== 'click' && eventType !== 'mouseup' && eventType !== 'pointerup') return;
+          
+          const element = elements[0];
+          if (!element || element.index === undefined || element.index === null) return;
+          
+          const index = element.index;
+          console.log('Chart clicked - opening modal for index:', index);
+          await open937Modal(index);
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
         },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (c) => `${c.label}: ${c.formattedValue} بلاغ`
+              label: (c) => `${c.label}: ${c.formattedValue} بلاغ`,
+              afterBody: () => '👆 انقر لعرض تفاصيل البلاغات'
             }
           }
         },
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: getChartTextColor(), font: { family: 'Tajawal', size: 12 } }
+            ticks: { 
+              color: getChartTextColor(), 
+              font: { family: 'Tajawal', size: 12, weight: 600 } 
+            }
           },
           y: {
             beginAtZero: true,
             grid: { color: '#E5E7EB' },
-            ticks: { color: getChartTextColor(), font: { family: 'Tajawal', size: 12 } }
+            ticks: { 
+              color: getChartTextColor(), 
+              font: { family: 'Tajawal', size: 12 },
+              stepSize: 1
+            }
           }
         }
       }
     });
 
-    window.slaChartInstance = chartInstance;
-
   } catch (error) {
-    console.error('❌ خطأ في تحميل مخطط تأخر البلاغات:', error);
-    const ctx = document.getElementById('sla-delay-chart');
+    console.error('❌ خطأ في تحميل مخطط بلاغات 937:', error);
+    const ctx = document.getElementById('chart937Sla');
     if (ctx) {
       const parent = ctx.parentElement;
       if (parent) {
@@ -3902,6 +3883,231 @@ async function loadSLADelayChart() {
     }
   }
 }
+
+/**
+ * فتح Modal لعرض بلاغات 937 حسب الفئة الزمنية
+ */
+async function open937Modal(index) {
+  // حماية: التأكد من أن index صحيح
+  if (index === undefined || index === null || isNaN(index)) {
+    console.warn('open937Modal: index غير صحيح', index);
+    return;
+  }
+
+  const ranges = [
+    { min: 0, max: 24, label: 'أقل من 24 ساعة' },
+    { min: 24, max: 48, label: '24-48 ساعة' },
+    { min: 48, max: 72, label: '48-72 ساعة' },
+    { min: 72, max: 99999, label: 'أكثر من 72 ساعة' }
+  ];
+
+  const r = ranges[index];
+  if (!r) {
+    console.warn('open937Modal: لا توجد فئة زمنية للـ index', index);
+    return;
+  }
+
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:3001'
+    : '';
+
+  // استخدام نفس Modal الموجود في urgent-dashboard
+  const modal = document.getElementById('complaintsModal');
+  const modalTitleElement = document.getElementById('modal-title');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  if (!modal) {
+    console.error('Modal not found - make sure complaintsModal exists in dashboard.html');
+    alert('خطأ: Modal غير موجود');
+    return;
+  }
+
+  // التأكد من أن الـ Modal مخفي في البداية (حماية إضافية)
+  if (!modal.classList.contains('hidden')) {
+    console.warn('Modal was already open, closing it first');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+
+  // تحديث عنوان الـ Modal
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML = `بلاغات 937 - ${r.label}`;
+  }
+
+  // إظهار الـ Modal
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex'; // أو 'block' حسب التصميم
+
+  // إخفاء المحتوى وإظهار التحميل
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    const res = await authFetch(
+      `${API_BASE}/api/complaints/937-range?min=${r.min}&max=${r.max}`
+    );
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const complaints = Array.isArray(data.items) ? data.items : [];
+
+    loading.classList.add('hidden');
+
+    if (!complaints.length) {
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    content.classList.remove('hidden');
+    render937ComplaintsList(complaints);
+
+  } catch (err) {
+    console.error('خطأ في open937Modal:', err);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
+}
+
+/**
+ * عرض قائمة بلاغات 937 في Modal
+ */
+function render937ComplaintsList(complaints) {
+  const list = document.getElementById('complaints-list');
+  if (!list) return;
+  
+  list.innerHTML = '';
+
+  if (complaints.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'text-center py-8 text-gray-500';
+    emptyDiv.textContent = 'لا توجد بلاغات';
+    list.appendChild(emptyDiv);
+    return;
+  }
+
+  complaints.forEach((complaint) => {
+    const item = document.createElement('div');
+    item.className = 'border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all bg-white';
+    item.onclick = () => open937ComplaintDetails(complaint);
+
+    const ticket = complaint.ticket || complaint.TicketNumber || `#${complaint.id || complaint.ComplaintID}`;
+    const patientName = complaint.fullName || complaint.PatientFullName || 'غير محدد';
+    const status = (complaint.status || complaint.StatusCode || 'open').toLowerCase();
+    const createdAt = complaint.createdAt || complaint.CreatedAt || '';
+    const description = complaint.description || complaint.Description || '';
+    const priority = complaint.priority || complaint.PriorityCode || 'MEDIUM';
+    const hours = complaint.actualClosingHours || complaint.ActualClosingHours || 0;
+
+    const statusColors = {
+      'open': 'bg-blue-100 text-blue-800',
+      'closed': 'bg-gray-100 text-gray-800',
+      'in_progress': 'bg-yellow-100 text-yellow-800',
+      'resolved': 'bg-green-100 text-green-800',
+      'مفتوح': 'bg-blue-100 text-blue-800',
+      'مغلق': 'bg-gray-100 text-gray-800',
+      'قيد المعالجة': 'bg-yellow-100 text-yellow-800',
+      'محلول': 'bg-green-100 text-green-800'
+    };
+
+    const statusText = {
+      'open': 'مفتوح',
+      'closed': 'مغلق',
+      'in_progress': 'قيد المعالجة',
+      'resolved': 'محلول',
+      'مفتوح': 'مفتوح',
+      'مغلق': 'مغلق',
+      'قيد المعالجة': 'قيد المعالجة',
+      'محلول': 'محلول'
+    };
+
+    const statusClass = statusColors[status] || 'bg-gray-100 text-gray-800';
+    const statusLabel = statusText[status] || status;
+
+    const priorityBadge = priority && (priority.toUpperCase() === 'URGENT' || priority.toUpperCase() === 'HIGH')
+      ? '<span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-800 mr-2">عاجل</span>'
+      : '';
+
+    item.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="font-bold text-gray-900" style="color:#002B5B">${ticket}</span>
+            ${priorityBadge}
+            <span class="text-xs px-2 py-1 rounded-full ${statusClass}">${statusLabel}</span>
+            ${hours > 0 ? `<span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">${Math.round(hours)} ساعة</span>` : ''}
+          </div>
+          <p class="text-sm font-medium text-gray-800 mb-1">${patientName}</p>
+          ${description ? `<p class="text-xs text-gray-600 mb-2 line-clamp-2">${description.substring(0, 100)}${description.length > 100 ? '...' : ''}</p>` : ''}
+          ${createdAt ? `<p class="text-xs text-gray-500 flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            ${createdAt}
+          </p>` : ''}
+        </div>
+        <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </div>
+    `;
+
+    list.appendChild(item);
+  });
+}
+
+/**
+ * فتح صفحة تفاصيل بلاغ 937
+ */
+function open937ComplaintDetails(complaint) {
+  closeComplaintsModal();
+
+  const ticket = complaint.ticket || complaint.TicketNumber || '';
+  const hospitalId = complaint.hospitalId || complaint.HospitalID;
+
+  if (!ticket) {
+    console.error('لا يمكن فتح التفاصيل: لا يوجد رقم البلاغ (TicketNumber)');
+    alert('خطأ: لا يمكن العثور على رقم البلاغ');
+    return;
+  }
+
+  let detailsUrl = '../public/complaints/history/complaint-details.html';
+  const params = new URLSearchParams();
+  params.set('ticket', ticket);
+  
+  if (hospitalId) {
+    params.set('hid', String(hospitalId));
+  }
+
+  detailsUrl += '?' + params.toString();
+  
+  console.log('🔗 فتح صفحة تفاصيل البلاغ:', detailsUrl);
+  
+  window.location.href = detailsUrl;
+}
+
+/**
+ * إغلاق Modal البلاغات
+ */
+function closeComplaintsModal() {
+  const modal = document.getElementById('complaintsModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+}
+
+// جعل الدوال متاحة بشكل عام
+window.open937Modal = open937Modal;
+window.closeComplaintsModal = closeComplaintsModal;
 
 /**
  * عرض البلاغات المتأخرة في المودال

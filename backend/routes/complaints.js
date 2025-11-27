@@ -620,7 +620,10 @@ router.get('/history', requireAuth, async (req, res) => {
         c.DepartmentID        AS departmentId,
         COALESCE(h.NameAr, 'غير محدد') AS hospital,
         c.ComplaintTypeID     AS type,
+        c.ActualClosingHours  AS actualClosingHours,
         t.TypeName            AS typeName,
+        c.SubTypeID           AS subTypeId,
+        st.SubTypeName        AS subTypeName,
         c.VisitDate           AS visitDate,
         DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
         DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
@@ -634,6 +637,7 @@ router.get('/history', requireAuth, async (req, res) => {
       FROM complaints c
       LEFT JOIN hospitals h ON h.HospitalID = c.HospitalID
       LEFT JOIN complaint_types t ON c.ComplaintTypeID = t.ComplaintTypeID
+      LEFT JOIN complaint_subtypes st ON c.SubTypeID = st.SubTypeID
       /* آخر إسناد */
       LEFT JOIN (
         SELECT ComplaintID, ToUserID
@@ -662,7 +666,10 @@ router.get('/history', requireAuth, async (req, res) => {
         c.HospitalID          AS hospitalId,
         c.DepartmentID        AS departmentId,
         c.ComplaintTypeID     AS type,
+        c.ActualClosingHours  AS actualClosingHours,
         t.TypeName            AS typeName,
+        c.SubTypeID           AS subTypeId,
+        st.SubTypeName        AS subTypeName,
         c.VisitDate           AS visitDate,
         DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
         DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
@@ -675,6 +682,7 @@ router.get('/history', requireAuth, async (req, res) => {
         ), '') AS reply
       FROM complaints c
       LEFT JOIN complaint_types t ON c.ComplaintTypeID = t.ComplaintTypeID
+      LEFT JOIN complaint_subtypes st ON c.SubTypeID = st.SubTypeID
       /* آخر إسناد */
       LEFT JOIN (
         SELECT ComplaintID, ToUserID
@@ -991,6 +999,92 @@ router.get('/history', requireAuth, async (req, res) => {
       ok: false,
       message: 'حدث خطأ في الخادم',
       error: err.message 
+    });
+  }
+});
+
+/**
+ * GET /api/complaints/937-range
+ * جلب بلاغات 937 حسب الفئة الزمنية
+ */
+router.get('/937-range', requireAuth, async (req, res) => {
+  try {
+    const minH = Number(req.query.min || 0);
+    const maxH = Number(req.query.max || 99999);
+
+    const { getHospitalPool, centralDb } = await import('../config/db.js');
+    
+    // جلب جميع المستشفيات النشطة
+    const [allHospitals] = await centralDb.query(`
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals 
+      WHERE IsActive = 1
+    `);
+
+    const allComplaints = [];
+
+    // جمع البلاغات من جميع المستشفيات
+    for (const hospital of allHospitals) {
+      try {
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        const [rows] = await hospitalPool.query(`
+          SELECT 
+            c.ComplaintID AS id,
+            c.TicketNumber AS ticket,
+            c.PatientFullName AS fullName,
+            c.PatientMobile AS mobile,
+            c.FileNumber AS fileNumber,
+            c.StatusCode AS status,
+            c.PriorityCode AS priority,
+            c.HospitalID AS hospitalId,
+            c.DepartmentID AS departmentId,
+            c.ComplaintTypeID AS type,
+            c.SubTypeID AS subTypeId,
+            c.ActualClosingHours AS actualClosingHours,
+            c.Description AS description,
+            c.VisitDate AS visitDate,
+            DATE_FORMAT(c.CreatedAt, '%Y-%m-%d %H:%i') AS createdAt,
+            DATE_FORMAT(c.UpdatedAt, '%Y-%m-%d %H:%i') AS lastUpdate,
+            t.TypeName AS typeName,
+            st.SubTypeName AS subTypeName,
+            ? AS hospital
+          FROM complaints c
+          LEFT JOIN complaint_types t ON c.ComplaintTypeID = t.ComplaintTypeID
+          LEFT JOIN complaint_subtypes st ON c.SubTypeID = st.SubTypeID
+          WHERE c.SubmissionType = '937'
+            AND c.ActualClosingHours IS NOT NULL
+            AND c.ActualClosingHours >= ?
+            AND c.ActualClosingHours < ?
+            AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+          ORDER BY c.CreatedAt DESC
+        `, [hospital.HospitalName, minH, maxH]);
+
+        // إضافة اسم المستشفى لكل بلاغ
+        const enrichedRows = rows.map(item => ({
+          ...item,
+          hospital: hospital.HospitalName
+        }));
+
+        allComplaints.push(...enrichedRows);
+      } catch (err) {
+        console.error(`Error fetching 937 complaints for hospital ${hospital.HospitalID}:`, err.message);
+      }
+    }
+
+    // ترتيب حسب التاريخ (الأحدث أولاً)
+    allComplaints.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      success: true,
+      items: allComplaints
+    });
+  } catch (error) {
+    console.error('GET /api/complaints/937-range failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'internal error',
+      error: error.message
     });
   }
 });

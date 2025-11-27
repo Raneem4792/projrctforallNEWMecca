@@ -44,6 +44,17 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+// دالة لتنظيف النص العربي وإزالة الحركات والمسافات
+function normalizeArabic(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/[\u064B-\u0652]/g, "") // إزالة الحركات
+    .replace(/\s+/g, "")             // إزالة المسافات
+    .replace(/أ|إ|آ/g, "ا")          // توحيد الهمزات
+    .replace(/ة/g, "ه")              // توحيد التاء المربوطة
+    .toLowerCase();
+}
+
 function destroyChartById(canvasId) {
   const existingChart = chartRegistry.get(canvasId);
   if (existingChart) {
@@ -349,18 +360,21 @@ async function loadUrgent() {
     const weekly = safeArray(data.weekly);
     const departments = safeArray(data.departments);
     const mistreatmentTime = safeArray(data.mistreatmentClosingTime);
+    const mistreatmentSla = safeArray(data.mistreatmentSla);
+    const labSla = safeArray(data.labSla);
     
     console.log('🏥 Hospitals:', hospitals.length);
     console.log('👥 Employees:', employees.length);
     console.log('⏱️ Mistreatment time data:', mistreatmentTime.length);
+    console.log('📊 Mistreatment SLA data:', mistreatmentSla.length);
+    console.log('🔬 Lab SLA data:', labSla.length);
 
     // تسجيل للتشخيص
-    if (mistreatmentTime.length > 0) {
-      console.log('📊 بيانات mistreatmentClosingTime:', mistreatmentTime.map(h => ({
+    if (mistreatmentSla.length > 0) {
+      console.log('📊 بيانات mistreatmentSla:', mistreatmentSla.map(h => ({
         name: h.name,
-        count: h.count,
-        closedCount: h.closedCount,
-        avgHours: h.avgHours
+        within24: h.within24,
+        over24: h.over24
       })));
     }
 
@@ -452,11 +466,12 @@ async function loadUrgent() {
 
 
 
-    if (mistreatmentTime.length) {
-      const cleanData = mistreatmentTime.map(h => ({
+    // رسم جديد: سوء التعامل خلال 24 ساعة والمتجاوز
+    if (mistreatmentSla.length) {
+      const slaData = mistreatmentSla.map(h => ({
         name: h.name || 'غير محدد',
-        count: Number(h.count) || 0,
-        avgHours: Number(h.avgHours) || 0,
+        within24: Number(h.within24 || 0),
+        over24: Number(h.over24 || 0),
         id: h.id
       }));
 
@@ -470,35 +485,29 @@ async function loadUrgent() {
       createChart('chartMistreatmentTime', {
         type: 'bar',
         data: {
-          labels: cleanData.map(h => h.name),
+          labels: slaData.map(h => h.name),
           datasets: [
             {
-              label: 'عدد بلاغات سوء التعامل',
-              data: cleanData.map(h => h.count),
-              backgroundColor: 'rgba(220, 38, 38, 0.8)',
-              borderColor: '#dc2626',
+              label: 'مغلقة خلال 24 ساعة',
+              data: slaData.map(h => h.within24),
+              backgroundColor: '#10b981',
+              borderColor: '#059669',
               borderWidth: 2,
-              borderRadius: 8,
+              borderRadius: 10,
               borderSkipped: false,
-              yAxisID: 'y',
               barThickness: 40,
               maxBarThickness: 50
             },
             {
-              label: 'متوسط زمن الإغلاق (ساعة)',
-              data: cleanData.map(h => h.avgHours),
-              type: 'line',
-              borderColor: '#f59e0b',
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              borderWidth: 4,
-              pointBackgroundColor: '#f59e0b',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 3,
-              pointRadius: 8,
-              pointHoverRadius: 12,
-              tension: 0.4,
-              fill: true,
-              yAxisID: 'y1'
+              label: 'متجاوزة 24 ساعة',
+              data: slaData.map(h => h.over24),
+              backgroundColor: '#ef4444',
+              borderColor: '#dc2626',
+              borderWidth: 2,
+              borderRadius: 10,
+              borderSkipped: false,
+              barThickness: 40,
+              maxBarThickness: 50
             }
           ]
         },
@@ -506,16 +515,20 @@ async function loadUrgent() {
           responsive: true,
           maintainAspectRatio: false,
           interaction: {
-            mode: 'index',
-            intersect: false
+            mode: 'nearest',
+            axis: 'x',
+            intersect: true
           },
-          onClick: (event, elements) => {
+          onClick: async (event, elements) => {
             if (elements && elements.length > 0) {
               const element = elements[0];
               const index = element.index;
-              const hospital = cleanData[index];
+              const datasetIndex = element.datasetIndex;
+              const hospital = slaData[index];
               if (hospital && hospital.id) {
-                openComplaintsModal(hospital.id, hospital.name);
+                const within24 = datasetIndex === 0;
+                const over24 = datasetIndex === 1;
+                await openComplaintsModal(hospital.id, hospital.name, within24, over24);
               }
             }
           },
@@ -547,9 +560,9 @@ async function loadUrgent() {
                 },
                 label: (ctx) => {
                   if (ctx.datasetIndex === 0) {
-                    return `🔴 عدد البلاغات: ${formatArabicNumber(ctx.raw)}`;
+                    return `✅ مغلقة خلال 24 ساعة: ${formatArabicNumber(ctx.raw)} بلاغ`;
                   }
-                  return `⏱️ متوسط الإغلاق: ${Number(ctx.raw).toFixed(1)} ساعة`;
+                  return `❌ متجاوزة 24 ساعة: ${formatArabicNumber(ctx.raw)} بلاغ`;
                 },
                 afterBody: () => '👆 انقر لعرض تفاصيل البلاغات'
               }
@@ -567,13 +580,12 @@ async function loadUrgent() {
             },
             y: {
               beginAtZero: true,
-              position: 'left',
               grid: { 
                 color: gridColor,
                 drawBorder: false 
               },
               ticks: {
-                color: '#dc2626',
+                color: axisTextColor,
                 font: { family: FONT_FAMILY, size: 11, weight: 600 },
                 stepSize: 1,
                 callback: function(value) {
@@ -582,28 +594,158 @@ async function loadUrgent() {
               },
               title: {
                 display: true,
-                text: '🔴 عدد البلاغات',
-                color: '#dc2626',
+                text: 'عدد البلاغات',
+                color: axisTextColor,
                 font: { family: FONT_FAMILY, size: 14, weight: 'bold' },
                 padding: { bottom: 10 }
               }
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
+          }
+        }
+      });
+    }
+
+    // 🔬 رسم SLA المختبرات
+    if (labSla.length) {
+      const labSlaData = labSla.map(h => ({
+        name: h.name || 'غير محدد',
+        within24: Number(h.within24 || 0),
+        over24: Number(h.over24 || 0),
+        id: h.id
+      }));
+
+      // التحقق من الوضع الداكن
+      const isDark = document.documentElement.classList.contains('dark') || 
+                     document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#FFFFFF' : '#1f2937';
+      const axisTextColor = isDark ? '#FFFFFF' : '#374151';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(156, 163, 175, 0.3)';
+
+      createChart('chartLabTime', {
+        type: 'bar',
+        data: {
+          labels: labSlaData.map(h => h.name),
+          datasets: [
+            {
+              label: 'مغلقة خلال 24 ساعة',
+              data: labSlaData.map(h => h.within24),
+              backgroundColor: '#10b981',
+              borderColor: '#059669',
+              borderWidth: 2,
+              borderRadius: 10,
+              borderSkipped: false,
+              barThickness: 40,
+              maxBarThickness: 50
             },
-            y1: {
-              beginAtZero: true,
-              position: 'right',
-              grid: { drawOnChartArea: false },
+            {
+              label: 'متجاوزة 24 ساعة',
+              data: labSlaData.map(h => h.over24),
+              backgroundColor: '#ef4444',
+              borderColor: '#dc2626',
+              borderWidth: 2,
+              borderRadius: 10,
+              borderSkipped: false,
+              barThickness: 40,
+              maxBarThickness: 50
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: true
+          },
+          onClick: async (event, elements) => {
+            if (!elements || elements.length === 0) return;
+
+            const element = elements[0];
+            const hospitalIndex = element.index;
+            const datasetIndex = element.datasetIndex; // 0 = الأخضر، 1 = الأحمر
+
+            const hospital = labSlaData[hospitalIndex];
+            if (!hospital || !hospital.id) return;
+
+            const onlyWithin24 = datasetIndex === 0; // الأخضر
+            const onlyOver24 = datasetIndex === 1;   // الأحمر
+
+            await openLabComplaintsModal(
+              hospital.id,
+              hospital.name,
+              onlyWithin24,
+              onlyOver24
+            );
+          },
+          onHover: (event, elements) => {
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                font: { family: FONT_FAMILY, size: 14, weight: 600 },
+                color: textColor,
+                padding: 20,
+                usePointStyle: true,
+                pointStyle: 'rectRounded'
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              titleColor: '#ffffff',
+              bodyColor: '#ffffff',
+              borderColor: '#374151',
+              borderWidth: 1,
+              cornerRadius: 12,
+              displayColors: true,
+              callbacks: {
+                title: (tooltipItems) => {
+                  return `🏥 ${tooltipItems[0].label}`;
+                },
+                label: (ctx) => {
+                  if (ctx.datasetIndex === 0) {
+                    return `✅ مغلقة خلال 24 ساعة: ${formatArabicNumber(ctx.raw)} بلاغ`;
+                  }
+                  return `❌ متجاوزة 24 ساعة: ${formatArabicNumber(ctx.raw)} بلاغ`;
+                },
+                afterBody: () => '👆 انقر لعرض تفاصيل البلاغات'
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
               ticks: {
-                color: '#f59e0b',
+                color: axisTextColor,
+                font: { family: FONT_FAMILY, size: 12, weight: 600 },
+                maxRotation: 45,
+                minRotation: 0
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { 
+                color: gridColor,
+                drawBorder: false 
+              },
+              ticks: {
+                color: axisTextColor,
                 font: { family: FONT_FAMILY, size: 11, weight: 600 },
-                stepSize: 2,
+                stepSize: 1,
                 callback: function(value) {
-                  return `${value}س`;
+                  return formatArabicNumber(value);
                 }
               },
               title: {
                 display: true,
-                text: '⏱️ متوسط الإغلاق (ساعة)',
-                color: '#f59e0b',
+                text: 'عدد البلاغات',
+                color: axisTextColor,
                 font: { family: FONT_FAMILY, size: 14, weight: 'bold' },
                 padding: { bottom: 10 }
               }
@@ -782,6 +924,165 @@ async function loadUrgent() {
     attachMistreatmentFilterListeners();
     renderTopEmployeesChart();
 
+    // =====================
+    // 🎯 بلاغات التحرش حسب المستشفى
+    // =====================
+    try {
+      // استخدام البيانات الجاهزة من API بدلاً من جلب البلاغات يدوياً
+      const harassmentData = safeArray(data.harassment || []).map(h => ({
+        id: h.id,
+        name: h.name,
+        within24: Number(h.within24 || 0),
+        over24: Number(h.over24 || 0)
+      }));
+
+      // رسم المخطط
+      if (harassmentData.length > 0) {
+        // التحقق من الوضع الداكن
+        const isDark = document.documentElement.classList.contains('dark') || 
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#FFFFFF' : '#1f2937';
+        const axisTextColor = isDark ? '#FFFFFF' : '#374151';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(156, 163, 175, 0.3)';
+
+        createChart('chartHarassment', {
+          type: 'bar',
+          data: {
+            labels: harassmentData.map(h => h.name),
+            datasets: [
+              {
+                label: 'مغلقة خلال 24 ساعة',
+                data: harassmentData.map(h => h.within24),
+                backgroundColor: '#10b981',
+                borderColor: '#059669',
+                borderWidth: 2,
+                borderRadius: 10,
+                borderSkipped: false,
+                barThickness: 40,
+                maxBarThickness: 50
+              },
+              {
+                label: 'متجاوزة 24 ساعة',
+                data: harassmentData.map(h => h.over24),
+                backgroundColor: '#ef4444',
+                borderColor: '#dc2626',
+                borderWidth: 2,
+                borderRadius: 10,
+                borderSkipped: false,
+                barThickness: 40,
+                maxBarThickness: 50
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            onClick: async (event, elements) => {
+              if (!elements || !elements.length) return;
+
+              const el = elements[0];
+              const index = el.index;
+              const datasetIndex = el.datasetIndex;
+
+              const hospital = harassmentData[index];
+              if (!hospital || !hospital.id) return;
+
+              const onlyWithin24 = datasetIndex === 0;
+              const onlyOver24 = datasetIndex === 1;
+
+              // فتح Modal للنتائج
+              await openHarassmentModal(
+                hospital.id,
+                hospital.name,
+                onlyWithin24,
+                onlyOver24
+              );
+            },
+            onHover: (event, elements) => {
+              event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  font: { family: FONT_FAMILY, size: 14, weight: 600 },
+                  color: textColor,
+                  padding: 20,
+                  usePointStyle: true,
+                  pointStyle: 'rectRounded'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                borderColor: '#374151',
+                borderWidth: 1,
+                cornerRadius: 12,
+                displayColors: true,
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `🏥 ${tooltipItems[0].label}`;
+                  },
+                  label: (ctx) => {
+                    if (ctx.datasetIndex === 0) {
+                      return `✅ مغلقة خلال 24 ساعة: ${formatArabicNumber(ctx.raw)} بلاغ`;
+                    }
+                    return `❌ متجاوزة 24 ساعة: ${formatArabicNumber(ctx.raw)} بلاغ`;
+                  },
+                  afterBody: () => '👆 انقر لعرض تفاصيل البلاغات'
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  color: axisTextColor,
+                  font: { family: FONT_FAMILY, size: 12, weight: 600 },
+                  maxRotation: 45,
+                  minRotation: 0
+                }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { 
+                  color: gridColor,
+                  drawBorder: false 
+                },
+                ticks: {
+                  color: axisTextColor,
+                  font: { family: FONT_FAMILY, size: 11, weight: 600 },
+                  stepSize: 1,
+                  callback: function(value) {
+                    return formatArabicNumber(value);
+                  }
+                },
+                title: {
+                  display: true,
+                  text: 'عدد البلاغات',
+                  color: axisTextColor,
+                  font: { family: FONT_FAMILY, size: 14, weight: 'bold' },
+                  padding: { bottom: 10 }
+                }
+              }
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeInOutQuart'
+            }
+          }
+        });
+      }
+
+    } catch (err) {
+      console.error("خطأ في رسم التحرش:", err);
+    }
+
   } catch (error) {
     console.error('Failed to load urgent dashboard data:', error);
     renderError('لم يتم تحميل بيانات البلاغات الحرجة. يرجى المحاولة لاحقاً.');
@@ -792,7 +1093,7 @@ async function loadUrgent() {
 // Modal البلاغات
 // ========================================
 
-async function openComplaintsModal(hospitalId, hospitalName) {
+async function openComplaintsModal(hospitalId, hospitalName, within24 = false, over24 = false) {
   const modal = document.getElementById('complaintsModal');
   const modalTitleElement = document.getElementById('modal-title');
   const modalTitle = document.getElementById('modal-hospital-name');
@@ -803,7 +1104,10 @@ async function openComplaintsModal(hospitalId, hospitalName) {
 
   // تغيير عنوان الـ Modal لبلاغات سوء التعامل
   if (modalTitleElement) {
-    modalTitleElement.innerHTML = 'بلاغات سوء التعامل - <span id="modal-hospital-name"></span>';
+    let titleText = 'بلاغات سوء التعامل';
+    if (within24) titleText += ' (مغلقة خلال 24 ساعة)';
+    if (over24) titleText += ' (متجاوزة 24 ساعة)';
+    modalTitleElement.innerHTML = `${titleText} - <span id="modal-hospital-name"></span>`;
   }
 
   // إظهار الـ Modal
@@ -822,7 +1126,55 @@ async function openComplaintsModal(hospitalId, hospitalName) {
 
   try {
     // جلب البلاغات
-    const complaints = await loadComplaintsForHospital(hospitalId);
+    let complaints = await loadComplaintsForHospital(hospitalId);
+
+    // تصفية حسب SLA إذا تم التحديد
+    if (within24 || over24) {
+      complaints = complaints.filter(c => {
+        const status = String(c.StatusCode || c.status || '').toUpperCase();
+        const isClosed = ['CLOSED', 'RESOLVED', 'CANCELLED', 'مغلق', 'محلول', 'منتهي', 'مكتمل']
+          .some(s => status.includes(s));
+
+        // تحسين حساب الساعات لمطابقة المنطق في المخطط البياني
+        let hours = 9999;
+        const actualHours = Number(c.ActualClosingHours ?? c.actualClosingHours);
+
+        if (!isNaN(actualHours) && actualHours > 0) {
+           hours = actualHours;
+        } else {
+           // حساب تقريبي في حال عدم توفر ActualClosingHours
+           let createdStr = String(c.createdAt || c.CreatedAt || '');
+           // إصلاح صيغة التاريخ للمتصفحات (استبدال المسافة بـ T)
+           if (createdStr.indexOf('T') === -1) createdStr = createdStr.replace(' ', 'T');
+           
+           const created = new Date(createdStr);
+           
+           // استخدام تاريخ التحديث كتقريب لتاريخ الإغلاق للبلاغات المغلقة
+           let endStr = String(c.lastUpdate || c.UpdatedAt || '');
+           if (endStr.indexOf('T') === -1) endStr = endStr.replace(' ', 'T');
+           
+           const end = isClosed && endStr ? new Date(endStr) : new Date();
+           
+           if (!isNaN(created.getTime())) {
+             const diffMs = end - created;
+             if (diffMs > 0) {
+               hours = diffMs / (1000 * 60 * 60);
+             }
+           }
+        }
+
+        if (within24) {
+          // يجب أن تكون مغلقة وخلال 24 ساعة
+          return isClosed && hours <= 24;
+        }
+        if (over24) {
+          // إما غير مغلقة (مفتوحة) أو مغلقة وتجاوزت 24 ساعة
+          // ملاحظة: حسب منطق المخطط، البلاغات المفتوحة تُحتسب ضمن "المتجاوزة" أو التي تحتاج انتباه
+          return !isClosed || hours > 24;
+        }
+        return true;
+      });
+    }
     
     // إخفاء التحميل
     loading.classList.add('hidden');
@@ -864,7 +1216,15 @@ async function loadComplaintsForHospital(hospitalId) {
     const mistreatmentComplaints = allComplaints.filter(complaint => {
       const typeId = complaint.type || complaint.ComplaintTypeID;
       const subTypeId = complaint.subTypeId || complaint.SubTypeID;
-      return typeId === 3 || typeId === 17 || subTypeId === 15;
+      // إضافة التحقق من PriorityCode أيضًا لتكون متوافقة مع الرسوم البيانية
+      // PriorityCode يجب أن يكون URGENT, CRITICAL, HIGH
+      const priority = (complaint.priority || complaint.PriorityCode || '').toUpperCase();
+      const isUrgent = priority === 'URGENT' || priority === 'CRITICAL' || priority === 'HIGH';
+
+      const isMistreatment = typeId === 17 || subTypeId === 15 || subTypeId === 29 || subTypeId === 8;
+      
+      // يجب أن يكون سوء تعامل + عاجل
+      return isMistreatment && isUrgent;
     });
 
     return mistreatmentComplaints;
@@ -952,6 +1312,188 @@ function renderComplaintsList(complaints) {
 
     list.appendChild(item);
   });
+}
+
+async function openHarassmentModal(hospitalId, hospitalName, within24, over24) {
+  const modal = document.getElementById('complaintsModal');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  modal.classList.remove('hidden');
+
+  const modalTitleElement = document.getElementById('modal-title');
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML =
+      (within24 ? 'بلاغات التحرش مغلقة خلال 24 ساعة - ' : 'بلاغات التحرش متجاوزة 24 ساعة - ') +
+      `<span id="modal-hospital-name">${hospitalName}</span>`;
+  }
+
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    // استخدام API الجديد المخصص لبلاغات التحرش
+    const response = await authFetch(
+      `${API_BASE}/api/dashboard/urgent/harassment/details/${hospitalId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const all = safeArray(data.items || []);
+
+    // لا حاجة للفلترة - البيانات جاهزة من API
+    let filtered = all;
+
+    // فلترة SLA
+    filtered = filtered.filter(c => {
+      const hours = Number(c.ActualClosingHours ?? 9999);
+      const status = String(c.StatusCode || c.status || '').toUpperCase();
+      const isClosed = ['CLOSED', 'RESOLVED', 'CANCELLED', 'مغلق', 'محلول', 'مكتمل', 'منتهي']
+        .some(s => status.includes(s));
+
+      if (within24) {
+        return isClosed && hours <= 24;
+      }
+
+      if (over24) {
+        return !isClosed || hours > 24;
+      }
+
+      return true;
+    });
+
+    loading.classList.add('hidden');
+
+    if (!filtered.length) {
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    content.classList.remove('hidden');
+    renderComplaintsList(filtered);
+
+  } catch (err) {
+    console.error('خطأ في openHarassmentModal:', err);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
+}
+
+async function openLabComplaintsModal(hospitalId, hospitalName, within24, over24) {
+  const modal = document.getElementById('complaintsModal');
+  const loading = document.getElementById('complaintsModalLoading');
+  const empty = document.getElementById('complaintsModalEmpty');
+  const content = document.getElementById('complaintsModalContent');
+  const list = document.getElementById('complaints-list');
+
+  modal.classList.remove('hidden');
+
+  // عنوان المودال
+  const modalTitleElement = document.getElementById('modal-title');
+  if (modalTitleElement) {
+    modalTitleElement.innerHTML =
+      (within24 ? 'بلاغات المختبر مغلقة خلال 24 ساعة - ' : 'بلاغات المختبر متجاوزة 24 ساعة - ') +
+      `<span id="modal-hospital-name">${hospitalName}</span>`;
+  }
+
+  loading.classList.remove('hidden');
+  empty.classList.add('hidden');
+  content.classList.add('hidden');
+  list.innerHTML = '';
+
+  try {
+    // جلب جميع البلاغات الحرجة للمستشفى
+    const response = await authFetch(
+      `${API_BASE}/api/complaints/history?hospitalId=${hospitalId}&pageSize=500`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const all = safeArray(data.items || []);
+
+    // فلترة المختبرات فقط
+    let filtered = all.filter(c => {
+      const subTypeName = String(c.subTypeName || c.SubTypeName || '').toLowerCase();
+      const typeId = Number(c.type || c.ComplaintTypeID);
+      return typeId === 16 || // 16 = إجراءات متعلقة بالتحاليل المخبرية
+             subTypeName.includes('تحاليل') ||
+             subTypeName.includes('الفحوصات') ||
+             subTypeName.includes('مخبري') ||
+             subTypeName.includes('مختبر');
+    });
+
+    // فلترة حسب SLA
+    filtered = filtered.filter(c => {
+      const status = String(c.StatusCode || c.status || '').toUpperCase();
+      const isClosed = ['CLOSED', 'RESOLVED', 'CANCELLED', 'مغلق', 'محلول', 'منتهي', 'مكتمل']
+        .some(s => status.includes(s));
+
+      // تحسين حساب الساعات لمطابقة المنطق في المخطط البياني
+      let hours = 9999;
+      const actualHours = Number(c.ActualClosingHours ?? c.actualClosingHours);
+
+      if (!isNaN(actualHours) && actualHours > 0) {
+         hours = actualHours;
+      } else {
+         // حساب تقريبي في حال عدم توفر ActualClosingHours
+         let createdStr = String(c.createdAt || c.CreatedAt || '');
+         // إصلاح صيغة التاريخ للمتصفحات (استبدال المسافة بـ T)
+         if (createdStr.indexOf('T') === -1) createdStr = createdStr.replace(' ', 'T');
+         
+         const created = new Date(createdStr);
+         
+         // استخدام تاريخ التحديث كتقريب لتاريخ الإغلاق للبلاغات المغلقة
+         let endStr = String(c.lastUpdate || c.UpdatedAt || '');
+         if (endStr.indexOf('T') === -1) endStr = endStr.replace(' ', 'T');
+         
+         const end = isClosed && endStr ? new Date(endStr) : new Date();
+         
+         if (!isNaN(created.getTime())) {
+           const diffMs = end - created;
+           if (diffMs > 0) {
+             hours = diffMs / (1000 * 60 * 60);
+           }
+         }
+      }
+
+      if (within24) {
+        return isClosed && hours <= 24;
+      }
+
+      if (over24) {
+        return !isClosed || hours > 24;
+      }
+
+      return true;
+    });
+
+    loading.classList.add('hidden');
+
+    if (!filtered.length) {
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    content.classList.remove('hidden');
+    renderComplaintsList(filtered);
+
+  } catch (err) {
+    console.error('خطأ في openLabComplaintsModal:', err);
+    loading.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
+  }
 }
 
 function openComplaintDetails(complaint) {

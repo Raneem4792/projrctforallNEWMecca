@@ -40,6 +40,26 @@ function formatDateLocal(value, opts = {}) {
 let processingTimerInterval = null;
 
 function setupProcessingDurationTimer(complaint) {
+  // 🚫 إذا البلاغ مغلق → أخفِ العداد فوراً
+  const status = complaint.StatusCode || complaint.status || '';
+  const statusUpper = status.toUpperCase();
+  const isClosed = statusUpper === 'CLOSED' || 
+                   statusUpper === 'RESOLVED' || 
+                   statusUpper === 'CANCELLED' ||
+                   status.includes('مغلق') || 
+                   status.includes('محلول') || 
+                   status.includes('مكتمل');
+  
+  if (isClosed) {
+    const container = document.getElementById('processingDurationContainer');
+    if (container) container.style.display = 'none';
+    if (processingTimerInterval) {
+      clearInterval(processingTimerInterval);
+      processingTimerInterval = null;
+    }
+    return;
+  }
+
   // إيقاف أي عداد سابق
   if (processingTimerInterval) {
     clearInterval(processingTimerInterval);

@@ -130,6 +130,42 @@
       </div>
     </section>
 
+    <!-- 🔬 بلاغات المختبر ومتوسط زمن الإغلاق -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-lab-time-title">
+            بلاغات المختبر ومتوسط زمن الإغلاق لكل مستشفى
+          </h3>
+          <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-lab-time-subtitle">
+            مقارنة بين عدد بلاغات المختبر المغلقة خلال 24 ساعة والمتجاوزة 24 ساعة
+          </p>
+
+          <div class="relative" style="height:380px;" dir="ltr">
+            <canvas id="chartLabTime"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 🎯 بلاغات التحرش -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-harassment-title">
+            بلاغات التحرش ومتوسط زمن الإغلاق لكل مستشفى
+          </h3>
+          <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-harassment-subtitle">
+            مقارنة بين بلاغات التحرش المغلقة خلال 24 ساعة والمتجاوزة 24 ساعة
+          </p>
+
+          <div class="relative" style="height:380px;" dir="ltr">
+            <canvas id="chartHarassment"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 🎯 مخططات مقسّمة بصفين -->
     <section class="py-6">
       <div class="container mx-auto px-4">
@@ -338,6 +374,12 @@
           'no-data-mistreatment': 'لا توجد بيانات لبلاغات سوء التعامل',
           'no-data-hint': 'جرّب تغيير التصفية أو تأكد من توافر البلاغات.',
           
+          'chart-lab-time-title': 'بلاغات المختبر ومتوسط زمن الإغلاق لكل مستشفى',
+          'chart-lab-time-subtitle': 'مقارنة بين عدد بلاغات المختبر المغلقة خلال 24 ساعة والمتجاوزة 24 ساعة',
+          
+          'chart-harassment-title': 'بلاغات التحرش ومتوسط زمن الإغلاق لكل مستشفى',
+          'chart-harassment-subtitle': 'مقارنة بين بلاغات التحرش المغلقة خلال 24 ساعة والمتجاوزة 24 ساعة',
+          
           // المودالات
           'modal-employee-title': 'تفاصيل الموظف',
           'modal-complaints-title': 'بلاغات سوء التعامل',
@@ -387,6 +429,12 @@
           'chart-top-employees-note': 'List is sorted in descending order by number of mistreatment complaints per employee.',
           'no-data-mistreatment': 'No data for mistreatment complaints',
           'no-data-hint': 'Try changing the filter or ensure complaints are available.',
+          
+          'chart-lab-time-title': 'Lab Complaints and Average Closure Time per Hospital',
+          'chart-lab-time-subtitle': 'Comparison between number of lab complaints closed within 24 hours and exceeding 24 hours',
+          
+          'chart-harassment-title': 'Harassment Complaints and Average Closure Time per Hospital',
+          'chart-harassment-subtitle': 'Comparison between harassment complaints closed within 24 hours and exceeding 24 hours',
           
           // المودالات
           'modal-employee-title': 'Employee Details',
