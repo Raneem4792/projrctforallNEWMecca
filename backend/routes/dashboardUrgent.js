@@ -683,24 +683,49 @@ router.get('/937-sla', requireAuth, async (req, res) => {
   try {
     const { getHospitalPool } = await import('../config/db.js');
     
-    // جلب جميع المستشفيات النشطة
-    const [allHospitals] = await pool.query(`
-      SELECT HospitalID, NameAr AS HospitalName
-      FROM hospitals 
-      WHERE IsActive = 1
-    `);
+    // استلام الفلاتر
+    const hospitalIdFilter = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    const startDate = req.query.startDate; // Format: YYYY-MM-DD
+    const endDate = req.query.endDate;     // Format: YYYY-MM-DD
+
+    // تجهيز شرط التاريخ
+    let dateCondition = "";
+    const queryParams = [];
+    
+    if (startDate && endDate) {
+      dateCondition = " AND CreatedAt >= ? AND CreatedAt <= ? ";
+      queryParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+    } else if (startDate) {
+      dateCondition = " AND CreatedAt >= ? ";
+      queryParams.push(`${startDate} 00:00:00`);
+    } else if (endDate) {
+      dateCondition = " AND CreatedAt <= ? ";
+      queryParams.push(`${endDate} 23:59:59`);
+    }
+
+    // تحديد المستشفيات المستهدفة
+    let targetHospitals = [];
+    if (hospitalIdFilter) {
+      // إذا تم تحديد مستشفى معين
+      const [hosp] = await pool.query(`SELECT HospitalID, NameAr AS HospitalName FROM hospitals WHERE HospitalID = ? AND IsActive = 1`, [hospitalIdFilter]);
+      if (hosp.length > 0) targetHospitals.push(hosp[0]);
+    } else {
+      // جميع المستشفيات
+      const [all] = await pool.query(`SELECT HospitalID, NameAr AS HospitalName FROM hospitals WHERE IsActive = 1`);
+      targetHospitals = all;
+    }
 
     let lt24 = 0;
     let btw24_48 = 0;
     let btw48_72 = 0;
     let gt72 = 0;
 
-    // جمع البيانات من جميع المستشفيات
-    for (const hospital of allHospitals) {
+    // جمع البيانات
+    for (const hospital of targetHospitals) {
       try {
         const hospitalPool = await getHospitalPool(hospital.HospitalID);
         
-        const [[stats]] = await hospitalPool.query(`
+        const query = `
           SELECT 
             SUM(CASE 
               WHEN ActualClosingHours IS NOT NULL AND ActualClosingHours <= 24 THEN 1
@@ -722,7 +747,10 @@ router.get('/937-sla', requireAuth, async (req, res) => {
           WHERE SubmissionType = '937'
             AND (IsDeleted = 0 OR IsDeleted IS NULL)
             AND ActualClosingHours IS NOT NULL
-        `);
+            ${dateCondition}
+        `;
+
+        const [[stats]] = await hospitalPool.query(query, queryParams);
 
         lt24 += Number(stats?.lt24 || 0);
         btw24_48 += Number(stats?.btw24_48 || 0);

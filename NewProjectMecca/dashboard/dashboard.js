@@ -3152,7 +3152,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       complaintsModal.style.display = 'none';
     }
   }, 1000);
+
+  // تهيئة عناصر التحكم في التصدير
+  initializeExportControls();
 });
+
+/**
+ * تهيئة عناصر التحكم في فترة التصدير
+ */
+function initializeExportControls() {
+  const periodSelect = document.getElementById('export-period-select');
+  const customDates = document.getElementById('export-custom-dates');
+  
+  if (periodSelect && customDates) {
+    periodSelect.addEventListener('change', () => {
+      if (periodSelect.value === 'custom') {
+        customDates.classList.remove('hidden');
+        customDates.style.display = 'flex';
+      } else {
+        customDates.classList.add('hidden');
+        customDates.style.display = 'none';
+      }
+    });
+  }
+}
 
 // ========================================
 // ربط كارت البلاغات المغلقة بصفحة closed.html
@@ -3740,7 +3763,20 @@ async function load937SLAChart() {
       ? 'http://localhost:3001'
       : '';
 
-    const resp = await authFetch(`${API_BASE}/api/dashboard/urgent/937-sla`);
+    // قراءة قيم الفلاتر
+    const startDate = document.getElementById('sla937-start-date')?.value || '';
+    const endDate = document.getElementById('sla937-end-date')?.value || '';
+    // قراءة فلتر المستشفى العام (نعتمد على filteredHospitalId الموجود في الـ scope)
+    const hospitalId = window.filteredHospitalId || '';
+
+    // بناء مسار الطلب مع الباراميترات
+    const params = new URLSearchParams();
+    if (hospitalId) params.append('hospitalId', hospitalId);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    const url = `${API_BASE}/api/dashboard/urgent/937-sla?${params.toString()}`;
+    const resp = await authFetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
     const data = await resp.json();
@@ -3757,7 +3793,7 @@ async function load937SLAChart() {
       '24-48 ساعة',
       '48-72 ساعة',
       'أكثر من 72 ساعة'
-    ];
+        ];
 
     const values = [
       Number(data.lt24 || 0),
@@ -3820,7 +3856,7 @@ async function load937SLAChart() {
             setTimeout(() => { chart937Initialized = true; }, 100);
             return;
           }
-          
+
           // التأكد من وجود عناصر تم الضغط عليها
           if (!elements || elements.length === 0) return;
           
@@ -3947,9 +3983,21 @@ async function open937Modal(index) {
   content.classList.add('hidden');
   list.innerHTML = '';
 
+  // قراءة قيم الفلاتر لإرسالها مع طلب التفاصيل
+  const startDate = document.getElementById('sla937-start-date')?.value || '';
+  const endDate = document.getElementById('sla937-end-date')?.value || '';
+  const hospitalId = window.filteredHospitalId || '';
+
+  const params = new URLSearchParams();
+  params.append('min', r.min);
+  params.append('max', r.max);
+  if (hospitalId) params.append('hospitalId', hospitalId);
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
   try {
     const res = await authFetch(
-      `${API_BASE}/api/complaints/937-range?min=${r.min}&max=${r.max}`
+      `${API_BASE}/api/complaints/937-range?${params.toString()}`
     );
 
     if (!res.ok) {
@@ -3976,6 +4024,28 @@ async function open937Modal(index) {
     empty.innerHTML = '<p class="text-red-600">حدث خطأ في تحميل البلاغات</p>';
   }
 }
+
+// إضافة مستمعي أحداث لأزرار الفلتر الجديدة
+document.addEventListener('DOMContentLoaded', () => {
+  const filterBtn = document.getElementById('btn-filter-937');
+  const resetBtn = document.getElementById('btn-reset-937');
+  
+  if (filterBtn) {
+    filterBtn.addEventListener('click', () => {
+      load937SLAChart();
+    });
+  }
+  
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const startDateEl = document.getElementById('sla937-start-date');
+      const endDateEl = document.getElementById('sla937-end-date');
+      if (startDateEl) startDateEl.value = '';
+      if (endDateEl) endDateEl.value = '';
+      load937SLAChart();
+    });
+  }
+});
 
 /**
  * عرض قائمة بلاغات 937 في Modal
@@ -4870,10 +4940,32 @@ function updateWeeklyPeriod() {
 async function exportHospitalReport(hospitalId, hospitalName, format) {
   try {
     const periodSelect = document.getElementById('export-period-select');
-    const months = periodSelect ? Number(periodSelect.value) || 12 : 12;
+    const selectedValue = periodSelect ? periodSelect.value : '12';
+    
+    let params = `hospitalId=${hospitalId}`;
+    let loadingSuffix = '';
+
+    if (selectedValue === 'custom') {
+      const startDate = document.getElementById('export-start-date')?.value;
+      const endDate = document.getElementById('export-end-date')?.value;
+      
+      if (!startDate || !endDate) {
+        alert('الرجاء اختيار تاريخ البداية والنهاية');
+        return;
+      }
+      params += `&startDate=${startDate}&endDate=${endDate}`;
+      loadingSuffix = ` (${startDate} - ${endDate})`;
+    } else if (selectedValue === 'week') {
+      params += `&period=week`;
+      loadingSuffix = ' (آخر أسبوع)';
+    } else {
+      const months = Number(selectedValue) || 12;
+      params += `&months=${months}`;
+      loadingSuffix = ` (آخر ${months} شهر)`;
+    }
     
     // عرض رسالة تحميل
-    const loadingMsg = format === 'excel' ? 'جاري تصدير Excel...' : 'جاري تصدير PDF...';
+    const loadingMsg = format === 'excel' ? `جاري تصدير Excel${loadingSuffix}...` : `جاري تصدير PDF${loadingSuffix}...`;
     alert(loadingMsg);
     
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -4881,7 +4973,7 @@ async function exportHospitalReport(hospitalId, hospitalName, format) {
     
     // جلب البيانات من API
     const response = await authFetch(
-      `${API_BASE}/api/dashboard/total/hospital-monthly-report?hospitalId=${hospitalId}&months=${months}`
+      `${API_BASE}/api/dashboard/total/hospital-monthly-report?${params}`
     );
     
     if (!response.ok) {

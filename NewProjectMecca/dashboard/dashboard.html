@@ -163,11 +163,19 @@
           <div class="flex items-center gap-3">
             <h3 id="hospital-export-title" class="text-xl font-bold" style="color:#002B5B;" data-i18n-key="hospital-report-title">تقرير المستشفى</h3>
             <select id="export-period-select" class="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="week" data-i18n-option="period-week">آخر أسبوع</option>
               <option value="1" data-i18n-option="period-1">آخر شهر</option>
               <option value="3" data-i18n-option="period-3">آخر 3 أشهر</option>
               <option value="6" data-i18n-option="period-6">آخر 6 أشهر</option>
               <option value="12" data-i18n-option="period-12" selected>آخر سنة</option>
+              <option value="custom" data-i18n-option="period-custom">تاريخ مخصص</option>
             </select>
+            
+            <div id="export-custom-dates" class="hidden flex items-center gap-2">
+              <input type="date" id="export-start-date" class="px-2 py-1 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <span class="text-gray-500">-</span>
+              <input type="date" id="export-end-date" class="px-2 py-1 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
           </div>
           <div class="flex gap-3">
             <button id="export-excel-btn" class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
@@ -256,9 +264,30 @@
 
     <!-- بلاغات 937 حسب الفئات الزمنية -->
     <div class="bg-white rounded-xl p-6 shadow border border-gray-100 mt-6">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="sla-937-title">بلاغات 937 حسب الزمن</h3>
-        <p class="text-xs text-gray-500" data-i18n-key="sla-937-subtitle">انقر على أي عمود لعرض البلاغات في هذه الفئة الزمنية</p>
+      <div class="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
+        <div>
+          <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="sla-937-title">بلاغات 937 حسب الزمن</h3>
+          <p class="text-xs text-gray-500 mt-1" data-i18n-key="sla-937-subtitle">انقر على أي عمود لعرض البلاغات في هذه الفئة الزمنية</p>
+        </div>
+        
+        <!-- فلتر التاريخ -->
+        <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 font-medium">من:</label>
+            <input type="date" id="sla937-start-date" class="text-xs border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="flex items-center gap-1">
+            <label class="text-xs text-gray-600 font-medium">إلى:</label>
+            <input type="date" id="sla937-end-date" class="text-xs border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <button id="btn-filter-937" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded hover:bg-blue-700 transition-colors flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+            تصفية
+          </button>
+          <button id="btn-reset-937" class="text-gray-500 hover:text-red-600 transition-colors p-1" title="إعادة تعيين">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
       </div>
 
       <div style="height:350px;">

@@ -2936,7 +2936,6 @@ router.get('/hospital-monthly-report',
   async (req, res) => {
   try {
     const hospitalId = Number(req.query.hospitalId);
-    const months = Number(req.query.months) || 12; // عدد الأشهر (افتراضياً سنة)
     
     if (!hospitalId || isNaN(hospitalId)) {
       return res.status(400).json({ 
@@ -2951,7 +2950,7 @@ router.get('/hospital-monthly-report',
       FROM hospitals 
       WHERE HospitalID = ? AND IsActive = 1
     `, [hospitalId]);
-
+    
     if (hospitalInfo.length === 0) {
       return res.status(404).json({ 
         success: false,
@@ -2965,10 +2964,30 @@ router.get('/hospital-monthly-report',
     const { getHospitalPool } = await import('../config/db.js');
     const hospitalPool = await getHospitalPool(hospitalId);
 
-    // حساب تاريخ البداية
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - months);
+    // تحديد الفترة الزمنية
+    let startDate, endDate;
+    let months = 0; // لتتبع عدد الأشهر إذا كان متاحاً
+    const period = req.query.period;
+    
+    if (req.query.startDate && req.query.endDate) {
+      // تاريخ مخصص
+      startDate = new Date(req.query.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      endDate = new Date(req.query.endDate);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'week') {
+      // آخر أسبوع
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+    } else {
+      // افتراضي (بالأشهر)
+      months = Number(req.query.months) || 12;
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - months);
+    }
 
     // جلب البيانات الشهرية
     const [monthlyData] = await hospitalPool.query(`

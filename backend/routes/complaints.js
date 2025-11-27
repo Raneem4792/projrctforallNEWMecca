@@ -1011,23 +1011,49 @@ router.get('/937-range', requireAuth, async (req, res) => {
   try {
     const minH = Number(req.query.min || 0);
     const maxH = Number(req.query.max || 99999);
+    
+    // استلام الفلاتر
+    const hospitalIdFilter = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    const startDate = req.query.startDate; // Format: YYYY-MM-DD
+    const endDate = req.query.endDate;     // Format: YYYY-MM-DD
 
     const { getHospitalPool, centralDb } = await import('../config/db.js');
     
-    // جلب جميع المستشفيات النشطة
-    const [allHospitals] = await centralDb.query(`
-      SELECT HospitalID, NameAr AS HospitalName
-      FROM hospitals 
-      WHERE IsActive = 1
-    `);
+    // تحديد المستشفيات المستهدفة
+    let targetHospitals = [];
+    if (hospitalIdFilter) {
+      const [hosp] = await centralDb.query(`SELECT HospitalID, NameAr AS HospitalName FROM hospitals WHERE HospitalID = ? AND IsActive = 1`, [hospitalIdFilter]);
+      if (hosp.length > 0) targetHospitals.push(hosp[0]);
+    } else {
+      const [all] = await centralDb.query(`SELECT HospitalID, NameAr AS HospitalName FROM hospitals WHERE IsActive = 1`);
+      targetHospitals = all;
+    }
+
+    // تجهيز شرط التاريخ
+    let dateCondition = "";
+    const queryParamsBase = [];
+    
+    if (startDate && endDate) {
+      dateCondition = " AND c.CreatedAt >= ? AND c.CreatedAt <= ? ";
+      queryParamsBase.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+    } else if (startDate) {
+      dateCondition = " AND c.CreatedAt >= ? ";
+      queryParamsBase.push(`${startDate} 00:00:00`);
+    } else if (endDate) {
+      dateCondition = " AND c.CreatedAt <= ? ";
+      queryParamsBase.push(`${endDate} 23:59:59`);
+    }
 
     const allComplaints = [];
 
-    // جمع البلاغات من جميع المستشفيات
-    for (const hospital of allHospitals) {
+    // جمع البلاغات
+    for (const hospital of targetHospitals) {
       try {
         const hospitalPool = await getHospitalPool(hospital.HospitalID);
         
+        // تجميع المعاملات: اسم المستشفى، الساعات min/max، ثم تواريخ الفلتر
+        const queryParams = [hospital.HospitalName, minH, maxH, ...queryParamsBase];
+
         const [rows] = await hospitalPool.query(`
           SELECT 
             c.ComplaintID AS id,
@@ -1057,8 +1083,9 @@ router.get('/937-range', requireAuth, async (req, res) => {
             AND c.ActualClosingHours >= ?
             AND c.ActualClosingHours < ?
             AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+            ${dateCondition}
           ORDER BY c.CreatedAt DESC
-        `, [hospital.HospitalName, minH, maxH]);
+        `, queryParams);
 
         // إضافة اسم المستشفى لكل بلاغ
         const enrichedRows = rows.map(item => ({
