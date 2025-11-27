@@ -20,14 +20,15 @@
       <div class="flex items-center justify-between h-16">
         <img src="../public/assets/img/logo3.png" class="h-16 w-auto" alt="شعار تجمع مكة المكرمة الصحي">
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="../index/index.html" class="text-white hover:text-blue-200">الرئيسية</a>
-          <a href="dashboard.html" class="text-white hover:text-blue-200">لوحة التحكم</a>
-          <a href="hospitals.html" class="text-white hover:text-blue-200">المستشفيات</a>
-          <a href="reports.html" class="text-white hover:text-blue-200">التقارير والإحصائيات</a>
-          <a href="open.html" class="text-white underline font-bold">البلاغات المفتوحة</a>
-          <a href="../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
-          <a href="../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
-          <a href="../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <a href="../index/index.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-home">الرئيسية</a>
+          <a href="dashboard.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-dashboard">لوحة التحكم</a>
+          <a href="hospitals.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-hospitals">المستشفيات</a>
+          <a href="reports.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-reports">التقارير والإحصائيات</a>
+          <a href="open.html" class="text-white underline font-bold transition-colors" data-i18n-key="nav-open">البلاغات المفتوحة</a>
+          <a href="../index/about-system.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-about">حول النظام</a>
+          <a href="../index/help.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-help">المساعدة</a>
+          <a href="../index/contact.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-contact">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center gap-2" data-i18n-key="languageToggle">🌐 العربية</button>
         </nav>
       </div>
     </div>
@@ -37,9 +38,9 @@
     <!-- عنوان -->
     <section class="py-10 bg-white border-b border-gray-100">
       <div class="container mx-auto px-4 text-center">
-        <h1 class="text-3xl font-bold mb-3" style="color:#002B5B">البلاغات المفتوحة</h1>
+        <h1 class="text-3xl font-bold mb-3" style="color:#002B5B" data-i18n-key="hero-title">البلاغات المفتوحة</h1>
         <div class="w-28 h-1 mx-auto mb-4" style="background:linear-gradient(90deg,#f59e0b,#fb923c)"></div>
-        <p class="text-gray-600">عرض وتحليل البلاغات المفتوحة حسب المستشفى والنوع الأكثر تكرارًا + تصانيف (بلاغ، اقتراح، حرج)</p>
+        <p class="text-gray-600" data-i18n-key="hero-subtitle">عرض وتحليل البلاغات المفتوحة حسب المستشفى والنوع الأكثر تكرارًا + تصانيف (بلاغ، اقتراح، حرج)</p>
         <div id="user-info" class="mt-2 text-sm text-blue-600 font-medium"></div>
       </div>
     </section>
@@ -53,7 +54,7 @@
             <span class="text-white text-xl">🟠</span>
           </div>
           <div class="text-3xl font-bold" style="color:#002B5B" id="open-total">0</div>
-          <div class="text-gray-600">إجمالي البلاغات المفتوحة</div>
+          <div class="text-gray-600" data-i18n-key="summary-total-label">إجمالي البلاغات المفتوحة</div>
         </div>
 
         <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border text-center">
@@ -63,7 +64,7 @@
             </svg>
           </div>
           <div class="text-3xl font-bold" style="color:#002B5B" id="open-hospitals">0</div>
-          <div class="text-gray-600">عدد المستشفيات المتأثرة</div>
+          <div class="text-gray-600" data-i18n-key="summary-hospitals-label">عدد المستشفيات المتأثرة</div>
         </div>
 
         <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border text-center">
@@ -74,7 +75,7 @@
             </svg>
           </div>
           <div class="text-3xl font-bold" style="color:#002B5B" id="open-top-type">–</div>
-          <div class="text-gray-600">أكثر نوع مفتوح تكرارًا (إجمالي)</div>
+          <div class="text-gray-600" data-i18n-key="summary-top-type-label">أكثر نوع مفتوح تكرارًا (إجمالي)</div>
         </div>
       </div>
     </section>
@@ -82,17 +83,17 @@
     <!-- فلاتر التصانيف -->
     <section class="container mx-auto px-4">
       <div class="flex flex-wrap items-center gap-3 mb-4">
-        <span class="text-sm text-gray-500">التصنيف:</span>
-        <button class="cat-btn px-4 py-2 rounded-full bg-orange-50 text-orange-700 border border-orange-200" data-cat="all">الكل</button>
-        <button class="cat-btn px-4 py-2 rounded-full bg-gray-50 border" data-cat="complaint">بلاغ</button>
-        <button class="cat-btn px-4 py-2 rounded-full bg-gray-50 border" data-cat="suggestion">اقتراح</button>
-        <button class="cat-btn px-4 py-2 rounded-full bg-gray-50 border" data-cat="critical">بلاغ حرج</button>
+        <span class="text-sm text-gray-500" data-i18n-key="filters-label">التصنيف:</span>
+        <button class="cat-btn px-4 py-2 rounded-full bg-orange-50 text-orange-700 border border-orange-200" data-cat="all" data-i18n-key="filter-all">الكل</button>
+        <button class="cat-btn px-4 py-2 rounded-full bg-gray-50 border" data-cat="complaint" data-i18n-key="filter-complaint">بلاغ</button>
+        <button class="cat-btn px-4 py-2 rounded-full bg-gray-50 border" data-cat="suggestion" data-i18n-key="filter-suggestion">اقتراح</button>
+        <button class="cat-btn px-4 py-2 rounded-full bg-gray-50 border" data-cat="critical" data-i18n-key="filter-critical">بلاغ حرج</button>
       </div>
 
       <!-- تبويبات العرض -->
       <div class="flex flex-wrap items-center gap-3 mb-6">
-        <button data-tab="all" class="tab-btn px-5 py-2 rounded-full bg-orange-50 text-orange-700 border border-orange-200">الكل</button>
-        <button data-tab="by-hospital" class="tab-btn px-5 py-2 rounded-full bg-gray-50 border">حسب المستشفى</button>
+        <button data-tab="all" class="tab-btn px-5 py-2 rounded-full bg-orange-50 text-orange-700 border border-orange-200" data-i18n-key="tab-all">الكل</button>
+        <button data-tab="by-hospital" class="tab-btn px-5 py-2 rounded-full bg-gray-50 border" data-i18n-key="tab-by-hospital">حسب المستشفى</button>
       </div>
 
       <!-- جميع البلاغات المفتوحة -->
@@ -115,15 +116,15 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6M13 19V5m4 14v-8"/>
             </svg>
           </div>
-          <h3 class="text-2xl font-bold" style="color:#002B5B">الأكثر تكرارًا لكل مستشفى</h3>
+          <h3 class="text-2xl font-bold" style="color:#002B5B" data-i18n-key="table-title">الأكثر تكرارًا لكل مستشفى</h3>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="text-gray-500">
               <tr class="text-right">
-                <th class="py-2">المستشفى</th>
-                <th class="py-2">النوع/القسم الأكثر تكرارًا</th>
-                <th class="py-2">عدد مرات التكرار</th>
+                <th class="py-2" data-i18n-key="table-hospital">المستشفى</th>
+                <th class="py-2" data-i18n-key="table-type">النوع/القسم الأكثر تكرارًا</th>
+                <th class="py-2" data-i18n-key="table-count">عدد مرات التكرار</th>
               </tr>
             </thead>
             <tbody id="open-top-table"></tbody>
@@ -146,66 +147,311 @@
               </svg>
             </div>
             <div>
-              <div class="font-bold">تجمع مكة الصحي</div>
-              <div class="text-sm text-gray-300">نظام البلاغات</div>
+              <div class="font-bold" data-i18n-key="footer-brand">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300" data-i18n-key="footer-brand-subtitle">نظام البلاغات</div>
             </div>
           </div>
-          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+          <p class="text-gray-300 text-sm" data-i18n-key="footer-description">منصة رسمية لتقديم ومتابعة البلاغات</p>
         </div>
 
         <!-- Column 2 - العمود الثاني -->
         <div>
-          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-links-title">روابط سريعة</h3>
           <ul class="space-y-2 text-sm">
-            <li><a href="../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
-            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
-            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
-            <li><a href="../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+            <li><a href="../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-home">الرئيسية</a></li>
+            <li><a href="../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-submit">تقديم بلاغ</a></li>
+            <li><a href="../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-track">متابعة بلاغ</a></li>
+            <li><a href="../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-faq">الأسئلة الشائعة</a></li>
           </ul>
         </div>
 
         <!-- Column 3 - العمود الثالث -->
         <div>
-          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-contact-title">معلومات التواصل</h3>
           <div class="space-y-2 text-sm text-gray-300">
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <span>رقم الدعم: 0559735137</span>
+              <span data-i18n-key="footer-support-1">رقم الدعم: 0559735137</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <span>رقم الدعم: 0542282550</span>
+              <span data-i18n-key="footer-support-2">رقم الدعم: 0542282550</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <span>support@makkahhealth.gov.sa</span>
+              <span data-i18n-key="footer-email">support@makkahhealth.gov.sa</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <span>ساعات العمل: 24/7</span>
+              <span data-i18n-key="footer-hours">ساعات العمل: 24/7</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300" data-i18n-key="footer-copy">
         © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
       </div>
     </div>
   </footer>
 
+  <script>
+    (function() {
+      const translations = {
+        ar: {
+          'nav-home': 'الرئيسية',
+          'nav-dashboard': 'لوحة التحكم',
+          'nav-hospitals': 'المستشفيات',
+          'nav-reports': 'التقارير والإحصائيات',
+          'nav-open': 'البلاغات المفتوحة',
+          'nav-about': 'حول النظام',
+          'nav-help': 'المساعدة',
+          'nav-contact': 'اتصل بنا',
+          languageToggle: '🌐 العربية',
+          'hero-title': 'البلاغات المفتوحة',
+          'hero-subtitle': 'عرض وتحليل البلاغات المفتوحة حسب المستشفى والنوع الأكثر تكرارًا + تصانيف (بلاغ، اقتراح، حرج)',
+          'summary-total-label': 'إجمالي البلاغات المفتوحة',
+          'summary-hospitals-label': 'عدد المستشفيات المتأثرة',
+          'summary-top-type-label': 'أكثر نوع مفتوح تكرارًا (إجمالي)',
+          'filters-label': 'التصنيف:',
+          'filter-all': 'الكل',
+          'filter-complaint': 'بلاغ',
+          'filter-suggestion': 'اقتراح',
+          'filter-critical': 'بلاغ حرج',
+          'tab-all': 'الكل',
+          'tab-by-hospital': 'حسب المستشفى',
+          'table-title': 'الأكثر تكرارًا لكل مستشفى',
+          'table-hospital': 'المستشفى',
+          'table-type': 'النوع/القسم الأكثر تكرارًا',
+          'table-count': 'عدد مرات التكرار',
+          'footer-brand': 'تجمع مكة الصحي',
+          'footer-brand-subtitle': 'نظام البلاغات',
+          'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+          'footer-links-title': 'روابط سريعة',
+          'footer-link-home': 'الرئيسية',
+          'footer-link-submit': 'تقديم بلاغ',
+          'footer-link-track': 'متابعة بلاغ',
+          'footer-link-faq': 'الأسئلة الشائعة',
+          'footer-contact-title': 'معلومات التواصل',
+          'footer-support-1': 'رقم الدعم: 0559735137',
+          'footer-support-2': 'رقم الدعم: 0542282550',
+          'footer-email': 'support@makkahhealth.gov.sa',
+          'footer-hours': 'ساعات العمل: 24/7',
+          'footer-copy': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة',
+          'user-cluster': '👑 مدير التجمع - عرض جميع المستشفيات',
+          'user-employee': '👤 موظف - عرض مستشفى واحد فقط (ID: {id})',
+          'user-unknown': '⚠️ نوع المستخدم غير محدد',
+          'reports-empty-title': 'لا توجد بلاغات مفتوحة',
+          'reports-empty-subtitle': 'جميع البلاغات تم حلها',
+          'reports-hospital-empty-title': 'لا توجد بلاغات مفتوحة',
+          'reports-hospital-empty-subtitle': 'جميع المستشفيات في حالة جيدة',
+          'report-type-label': 'النوع:',
+          'report-department-label': 'القسم:',
+          'report-status-label': 'الحالة:',
+          'report-date-label': 'التاريخ:',
+          'report-details-button': 'عرض التفاصيل',
+          'report-undefined': 'غير محدد',
+          'reports-more-count': 'و {count} بلاغات أخرى',
+          'reports-hospital-count': '{count} بلاغ مفتوح',
+          'table-empty': 'لا توجد بيانات للعرض',
+          'error-title': 'خطأ في تحميل البيانات',
+          'page-title': 'البلاغات المفتوحة - تجمع مكة المكرمة الصحي',
+          'status-open': 'مفتوحة',
+          'status-closed': 'مغلقة',
+          'status-in-progress': 'قيد المعالجة',
+          'status-pending': 'معلقة',
+          'status-awaiting': 'بانتظار الرد',
+          'status-on-hold': 'قيد الانتظار',
+          'status-resolved': 'محلولة',
+          'status-unknown': 'غير معروفة',
+          'priority-critical': 'حرجة',
+          'priority-urgent': 'عاجلة',
+          'priority-high': 'عالية',
+          'priority-medium': 'متوسطة',
+          'priority-low': 'منخفضة',
+          'priority-normal': 'عادية',
+          'priority-unknown': 'غير محددة'
+        },
+        en: {
+          'nav-home': 'Home',
+          'nav-dashboard': 'Dashboard',
+          'nav-hospitals': 'Hospitals',
+          'nav-reports': 'Reports & Analytics',
+          'nav-open': 'Open Reports',
+          'nav-about': 'About',
+          'nav-help': 'Help',
+          'nav-contact': 'Contact',
+          languageToggle: '🌐 English',
+          'hero-title': 'Open Reports',
+          'hero-subtitle': 'Review and analyze open reports by hospital and most frequent type, covering complaints, suggestions, and critical cases.',
+          'summary-total-label': 'Total open reports',
+          'summary-hospitals-label': 'Affected hospitals',
+          'summary-top-type-label': 'Most frequent open type (total)',
+          'filters-label': 'Category:',
+          'filter-all': 'All',
+          'filter-complaint': 'Complaint',
+          'filter-suggestion': 'Suggestion',
+          'filter-critical': 'Critical report',
+          'tab-all': 'All',
+          'tab-by-hospital': 'By hospital',
+          'table-title': 'Top repeated per hospital',
+          'table-hospital': 'Hospital',
+          'table-type': 'Most repeated type/department',
+          'table-count': 'Repeat count',
+          'footer-brand': 'Makkah Health Cluster',
+          'footer-brand-subtitle': 'Complaints platform',
+          'footer-description': 'Official platform to submit and follow up reports.',
+          'footer-links-title': 'Quick links',
+          'footer-link-home': 'Home',
+          'footer-link-submit': 'Submit a report',
+          'footer-link-track': 'Track a report',
+          'footer-link-faq': 'FAQs',
+          'footer-contact-title': 'Contact info',
+          'footer-support-1': 'Support: 0559735137',
+          'footer-support-2': 'Support: 0542282550',
+          'footer-email': 'support@makkahhealth.gov.sa',
+          'footer-hours': 'Working hours: 24/7',
+          'footer-copy': '© 2025 Makkah Health Cluster – All rights reserved',
+          'user-cluster': '👑 Cluster manager – showing all hospitals',
+          'user-employee': '👤 Employee – showing a single hospital (ID: {id})',
+          'user-unknown': '⚠️ User type is not defined',
+          'reports-empty-title': 'No open reports',
+          'reports-empty-subtitle': 'All reports have been resolved.',
+          'reports-hospital-empty-title': 'No open reports',
+          'reports-hospital-empty-subtitle': 'All hospitals are in good standing.',
+          'report-type-label': 'Type:',
+          'report-department-label': 'Department:',
+          'report-status-label': 'Status:',
+          'report-date-label': 'Date:',
+          'report-details-button': 'View details',
+          'report-undefined': 'Not specified',
+          'reports-more-count': 'and {count} more reports',
+          'reports-hospital-count': '{count} open report(s)',
+          'table-empty': 'No data to display',
+          'error-title': 'Failed to load data',
+          'page-title': 'Open Reports - Makkah Health Cluster',
+          'status-open': 'Open',
+          'status-closed': 'Closed',
+          'status-in-progress': 'In progress',
+          'status-pending': 'Pending',
+          'status-awaiting': 'Awaiting response',
+          'status-on-hold': 'On hold',
+          'status-resolved': 'Resolved',
+          'status-unknown': 'Unknown',
+          'priority-critical': 'Critical',
+          'priority-urgent': 'Urgent',
+          'priority-high': 'High',
+          'priority-medium': 'Medium',
+          'priority-low': 'Low',
+          'priority-normal': 'Normal',
+          'priority-unknown': 'Not specified'
+        }
+      };
+
+      const listeners = new Set();
+      let currentLanguage = 'ar';
+
+      function translate(key, params = {}) {
+        const dictionary = translations[currentLanguage] || translations.ar;
+        const fallbackDictionary = translations.ar;
+        let template = dictionary?.[key];
+        if (template === undefined) {
+          template = fallbackDictionary?.[key] ?? key;
+        }
+
+        if (typeof template !== 'string') {
+          return template;
+        }
+
+        return template.replace(/\{(\w+)\}/g, (_, token) => {
+          return params[token] !== undefined ? params[token] : `{${token}}`;
+        });
+      }
+
+      function applyStaticTranslations() {
+        document.documentElement.lang = currentLanguage;
+        document.documentElement.dir = currentLanguage === 'ar' ? 'rtl' : 'ltr';
+        
+        // تحديث عنوان الصفحة
+        document.title = translate('page-title');
+
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+          const key = el.getAttribute('data-i18n-key');
+          if (!key) return;
+          const text = translate(key, {});
+          if (text) {
+            el.textContent = text;
+          }
+        });
+      }
+
+      function setLanguage(lang) {
+        if (!translations[lang]) lang = 'ar';
+        if (lang === currentLanguage) return;
+        currentLanguage = lang;
+        window.currentLanguage = lang;
+        // حفظ اللغة في localStorage الموحد
+        localStorage.setItem('siteLanguage', lang);
+        applyStaticTranslations();
+        listeners.forEach(fn => fn(currentLanguage));
+      }
+
+      const toggleHandler = () => {
+        const nextLang = currentLanguage === 'ar' ? 'en' : 'ar';
+        setLanguage(nextLang);
+      };
+
+      function initializeToggle() {
+        const toggle = document.getElementById('languageToggle');
+        if (!toggle) return;
+        toggle.removeEventListener('click', toggleHandler);
+        toggle.addEventListener('click', toggleHandler);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // قراءة اللغة من localStorage الموحد
+        const savedLang = localStorage.getItem('siteLanguage') || 'ar';
+        currentLanguage = savedLang;
+        window.currentLanguage = savedLang;
+        document.documentElement.setAttribute('lang', savedLang);
+        document.documentElement.setAttribute('dir', (savedLang === 'ar') ? 'rtl' : 'ltr');
+        
+        applyStaticTranslations();
+        initializeToggle();
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        applyStaticTranslations();
+        initializeToggle();
+      });
+
+      window.openI18n = {
+        t: translate,
+        getLanguage: () => currentLanguage,
+        setLanguage,
+        onChange: (fn) => {
+          if (typeof fn === 'function') {
+            listeners.add(fn);
+            return () => listeners.delete(fn);
+          }
+          return () => {};
+        },
+        refresh: applyStaticTranslations
+      };
+    })();
+  </script>
   <script src="open.js"></script>
 </body>
 </html>

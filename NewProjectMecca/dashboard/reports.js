@@ -3,6 +3,9 @@
    Reports JavaScript File
    ======================================== */
 
+// ===== قراءة اللغة من localStorage =====
+const currentLang = localStorage.getItem("siteLanguage") || "ar";
+
 // ===== App Namespace Protection =====
 if (!window.App) window.App = {};
 const App = window.App;
@@ -279,20 +282,30 @@ async function loadHospitalsData() {
     }
 
     // 3) معالجة البيانات
-    hospitalsData = data.map(hospital => ({
-      hospitalId: hospital.HospitalID,
-      hospitalName: hospital.HospitalName || hospital.NameAr || hospital.NameEn || 'غير محدد',
-      totalReports: Number(hospital.counts?.total || 0),
-      openReports: Number(hospital.counts?.open || 0),
-      closedReports: Number(hospital.counts?.closed || 0),
-      priorityCounts: {
-        red: Number(hospital.counts?.critical || hospital.counts?.urgent || 0),
-        orange: Number(hospital.counts?.high || 0),
-        yellow: Number(hospital.counts?.medium || 0),
-        green: Number(hospital.counts?.low || 0)
-      },
-      redReports: hospital.redReports || []
-    }));
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+    hospitalsData = data.map(hospital => {
+      // تحديد اسم المستشفى حسب اللغة
+      const hospitalName = lang === 'en'
+        ? (hospital.HospitalNameEn || hospital.HospitalNameAr || hospital.HospitalName || hospital.NameEn || 'Not specified')
+        : (hospital.HospitalNameAr || hospital.HospitalName || hospital.NameAr || 'غير محدد');
+      
+      return {
+        hospitalId: hospital.HospitalID,
+        hospitalName: hospitalName,
+        hospitalNameAr: hospital.HospitalNameAr || hospital.HospitalName || hospital.NameAr,
+        hospitalNameEn: hospital.HospitalNameEn || hospital.HospitalName || hospital.NameEn,
+        totalReports: Number(hospital.counts?.total || 0),
+        openReports: Number(hospital.counts?.open || 0),
+        closedReports: Number(hospital.counts?.closed || 0),
+        priorityCounts: {
+          red: Number(hospital.counts?.critical || hospital.counts?.urgent || 0),
+          orange: Number(hospital.counts?.high || 0),
+          yellow: Number(hospital.counts?.medium || 0),
+          green: Number(hospital.counts?.low || 0)
+        },
+        redReports: hospital.redReports || []
+      };
+    });
 
     console.log('✅ تم تحميل بيانات المستشفيات:', hospitalsData);
 
@@ -343,8 +356,12 @@ function renderSummaryTable() {
     console.log('🔍 تصفية بيانات الجدول للمستشفى:', userHospitalId, 'البيانات المفلترة:', filteredData);
   }
 
+  const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
   filteredData.forEach((h, idx) => {
-    const name = h.hospitalName || h.HospitalName || 'غير محدد';
+    // تحديد اسم المستشفى حسب اللغة
+    const name = lang === 'en'
+      ? (h.hospitalNameEn || h.hospitalNameAr || h.hospitalName || h.HospitalNameEn || h.HospitalName || 'Not specified')
+      : (h.hospitalNameAr || h.hospitalName || h.HospitalNameAr || h.HospitalName || 'غير محدد');
     const total = Number(h.totalReports || h.counts?.total || 0);
     const open = Number(h.openReports || h.counts?.open || 0);
     const closed = Number(h.closedReports || h.counts?.closed || 0);
@@ -569,9 +586,30 @@ async function createReportsTrendChart() {
       
       // تحضير البيانات للرسم البياني
       const trendData = result.data;
-      const labels = trendData.map(item => item.monthName);
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      const labels = trendData.map(item => {
+        return lang === 'en'
+          ? (item.monthNameEn || item.monthName)
+          : (item.monthNameAr || item.monthName);
+      });
       const newReportsData = trendData.map(item => item.newReports);
       const closedReportsData = trendData.map(item => item.closedReports);
+      
+      // دالة ترجمة آمنة
+      const t = (key) => {
+        try {
+          if (window.reportsI18n && window.reportsI18n.t) {
+            return window.reportsI18n.t(key);
+          }
+          const fallback = {
+            'chart-new-reports': 'البلاغات الجديدة',
+            'chart-closed-reports': 'البلاغات المغلقة'
+          };
+          return fallback[key] || key;
+        } catch (e) {
+          return key;
+        }
+      };
       
       reportsChart = new Chart(reportsCtx.getContext('2d'), {
         type: 'line',
@@ -579,7 +617,7 @@ async function createReportsTrendChart() {
           labels: labels,
           datasets: [
             {
-              label: 'البلاغات الجديدة',
+              label: t('chart-new-reports'),
               data: newReportsData,
               borderColor: '#004A9F',
               backgroundColor: 'rgba(0,74,159,.1)',
@@ -587,7 +625,7 @@ async function createReportsTrendChart() {
               fill: true
             },
             {
-              label: 'البلاغات المغلقة',
+              label: t('chart-closed-reports'),
               data: closedReportsData,
               borderColor: '#0FA47A',
               backgroundColor: 'rgba(15,164,122,.1)',
@@ -646,13 +684,33 @@ async function createReportsTrendChart() {
     destroyChartByCanvasId('reportsChart');
     
     // في حالة الخطأ، استخدم بيانات وهمية كبديل
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+    const monthNamesAr = ['أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر','يناير'];
+    const monthNamesEn = ['August','September','October','November','December','January'];
+    const fallbackLabels = lang === 'en' ? monthNamesEn : monthNamesAr;
+    
+    const t = (key) => {
+      try {
+        if (window.reportsI18n && window.reportsI18n.t) {
+          return window.reportsI18n.t(key);
+        }
+        const fallback = {
+          'chart-new-reports': 'البلاغات الجديدة',
+          'chart-closed-reports': 'البلاغات المغلقة'
+        };
+        return fallback[key] || key;
+      } catch (e) {
+        return key;
+      }
+    };
+    
     reportsChart = new Chart(reportsCtx.getContext('2d'), {
       type: 'line',
       data: {
-        labels: ['أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر','يناير'],
+        labels: fallbackLabels,
         datasets: [
           {
-            label: 'البلاغات الجديدة',
+            label: t('chart-new-reports'),
             data: [1200,1350,1100,1400,1250,1500],
             borderColor: '#004A9F',
             backgroundColor: 'rgba(0,74,159,.1)',
@@ -660,7 +718,7 @@ async function createReportsTrendChart() {
             fill: true
           },
           {
-            label: 'البلاغات المغلقة',
+            label: t('chart-closed-reports'),
             data: [1100,1250,1050,1300,1200,1400],
             borderColor: '#0FA47A',
             backgroundColor: 'rgba(15,164,122,.1)',
@@ -729,7 +787,12 @@ async function createStatusChart() {
       
       // تحضير البيانات للرسم البياني
       const statusData = result.data;
-      const labels = statusData.map(item => item.LabelAr);
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      const labels = statusData.map(item => {
+        return lang === 'en' 
+          ? (item.LabelEn || item.LabelAr || item.Label || item.statusName || 'Not specified')
+          : (item.LabelAr || item.Label || item.statusName || 'غير محدد');
+      });
       const data = statusData.map(item => item.count);
       const colors = ['#0FA47A', '#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6']; // ألوان متنوعة
       
@@ -783,10 +846,15 @@ async function createStatusChart() {
     destroyChartByCanvasId('statusChart');
     
     // في حالة الخطأ، استخدم بيانات وهمية كبديل
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+    const fallbackLabels = lang === 'en' 
+      ? ['Closed', 'Open', 'In Progress']
+      : ['مغلقة', 'مفتوحة', 'قيد المعالجة'];
+    
     statusChart = new Chart(statusCtx.getContext('2d'), {
       type: 'doughnut',
       data: {
-        labels: ['مغلقة', 'مفتوحة', 'قيد المعالجة'],
+        labels: fallbackLabels,
         datasets: [{
           data: [13413, 1834, 892],
           backgroundColor: ['#0FA47A', '#F59E0B', '#3B82F6'],
@@ -864,32 +932,57 @@ async function createHospitalChart() {
     destroyChartByCanvasId('hospitalChart');
     
     // تحضير البيانات للرسم البياني
-    const labels = hospitalsData.map(hospital => hospital.hospitalName);
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+    const labels = hospitalsData.map(hospital => {
+      return lang === 'en'
+        ? (hospital.hospitalNameEn || hospital.hospitalNameAr || hospital.hospitalName || 'Not specified')
+        : (hospital.hospitalNameAr || hospital.hospitalName || 'غير محدد');
+    });
     const openData = hospitalsData.map(hospital => hospital.openReports);
     const closedData = hospitalsData.map(hospital => hospital.closedReports);
     const criticalData = hospitalsData.map(hospital => hospital.criticalReports);
 
+    // دالة ترجمة آمنة
+    const t = (key) => {
+      try {
+        if (window.reportsI18n && window.reportsI18n.t) {
+          return window.reportsI18n.t(key);
+        }
+        // Fallback للعربية
+        const fallback = {
+          'chart-open-reports': 'بلاغات مفتوحة',
+          'chart-closed-reports': 'بلاغات مغلقة',
+          'chart-critical-reports': 'بلاغات حرجة',
+          'chart-hospital-types-title': 'عدد البلاغات حسب نوعها في كل مستشفى'
+        };
+        return fallback[key] || key;
+      } catch (e) {
+        console.warn('Translation error:', e);
+        return key;
+      }
+    };
+    
     hospitalChart = new Chart(ctx.getContext('2d'), {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [
           {
-            label: 'بلاغات مفتوحة',
+            label: t('chart-open-reports'),
             data: openData,
             backgroundColor: '#3B82F6',
             borderColor: '#2563EB',
             borderWidth: 1
           },
           {
-            label: 'بلاغات مغلقة',
+            label: t('chart-closed-reports'),
             data: closedData,
             backgroundColor: '#10B981',
             borderColor: '#059669',
             borderWidth: 1
           },
           {
-            label: 'بلاغات حرجة',
+            label: t('chart-critical-reports'),
             data: criticalData,
             backgroundColor: '#EF4444',
             borderColor: '#DC2626',
@@ -911,7 +1004,7 @@ async function createHospitalChart() {
           },
           title: {
             display: true,
-            text: 'عدد البلاغات حسب نوعها في كل مستشفى',
+            text: t('chart-hospital-types-title'),
             font: { family: 'Tajawal', size: 18 },
             color: '#002B5B',
             padding: { bottom: 20 }
@@ -1086,7 +1179,12 @@ async function createCriticalRatioChart() {
       
       // تحضير البيانات للرسم البياني
       const criticalData = result.data;
-      const labels = criticalData.map(item => item.hospitalName);
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      const labels = criticalData.map(item => {
+        return lang === 'en'
+          ? (item.hospitalNameEn || item.hospitalNameAr || item.hospitalName || 'Not specified')
+          : (item.hospitalNameAr || item.hospitalName || 'غير محدد');
+      });
       const data = criticalData.map(item => item.criticalRatio);
       const colors = [
         'rgba(239,68,68,0.8)',
@@ -1096,12 +1194,30 @@ async function createCriticalRatioChart() {
         'rgba(16,185,129,0.8)'
       ];
       
+      // دالة ترجمة آمنة
+      const t = (key) => {
+        try {
+          if (window.reportsI18n && window.reportsI18n.t) {
+            return window.reportsI18n.t(key);
+          }
+          // Fallback للعربية
+          const fallback = {
+            'chart-critical-ratio-label': 'نسبة البلاغات الحرجة (%)',
+            'chart-critical-ratio-title': 'المستشفيات ذات النسبة الأعلى من البلاغات الحرجة'
+          };
+          return fallback[key] || key;
+        } catch (e) {
+          console.warn('Translation error:', e);
+          return key;
+        }
+      };
+      
       criticalRatioChart = new Chart(ctx.getContext('2d'), {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [{
-            label: 'نسبة البلاغات الحرجة (%)',
+            label: t('chart-critical-ratio-label'),
             data: data,
             backgroundColor: colors.slice(0, labels.length),
             borderRadius: 8,
@@ -1115,7 +1231,7 @@ async function createCriticalRatioChart() {
             legend: { display: false },
             title: {
               display: true,
-              text: 'المستشفيات ذات النسبة الأعلى من البلاغات الحرجة',
+              text: t('chart-critical-ratio-title'),
               font: { family: 'Tajawal', size: 16 },
               color: '#002B5B'
             },
@@ -1490,7 +1606,12 @@ async function createDeptCountChart(hospitalId = null) {
     // تجهيز الكاش لو فاضي
     if (!hospitalsCache.length) {
       hospitalsCache = await loadHospitals();
-      hospitalsCache.forEach(h => hospitalsById.set(String(h.HospitalID), h.HospitalName));
+      hospitalsCache.forEach(h => {
+        hospitalsById.set(String(h.HospitalID), {
+          nameAr: h.HospitalNameAr || h.HospitalName || h.NameAr,
+          nameEn: h.HospitalNameEn || h.HospitalName || h.NameEn
+        });
+      });
     }
 
     if (hospitalId === 'all') {
@@ -1521,7 +1642,10 @@ async function createDeptCountChart(hospitalId = null) {
       const pairs = Array.from(sumMap.entries()).sort((a,b) => b[1]-a[1]);
       labels = pairs.map(p => p[0]);
       values = pairs.map(p => p[1]);
-      titleText = 'عدد البلاغات لكل قسم — جميع المستشفيات';
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      titleText = lang === 'en' 
+        ? 'Reports Count by Department — All Hospitals'
+        : 'عدد البلاغات لكل قسم — جميع المستشفيات';
     } else {
       // ✅ وضع مستشفى واحد
       const response = await fetch(`${API_BASE}/api/dashboard/total/dept-count/${hospitalId}`);
@@ -1533,20 +1657,41 @@ async function createDeptCountChart(hospitalId = null) {
       labels = deptData.map(item => item.departmentName);
       values = deptData.map(item => item.complaintCount);
 
-      const hospitalName = hospitalsById.get(String(hospitalId)) || 'مستشفى غير محدد';
-      titleText = `عدد البلاغات لكل قسم — ${hospitalName}`;
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      const hospitalInfo = hospitalsById.get(String(hospitalId));
+      const hospitalName = hospitalInfo
+        ? (lang === 'en' ? hospitalInfo.nameEn : hospitalInfo.nameAr) || hospitalInfo.nameAr
+        : (lang === 'en' ? 'Hospital not specified' : 'مستشفى غير محدد');
+      titleText = lang === 'en' 
+        ? `Reports Count by Department — ${hospitalName}`
+        : `عدد البلاغات لكل قسم — ${hospitalName}`;
     }
 
     // تدمير الـ chart السابق إذا كان موجوداً
     destroyChart(deptCountChart);
     destroyChartByCanvasId('deptCountChart');
 
+    // دالة ترجمة آمنة
+    const t = (key) => {
+      try {
+        if (window.reportsI18n && window.reportsI18n.t) {
+          return window.reportsI18n.t(key);
+        }
+        const fallback = {
+          'chart-complaints-count': 'عدد البلاغات'
+        };
+        return fallback[key] || key;
+      } catch (e) {
+        return key;
+      }
+    };
+    
     deptCountChart = new Chart(el.getContext('2d'), {
       type: 'bar',
       data: {
         labels,
         datasets: [{
-          label: 'عدد البلاغات',
+          label: t('chart-complaints-count'),
           data: values,
           backgroundColor: labels.map((_, i) => barColors[i % barColors.length]),
           borderColor: '#fff',
@@ -1585,9 +1730,23 @@ async function createDeptCountChart(hospitalId = null) {
     // تدمير الـ chart السابق إذا كان موجوداً
     destroyChart(deptCountChart);
     destroyChartByCanvasId('deptCountChart');
+    const t = (key) => {
+      try {
+        if (window.reportsI18n && window.reportsI18n.t) {
+          return window.reportsI18n.t(key);
+        }
+        const fallback = {
+          'chart-complaints-count': 'عدد البلاغات'
+        };
+        return fallback[key] || key;
+      } catch (e) {
+        return key;
+      }
+    };
+    
     deptCountChart = new Chart(el.getContext('2d'), {
       type: 'bar',
-      data: { labels, datasets: [{ label:'عدد البلاغات', data: values, backgroundColor: labels.map((_, i) => barColors[i % barColors.length]), borderColor:'#fff', borderWidth:1, borderRadius:8, barThickness:24, maxBarThickness:28 }]},
+      data: { labels, datasets: [{ label: t('chart-complaints-count'), data: values, backgroundColor: labels.map((_, i) => barColors[i % barColors.length]), borderColor:'#fff', borderWidth:1, borderRadius:8, barThickness:24, maxBarThickness:28 }]},
       options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, title:{ display:true, text:'عدد البلاغات لكل قسم — مستشفى الملك عبدالعزيز (بيانات افتراضية)', font:{family:'Tajawal', size:16}, color:'#002B5B', padding:{bottom:10} }}, scales:{ x:{ beginAtZero:true, ticks:{stepSize:50}, grid:{color:'rgba(0,0,0,0.05)'} }, y:{ ticks:{ font:{family:'Tajawal'} }, grid:{display:false} } }, animation:{duration:600} }
     });
   }
@@ -1684,7 +1843,12 @@ async function createTopEmployeesChart(hospitalId = null, topN = 8) {
     // تجهيز الكاش لو فاضي
     if (!hospitalsCache.length) {
       hospitalsCache = await loadHospitals();
-      hospitalsCache.forEach(h => hospitalsById.set(String(h.HospitalID), h.HospitalName));
+      hospitalsCache.forEach(h => {
+        hospitalsById.set(String(h.HospitalID), {
+          nameAr: h.HospitalNameAr || h.HospitalName || h.NameAr,
+          nameEn: h.HospitalNameEn || h.HospitalName || h.NameEn
+        });
+      });
     }
 
     let labels = [], values = [], titleText = '';
@@ -1718,7 +1882,10 @@ async function createTopEmployeesChart(hospitalId = null, topN = 8) {
       const pairs = Array.from(agg.entries()).sort((a,b) => b[1]-a[1]).slice(0, topN);
       labels = pairs.map(p => p[0]);
       values = pairs.map(p => p[1]);
-      titleText = 'أكثر الموظفين تكرّرًا في البلاغات — جميع المستشفيات';
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      titleText = lang === 'en'
+        ? 'Most Frequent Employees in Reports — All Hospitals'
+        : 'أكثر الموظفين تكرّرًا في البلاغات — جميع المستشفيات';
     } else {
       // ✅ وضع مستشفى واحد
       const response = await fetch(`${API_BASE}/api/dashboard/total/top-employees/${hospitalId}?top=${topN}`, {
@@ -1732,20 +1899,42 @@ async function createTopEmployeesChart(hospitalId = null, topN = 8) {
       labels = employeeData.map(item => item.displayName);
       values = employeeData.map(item => item.complaintCount);
 
-      const hospitalName = hospitalsById.get(String(hospitalId)) || 'مستشفى غير محدد';
-      titleText = `أكثر الموظفين تكرّرًا في البلاغات — ${hospitalName}`;
+      const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+      const hospitalInfo = hospitalsById.get(String(hospitalId));
+      const hospitalName = hospitalInfo
+        ? (lang === 'en' ? hospitalInfo.nameEn : hospitalInfo.nameAr) || hospitalInfo.nameAr
+        : (lang === 'en' ? 'Hospital not specified' : 'مستشفى غير محدد');
+      titleText = lang === 'en'
+        ? `Most Frequent Employees in Reports — ${hospitalName}`
+        : `أكثر الموظفين تكرّرًا في البلاغات — ${hospitalName}`;
     }
 
     // تدمير الـ chart السابق إذا كان موجوداً
     destroyChart(topEmployeesChart);
     destroyChartByCanvasId('topEmployeesChart');
 
+    // دالة ترجمة آمنة
+    const t = (key) => {
+      try {
+        if (window.reportsI18n && window.reportsI18n.t) {
+          return window.reportsI18n.t(key);
+        }
+        const fallback = {
+          'chart-complaints-count': 'عدد البلاغات',
+          'chart-complaint-singular': 'بلاغ'
+        };
+        return fallback[key] || key;
+      } catch (e) {
+        return key;
+      }
+    };
+    
     topEmployeesChart = new Chart(el.getContext('2d'), {
       type: 'bar',
       data: {
         labels,
         datasets: [{
-          label: 'عدد البلاغات',
+          label: t('chart-complaints-count'),
           data: values,
           backgroundColor: labels.map((_, i) => empBarColors[i % empBarColors.length]),
           borderColor: '#fff',
@@ -1768,7 +1957,15 @@ async function createTopEmployeesChart(hospitalId = null, topN = 8) {
             color: '#002B5B',
             padding: { bottom: 10 }
           },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label} : ${ctx.raw} بلاغ ` } }
+          tooltip: { 
+            callbacks: { 
+              label: (ctx) => {
+                const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+                const complaintText = lang === 'en' ? 'report(s)' : 'بلاغ';
+                return ` ${ctx.label} : ${ctx.raw} ${complaintText} `;
+              }
+            } 
+          }
         },
         scales: {
           x: { beginAtZero: true, ticks: { stepSize: 10 }, grid: { color: 'rgba(0,0,0,0.05)' } },
@@ -1785,9 +1982,23 @@ async function createTopEmployeesChart(hospitalId = null, topN = 8) {
     // تدمير الـ chart السابق إذا كان موجوداً
     destroyChart(topEmployeesChart);
     destroyChartByCanvasId('topEmployeesChart');
+    const t = (key) => {
+      try {
+        if (window.reportsI18n && window.reportsI18n.t) {
+          return window.reportsI18n.t(key);
+        }
+        const fallback = {
+          'chart-complaints-count': 'عدد البلاغات'
+        };
+        return fallback[key] || key;
+      } catch (e) {
+        return key;
+      }
+    };
+    
     topEmployeesChart = new Chart(el.getContext('2d'), {
       type: 'bar',
-      data: { labels, datasets: [{ label:'عدد البلاغات', data: values, backgroundColor: labels.map((_, i) => empBarColors[i % empBarColors.length]), borderColor:'#fff', borderWidth:1, borderRadius:8, barThickness:24, maxBarThickness:28 }]},
+      data: { labels, datasets: [{ label: t('chart-complaints-count'), data: values, backgroundColor: labels.map((_, i) => empBarColors[i % empBarColors.length]), borderColor:'#fff', borderWidth:1, borderRadius:8, barThickness:24, maxBarThickness:28 }]},
       options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, title:{ display:true, text:'أكثر الموظفين تكرّرًا في البلاغات — مستشفى الملك عبدالعزيز (بيانات افتراضية)', font:{family:'Tajawal', size:16}, color:'#002B5B', padding:{bottom:10} }}, scales:{ x:{ beginAtZero:true, ticks:{stepSize:10}, grid:{color:'rgba(0,0,0,0.05)'} }, y:{ ticks:{ font:{family:'Tajawal'} }, grid:{display:false} } }, animation:{duration:600} }
     });
   }
@@ -1858,12 +2069,54 @@ async function applyReportExportPermissions() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // انتظر تحميل نظام الترجمة
+  await new Promise(resolve => {
+    if (window.reportsI18n) {
+      resolve();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.reportsI18n) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(); // Continue even if translation system not loaded
+      }, 2000);
+    }
+  });
+  
   try {
     // تدمير جميع الـ charts السابقة قبل البدء
     destroyAllCharts();
     
     // تحميل بيانات المستخدم أولاً
     await loadCurrentUser();
+    
+    // الاستماع لتغييرات اللغة
+    if (window.reportsI18n) {
+      window.reportsI18n.onChange = () => {
+        // إعادة تحميل البيانات عند تغيير اللغة
+        if (hospitalsData.length > 0) {
+          // تحديث أسماء المستشفيات في البيانات الموجودة
+          const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+          hospitalsData = hospitalsData.map(h => ({
+            ...h,
+            hospitalName: lang === 'en' ? (h.hospitalNameEn || h.hospitalNameAr || h.hospitalName) : (h.hospitalNameAr || h.hospitalName)
+          }));
+          // إعادة عرض الجدول والرسوم البيانية
+          renderSummaryTable();
+          // إعادة إنشاء الرسوم البيانية مع الترجمة الجديدة
+          if (hospitalChart) {
+            createHospitalChart();
+          }
+          if (criticalRatioChart) {
+            createCriticalRatioChart();
+          }
+        }
+      };
+    }
     
     // تطبيق صلاحيات تصدير التقارير
     await applyReportExportPermissions();
@@ -1906,11 +2159,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const userHospital = hospitals.find(h => Number(h.HospitalID) === Number(userHospId));
       if (userHospital) {
         // ملء القوائم بمستشفى واحد فقط (بدون خيار "الكل")
+        const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+        const hospitalName = lang === 'en'
+          ? (userHospital.HospitalNameEn || userHospital.HospitalNameAr || userHospital.HospitalName)
+          : (userHospital.HospitalNameAr || userHospital.HospitalName);
+        
         if (detailHospitalSel) {
           detailHospitalSel.innerHTML = '';
           const opt = document.createElement('option');
           opt.value = String(userHospital.HospitalID);
-          opt.textContent = userHospital.HospitalName;
+          opt.textContent = hospitalName;
           opt.selected = true;
           detailHospitalSel.appendChild(opt);
           detailHospitalSel.disabled = true; // تعطيل القائمة
@@ -1919,7 +2177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           deptReportHospitalSel.innerHTML = '';
           const opt = document.createElement('option');
           opt.value = String(userHospital.HospitalID);
-          opt.textContent = userHospital.HospitalName;
+          opt.textContent = hospitalName;
           opt.selected = true;
           deptReportHospitalSel.appendChild(opt);
           deptReportHospitalSel.disabled = true;
@@ -1928,7 +2186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           empReportHospitalSel.innerHTML = '';
           const opt = document.createElement('option');
           opt.value = String(userHospital.HospitalID);
-          opt.textContent = userHospital.HospitalName;
+          opt.textContent = hospitalName;
           opt.selected = true;
           empReportHospitalSel.appendChild(opt);
           empReportHospitalSel.disabled = true;
@@ -1937,7 +2195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           criticalHospitalSel.innerHTML = '';
           const opt = document.createElement('option');
           opt.value = String(userHospital.HospitalID);
-          opt.textContent = userHospital.HospitalName;
+          opt.textContent = hospitalName;
           opt.selected = true;
           criticalHospitalSel.appendChild(opt);
           criticalHospitalSel.disabled = true;
@@ -2107,10 +2365,14 @@ function fillHospitalSelect(selectEl, hospitals, selectedId) {
   selectEl.appendChild(allOpt);
 
   // ✅ بعدين نضيف باقي المستشفيات
+  const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
   hospitals.forEach(h => {
     const opt = document.createElement('option');
     opt.value = String(h.HospitalID);
-    opt.textContent = h.HospitalName;
+    const hospitalName = lang === 'en'
+      ? (h.HospitalNameEn || h.HospitalNameAr || h.HospitalName)
+      : (h.HospitalNameAr || h.HospitalName);
+    opt.textContent = hospitalName;
     if (selectedId && Number(selectedId) === Number(h.HospitalID)) opt.selected = true;
     selectEl.appendChild(opt);
   });
@@ -2202,10 +2464,19 @@ async function createHospitalFunnelChartById(hospitalId) {
     // لو أول مرة، حمّلي المستشفيات وجهّزي الخرائط
     if (!hospitalsCache.length) {
       hospitalsCache = await loadHospitals();
-      hospitalsCache.forEach(h => hospitalsById.set(String(h.HospitalID), h.HospitalName));
+      hospitalsCache.forEach(h => {
+        hospitalsById.set(String(h.HospitalID), {
+          nameAr: h.HospitalNameAr || h.HospitalName || h.NameAr,
+          nameEn: h.HospitalNameEn || h.HospitalName || h.NameEn
+        });
+      });
     }
 
-    const name = hospitalsById.get(String(hospitalId)) || '—';
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+    const hospitalInfo = hospitalsById.get(String(hospitalId));
+    const name = hospitalInfo
+      ? (lang === 'en' ? hospitalInfo.nameEn : hospitalInfo.nameAr) || hospitalInfo.nameAr
+      : '—';
     const url  = `${API_BASE}/api/dashboard/total/funnel/${hospitalId}`;
     const res  = await fetch(url);
     
@@ -2583,8 +2854,11 @@ function renderDetailsTable(complaints) {
     };
 
     // دعم أسماء الأعمدة المختلفة من API
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
     const ticketNumber = complaint.ticket || complaint.TicketNumber || complaint.id || '';
-    const hospitalName = complaint.hospital || complaint.HospitalName || '';
+    const hospitalName = lang === 'en'
+      ? (complaint.hospitalNameEn || complaint.hospitalNameAr || complaint.hospital || complaint.HospitalNameEn || complaint.HospitalName || '')
+      : (complaint.hospitalNameAr || complaint.hospital || complaint.HospitalNameAr || complaint.HospitalName || '');
     const departmentName = complaint.department || complaint.DepartmentName || '';
     const statusName = complaint.statusName || complaint.status || (complaint.StatusCode === 'CLOSED' ? 'مغلق' : complaint.StatusCode === 'OPEN' ? 'مفتوح' : '');
     const priorityName = complaint.priorityName || complaint.priority || '';
@@ -3129,7 +3403,10 @@ function renderCriticalTable(complaints) {
     tr.className = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
     
     const ticketNumber = complaint.ticketNumber || complaint.TicketNumber || complaint.ticket || '—';
-    const hospitalName = complaint.hospitalName || complaint.HospitalName || '—';
+    const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
+    const hospitalName = lang === 'en'
+      ? (complaint.hospitalNameEn || complaint.hospitalNameAr || complaint.hospitalName || complaint.HospitalNameEn || complaint.HospitalName || '—')
+      : (complaint.hospitalNameAr || complaint.hospitalName || complaint.HospitalNameAr || complaint.HospitalName || '—');
     const departmentName = complaint.departmentName || complaint.DepartmentName || '—';
     const priorityCode = complaint.priorityCode || complaint.PriorityCode || '—';
     const statusCode = complaint.statusCode || complaint.StatusCode || '—';

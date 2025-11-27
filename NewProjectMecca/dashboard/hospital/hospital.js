@@ -33,11 +33,19 @@ function chip(priority) {
   return base + 'priority-yellow';
 }
 
+// === قراءة اللغة من localStorage =====
+const currentLang = localStorage.getItem("siteLanguage") || "ar";
+
 // === تعبئة الصفحة ===
 let hospitalChart;
 let currentHospital; // لحفظ المستشفى الحالي للفلترة
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // قراءة اللغة من localStorage وتطبيقها
+  const lang = localStorage.getItem("siteLanguage") || "ar";
+  document.documentElement.setAttribute("lang", lang);
+  document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+  
   try {
     // لو فيه مستخدم في localStorage، تجاهل ?id واستخدم HospitalID الخاص به
     const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -45,7 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const id = forcedHospitalId ?? parseInt(getParam('id') || '0', 10);
     
     if (!id || isNaN(id)) {
-      throw new Error('معرف المستشفى غير صحيح');
+      const t = window.hospitalI18n?.t || ((key) => key);
+      throw new Error(t('error-invalid-id') || 'معرف المستشفى غير صحيح');
     }
 
     // جلب بيانات المستشفى من API
@@ -53,8 +62,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentHospital = h; // حفظ المستشفى الحالي
 
     // العنوان والوصف
-    $('#hName').textContent = h.HospitalName;
-    $('#hDesc').textContent = `${h.type}${h.beds > 0 ? ` - ${h.beds} سرير` : ''}`;
+    const t = window.hospitalI18n?.t || ((key) => key);
+    
+    // استخدام اسم المستشفى حسب اللغة
+    const hospitalName = lang === 'en'
+      ? (h.HospitalNameEn || h.HospitalNameAr || h.HospitalName)
+      : (h.HospitalNameAr || h.HospitalName);
+    
+    $('#hName').textContent = hospitalName;
+    
+    // ترجمة النوع وعدد الأسرة
+    const typeText = h.type || (lang === 'en' ? 'General' : 'عام');
+    const bedsText = h.beds > 0 
+      ? (lang === 'en' ? ` - ${h.beds} beds` : ` - ${h.beds} سرير`)
+      : '';
+    $('#hDesc').textContent = `${typeText}${bedsText}`;
 
     // الشارات
     $('#cRed').textContent = h.priorityCounts?.red ?? 0;
@@ -76,9 +98,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // نخلي البانر دائمًا ظاهر، حتى لو ما فيه بلاغات
     const alertText = criticalBanner.querySelector('.alert-text');
     if (alertText) {
-      alertText.innerHTML = criticalCount > 0
-        ? `لديك <b>${criticalCount}</b> بلاغ${criticalCount === 1 ? '' : 'ات'} حمراء تتطلب متابعة فورية.`
-        : 'لا توجد بلاغات حرجة حالياً ✅';
+      if (criticalCount > 0) {
+        if (lang === 'en') {
+          alertText.innerHTML = `You have <b id="criticalCount">${criticalCount}</b> critical report${criticalCount === 1 ? '' : 's'} requiring immediate follow-up.`;
+        } else {
+          alertText.innerHTML = `لديك <b id="criticalCount">${criticalCount}</b> بلاغ${criticalCount === 1 ? '' : 'ات'} حمراء تتطلب متابعة فورية.`;
+        }
+      } else {
+        alertText.innerHTML = t('critical-banner-none');
+      }
     }
     criticalBanner.classList.remove('hidden');
   }
@@ -90,7 +118,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
     // اربط زر "عرض المزيد" للبلاغات الحديثة بسجل البلاغات مفلتر على المستشفى
-    const hospitalName = h?.HospitalName || document.querySelector('#hName')?.textContent?.trim() || '';
     const recentViewAll = document.getElementById('recentViewAll');
     if (recentViewAll) {
       recentViewAll.href = `/NewProjectMecca/public/complaints/history/complaints-history.html?hname=${encodeURIComponent(hospitalName)}`;
@@ -108,18 +135,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       return diffDays > 3;
     });
     if (overdue.length) {
-      overdueList.innerHTML = overdue.map(r => `
+      overdueList.innerHTML = overdue.map(r => {
+        const days = Math.floor((now - new Date(r.date.replace(' ','T'))) / (1000*60*60*24));
+        const priorityText = r.priority === 'red' 
+          ? t('priority-critical-short')
+          : r.priority === 'orange' 
+          ? t('priority-medium-short')
+          : t('priority-low-short');
+        
+        return `
         <li class="report-item">
           <div class="report-left">
             <div class="id">#${r.id}</div>
             <div class="type">${r.type}</div>
           </div>
           <div class="report-right">
-            <span class="badge">مفتوح منذ ${Math.floor((now - new Date(r.date.replace(' ','T'))) / (1000*60*60*24))} يوم</span>
-            <span class="${chip(r.priority)}">${r.priority==='red'?'🔴 حرجة':r.priority==='orange'?'🟠 متوسطة':'🟡 منخفضة'}</span>
+            <span class="badge">${t('open-since-days', { days })}</span>
+            <span class="${chip(r.priority)}">${priorityText}</span>
           </div>
         </li>
-      `).join('');
+      `;
+      }).join('');
       overdueBlock.classList.remove('hidden');
     } else {
       overdueBlock.classList.add('hidden');
@@ -132,7 +168,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   (h.recent || []).forEach(r => {
     const div = document.createElement('div');
     div.className = 'report-item cursor-pointer hover:bg-gray-50 transition-colors';
-    const patientBadge = r.isPatientRelated ? `<span class="badge" title="يمس المريض">PATIENT</span>` : '';
+    const patientBadge = r.isPatientRelated 
+      ? `<span class="badge" title="${lang === 'en' ? 'Patient related' : 'يمس المريض'}">${t('patient-badge')}</span>` 
+      : '';
+    
+    const priorityText = r.priority === 'red' 
+      ? t('priority-critical')
+      : r.priority === 'orange' 
+      ? t('priority-medium')
+      : t('priority-low');
+    
     div.innerHTML = `
       <div class="report-left">
         <div class="id">#${r.ticket || r.id}</div>
@@ -141,7 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="report-right">
         ${patientBadge}
         <span class="${chip(r.priority)}">
-          ${r.priority === 'red' ? '🔴 أولوية حرجة' : r.priority === 'orange' ? '🟠 أولوية متوسطة' : '🟡 طلب/منخفضة'}
+          ${priorityText}
         </span>
         <div class="date">${r.date}</div>
       </div>
@@ -157,13 +202,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // المخطط الشهري
+  const monthNamesAr = ['أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر', 'يناير'];
+  const monthNamesEn = ['August', 'September', 'October', 'November', 'December', 'January'];
+  const monthLabels = lang === 'en' ? monthNamesEn : monthNamesAr;
+  
   const ctx = document.getElementById('hospitalChart').getContext('2d');
   hospitalChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر', 'يناير'],
+      labels: monthLabels,
       datasets: [{
-        label: 'البلاغات الشهرية',
+        label: t('chart-monthly-label'),
         data: h.monthly || [0, 0, 0, 0, 0, 0],
         backgroundColor: '#004A9F',
         borderRadius: 4
@@ -186,6 +235,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const applyBtn = $('#applyFiltersBtn');
 
   function renderRecentFiltered() {
+    const currentLang = localStorage.getItem("siteLanguage") || "ar";
+    const t = window.hospitalI18n?.t || ((key) => key);
+    
     const pri = fPriority?.value || '';
     const list = (currentHospital.recent || []).filter(r => {
       const okPri = !pri || r.priority === pri;
@@ -195,7 +247,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.forEach(r => {
       const div = document.createElement('div');
       div.className = 'report-item cursor-pointer hover:bg-gray-50 transition-colors';
-      const patientBadge = r.isPatientRelated ? `<span class="badge" title="يمس المريض">PATIENT</span>` : '';
+      const patientBadge = r.isPatientRelated 
+        ? `<span class="badge" title="${currentLang === 'en' ? 'Patient related' : 'يمس المريض'}">${t('patient-badge')}</span>` 
+        : '';
+      
+      const priorityText = r.priority === 'red' 
+        ? t('priority-critical')
+        : r.priority === 'orange' 
+        ? t('priority-medium')
+        : t('priority-low');
+      
       div.innerHTML = `
         <div class="report-left">
           <div class="id">#${r.ticket || r.id}</div>
@@ -204,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="report-right">
           ${patientBadge}
           <span class="${chip(r.priority)}">
-            ${r.priority === 'red' ? '🔴 أولوية حرجة' : r.priority === 'orange' ? '🟠 أولوية متوسطة' : '🟡 طلب/منخفضة'}
+            ${priorityText}
           </span>
           <div class="date">${r.date}</div>
         </div>
@@ -222,19 +283,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     applyBtn?.addEventListener('click', renderRecentFiltered);
 
+    // الاستماع لتغييرات اللغة
+    if (window.hospitalI18n) {
+      window.hospitalI18n.onChange((newLang) => {
+        // تحديث dir و lang
+        document.documentElement.setAttribute("lang", newLang);
+        document.documentElement.setAttribute("dir", newLang === "ar" ? "rtl" : "ltr");
+        
+        // إعادة تحميل الصفحة لإعادة عرض البيانات مع الترجمة الجديدة
+        location.reload();
+      });
+    }
+
   } catch (error) {
     console.error('خطأ في تحميل صفحة المستشفى:', error);
     
     // عرض رسالة خطأ للمستخدم
+    const t = window.hospitalI18n?.t || ((key) => key);
+    
     const mainContent = document.querySelector('main');
     if (mainContent) {
       mainContent.innerHTML = `
         <div class="text-center py-12">
-          <div class="text-red-600 text-xl mb-4">⚠️ تعذر تحميل بيانات المستشفى</div>
+          <div class="text-red-600 text-xl mb-4">⚠️ ${t('error-load-failed')}</div>
           <div class="text-gray-600 mb-4">${error.message}</div>
           <button onclick="location.reload()" 
                   class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            إعادة المحاولة
+            ${t('error-retry')}
           </button>
         </div>
       `;

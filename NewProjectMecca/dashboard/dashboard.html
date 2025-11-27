@@ -803,6 +803,10 @@
     };
 
     function applyDashboardTranslation(lang) {
+      // حفظ اللغة في window.currentLanguage
+      window.currentLanguage = lang;
+      localStorage.setItem('siteLanguage', lang);
+      
       const dict = dashboardTranslations[lang];
       if (!dict) return;
 
@@ -827,14 +831,18 @@
     }
 
     (function initDashboardTranslation() {
-      const saved = localStorage.getItem('dashboardLanguage') || 'ar';
+      // قراءة اللغة من localStorage الموحد
+      const saved = localStorage.getItem('siteLanguage') || 'ar';
+      window.currentLanguage = saved;
+      document.documentElement.setAttribute('lang', saved);
+      document.documentElement.setAttribute('dir', (saved === 'ar') ? 'rtl' : 'ltr');
+      
       applyDashboardTranslation(saved);
 
       const toggleBtn = document.getElementById('langToggle') || document.getElementById('languageToggle');
       if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
-          const nextLang = (localStorage.getItem('dashboardLanguage') || 'ar') === 'ar' ? 'en' : 'ar';
-          localStorage.setItem('dashboardLanguage', nextLang);
+          const nextLang = (window.currentLanguage === 'ar') ? 'en' : 'ar';
           applyDashboardTranslation(nextLang);
 
           // إعادة رسم الرسوم البيانية بعد إكمال تحديث DOM واتجاه الصفحة

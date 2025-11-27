@@ -851,7 +851,8 @@ router.get('/open-reports', async (req, res) => {
             c.StatusCode,
             c.CreatedAt,
             c.UpdatedAt,
-            ct.TypeName,
+            ct.TypeName AS TypeNameAr,
+            ct.TypeNameEn,
             ct.TypeCode,
             d.NameAr AS DepartmentName
           FROM complaints c
@@ -869,11 +870,14 @@ router.get('/open-reports', async (req, res) => {
           reports.forEach(report => {
             openReports.push({
               ...report,
-              HospitalName: hospital.HospitalName
+              HospitalNameAr: hospital.HospitalName,
+              HospitalNameEn: hospital.HospitalNameEn || hospital.HospitalName,
+              TypeNameAr: report.TypeNameAr || 'غير محدد',
+              TypeNameEn: report.TypeNameEn || report.TypeNameAr || 'Not specified'
             });
             
-            // عد أنواع البلاغات
-            const typeName = report.TypeName || 'غير محدد';
+            // عد أنواع البلاغات (استخدم العربي للعد)
+            const typeName = report.TypeNameAr || 'غير محدد';
             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
           });
         }
@@ -943,7 +947,8 @@ router.get('/closed-reports', async (req, res) => {
             c.CreatedAt,
             c.UpdatedAt,
             COALESCE(c.UpdatedAt, c.CreatedAt) AS ClosedAt,
-            ct.TypeName,
+            ct.TypeName AS TypeNameAr,
+            ct.TypeNameEn,
             ct.TypeCode,
             d.NameAr AS DepartmentName
           FROM complaints c
@@ -961,11 +966,14 @@ router.get('/closed-reports', async (req, res) => {
           reports.forEach(report => {
             closedReports.push({
               ...report,
-              HospitalName: hospital.HospitalName
+              HospitalNameAr: hospital.HospitalName,
+              HospitalNameEn: hospital.HospitalNameEn || hospital.HospitalName,
+              TypeNameAr: report.TypeNameAr || 'غير محدد',
+              TypeNameEn: report.TypeNameEn || report.TypeNameAr || 'Not specified'
             });
             
-            // عد أنواع البلاغات
-            const typeName = report.TypeName || 'غير محدد';
+            // عد أنواع البلاغات (استخدم العربي للعد)
+            const typeName = report.TypeNameAr || 'غير محدد';
             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
           });
         }
@@ -1034,7 +1042,8 @@ router.get('/all-reports', async (req, res) => {
             c.StatusCode,
             c.CreatedAt,
             c.UpdatedAt,
-            ct.TypeName,
+            ct.TypeName AS TypeNameAr,
+            ct.TypeNameEn AS TypeNameEn,
             ct.TypeCode,
             d.NameAr AS DepartmentName
           FROM complaints c
@@ -1051,11 +1060,16 @@ router.get('/all-reports', async (req, res) => {
           reports.forEach(report => {
             allReports.push({
               ...report,
-              HospitalName: hospital.HospitalName
+              HospitalName: hospital.HospitalName,
+              HospitalNameAr: hospital.HospitalName,
+              HospitalNameEn: hospital.HospitalNameEn || hospital.HospitalName,
+              TypeName: report.TypeNameAr || report.TypeNameEn || 'غير محدد',
+              TypeNameAr: report.TypeNameAr || 'غير محدد',
+              TypeNameEn: report.TypeNameEn || report.TypeNameAr || 'Not specified'
             });
             
             // عد أنواع البلاغات
-            const typeName = report.TypeName || 'غير محدد';
+            const typeName = report.TypeNameAr || report.TypeNameEn || 'غير محدد';
             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
           });
         }
@@ -1265,7 +1279,8 @@ router.get('/monthly-trends',
     
     // إنشاء مصفوفة للأشهر الـ 6 الماضية
     const last6Months = [];
-    const monthNames = ['يناير', 'ديسمبر', 'نوفمبر', 'أكتوبر', 'سبتمبر', 'أغسطس'];
+    const monthNamesAr = ['يناير', 'ديسمبر', 'نوفمبر', 'أكتوبر', 'سبتمبر', 'أغسطس'];
+    const monthNamesEn = ['January', 'December', 'November', 'October', 'September', 'August'];
     
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
@@ -1273,17 +1288,22 @@ router.get('/monthly-trends',
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-      const monthName = monthNames[5 - i];
+      const monthNameAr = monthNamesAr[5 - i];
+      const monthNameEn = monthNamesEn[5 - i];
       
       last6Months.push({
         monthKey,
-        monthName,
+        monthName: monthNameAr,
+        monthNameAr: monthNameAr,
+        monthNameEn: monthNameEn,
         year,
         month
       });
       
       monthlyData[monthKey] = {
-        monthName,
+        monthName: monthNameAr,
+        monthNameAr: monthNameAr,
+        monthNameEn: monthNameEn,
         newReports: 0,
         closedReports: 0
       };
@@ -1339,7 +1359,9 @@ router.get('/monthly-trends',
     // تحويل البيانات إلى الصيغة المطلوبة للرسم البياني
     const result = last6Months.map(month => ({
       monthKey: month.monthKey,
-      monthName: month.monthName,
+      monthName: month.monthNameAr,
+      monthNameAr: month.monthNameAr,
+      monthNameEn: month.monthNameEn,
       newReports: monthlyData[month.monthKey]?.newReports || 0,
       closedReports: monthlyData[month.monthKey]?.closedReports || 0
     }));
@@ -1737,7 +1759,7 @@ router.get('/reports-by-type',
     if (userRoleId === 1) {
       console.log('✅ مدير تجمع - جلب بيانات جميع المستشفيات');
       const [allHospitals] = await pool.query(`
-        SELECT HospitalID, NameAr AS HospitalName
+        SELECT HospitalID, NameAr AS HospitalNameAr, NameEn AS HospitalNameEn
         FROM hospitals
         WHERE IsActive = 1
         ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1790,21 +1812,25 @@ router.get('/reports-by-type',
         
         results.push({
           hospitalId: hospital.HospitalID,
-          hospitalName: hospital.HospitalName,
+          hospitalName: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameAr: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameEn: hospital.HospitalNameEn || hospital.HospitalNameAr || hospital.HospitalName,
           totalReports: Number(hospitalStats.totalReports),
           closedReports: Number(hospitalStats.closedReports),
           openReports: Number(hospitalStats.openReports),
           criticalReports: Number(hospitalStats.criticalReports)
         });
         
-        console.log(`📊 مستشفى ${hospital.HospitalName}: ${hospitalStats.totalReports} إجمالي، ${hospitalStats.openReports} مفتوح، ${hospitalStats.closedReports} مغلق، ${hospitalStats.criticalReports} حرج`);
+        console.log(`📊 مستشفى ${hospital.HospitalNameAr || hospital.HospitalName}: ${hospitalStats.totalReports} إجمالي، ${hospitalStats.openReports} مفتوح، ${hospitalStats.closedReports} مغلق، ${hospitalStats.criticalReports} حرج`);
         
       } catch (error) {
-        console.error(`❌ خطأ في جلب بيانات مستشفى ${hospital.HospitalName}:`, error.message);
+        console.error(`❌ خطأ في جلب بيانات مستشفى ${hospital.HospitalNameAr || hospital.HospitalName}:`, error.message);
         // إضافة بيانات فارغة في حالة الخطأ
         results.push({
           hospitalId: hospital.HospitalID,
-          hospitalName: hospital.HospitalName,
+          hospitalName: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameAr: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameEn: hospital.HospitalNameEn || hospital.HospitalNameAr || hospital.HospitalName,
           totalReports: 0,
           closedReports: 0,
           openReports: 0,
@@ -1839,7 +1865,7 @@ router.get('/critical-ratio',
     if (userRoleId === 1) {
       console.log('✅ مدير تجمع - جلب بيانات جميع المستشفيات');
       const [allHospitals] = await pool.query(`
-        SELECT HospitalID, NameAr AS HospitalName
+        SELECT HospitalID, NameAr AS HospitalNameAr, NameEn AS HospitalNameEn
         FROM hospitals
         WHERE IsActive = 1
         ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
@@ -1893,8 +1919,9 @@ router.get('/critical-ratio',
         
         results.push({
           hospitalId: hospital.HospitalID,
-          hospitalName: hospital.HospitalName,
-          hospitalNameEn: hospital.HospitalNameEn,
+          hospitalName: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameAr: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameEn: hospital.HospitalNameEn || hospital.HospitalNameAr || hospital.HospitalName,
           totalReports: totalReports,
           criticalReports: criticalReports,
           criticalRatio: criticalRatio
@@ -1907,7 +1934,9 @@ router.get('/critical-ratio',
         // إضافة بيانات فارغة في حالة الخطأ
         results.push({
           hospitalId: hospital.HospitalID,
-          hospitalName: hospital.HospitalName,
+          hospitalName: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameAr: hospital.HospitalNameAr || hospital.HospitalName,
+          hospitalNameEn: hospital.HospitalNameEn || hospital.HospitalNameAr || hospital.HospitalName,
           totalReports: 0,
           criticalReports: 0,
           criticalRatio: 0
@@ -1982,7 +2011,8 @@ router.get('/critical-reports',
           c.HospitalID,
           ${selectHospitalName},
           d.NameAr AS DepartmentName,
-          t.TypeName,
+          t.TypeName AS TypeNameAr,
+          t.TypeNameEn,
           c.PriorityCode,
           c.StatusCode,
           c.CreatedAt
@@ -1997,10 +2027,22 @@ router.get('/critical-reports',
       const [rows] = await pool.query(sql);
 
       // إن كنا على قاعدة مستشفى والاسم مفقود، نحط الاسم الممرّر (إن وُجد)
-      if (hospitalName) rows.forEach(r => {
-        r.HospitalName = hospitalName;
-        r.HospitalNameEn = hospitalNameEn;
-      });
+      if (hospitalName) {
+        rows.forEach(r => {
+          r.HospitalNameAr = hospitalName;
+          r.HospitalNameEn = hospitalNameEn || hospitalName;
+          r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+          r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+        });
+      } else {
+        // حتى لو لم نمرر الاسم، نضيف الحقول
+        rows.forEach(r => {
+          r.HospitalNameAr = r.HospitalName || null;
+          r.HospitalNameEn = r.HospitalNameEn || r.HospitalName || null;
+          r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+          r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+        });
+      }
       return rows;
     }
 
@@ -2017,8 +2059,10 @@ router.get('/critical-reports',
           const rows = await fetchOneHospital(h.HospitalID, h.NameAr, h.NameEn);
           rows.forEach(r => {
             r.HospitalID = h.HospitalID;
-            r.HospitalName = r.HospitalName || h.NameAr;
-            r.HospitalNameEn = r.HospitalNameEn || h.NameEn;
+            r.HospitalNameAr = r.HospitalNameAr || r.HospitalName || h.NameAr;
+            r.HospitalNameEn = r.HospitalNameEn || h.NameEn || h.NameAr;
+            r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+            r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
             all.push(r);
           });
         } catch (e) {
@@ -2029,7 +2073,7 @@ router.get('/critical-reports',
       // ملخّص
       const affectedHospitals = new Set(all.map(r => r.HospitalID)).size;
       const typeCounts = all.reduce((acc, r) => {
-        const k = r.TypeName || 'غير محدد';
+        const k = r.TypeNameAr || r.TypeName || 'غير محدد';
         acc[k] = (acc[k] || 0) + 1;
         return acc;
       }, {});
@@ -2054,9 +2098,17 @@ router.get('/critical-reports',
 
     const rows = await fetchOneHospital(Number(hospitalId));
 
+    // إضافة الأسماء للصفوف إذا لم تكن موجودة
+    rows.forEach(r => {
+      r.HospitalNameAr = r.HospitalNameAr || r.HospitalName || null;
+      r.HospitalNameEn = r.HospitalNameEn || r.HospitalName || null;
+      r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+      r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+    });
+    
     const affectedHospitals = new Set(rows.map(r => r.HospitalID)).size;
     const typeCounts = rows.reduce((acc, r) => {
-      const k = r.TypeName || 'غير محدد';
+      const k = r.TypeNameAr || r.TypeName || 'غير محدد';
       acc[k] = (acc[k] || 0) + 1;
       return acc;
     }, {});

@@ -33,9 +33,10 @@
         <img src="../../public/assets/img/logo3.png" class="h-16" />
 
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="../../index/index.html" class="text-white hover:text-blue-200">الرئيسية</a>
-          <a href="../dashboard.html" class="text-white hover:text-blue-200">لوحة البلاغات</a>
-          <span class="text-white font-bold border-b border-white pb-1">البلاغات الحرجة</span>
+          <a href="../../index/index.html" class="text-white hover:text-blue-200" data-i18n-key="nav-home">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200" data-i18n-key="nav-dashboard">لوحة البلاغات</a>
+          <span class="text-white font-bold border-b border-white pb-1" data-i18n-key="nav-urgent">البلاغات الحرجة</span>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center gap-2" data-i18n-key="languageToggle">🌐 العربية</button>
         </nav>
       </div>
     </div>
@@ -46,9 +47,9 @@
     <!-- 🔴 عنوان -->
     <section class="pt-4 pb-6 mesh-gradient">
       <div class="container mx-auto px-4 text-center">
-        <h2 class="text-3xl font-bold mb-3" style="color:#002B5B">البلاغات الحرجة</h2>
+        <h2 class="text-3xl font-bold mb-3" style="color:#002B5B" data-i18n-key="page-title">البلاغات الحرجة</h2>
         <div class="w-24 h-1 mx-auto mb-4" style="background:linear-gradient(90deg,#e11d48,#b91c1c)"></div>
-        <p class="text-xl text-gray-600">تحليل البلاغات الحرجة على مستوى التجمع الصحي</p>
+        <p class="text-xl text-gray-600" data-i18n-key="page-subtitle">تحليل البلاغات الحرجة على مستوى التجمع الصحي</p>
       </div>
     </section>
 
@@ -62,7 +63,7 @@
               <span class="text-white text-xl">🔴</span>
             </div>
             <div>
-              <div class="text-xs text-gray-500">إجمالي البلاغات الحرجة</div>
+              <div class="text-xs text-gray-500" data-i18n-key="kpi-total-label">إجمالي البلاغات الحرجة</div>
               <div id="kpi-total" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </div>
@@ -72,8 +73,8 @@
               <span class="text-white text-xl">⏱</span>
             </div>
             <div>
-              <div class="text-xs text-gray-500">متوسط زمن الإغلاق</div>
-              <div id="kpi-time" class="text-lg font-bold" style="color:#002B5B">0 ساعة</div>
+              <div class="text-xs text-gray-500" data-i18n-key="kpi-time-label">متوسط زمن الإغلاق</div>
+              <div id="kpi-time" class="text-lg font-bold" style="color:#002B5B">0 <span data-i18n-key="hours">ساعة</span></div>
             </div>
           </div>
 
@@ -82,7 +83,7 @@
               <span class="text-white text-xl">✔</span>
             </div>
             <div>
-              <div class="text-xs text-gray-500">معدل إغلاق البلاغات</div>
+              <div class="text-xs text-gray-500" data-i18n-key="kpi-closure-label">معدل إغلاق البلاغات</div>
               <div id="kpi-closure" class="text-lg font-bold" style="color:#002B5B">0%</div>
             </div>
           </div>
@@ -97,10 +98,10 @@
         <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h3 class="text-2xl font-semibold" style="color:#002B5B">البلاغات حسب المستشفى</h3>
-              <p class="text-sm text-gray-500">مقارنة البلاغات الحرجة لكل مستشفى داخل التجمع</p>
+              <h3 class="text-2xl font-semibold" style="color:#002B5B" data-i18n-key="chart-hospitals-title">البلاغات حسب المستشفى</h3>
+              <p class="text-sm text-gray-500" data-i18n-key="chart-hospitals-subtitle">مقارنة البلاغات الحرجة لكل مستشفى داخل التجمع</p>
             </div>
-            <span class="text-sm font-medium px-3 py-1 rounded-full bg-red-100 text-red-600">Critical</span>
+            <span class="text-sm font-medium px-3 py-1 rounded-full bg-red-100 text-red-600" data-i18n-key="critical-badge">Critical</span>
           </div>
 
           <div class="relative max-w-4xl mx-auto" dir="ltr">
@@ -115,10 +116,10 @@
     <section class="py-6">
       <div class="container mx-auto px-4">
         <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-mistreatment-time-title">
             بلاغات سوء التعامل ومتوسط زمن الإغلاق لكل مستشفى
           </h3>
-          <p class="text-sm text-gray-500 mb-4">
+          <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-mistreatment-time-subtitle">
             مقارنة بين عدد بلاغات سوء التعامل ومتوسط زمن إغلاقها بالساعات
           </p>
 
@@ -134,10 +135,10 @@
       <div class="container mx-auto px-4">
         <div class="grid gap-6 lg:grid-cols-2">
           <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-mistreatment-medicine-title">
               مقارنة سوء التعامل وبلاغات الأدوية حسب المستشفى
             </h3>
-            <p class="text-sm text-gray-500 mb-4">
+            <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-mistreatment-medicine-subtitle">
               يوضح عدد بلاغات سوء التعامل مقابل بلاغات الأدوية في كل مستشفى
             </p>
             <div dir="ltr">
@@ -146,10 +147,10 @@
           </div>
 
           <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-top-mistreatment-title">
               أعلى المستشفيات في بلاغات سوء التعامل
             </h3>
-            <p class="text-sm text-gray-500 mb-4">
+            <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-top-mistreatment-subtitle">
               ترتيب المستشفيات حسب عدد بلاغات سوء التعامل
             </p>
             <div dir="ltr">
@@ -165,10 +166,10 @@
       <div class="container mx-auto px-4">
         <div class="grid gap-6 lg:grid-cols-2">
           <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-top-medicine-title">
               أعلى المستشفيات في بلاغات الأدوية
             </h3>
-            <p class="text-sm text-gray-500 mb-4">
+            <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-top-medicine-subtitle">
               ترتيب المستشفيات حسب عدد بلاغات الأدوية
             </p>
             <div dir="ltr">
@@ -177,10 +178,10 @@
           </div>
 
           <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+            <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-open-closed-title">
               نسبة البلاغات المغلقة مقابل المفتوحة
             </h3>
-            <p class="text-sm text-gray-500 mb-4">
+            <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-open-closed-subtitle">
               مقارنة بين البلاغات الحرجة المغلقة والبلاغات الحرجة المفتوحة في جميع المستشفيات
             </p>
             <div class="relative w-full" dir="ltr">
@@ -195,20 +196,20 @@
     <section class="py-6">
       <div class="container mx-auto px-4">
         <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
-          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-top-employees-title">
             أكثر الموظفين تكرارًا في بلاغات سوء التعامل
           </h3>
-          <p class="text-sm text-gray-500 mb-4">
+          <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-top-employees-subtitle">
             يعرض الموظفين الذين وردت عليهم أكبر عدد من بلاغات سوء التعامل
           </p>
           <div class="relative w-full h-[320px]" data-top-employees-wrapper dir="ltr">
             <canvas id="chartTopEmployeesMistreatment" class="h-full w-full"></canvas>
             <div id="topEmployeesMistreatmentEmpty" class="hidden absolute inset-0 flex flex-col items-center justify-center text-gray-400 text-sm">
-              <span class="text-base font-medium mb-1">لا توجد بيانات لبلاغات سوء التعامل</span>
-              <span class="text-xs text-gray-500">جرّب تغيير التصفية أو تأكد من توافر البلاغات.</span>
+              <span class="text-base font-medium mb-1" data-i18n-key="no-data-mistreatment">لا توجد بيانات لبلاغات سوء التعامل</span>
+              <span class="text-xs text-gray-500" data-i18n-key="no-data-hint">جرّب تغيير التصفية أو تأكد من توافر البلاغات.</span>
             </div>
           </div>
-          <p class="text-xs text-gray-400 mt-3">
+          <p class="text-xs text-gray-400 mt-3" data-i18n-key="chart-top-employees-note">
             يتم ترتيب القائمة تنازليًا حسب عدد بلاغات سوء التعامل لكل موظف.
           </p>
         </div>
@@ -226,11 +227,11 @@
       <div class="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full" dir="rtl">
         <div class="bg-white px-6 pt-6 pb-4">
           <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
-            <h3 class="text-2xl font-bold" id="employee-modal-title" style="color:#002B5B">
+            <h3 class="text-2xl font-bold" id="employee-modal-title" style="color:#002B5B" data-i18n-key="modal-employee-title">
               تفاصيل الموظف
             </h3>
             <button onclick="closeEmployeeDetailsModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
-              <span class="sr-only">إغلاق</span>
+              <span class="sr-only" data-i18n-key="close">إغلاق</span>
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -257,10 +258,10 @@
         <div class="bg-white px-6 pt-6 pb-4">
           <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
             <h3 class="text-2xl font-bold" id="modal-title" style="color:#002B5B">
-              بلاغات سوء التعامل - <span id="modal-hospital-name" class="text-gray-700"></span>
+              <span data-i18n-key="modal-complaints-title">بلاغات سوء التعامل</span> - <span id="modal-hospital-name" class="text-gray-700"></span>
             </h3>
             <button onclick="closeComplaintsModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
-              <span class="sr-only">إغلاق</span>
+              <span class="sr-only" data-i18n-key="close">إغلاق</span>
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -270,7 +271,7 @@
           <!-- Loading state -->
           <div id="complaintsModalLoading" class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600"></div>
-            <p class="mt-4 text-gray-600">جاري تحميل البلاغات...</p>
+            <p class="mt-4 text-gray-600" data-i18n-key="loading-complaints">جاري تحميل البلاغات...</p>
           </div>
 
           <!-- Empty state -->
@@ -278,7 +279,7 @@
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p class="mt-4 text-gray-600">لا توجد بلاغات لهذا المستشفى</p>
+            <p class="mt-4 text-gray-600" data-i18n-key="no-complaints-hospital">لا توجد بلاغات لهذا المستشفى</p>
           </div>
 
           <!-- Complaints list -->
@@ -289,6 +290,157 @@
       </div>
     </div>
   </div>
+
+  <!-- نظام الترجمة -->
+  <script>
+    (function() {
+      const translations = {
+        ar: {
+          // الهيدر
+          'nav-home': 'الرئيسية',
+          'nav-dashboard': 'لوحة البلاغات',
+          'nav-urgent': 'البلاغات الحرجة',
+          'languageToggle': '🌐 العربية',
+          
+          // العنوان الرئيسي
+          'page-title': 'البلاغات الحرجة',
+          'page-subtitle': 'تحليل البلاغات الحرجة على مستوى التجمع الصحي',
+          
+          // KPIs
+          'kpi-total-label': 'إجمالي البلاغات الحرجة',
+          'kpi-time-label': 'متوسط زمن الإغلاق',
+          'kpi-closure-label': 'معدل إغلاق البلاغات',
+          'hours': 'ساعة',
+          
+          // الرسوم البيانية
+          'chart-hospitals-title': 'البلاغات حسب المستشفى',
+          'chart-hospitals-subtitle': 'مقارنة البلاغات الحرجة لكل مستشفى داخل التجمع',
+          'critical-badge': 'Critical',
+          
+          'chart-mistreatment-time-title': 'بلاغات سوء التعامل ومتوسط زمن الإغلاق لكل مستشفى',
+          'chart-mistreatment-time-subtitle': 'مقارنة بين عدد بلاغات سوء التعامل ومتوسط زمن إغلاقها بالساعات',
+          
+          'chart-mistreatment-medicine-title': 'مقارنة سوء التعامل وبلاغات الأدوية حسب المستشفى',
+          'chart-mistreatment-medicine-subtitle': 'يوضح عدد بلاغات سوء التعامل مقابل بلاغات الأدوية في كل مستشفى',
+          
+          'chart-top-mistreatment-title': 'أعلى المستشفيات في بلاغات سوء التعامل',
+          'chart-top-mistreatment-subtitle': 'ترتيب المستشفيات حسب عدد بلاغات سوء التعامل',
+          
+          'chart-top-medicine-title': 'أعلى المستشفيات في بلاغات الأدوية',
+          'chart-top-medicine-subtitle': 'ترتيب المستشفيات حسب عدد بلاغات الأدوية',
+          
+          'chart-open-closed-title': 'نسبة البلاغات المغلقة مقابل المفتوحة',
+          'chart-open-closed-subtitle': 'مقارنة بين البلاغات الحرجة المغلقة والبلاغات الحرجة المفتوحة في جميع المستشفيات',
+          
+          'chart-top-employees-title': 'أكثر الموظفين تكرارًا في بلاغات سوء التعامل',
+          'chart-top-employees-subtitle': 'يعرض الموظفين الذين وردت عليهم أكبر عدد من بلاغات سوء التعامل',
+          'chart-top-employees-note': 'يتم ترتيب القائمة تنازليًا حسب عدد بلاغات سوء التعامل لكل موظف.',
+          'no-data-mistreatment': 'لا توجد بيانات لبلاغات سوء التعامل',
+          'no-data-hint': 'جرّب تغيير التصفية أو تأكد من توافر البلاغات.',
+          
+          // المودالات
+          'modal-employee-title': 'تفاصيل الموظف',
+          'modal-complaints-title': 'بلاغات سوء التعامل',
+          'loading-complaints': 'جاري تحميل البلاغات...',
+          'no-complaints-hospital': 'لا توجد بلاغات لهذا المستشفى',
+          'close': 'إغلاق'
+        },
+        en: {
+          // الهيدر
+          'nav-home': 'Home',
+          'nav-dashboard': 'Complaints Dashboard',
+          'nav-urgent': 'Urgent Complaints',
+          'languageToggle': '🌐 English',
+          
+          // العنوان الرئيسي
+          'page-title': 'Urgent Complaints',
+          'page-subtitle': 'Analysis of urgent complaints at the health cluster level',
+          
+          // KPIs
+          'kpi-total-label': 'Total Urgent Complaints',
+          'kpi-time-label': 'Average Closure Time',
+          'kpi-closure-label': 'Complaint Closure Rate',
+          'hours': 'hours',
+          
+          // الرسوم البيانية
+          'chart-hospitals-title': 'Complaints by Hospital',
+          'chart-hospitals-subtitle': 'Comparison of urgent complaints for each hospital in the cluster',
+          'critical-badge': 'Critical',
+          
+          'chart-mistreatment-time-title': 'Mistreatment Complaints and Average Closure Time per Hospital',
+          'chart-mistreatment-time-subtitle': 'Comparison between number of mistreatment complaints and average closure time in hours',
+          
+          'chart-mistreatment-medicine-title': 'Comparison of Mistreatment and Medicine Complaints by Hospital',
+          'chart-mistreatment-medicine-subtitle': 'Shows number of mistreatment complaints versus medicine complaints in each hospital',
+          
+          'chart-top-mistreatment-title': 'Top Hospitals in Mistreatment Complaints',
+          'chart-top-mistreatment-subtitle': 'Ranking of hospitals by number of mistreatment complaints',
+          
+          'chart-top-medicine-title': 'Top Hospitals in Medicine Complaints',
+          'chart-top-medicine-subtitle': 'Ranking of hospitals by number of medicine complaints',
+          
+          'chart-open-closed-title': 'Closed vs Open Complaints Ratio',
+          'chart-open-closed-subtitle': 'Comparison between closed urgent complaints and open urgent complaints across all hospitals',
+          
+          'chart-top-employees-title': 'Most Repeated Employees in Mistreatment Complaints',
+          'chart-top-employees-subtitle': 'Shows employees who received the highest number of mistreatment complaints',
+          'chart-top-employees-note': 'List is sorted in descending order by number of mistreatment complaints per employee.',
+          'no-data-mistreatment': 'No data for mistreatment complaints',
+          'no-data-hint': 'Try changing the filter or ensure complaints are available.',
+          
+          // المودالات
+          'modal-employee-title': 'Employee Details',
+          'modal-complaints-title': 'Mistreatment Complaints',
+          'loading-complaints': 'Loading complaints...',
+          'no-complaints-hospital': 'No complaints for this hospital',
+          'close': 'Close'
+        }
+      };
+
+      let currentLanguage = 'ar';
+
+      function applyTranslation(lang) {
+        window.currentLanguage = lang;
+        currentLanguage = lang;
+        localStorage.setItem('siteLanguage', lang);
+        
+        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.setAttribute('dir', (lang === 'ar') ? 'rtl' : 'ltr');
+        
+        const elements = translations[lang];
+        if (!elements) return;
+
+        // تطبيق الترجمة على جميع العناصر
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+          const key = el.getAttribute('data-i18n-key');
+          if (key && elements[key]) {
+            el.textContent = elements[key];
+          }
+        });
+
+        // تحديث عنوان الصفحة
+        if (elements['page-title']) {
+          document.title = elements['page-title'] + ' – ' + (lang === 'ar' ? 'لوحة التحكم' : 'Dashboard');
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const savedLanguage = localStorage.getItem('siteLanguage') || 'ar';
+        window.currentLanguage = savedLanguage;
+        document.documentElement.setAttribute('lang', savedLanguage);
+        document.documentElement.setAttribute('dir', (savedLanguage === 'ar') ? 'rtl' : 'ltr');
+        applyTranslation(savedLanguage);
+        
+        const languageToggle = document.getElementById('languageToggle');
+        if (languageToggle) {
+          languageToggle.addEventListener('click', function() {
+            const newLang = (window.currentLanguage === 'ar') ? 'en' : 'ar';
+            applyTranslation(newLang);
+          });
+        }
+      });
+    })();
+  </script>
 
   <script src="urgent-dashboard.js"></script>
 </body>

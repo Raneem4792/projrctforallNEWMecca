@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>لوحة مستشفى - نظام البلاغات</title>
+  <title data-i18n-key="page-title">لوحة مستشفى - نظام البلاغات</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
   <!-- Theme controller -->
@@ -31,14 +31,12 @@
         
         <!-- Navigation - قائمة التنقل -->
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="../../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
-          <a href="../dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
-          <a href="../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
-          <a href="../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
-          <a href="../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
-          <a href="#" class="text-white hover:text-blue-200 transition-colors flex items-center">
-            🌐 English
-          </a>
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-home">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-dashboard">لوحة التحكم</a>
+          <a href="../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-about">حول النظام</a>
+          <a href="../../index/help.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-help">المساعدة</a>
+          <a href="../../index/contact.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-contact">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center gap-2" data-i18n-key="languageToggle">🌐 العربية</button>
         </nav>
         
         <!-- Mobile menu button - زر القائمة للموبايل -->
@@ -55,7 +53,7 @@
     <!-- عنوان + شارات المستويات -->
     <div class="mb-8">
       <h1 id="hName" class="text-3xl md:text-4xl font-extrabold mt-4" style="color:#002B5B;">اسم المستشفى</h1>
-      <p id="hDesc" class="text-gray-600 mt-1">النوع - عدد الأسرة</p>
+      <p id="hDesc" class="text-gray-600 mt-1" data-i18n-key="hospital-type-beds">النوع - عدد الأسرة</p>
       <div class="mt-4 flex items-center gap-2">
         <span class="pill pill-red">🔴 <span id="cRed">0</span></span>
         <span class="pill pill-orange">🟠 <span id="cOrange">0</span></span>
@@ -66,60 +64,60 @@
     <!-- Critical Banner - تحت اسم المستشفى مباشرة -->
     <section id="criticalBanner" class="alert-critical hidden my-8">
       <div class="alert-dot"></div>
-      <div class="alert-text">لديك <b id="criticalCount">0</b> بلاغات حمراء تتطلب متابعة فورية.</div>
-      <a id="criticalViewAll" href="#" class="alert-link">عرض المزيد</a>
+      <div class="alert-text" data-i18n-key="critical-banner-text">لديك <b id="criticalCount">0</b> بلاغات حمراء تتطلب متابعة فورية.</div>
+      <a id="criticalViewAll" href="#" class="alert-link" data-i18n-key="view-more">عرض المزيد</a>
     </section>
 
     <!-- === Filters Bar (Hospital scope) === -->
     <section id="filtersBar" class="mb-6 flex flex-wrap gap-3 items-center">
       <select id="fPriority" class="border rounded-lg px-3 py-2 bg-white">
-        <option value="">الأولوية: الكل</option>
-        <option value="red">حرجة</option>
-        <option value="orange">متوسطة</option>
-        <option value="yellow">منخفضة</option>
+        <option value="" data-i18n-key="filter-priority-all">الأولوية: الكل</option>
+        <option value="red" data-i18n-key="filter-priority-critical">حرجة</option>
+        <option value="orange" data-i18n-key="filter-priority-medium">متوسطة</option>
+        <option value="yellow" data-i18n-key="filter-priority-low">منخفضة</option>
       </select>
-      <button id="applyFiltersBtn" class="px-4 py-2 rounded-lg text-white" style="background:#004A9F">تطبيق</button>
+      <button id="applyFiltersBtn" class="px-4 py-2 rounded-lg text-white" style="background:#004A9F" data-i18n-key="apply-filters">تطبيق</button>
     </section>
 
     <!-- KPIs -->
     <section class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-10">
       <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
         <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiTotal">0</div>
-        <div class="text-gray-600 font-medium mt-1">إجمالي البلاغات</div>
+        <div class="text-gray-600 font-medium mt-1" data-i18n-key="kpi-total">إجمالي البلاغات</div>
       </div>
       <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
         <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiOpen">0</div>
-        <div class="text-gray-600 font-medium mt-1">مفتوحة</div>
+        <div class="text-gray-600 font-medium mt-1" data-i18n-key="kpi-open">مفتوحة</div>
       </div>
       <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
         <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiClosed">0</div>
-        <div class="text-gray-600 font-medium mt-1">مغلقة</div>
+        <div class="text-gray-600 font-medium mt-1" data-i18n-key="kpi-closed">مغلقة</div>
       </div>
       <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
         <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiRate">0%</div>
-        <div class="text-gray-600 font-medium mt-1">معدل الحل</div>
+        <div class="text-gray-600 font-medium mt-1" data-i18n-key="kpi-solve-rate">معدل الحل</div>
       </div>
       <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
         <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiSLA">0%</div>
-        <div class="text-gray-600 font-medium mt-1">SLA (≤ 3 أيام)</div>
+        <div class="text-gray-600 font-medium mt-1" data-i18n-key="kpi-sla">SLA (≤ 3 أيام)</div>
       </div>
       <div class="card-hover bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-center">
         <div class="text-3xl font-bold" style="color:#002B5B;" id="kpiRepeated30d">0</div>
-        <div class="text-gray-600 font-medium mt-1">تكرارات 30 يوم</div>
+        <div class="text-gray-600 font-medium mt-1" data-i18n-key="kpi-repeated-30d">تكرارات 30 يوم</div>
       </div>
     </section>
 
     <!-- مخطط + أحدث البلاغات -->
     <section class="grid lg:grid-cols-2 gap-10">
       <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
-        <h3 class="text-2xl font-bold mb-4" style="color:#002B5B;">اتجاه البلاغات الشهرية</h3>
+        <h3 class="text-2xl font-bold mb-4" style="color:#002B5B;" data-i18n-key="chart-monthly-trends">اتجاه البلاغات الشهرية</h3>
         <div style="height:340px"><canvas id="hospitalChart"></canvas></div>
       </div>
 
       <div class="card-hover bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-2xl font-bold" style="color:#002B5B;">البلاغات الحديثة</h3>
-          <a id="recentViewAll" href="#" class="text-blue-700 hover:underline text-sm">عرض المزيد</a>
+          <h3 class="text-2xl font-bold" style="color:#002B5B;" data-i18n-key="recent-reports">البلاغات الحديثة</h3>
+          <a id="recentViewAll" href="#" class="text-blue-700 hover:underline text-sm" data-i18n-key="view-more">عرض المزيد</a>
         </div>
         <div id="recent" class="space-y-4"></div>
       </div>
@@ -128,10 +126,10 @@
 
     <!-- Overdue Block -->
     <section id="overdueBlock" class="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hidden">
-      <h3 class="text-2xl font-bold mb-6" style="color:#002B5B;">بلاغات متأخرة (> 3 أيام)</h3>
+      <h3 class="text-2xl font-bold mb-6" style="color:#002B5B;" data-i18n-key="overdue-reports">بلاغات متأخرة (> 3 أيام)</h3>
       <ul id="overdueList" class="space-y-3"></ul>
       <div class="mt-4">
-        <a id="overdueViewAll" href="#" class="text-blue-700 hover:underline">عرض الكل</a>
+        <a id="overdueViewAll" href="#" class="text-blue-700 hover:underline" data-i18n-key="view-all">عرض الكل</a>
       </div>
     </section>
   </main>
@@ -149,27 +147,27 @@
               </svg>
             </div>
             <div>
-              <div class="font-bold">تجمع مكة الصحي</div>
-              <div class="text-sm text-gray-300">نظام البلاغات</div>
+              <div class="font-bold" data-i18n-key="footer-org-name">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300" data-i18n-key="footer-system-name">نظام البلاغات</div>
             </div>
           </div>
-          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+          <p class="text-gray-300 text-sm" data-i18n-key="footer-description">منصة رسمية لتقديم ومتابعة البلاغات</p>
         </div>
 
         <!-- Column 2 - العمود الثاني -->
         <div>
-          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-links-title">روابط سريعة</h3>
           <ul class="space-y-2 text-sm">
-            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
-            <li><a href="../../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
-            <li><a href="../../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
-            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+            <li><a href="../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-home">الرئيسية</a></li>
+            <li><a href="../../public/complaints/submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-submit">تقديم بلاغ</a></li>
+            <li><a href="../../public/complaints/track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-track">متابعة بلاغ</a></li>
+            <li><a href="../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-faq">الأسئلة الشائعة</a></li>
           </ul>
         </div>
 
         <!-- Column 3 - العمود الثالث -->
         <div>
-          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-contact-title">معلومات التواصل</h3>
           <div class="space-y-2 text-sm text-gray-300">
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -190,18 +188,226 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <span>ساعات العمل: 24/7</span>
+              <span data-i18n-key="footer-hours">ساعات العمل: 24/7</span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
-        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+        <span data-i18n-key="footer-copy">© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
       </div>
     </div>
   </footer>
 
+  <script>
+    (function() {
+      const translations = {
+        ar: {
+          'nav-home': 'الرئيسية',
+          'nav-dashboard': 'لوحة التحكم',
+          'nav-about': 'حول النظام',
+          'nav-help': 'المساعدة',
+          'nav-contact': 'اتصل بنا',
+          'languageToggle': '🌐 العربية',
+          'page-title': 'لوحة مستشفى - نظام البلاغات',
+          'hospital-type-beds': 'النوع - عدد الأسرة',
+          'critical-banner-text': 'لديك <b id="criticalCount">0</b> بلاغات حمراء تتطلب متابعة فورية.',
+          'critical-banner-none': 'لا توجد بلاغات حرجة حالياً ✅',
+          'view-more': 'عرض المزيد',
+          'view-all': 'عرض الكل',
+          'filter-priority-all': 'الأولوية: الكل',
+          'filter-priority-critical': 'حرجة',
+          'filter-priority-medium': 'متوسطة',
+          'filter-priority-low': 'منخفضة',
+          'apply-filters': 'تطبيق',
+          'kpi-total': 'إجمالي البلاغات',
+          'kpi-open': 'مفتوحة',
+          'kpi-closed': 'مغلقة',
+          'kpi-solve-rate': 'معدل الحل',
+          'kpi-sla': 'SLA (≤ 3 أيام)',
+          'kpi-repeated-30d': 'تكرارات 30 يوم',
+          'chart-monthly-trends': 'اتجاه البلاغات الشهرية',
+          'chart-monthly-label': 'البلاغات الشهرية',
+          'recent-reports': 'البلاغات الحديثة',
+          'overdue-reports': 'بلاغات متأخرة (> 3 أيام)',
+          'priority-critical': '🔴 أولوية حرجة',
+          'priority-medium': '🟠 أولوية متوسطة',
+          'priority-low': '🟡 طلب/منخفضة',
+          'priority-critical-short': '🔴 حرجة',
+          'priority-medium-short': '🟠 متوسطة',
+          'priority-low-short': '🟡 منخفضة',
+          'open-since-days': 'مفتوح منذ {days} يوم',
+          'patient-badge': 'PATIENT',
+          'error-load-failed': 'تعذر تحميل بيانات المستشفى',
+          'error-retry': 'إعادة المحاولة',
+          'error-invalid-id': 'معرف المستشفى غير صحيح',
+          'footer-org-name': 'تجمع مكة الصحي',
+          'footer-system-name': 'نظام البلاغات',
+          'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+          'footer-links-title': 'روابط سريعة',
+          'footer-link-home': 'الرئيسية',
+          'footer-link-submit': 'تقديم بلاغ',
+          'footer-link-track': 'متابعة بلاغ',
+          'footer-link-faq': 'الأسئلة الشائعة',
+          'footer-contact-title': 'معلومات التواصل',
+          'footer-hours': 'ساعات العمل: 24/7',
+          'footer-copy': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة'
+        },
+        en: {
+          'nav-home': 'Home',
+          'nav-dashboard': 'Dashboard',
+          'nav-about': 'About System',
+          'nav-help': 'Help',
+          'nav-contact': 'Contact Us',
+          'languageToggle': '🌐 العربية',
+          'page-title': 'Hospital Dashboard - Complaint System',
+          'hospital-type-beds': 'Type - Number of Beds',
+          'critical-banner-text': 'You have <b id="criticalCount">0</b> critical reports requiring immediate follow-up.',
+          'critical-banner-none': 'No critical reports at the moment ✅',
+          'view-more': 'View More',
+          'view-all': 'View All',
+          'filter-priority-all': 'Priority: All',
+          'filter-priority-critical': 'Critical',
+          'filter-priority-medium': 'Medium',
+          'filter-priority-low': 'Low',
+          'apply-filters': 'Apply',
+          'kpi-total': 'Total Reports',
+          'kpi-open': 'Open',
+          'kpi-closed': 'Closed',
+          'kpi-solve-rate': 'Solve Rate',
+          'kpi-sla': 'SLA (≤ 3 days)',
+          'kpi-repeated-30d': 'Repeats 30 days',
+          'chart-monthly-trends': 'Monthly Reports Trend',
+          'chart-monthly-label': 'Monthly Reports',
+          'recent-reports': 'Recent Reports',
+          'overdue-reports': 'Overdue Reports (> 3 days)',
+          'priority-critical': '🔴 Critical Priority',
+          'priority-medium': '🟠 Medium Priority',
+          'priority-low': '🟡 Request/Low',
+          'priority-critical-short': '🔴 Critical',
+          'priority-medium-short': '🟠 Medium',
+          'priority-low-short': '🟡 Low',
+          'open-since-days': 'Open for {days} days',
+          'patient-badge': 'PATIENT',
+          'error-load-failed': 'Failed to load hospital data',
+          'error-retry': 'Retry',
+          'error-invalid-id': 'Invalid hospital ID',
+          'footer-org-name': 'Makkah Health Cluster',
+          'footer-system-name': 'Complaint System',
+          'footer-description': 'Official platform for filing and tracking complaints',
+          'footer-links-title': 'Quick Links',
+          'footer-link-home': 'Home',
+          'footer-link-submit': 'Submit Complaint',
+          'footer-link-track': 'Track Complaint',
+          'footer-link-faq': 'FAQ',
+          'footer-contact-title': 'Contact Information',
+          'footer-hours': 'Working Hours: 24/7',
+          'footer-copy': '© 2025 Makkah Health Cluster – All Rights Reserved'
+        }
+      };
+
+      const listeners = new Set();
+      let currentLanguage = localStorage.getItem('siteLanguage') || localStorage.getItem('hospitalPageLanguage') || 'ar';
+
+      function translate(key, params = {}) {
+        const dictionary = translations[currentLanguage] || translations.ar;
+        const fallbackDictionary = translations.ar;
+        let template = dictionary?.[key];
+        if (template === undefined) {
+          template = fallbackDictionary?.[key] ?? key;
+        }
+
+        if (typeof template !== 'string') {
+          return template;
+        }
+
+        return template.replace(/\{(\w+)\}/g, (_, token) => {
+          return params[token] !== undefined ? params[token] : `{${token}}`;
+        });
+      }
+
+      function applyStaticTranslations() {
+        document.documentElement.lang = currentLanguage;
+        document.documentElement.dir = currentLanguage === 'ar' ? 'rtl' : 'ltr';
+        
+        // تحديث عنوان الصفحة
+        document.title = translate('page-title');
+
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+          const key = el.getAttribute('data-i18n-key');
+          if (!key) return;
+          
+          // معالجة خاصة للخيارات في select
+          if (el.tagName === 'OPTION') {
+            const text = translate(key, {});
+            if (text) el.textContent = text;
+            return;
+          }
+          
+          const text = translate(key, {});
+          if (text) {
+            if (el.tagName === 'INPUT' && el.type === 'submit' || el.tagName === 'BUTTON') {
+              el.textContent = text;
+            } else if (el.hasAttribute('placeholder')) {
+              el.placeholder = text;
+            } else if (el.hasAttribute('title')) {
+              el.title = text;
+            } else {
+              // معالجة خاصة للنصوص التي تحتوي على HTML
+              if (key === 'critical-banner-text' && el.innerHTML.includes('<b')) {
+                const count = el.querySelector('#criticalCount')?.textContent || '0';
+                el.innerHTML = translate(key, { count });
+              } else {
+                el.textContent = text;
+              }
+            }
+          }
+        });
+      }
+
+      function setLanguage(lang) {
+        if (!translations[lang]) lang = 'ar';
+        if (lang === currentLanguage) return;
+        currentLanguage = lang;
+        localStorage.setItem('siteLanguage', currentLanguage);
+        localStorage.setItem('hospitalPageLanguage', currentLanguage);
+        applyStaticTranslations();
+        listeners.forEach(fn => fn(currentLanguage));
+      }
+
+      const toggleHandler = () => {
+        const nextLang = currentLanguage === 'ar' ? 'en' : 'ar';
+        setLanguage(nextLang);
+      };
+
+      function initializeToggle() {
+        const toggle = document.getElementById('languageToggle');
+        if (!toggle) return;
+        toggle.removeEventListener('click', toggleHandler);
+        toggle.addEventListener('click', toggleHandler);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        applyStaticTranslations();
+        initializeToggle();
+      });
+
+      window.hospitalI18n = {
+        t: translate,
+        getLanguage: () => currentLanguage,
+        setLanguage,
+        onChange: (fn) => {
+          if (typeof fn === 'function') {
+            listeners.add(fn);
+            return () => listeners.delete(fn);
+          }
+          return () => {};
+        },
+        refresh: applyStaticTranslations
+      };
+    })();
+  </script>
   <script src="./hospital.js"></script>
 </body>
 </html>

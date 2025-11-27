@@ -225,7 +225,9 @@
   <script>
     const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
     const token    = localStorage.getItem('token') || '';
-    let currentLanguage = localStorage.getItem('selectedLanguage') || 'ar';
+    // قراءة اللغة من localStorage الموحد
+    let currentLanguage = localStorage.getItem('siteLanguage') || 'ar';
+    window.currentLanguage = currentLanguage;
 
     // ✅ دالة للتحقق من مدير التجمع
     function isClusterManager() {
@@ -912,7 +914,9 @@
       }
 
       currentLanguage = effectiveLang;
-      localStorage.setItem('selectedLanguage', effectiveLang);
+      window.currentLanguage = effectiveLang;
+      // حفظ اللغة في localStorage الموحد
+      localStorage.setItem('siteLanguage', effectiveLang);
       updateFilterStatics();
 
       if (projectsLoaded) {
@@ -1192,12 +1196,20 @@
     const languageToggleBtn = document.getElementById('languageToggle');
     if (languageToggleBtn) {
       languageToggleBtn.addEventListener('click', () => {
-        const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+        const newLang = (window.currentLanguage === 'ar') ? 'en' : 'ar';
         applyTranslation(newLang);
       });
     }
 
-    applyTranslation(currentLanguage);
+    // تهيئة اللغة عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedLang = localStorage.getItem('siteLanguage') || 'ar';
+      currentLanguage = savedLang;
+      window.currentLanguage = savedLang;
+      document.documentElement.setAttribute('lang', savedLang);
+      document.documentElement.setAttribute('dir', (savedLang === 'ar') ? 'rtl' : 'ltr');
+      applyTranslation(savedLang);
+    });
 
     // بدء
     (async function init(){

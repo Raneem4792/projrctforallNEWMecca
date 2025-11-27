@@ -278,7 +278,7 @@ let userHospitalId = null;
  */
 function getDashboardLang() {
   return (
-    localStorage.getItem('dashboardLanguage') ||
+    localStorage.getItem('siteLanguage') ||
     document.documentElement.getAttribute('lang') ||
     'ar'
   );
@@ -546,6 +546,19 @@ async function loadHospitalsData() {
 /**
  * توليد قائمة المستشفيات للفلترة
  */
+function applyFacilityButtonTheme(btn, baseColor) {
+  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark-mode');
+  if (isDark) {
+    btn.style.color = '#FFFFFF';
+    btn.style.borderColor = 'rgba(255,255,255,0.7)';
+    btn.style.backgroundColor = 'rgba(255,255,255,0.05)';
+  } else {
+    btn.style.color = baseColor;
+    btn.style.borderColor = baseColor;
+    btn.style.backgroundColor = 'transparent';
+  }
+}
+
 function generateHospitalFilterList() {
   const list = document.getElementById('hospital-filter-list');
   if (!list) return;
@@ -565,8 +578,7 @@ function generateHospitalFilterList() {
   hospitalsOnly.forEach(h => {
     const btn = document.createElement('button');
     btn.className = 'px-4 py-2 rounded-full border text-sm font-medium hover:bg-blue-600 hover:text-white transition';
-    btn.style.borderColor = '#004A9F';
-    btn.style.color = '#004A9F';
+    applyFacilityButtonTheme(btn, '#004A9F');
     btn.dataset.hospitalId = h.id;
 
     // دعم الترجمة في الزر
@@ -603,8 +615,7 @@ function generateCenterFilterList() {
   centersOnly.forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'px-4 py-2 rounded-full border text-sm font-medium hover:bg-green-600 hover:text-white transition';
-    btn.style.borderColor = '#0FA47A';
-    btn.style.color = '#0FA47A';
+    applyFacilityButtonTheme(btn, '#0FA47A');
     btn.dataset.centerId = c.id;
 
     // دعم الترجمة في الزر

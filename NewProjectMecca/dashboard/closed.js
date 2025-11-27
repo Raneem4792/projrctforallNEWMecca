@@ -58,85 +58,124 @@ async function loadCurrentUser() {
  */
 function updateUserInfo() {
   const userInfoElement = document.getElementById('user-info');
-  if (userInfoElement) {
+  if (userInfoElement && window.closedI18n) {
+    const t = window.closedI18n.t;
     if (isClusterManager) {
-      userInfoElement.textContent = '👑 مدير التجمع - عرض جميع المستشفيات';
+      userInfoElement.textContent = t('user-cluster');
       userInfoElement.className = 'mt-2 text-sm text-green-600 font-medium';
     } else if (userHospitalId) {
-      userInfoElement.textContent = `👤 موظف - عرض مستشفى واحد فقط (ID: ${userHospitalId})`;
+      userInfoElement.textContent = t('user-employee', { id: userHospitalId });
       userInfoElement.className = 'mt-2 text-sm text-blue-600 font-medium';
     } else {
-      userInfoElement.textContent = '⚠️ نوع المستخدم غير محدد';
+      userInfoElement.textContent = t('user-unknown');
       userInfoElement.className = 'mt-2 text-sm text-orange-600 font-medium';
     }
   }
 }
 
 /**
- * ترجمة الحالات إلى العربي
+ * ترجمة الحالات
  */
 function translateStatus(statusCode) {
-  const statusMap = {
-    'OPEN': 'مفتوحة',
-    'open': 'مفتوحة',
-    'CLOSED': 'مغلقة',
-    'closed': 'مغلقة',
-    'IN_PROGRESS': 'قيد المعالجة',
-    'in_progress': 'قيد المعالجة',
-    'PENDING': 'معلقة',
-    'pending': 'معلقة',
-    'AWAITING_RESPONSE': 'بانتظار الرد',
-    'awaiting_response': 'بانتظار الرد',
-    'ON_HOLD': 'قيد الانتظار',
-    'on_hold': 'قيد الانتظار',
-    'RESOLVED': 'محلولة',
-    'resolved': 'محلولة',
-    'مغلق': 'مغلقة',
-    'محلول': 'محلولة',
-    'مكتمل': 'مكتملة',
-    'مفتوحة': 'مفتوحة',
-    'قيد المراجعة': 'قيد المراجعة',
-    'معلقة': 'معلقة'
+  if (!window.closedI18n) {
+    // Fallback if translation system not loaded
+    const statusMap = {
+      'OPEN': 'مفتوحة', 'open': 'مفتوحة',
+      'CLOSED': 'مغلقة', 'closed': 'مغلقة',
+      'IN_PROGRESS': 'قيد المعالجة', 'in_progress': 'قيد المعالجة',
+      'PENDING': 'معلقة', 'pending': 'معلقة',
+      'AWAITING_RESPONSE': 'بانتظار الرد', 'awaiting_response': 'بانتظار الرد',
+      'ON_HOLD': 'قيد الانتظار', 'on_hold': 'قيد الانتظار',
+      'RESOLVED': 'محلولة', 'resolved': 'محلولة'
+    };
+    return statusMap[statusCode] || statusCode;
+  }
+  
+  const t = window.closedI18n.t;
+  const statusKeyMap = {
+    'OPEN': 'status-open', 'open': 'status-open',
+    'CLOSED': 'status-closed', 'closed': 'status-closed',
+    'IN_PROGRESS': 'status-in-progress', 'in_progress': 'status-in-progress',
+    'PENDING': 'status-pending', 'pending': 'status-pending',
+    'AWAITING_RESPONSE': 'status-awaiting', 'awaiting_response': 'status-awaiting',
+    'ON_HOLD': 'status-on-hold', 'on_hold': 'status-on-hold',
+    'RESOLVED': 'status-resolved', 'resolved': 'status-resolved',
+    'مغلق': 'status-closed', 'محلول': 'status-resolved',
+    'مكتمل': 'status-resolved', 'مفتوحة': 'status-open',
+    'قيد المراجعة': 'status-in-progress', 'معلقة': 'status-pending'
   };
   
-  return statusMap[statusCode] || statusCode;
+  const key = statusKeyMap[statusCode];
+  return key ? t(key) : statusCode;
 }
 
 /**
- * ترجمة الأولويات إلى العربي
+ * ترجمة الأولويات
  */
 function translatePriority(priorityCode) {
-  const priorityMap = {
-    'HIGH': 'عالية',
-    'high': 'عالية',
-    'CRITICAL': 'حرجة',
-    'critical': 'حرجة',
-    'URGENT': 'عاجلة',
-    'urgent': 'عاجلة',
-    'MEDIUM': 'متوسطة',
-    'medium': 'متوسطة',
-    'LOW': 'منخفضة',
-    'low': 'منخفضة',
-    'NORMAL': 'عادية',
-    'normal': 'عادية',
-    'حرجة': 'حرجة',
-    'عاجلة': 'عاجلة',
-    'عالية': 'عالية',
-    'متوسطة': 'متوسطة',
-    'منخفضة': 'منخفضة',
-    'عادية': 'عادية',
-    'حرج': 'حرجة',
-    'عاجل': 'عاجلة'
+  if (!window.closedI18n) {
+    // Fallback if translation system not loaded
+    const priorityMap = {
+      'HIGH': 'عالية', 'high': 'عالية',
+      'CRITICAL': 'حرجة', 'critical': 'حرجة',
+      'URGENT': 'عاجلة', 'urgent': 'عاجلة',
+      'MEDIUM': 'متوسطة', 'medium': 'متوسطة',
+      'LOW': 'منخفضة', 'low': 'منخفضة',
+      'NORMAL': 'عادية', 'normal': 'عادية'
+    };
+    return priorityMap[priorityCode] || priorityCode || 'غير محددة';
+  }
+  
+  const t = window.closedI18n.t;
+  const priorityKeyMap = {
+    'HIGH': 'priority-high', 'high': 'priority-high',
+    'CRITICAL': 'priority-critical', 'critical': 'priority-critical',
+    'URGENT': 'priority-urgent', 'urgent': 'priority-urgent',
+    'MEDIUM': 'priority-medium', 'medium': 'priority-medium',
+    'LOW': 'priority-low', 'low': 'priority-low',
+    'NORMAL': 'priority-normal', 'normal': 'priority-normal',
+    'حرجة': 'priority-critical', 'عاجلة': 'priority-urgent',
+    'عالية': 'priority-high', 'متوسطة': 'priority-medium',
+    'منخفضة': 'priority-low', 'عادية': 'priority-normal',
+    'حرج': 'priority-critical', 'عاجل': 'priority-urgent'
   };
   
-  return priorityMap[priorityCode] || priorityCode || 'غير محددة';
+  const key = priorityKeyMap[priorityCode];
+  return key ? t(key) : (priorityCode || t('priority-unknown'));
 }
 
 // تهيئة الصفحة عند التحميل
 document.addEventListener('DOMContentLoaded', async () => {
+  // انتظر تحميل نظام الترجمة
+  await new Promise(resolve => {
+    if (window.closedI18n) {
+      resolve();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.closedI18n) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(); // Continue even if translation system not loaded
+      }, 2000);
+    }
+  });
+  
   await loadCurrentUser();
   await loadClosedData();
   initializeEventHandlers();
+  
+  // الاستماع لتغييرات اللغة
+  if (window.closedI18n) {
+    window.closedI18n.onChange(() => {
+      updateUserInfo();
+      renderReports();
+      updateTopTable();
+    });
+  }
 });
 
 /**
@@ -215,9 +254,13 @@ function updateSummaryCards(summary) {
       topTypeElement.textContent = '–';
     } else {
       // حساب أكثر نوع تكراراً من البيانات المفلترة
+      const lang = window.closedI18n?.getLanguage() || 'ar';
       const typeCounts = {};
       closedData.forEach(report => {
-        const typeName = report.TypeName || 'غير محدد';
+        // استخدام الاسم حسب اللغة
+        const typeName = lang === 'ar'
+          ? (report.TypeNameAr || report.TypeName || 'غير محدد')
+          : (report.TypeNameEn || report.TypeNameAr || report.TypeName || 'Not specified');
         typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
       });
       
@@ -248,11 +291,12 @@ function renderAllReports() {
   if (!container) return;
   
   if (closedData.length === 0) {
+    const t = window.closedI18n?.t || ((key) => key);
     container.innerHTML = `
       <div class="col-span-full text-center py-12">
         <div class="text-gray-400 text-6xl mb-4">✅</div>
-        <h3 class="text-xl font-bold text-gray-600 mb-2">لا توجد بلاغات مغلقة</h3>
-        <p class="text-gray-500">لم يتم إغلاق أي بلاغات بعد</p>
+        <h3 class="text-xl font-bold text-gray-600 mb-2">${t('reports-empty-title')}</h3>
+        <p class="text-gray-500">${t('reports-empty-subtitle')}</p>
       </div>
     `;
     return;
@@ -260,6 +304,9 @@ function renderAllReports() {
   
   // تحديد مسار صفحة التفاصيل
   const DETAILS_PAGE = '../public/complaints/history/complaint-details.html';
+  
+  // الحصول على اللغة الحالية
+  const lang = window.closedI18n?.getLanguage() || 'ar';
 
   container.innerHTML = closedData.map(report => {
     // بناء الباراميترات للرابط
@@ -268,6 +315,16 @@ function renderAllReports() {
       hid: String(report.HospitalID || ''),
       complaintId: String(report.ComplaintID || '')
     }).toString();
+    
+    // تحديد اسم المستشفى حسب اللغة
+    const hospitalName = lang === 'ar' 
+      ? (report.HospitalNameAr || report.HospitalName || `#${report.HospitalID || ''}`)
+      : (report.HospitalNameEn || report.HospitalNameAr || report.HospitalName || `#${report.HospitalID || ''}`);
+    
+    // تحديد اسم التصنيف حسب اللغة
+    const typeName = lang === 'ar'
+      ? (report.TypeNameAr || report.TypeName || ((window.closedI18n?.t('report-undefined')) || 'غير محدد'))
+      : (report.TypeNameEn || report.TypeNameAr || report.TypeName || ((window.closedI18n?.t('report-undefined')) || 'Not specified'));
 
     return `
       <div class="bg-white rounded-xl p-6 shadow-lg border border-green-100 hover:shadow-xl transition-shadow">
@@ -278,7 +335,7 @@ function renderAllReports() {
             </div>
             <div>
               <h4 class="font-bold text-gray-800">${report.TicketNumber || '—'}</h4>
-              <p class="text-sm text-gray-600">${report.HospitalName || ('#'+(report.HospitalID??''))}</p>
+              <p class="text-sm text-gray-600">${hospitalName}</p>
             </div>
           </div>
           <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
@@ -288,23 +345,23 @@ function renderAllReports() {
         
         <div class="space-y-2 mb-4">
           <div class="flex justify-between">
-            <span class="text-gray-500 text-sm">النوع:</span>
-            <span class="text-gray-800 text-sm font-medium">${report.TypeName || 'غير محدد'}</span>
+            <span class="text-gray-500 text-sm">${(window.closedI18n?.t('report-type-label')) || 'النوع:'}</span>
+            <span class="text-gray-800 text-sm font-medium">${typeName}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500 text-sm">القسم:</span>
-            <span class="text-gray-800 text-sm font-medium">${report.DepartmentName || 'غير محدد'}</span>
+            <span class="text-gray-500 text-sm">${(window.closedI18n?.t('report-department-label')) || 'القسم:'}</span>
+            <span class="text-gray-800 text-sm font-medium">${report.DepartmentName || ((window.closedI18n?.t('report-undefined')) || 'غير محدد')}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500 text-sm">الأولوية:</span>
+            <span class="text-gray-500 text-sm">${(window.closedI18n?.t('report-priority-label')) || 'الأولوية:'}</span>
             <span class="text-gray-800 text-sm font-medium">${translatePriority(report.PriorityCode)}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500 text-sm">تاريخ الإنشاء:</span>
+            <span class="text-gray-500 text-sm">${(window.closedI18n?.t('report-created-label')) || 'تاريخ الإنشاء:'}</span>
             <span class="text-gray-800 text-sm font-medium">${formatDate(report.CreatedAt)}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500 text-sm">تاريخ الإغلاق:</span>
+            <span class="text-gray-500 text-sm">${(window.closedI18n?.t('report-closed-label')) || 'تاريخ الإغلاق:'}</span>
             <span class="text-gray-800 text-sm font-medium">${formatDate(report.UpdatedAt || report.ClosedAt || report.CreatedAt)}</span>
           </div>
         </div>
@@ -312,7 +369,7 @@ function renderAllReports() {
         <div class="pt-4 border-t border-gray-100">
           <a href="${DETAILS_PAGE}?${params}"
              class="block text-center w-full bg-green-50 text-green-700 py-2 px-4 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
-            عرض التفاصيل
+            ${(window.closedI18n?.t('report-details-button')) || 'عرض التفاصيل'}
           </a>
         </div>
       </div>
@@ -327,12 +384,20 @@ function renderByHospital() {
   const container = document.getElementById('closed-hospitals-grid');
   if (!container) return;
   
+  // تحديد مسار صفحة التفاصيل
+  const DETAILS_PAGE = '../public/complaints/history/complaint-details.html';
+  
   // تجميع البلاغات حسب المستشفى
-  const reportsByHospital = {};
+  const lang = window.closedI18n?.getLanguage() || 'ar';
+  let reportsByHospital = {};
   closedData.forEach(report => {
     if (!reportsByHospital[report.HospitalID]) {
+      // تحديد اسم المستشفى حسب اللغة
+      const hospitalName = lang === 'ar'
+        ? (report.HospitalNameAr || report.HospitalName)
+        : (report.HospitalNameEn || report.HospitalNameAr || report.HospitalName);
       reportsByHospital[report.HospitalID] = {
-        hospitalName: report.HospitalName,
+        hospitalName: hospitalName,
         reports: []
       };
     }
@@ -350,11 +415,12 @@ function renderByHospital() {
   }
   
   if (Object.keys(reportsByHospital).length === 0) {
+    const t = window.closedI18n?.t || ((key) => key);
     container.innerHTML = `
       <div class="col-span-full text-center py-12">
         <div class="text-gray-400 text-6xl mb-4">🏥</div>
-        <h3 class="text-xl font-bold text-gray-600 mb-2">لا توجد بلاغات مغلقة</h3>
-        <p class="text-gray-500">لم يتم إغلاق أي بلاغات بعد</p>
+        <h3 class="text-xl font-bold text-gray-600 mb-2">${t('reports-hospital-empty-title')}</h3>
+        <p class="text-gray-500">${t('reports-hospital-empty-subtitle')}</p>
       </div>
     `;
     return;
@@ -368,7 +434,7 @@ function renderByHospital() {
         </div>
         <div>
           <h3 class="font-bold text-gray-800">${hospital.hospitalName}</h3>
-          <p class="text-sm text-gray-600">${hospital.reports.length} بلاغ مغلق</p>
+          <p class="text-sm text-gray-600">${(window.closedI18n?.t('reports-hospital-count', { count: hospital.reports.length })) || `${hospital.reports.length} بلاغ مغلق`}</p>
         </div>
       </div>
       
@@ -380,12 +446,17 @@ function renderByHospital() {
             complaintId: String(report.ComplaintID || '')
           }).toString();
           
+          // تحديد اسم التصنيف حسب اللغة
+          const typeName = lang === 'ar'
+            ? (report.TypeNameAr || report.TypeName || ((window.closedI18n?.t('report-undefined')) || 'غير محدد'))
+            : (report.TypeNameEn || report.TypeNameAr || report.TypeName || ((window.closedI18n?.t('report-undefined')) || 'Not specified'));
+          
           return `
             <a href="${DETAILS_PAGE}?${params}" class="block">
               <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer">
                 <div>
                   <p class="font-medium text-gray-800 text-sm">${report.TicketNumber}</p>
-                  <p class="text-xs text-gray-600">${report.TypeName || 'غير محدد'}</p>
+                  <p class="text-xs text-gray-600">${typeName}</p>
                 </div>
                 <span class="text-xs text-green-600 font-medium">${translateStatus(report.StatusCode)}</span>
               </div>
@@ -395,7 +466,7 @@ function renderByHospital() {
         
         ${hospital.reports.length > 3 ? `
           <div class="text-center pt-2">
-            <span class="text-sm text-gray-500">و ${hospital.reports.length - 3} بلاغات أخرى</span>
+            <span class="text-sm text-gray-500">${(window.closedI18n?.t('reports-more-count', { count: hospital.reports.length - 3 })) || `و ${hospital.reports.length - 3} بلاغات أخرى`}</span>
           </div>
         ` : ''}
       </div>
@@ -471,22 +542,36 @@ function updateTopTable() {
   if (!tableBody) return;
   
   if (closedData.length === 0) {
+    const t = window.closedI18n?.t || ((key) => key);
     tableBody.innerHTML = `
       <tr>
-        <td colspan="3" class="text-center py-8 text-gray-500">لا توجد بيانات للعرض</td>
+        <td colspan="3" class="text-center py-8 text-gray-500">${t('table-empty')}</td>
       </tr>
     `;
     return;
   }
   
   // تجميع البيانات حسب المستشفى والنوع
+  const lang = window.closedI18n?.getLanguage() || 'ar';
   const hospitalTypeCounts = {};
   closedData.forEach(report => {
-    const key = `${report.HospitalID}-${report.TypeName || 'غير محدد'}`;
+    // استخدام الاسم العربي للمفتاح (للتجميع)
+    const typeKey = report.TypeNameAr || report.TypeName || 'غير محدد';
+    const key = `${report.HospitalID}-${typeKey}`;
+    
     if (!hospitalTypeCounts[key]) {
+      // تحديد الأسماء حسب اللغة للعرض
+      const hospitalName = lang === 'ar'
+        ? (report.HospitalNameAr || report.HospitalName)
+        : (report.HospitalNameEn || report.HospitalNameAr || report.HospitalName);
+      
+      const typeName = lang === 'ar'
+        ? (report.TypeNameAr || report.TypeName || 'غير محدد')
+        : (report.TypeNameEn || report.TypeNameAr || report.TypeName || 'Not specified');
+      
       hospitalTypeCounts[key] = {
-        hospitalName: report.HospitalName,
-        typeName: report.TypeName || 'غير محدد',
+        hospitalName: hospitalName,
+        typeName: typeName,
         count: 0
       };
     }
@@ -499,9 +584,10 @@ function updateTopTable() {
     .slice(0, 10); // أعلى 10
   
   if (sortedData.length === 0) {
+    const t = window.closedI18n?.t || ((key) => key);
     tableBody.innerHTML = `
       <tr>
-        <td colspan="3" class="text-center py-8 text-gray-500">لا توجد بيانات للعرض</td>
+        <td colspan="3" class="text-center py-8 text-gray-500">${t('table-empty')}</td>
       </tr>
     `;
     return;
@@ -526,10 +612,11 @@ function updateTopTable() {
 function showErrorMessage(message) {
   const container = document.getElementById('closed-list');
   if (container) {
+    const t = window.closedI18n?.t || ((key) => key);
     container.innerHTML = `
       <div class="col-span-full text-center py-12">
         <div class="text-red-400 text-6xl mb-4">⚠️</div>
-        <h3 class="text-xl font-bold text-red-600 mb-2">خطأ في تحميل البيانات</h3>
+        <h3 class="text-xl font-bold text-red-600 mb-2">${t('error-title')}</h3>
         <p class="text-gray-500">${message}</p>
       </div>
     `;

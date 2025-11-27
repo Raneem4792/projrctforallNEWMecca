@@ -93,19 +93,28 @@ function buildBarOptions({
   legendPosition = 'bottom',
   padding = { top: 12, bottom: 8, left: 4, right: 10 }
 } = {}) {
+  // التحقق من الوضع الداكن
+  const isDark = document.documentElement.classList.contains('dark') || 
+                 document.documentElement.getAttribute('data-theme') === 'dark';
+  
+  // تحديد الألوان حسب الوضع
+  const textColor = isDark ? '#FFFFFF' : '#0f172a';
+  const secondaryTextColor = isDark ? '#E2E8F0' : '#475569';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : GRID_COLOR;
+  
   const categoryAxis = {
     grid: { display: false },
     ticks: {
-      color: '#0f172a',
+      color: textColor,
       font: { family: FONT_FAMILY, weight: 600 }
     }
   };
 
   const valueAxis = {
     beginAtZero: true,
-    grid: { color: GRID_COLOR, drawBorder: false },
+    grid: { color: gridColor, drawBorder: false },
     ticks: {
-      color: '#475569',
+      color: secondaryTextColor,
       font: { family: FONT_FAMILY },
       precision: 0
     }
@@ -125,7 +134,7 @@ function buildBarOptions({
         position: legendPosition,
         labels: {
           font: { family: FONT_FAMILY, weight: 500 },
-          color: '#0f172a'
+          color: textColor
         }
       },
       tooltip: {
@@ -141,7 +150,7 @@ function buildBarOptions({
         align,
         clamp: true,
         offset: 4,
-        color: '#0f172a',
+        color: textColor,
         font: { family: FONT_FAMILY, weight: 600, size: 13 },
         formatter: formatArabicNumber
       }
@@ -231,6 +240,13 @@ function renderTopEmployeesChart() {
   destroyChartById('chartTopEmployeesMistreatment');
   const ctx = canvas.getContext('2d');
 
+  // التحقق من الوضع الداكن
+  const isDark = document.documentElement.classList.contains('dark') || 
+                 document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#FFFFFF' : '#0f172a';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.05)';
+  const titleColor = isDark ? '#FFFFFF' : '#002B5B';
+
   topEmployeesChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -271,7 +287,7 @@ function renderTopEmployeesChart() {
           display: true,
           text: chartTitle,
           font: { family: 'Tajawal', size: 16 },
-          color: '#002B5B',
+          color: titleColor,
           padding: { bottom: 10 }
         },
         tooltip: {
@@ -284,11 +300,18 @@ function renderTopEmployeesChart() {
       scales: {
         x: {
           beginAtZero: true,
-          ticks: { stepSize: 1 },
-          grid: { color: 'rgba(0,0,0,0.05)' }
+          ticks: { 
+            stepSize: 1,
+            color: textColor,
+            font: { family: 'Tajawal' }
+          },
+          grid: { color: gridColor }
         },
         y: {
-          ticks: { font: { family: 'Tajawal' } },
+          ticks: { 
+            font: { family: 'Tajawal' },
+            color: textColor
+          },
           grid: { display: false }
         }
       },
@@ -437,6 +460,13 @@ async function loadUrgent() {
         id: h.id
       }));
 
+      // التحقق من الوضع الداكن
+      const isDark = document.documentElement.classList.contains('dark') || 
+                     document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#FFFFFF' : '#1f2937';
+      const axisTextColor = isDark ? '#FFFFFF' : '#374151';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(156, 163, 175, 0.3)';
+
       createChart('chartMistreatmentTime', {
         type: 'bar',
         data: {
@@ -497,7 +527,7 @@ async function loadUrgent() {
               position: 'top',
               labels: {
                 font: { family: FONT_FAMILY, size: 14, weight: 600 },
-                color: '#1f2937',
+                color: textColor,
                 padding: 20,
                 usePointStyle: true,
                 pointStyle: 'rectRounded'
@@ -529,7 +559,7 @@ async function loadUrgent() {
             x: {
               grid: { display: false },
               ticks: {
-                color: '#374151',
+                color: axisTextColor,
                 font: { family: FONT_FAMILY, size: 12, weight: 600 },
                 maxRotation: 45,
                 minRotation: 0
@@ -539,7 +569,7 @@ async function loadUrgent() {
               beginAtZero: true,
               position: 'left',
               grid: { 
-                color: 'rgba(156, 163, 175, 0.3)',
+                color: gridColor,
                 drawBorder: false 
               },
               ticks: {
@@ -1558,4 +1588,37 @@ window.viewEmployeeComplaints = viewEmployeeComplaints;
 window.openComplaintDetailsFromEmployee = openComplaintDetailsFromEmployee;
 
 document.addEventListener('DOMContentLoaded', loadUrgent);
+
+// إعادة رسم الرسوم البيانية عند تغيير الوضع الداكن
+function reRenderChartsOnThemeChange() {
+  // مراقبة تغييرات الوضع الداكن
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        // إعادة تحميل البيانات وإعادة رسم الرسوم البيانية
+        if (typeof loadUrgent === 'function') {
+          loadUrgent();
+        }
+        if (typeof renderTopEmployeesChart === 'function') {
+          renderTopEmployeesChart();
+        }
+      }
+    });
+  });
+
+  // مراقبة تغييرات على html element
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme']
+  });
+
+  // مراقبة تغييرات على body element أيضاً
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+}
+
+// تشغيل المراقب عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', reRenderChartsOnThemeChange);
 

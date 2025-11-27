@@ -35,12 +35,13 @@
           <img src="../../assets/img/logo3.png" class="h-16 w-auto" alt="Logo">
         </div>
         <nav class="hidden md:flex items-center space-x-reverse space-x-8">
-          <a href="../../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
-          <a href="../../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
-          <a href="complaints-history.html" class="text-white hover:text-blue-200 transition-colors">سجل البلاغات</a>
-          <a href="../../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors">حول النظام</a>
-          <a href="../../../index/help.html" class="text-white hover:text-blue-200 transition-colors">المساعدة</a>
-          <a href="../../../index/contact.html" class="text-white hover:text-blue-200 transition-colors">اتصل بنا</a>
+          <a href="../../../index/index.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-home">الرئيسية</a>
+          <a href="../../../dashboard/dashboard.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-dashboard">لوحة التحكم</a>
+          <a href="complaints-history.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-history">سجل البلاغات</a>
+          <a href="../../../index/about-system.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-about">حول النظام</a>
+          <a href="../../../index/help.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-help">المساعدة</a>
+          <a href="../../../index/contact.html" class="text-white hover:text-blue-200 transition-colors" data-i18n-key="nav-contact">اتصل بنا</a>
+          <button id="languageToggle" class="text-white hover:text-blue-200 transition-colors flex items-center gap-2" data-i18n-key="languageToggle">🌐 العربية</button>
         </nav>
       </div>
     </div>
@@ -49,17 +50,15 @@
   <main class="container mx-auto px-4 pt-16 pb-10">
     <!-- عنوان الصفحة -->
     <section class="text-center pt-6">
-      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-6">تفاصيل البلاغ</h1>
-      <a href="complaints-history.html" class="inline-block bg-gray-100 text-gray-700 px-4 py-1.5 rounded-full text-sm hover:bg-gray-200 transition">
-        ⟵ رجوع للسجل
-      </a>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-[#002B5B] mb-6" data-i18n-key="page-title">تفاصيل البلاغ</h1>
+      <a href="complaints-history.html" class="inline-block bg-gray-100 text-gray-700 px-4 py-1.5 rounded-full text-sm hover:bg-gray-200 transition" data-i18n-key="back-to-history">⟵ رجوع للسجل</a>
     </section>
 
     <!-- هيدر مختصر للتعريف -->
     <section id="headCard" class="bg-white rounded-2xl p-5 shadow-xl border border-gray-100 mt-8 mb-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div class="text-xs text-gray-500">رقم البلاغ</div>
+          <div class="text-xs text-gray-500" data-i18n-key="complaint-number">رقم البلاغ</div>
           <div id="dTicket" class="text-xl font-extrabold text-[#002B5B]">-</div>
         </div>
         <div class="flex gap-2 items-center">
@@ -71,7 +70,7 @@
       <!-- عداد مدة المعالجة -->
       <div id="processingDurationContainer" class="mt-4 pt-4 border-t border-gray-200" style="display: none;">
         <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold text-gray-700">📅 المدة المتبقية لمعالجة البلاغ:</span>
+          <span class="text-sm font-semibold text-gray-700" data-i18n-key="remaining-time">📅 المدة المتبقية لمعالجة البلاغ:</span>
           <span id="processingCountdown" class="text-lg font-bold text-blue-600">-</span>
         </div>
         <div id="processingDeadlineInfo" class="text-xs text-gray-500 mt-1"></div>
@@ -81,14 +80,14 @@
     <!-- شريط الإجراءات -->
     <section id="actionsBar" class="bg-white rounded-2xl p-4 shadow-xl border border-gray-100 mb-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="text-sm text-gray-600">إجراءات على البلاغ</div>
+        <div class="text-sm text-gray-600" data-i18n-key="actions-title">إجراءات على البلاغ</div>
         <div class="flex flex-wrap gap-2">
-          <button id="btnReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition">إضافة رد</button>
-          <button id="btnChangeStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm hover:bg-amber-600 transition">تغيير الحالة</button>
-          <button id="btnChangePriority" class="h-10 px-4 rounded-xl bg-orange-600 text-white text-sm hover:bg-orange-700 transition">🔺 تغيير الأولوية</button>
-          <button id="btnChangeDuration" class="h-10 px-4 rounded-xl bg-cyan-600 text-white text-sm hover:bg-cyan-700 transition">⏳ تغيير المدة</button>
-          <button id="btnTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">تحويل</button>
-          <button id="btnDeleteComplaint" class="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700 transition">🗑️ حذف البلاغ</button>
+          <button id="btnReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm hover:bg-[#0c8f68] transition" data-i18n-key="btn-add-reply">إضافة رد</button>
+          <button id="btnChangeStatus" class="h-10 px-4 rounded-xl bg-amber-500 text-white text-sm hover:bg-amber-600 transition" data-i18n-key="btn-change-status">تغيير الحالة</button>
+          <button id="btnChangePriority" class="h-10 px-4 rounded-xl bg-orange-600 text-white text-sm hover:bg-orange-700 transition" data-i18n-key="btn-change-priority">🔺 تغيير الأولوية</button>
+          <button id="btnChangeDuration" class="h-10 px-4 rounded-xl bg-cyan-600 text-white text-sm hover:bg-cyan-700 transition" data-i18n-key="btn-change-duration">⏳ تغيير المدة</button>
+          <button id="btnTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition" data-i18n-key="btn-transfer">تحويل</button>
+          <button id="btnDeleteComplaint" class="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700 transition" data-i18n-key="btn-delete">🗑️ حذف البلاغ</button>
         </div>
       </div>
     </section>
@@ -96,31 +95,31 @@
     <!-- تفاصيل أساسية -->
     <section class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card">
-        <div class="section-title"><span class="icon">👤</span><h2>بيانات المراجع</h2></div>
+        <div class="section-title"><span class="icon">👤</span><h2 data-i18n-key="section-referrer">بيانات المراجع</h2></div>
         <div class="grid sm:grid-cols-2 gap-3 text-[15px] text-gray-700">
-          <div><span class="font-semibold text-gray-800">الاسم:</span> <span id="dName">-</span></div>
-          <div><span class="font-semibold text-gray-800">الجوال:</span> <span id="dMobile">-</span></div>
-          <div><span class="font-semibold text-gray-800">رقم الملف:</span> <span id="dFile">-</span></div>
-          <div><span class="font-semibold text-gray-800">المستشفى:</span> <span id="uiHospitalName">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-name">الاسم:</span> <span id="dName">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-mobile">الجوال:</span> <span id="dMobile">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-file-number">رقم الملف:</span> <span id="dFile">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-hospital">المستشفى:</span> <span id="uiHospitalName">-</span></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="section-title"><span class="icon">🗂️</span><h2>معلومات البلاغ</h2></div>
+        <div class="section-title"><span class="icon">🗂️</span><h2 data-i18n-key="section-complaint-info">معلومات البلاغ</h2></div>
         <div class="grid sm:grid-cols-2 gap-3 text-[15px] text-gray-700">
-          <div><span class="font-semibold text-gray-800">التصنيف:</span> <span id="dType">-</span></div>
-          <div><span class="font-semibold text-gray-800">التصنيف الفرعي:</span> <span id="uiSubTypeName">-</span></div>
-          <div><span class="font-semibold text-gray-800">القسم:</span> <span id="uiDepartmentName">-</span></div>
-          <div><span class="font-semibold text-gray-800">القسم الفرعي:</span> <span id="uiSubDepartmentName">-</span></div>
-          <div><span class="font-semibold text-gray-800">تاريخ الزيارة:</span> <span id="dVisitDate">—</span></div>
-          <div><span class="font-semibold text-gray-800">تاريخ الإنشاء:</span> <span id="dCreated">-</span></div>
-          <div><span class="font-semibold text-gray-800">آخر تحديث:</span> <span id="dUpdated">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-type">التصنيف:</span> <span id="dType">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-subtype">التصنيف الفرعي:</span> <span id="uiSubTypeName">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-department">القسم:</span> <span id="uiDepartmentName">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-subdepartment">القسم الفرعي:</span> <span id="uiSubDepartmentName">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-visit-date">تاريخ الزيارة:</span> <span id="dVisitDate">—</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-created">تاريخ الإنشاء:</span> <span id="dCreated">-</span></div>
+          <div><span class="font-semibold text-gray-800" data-i18n-key="label-updated">آخر تحديث:</span> <span id="dUpdated">-</span></div>
         </div>
         
         <!-- وصف البلاغ -->
         <div class="mt-4 pt-4 border-t border-gray-200">
           <div class="text-[15px] text-gray-700">
-            <span class="font-semibold text-gray-800 block mb-2">وصف البلاغ:</span>
+            <span class="font-semibold text-gray-800 block mb-2" data-i18n-key="label-description">وصف البلاغ:</span>
             <div id="dDescription" class="bg-gray-50 rounded-lg p-3 text-gray-800 leading-relaxed min-h-[80px]">
               -
             </div>
@@ -133,25 +132,25 @@
     <section id="targetSection" class="card mt-4" style="display:none;">
       <div class="section-title">
         <span class="icon">👥</span>
-        <h2>بيانات الموظف المُبلّغ عليه</h2>
+        <h2 data-i18n-key="section-target-employee">بيانات الموظف المُبلّغ عليه</h2>
       </div>
       
       <div class="grid sm:grid-cols-2 gap-3 text-[15px] text-gray-700">
-        <div><span class="font-semibold text-gray-800">اسم الموظف:</span> <span id="targetEmployeeName">—</span></div>
-        <div><span class="font-semibold text-gray-800">رقم الموظف:</span> <span id="targetEmployeeID">—</span></div>
-        <div><span class="font-semibold text-gray-800">اسم القسم:</span> <span id="targetDepartmentName">—</span></div>
-        <div><span class="font-semibold text-gray-800">رقم القسم:</span> <span id="targetDepartmentID">—</span></div>
+        <div><span class="font-semibold text-gray-800" data-i18n-key="label-employee-name">اسم الموظف:</span> <span id="targetEmployeeName">—</span></div>
+        <div><span class="font-semibold text-gray-800" data-i18n-key="label-employee-id">رقم الموظف:</span> <span id="targetEmployeeID">—</span></div>
+        <div><span class="font-semibold text-gray-800" data-i18n-key="label-dept-name">اسم القسم:</span> <span id="targetDepartmentName">—</span></div>
+        <div><span class="font-semibold text-gray-800" data-i18n-key="label-dept-id">رقم القسم:</span> <span id="targetDepartmentID">—</span></div>
       </div>
     </section>
 
     <!-- خط زمني مبسّط + مرفقات (واجهات فقط) -->
     <section class="grid md:grid-cols-3 gap-4">
       <div class="md:col-span-2 card">
-        <div class="section-title"><span class="icon">🕓</span><h2>تتبع الحالة</h2></div>
+        <div class="section-title"><span class="icon">🕓</span><h2 data-i18n-key="section-timeline">تتبع الحالة</h2></div>
         <div class="mb-3 text-sm text-gray-600">
-          <small>تم إنشاء البلاغ بواسطة: <strong id="uiCreatedByName">—</strong></small>
+          <small><span data-i18n-key="created-by">تم إنشاء البلاغ بواسطة:</span> <strong id="uiCreatedByName">—</strong></small>
           <br>
-          <small>الموظف المُسند إليه: <strong id="uiAssignedToName">—</strong></small>
+          <small><span data-i18n-key="assigned-to">الموظف المُسند إليه:</span> <strong id="uiAssignedToName">—</strong></small>
         </div>
         <ul id="dTimeline" class="space-y-3 text-gray-700 text-[15px]">
           <!-- يُملأ من JS -->
@@ -159,8 +158,8 @@
       </div>
 
       <div class="card">
-        <div class="section-title"><span class="icon">📎</span><h2>المرفقات</h2></div>
-        <div id="dAttachments" class="text-gray-600 text-sm">لا توجد مرفقات.</div>
+        <div class="section-title"><span class="icon">📎</span><h2 data-i18n-key="section-attachments">المرفقات</h2></div>
+        <div id="dAttachments" class="text-gray-600 text-sm" data-i18n-key="no-attachments">لا توجد مرفقات.</div>
       </div>
     </section>
 
@@ -168,15 +167,15 @@
     <section class="card mt-4">
       <div class="section-title">
         <span class="icon">💬</span>
-        <h2>الردود على البلاغ</h2>
+        <h2 data-i18n-key="section-replies">الردود على البلاغ</h2>
       </div>
       
       <div id="repliesList" class="space-y-4 mt-4">
         <!-- سيتم ملؤها ديناميكياً من JavaScript -->
         <div class="text-center text-gray-500 py-8">
           <div class="text-lg mb-2">💬</div>
-          <div>لا توجد ردود بعد</div>
-          <div class="text-sm mt-1">كن أول من يرد على هذا البلاغ</div>
+          <div data-i18n-key="no-replies">لا توجد ردود بعد</div>
+          <div class="text-sm mt-1" data-i18n-key="be-first-reply">كن أول من يرد على هذا البلاغ</div>
         </div>
       </div>
     </section>
@@ -195,54 +194,54 @@
               </svg>
             </div>
             <div>
-              <div class="font-bold">تجمع مكة الصحي</div>
-              <div class="text-sm text-gray-300">نظام البلاغات</div>
+              <div class="font-bold" data-i18n-key="footer-brand">تجمع مكة الصحي</div>
+              <div class="text-sm text-gray-300" data-i18n-key="footer-brand-subtitle">نظام البلاغات</div>
             </div>
           </div>
-          <p class="text-gray-300 text-sm">منصة رسمية لتقديم ومتابعة البلاغات</p>
+          <p class="text-gray-300 text-sm" data-i18n-key="footer-description">منصة رسمية لتقديم ومتابعة البلاغات</p>
         </div>
 
         <!-- Column 2 - العمود الثاني -->
         <div>
-          <h3 class="font-bold mb-4">روابط سريعة</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-links-title">روابط سريعة</h3>
           <ul class="space-y-2 text-sm">
-            <li><a href="../../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الرئيسية</a></li>
-            <li><a href="../submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">تقديم بلاغ</a></li>
-            <li><a href="../track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors">متابعة بلاغ</a></li>
-            <li><a href="../../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors">الأسئلة الشائعة</a></li>
+            <li><a href="../../../index/index.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-home">الرئيسية</a></li>
+            <li><a href="../submit/submit-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-submit">تقديم بلاغ</a></li>
+            <li><a href="../track/track-complaint.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-track">متابعة بلاغ</a></li>
+            <li><a href="../../../index/help.html" class="text-gray-300 hover:text-white hover:underline transition-colors" data-i18n-key="footer-link-faq">الأسئلة الشائعة</a></li>
           </ul>
         </div>
 
         <!-- Column 3 - العمود الثالث -->
         <div>
-          <h3 class="font-bold mb-4">معلومات التواصل</h3>
+          <h3 class="font-bold mb-4" data-i18n-key="footer-contact-title">معلومات التواصل</h3>
           <div class="space-y-2 text-sm text-gray-300">
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <span>رقم الدعم: 0559735137</span>
+              <span data-i18n-key="footer-support">رقم الدعم: 0559735137</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <span>support@makkahhealth.gov.sa</span>
+              <span data-i18n-key="footer-email">support@makkahhealth.gov.sa</span>
             </div>
             <div class="flex items-baseline">
               <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <span>ساعات العمل: 24/7</span>
+              <span data-i18n-key="footer-hours">ساعات العمل: 24/7</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300" data-i18n-key="footer-copyright">
         © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
       </div>
     </div>
@@ -255,34 +254,34 @@
   <div id="replyModal" class="fixed inset-0 z-50 hidden place-items-center">
     <div class="bg-white w-[90%] max-w-2xl rounded-2xl shadow-2xl border border-gray-100 p-5">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-lg font-bold text-[#002B5B]">إضافة رد على البلاغ</h3>
+        <h3 class="text-lg font-bold text-[#002B5B]" data-i18n-key="modal-add-reply-title">إضافة رد على البلاغ</h3>
         <button data-close-modal class="text-gray-500 hover:text-gray-700">✕</button>
       </div>
       <div class="grid gap-3">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">نوع الرد</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-reply-type">نوع الرد</label>
           <select id="replyType" class="w-full h-10 rounded-xl border border-gray-200 px-3 focus:ring-2 focus:ring-blue-200">
-            <option value="">اختر نوع الرد</option>
-            <option value="update">تحديث الحالة</option>
-            <option value="followup">متابعة</option>
-            <option value="resolution">حل المشكلة</option>
-            <option value="information">معلومات إضافية</option>
-            <option value="request">طلب توضيح</option>
-            <option value="escalation">تصعيد</option>
+            <option value="" data-i18n-key="modal-reply-type-placeholder">اختر نوع الرد</option>
+            <option value="update" data-i18n-key="modal-reply-type-update">تحديث الحالة</option>
+            <option value="followup" data-i18n-key="modal-reply-type-followup">متابعة</option>
+            <option value="resolution" data-i18n-key="modal-reply-type-resolution">حل المشكلة</option>
+            <option value="information" data-i18n-key="modal-reply-type-information">معلومات إضافية</option>
+            <option value="request" data-i18n-key="modal-reply-type-request">طلب توضيح</option>
+            <option value="escalation" data-i18n-key="modal-reply-type-escalation">تصعيد</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">نص الرد</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-reply-text">نص الرد</label>
           <textarea id="replyText" rows="4" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">مرفقات (اختياري)</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-reply-files">مرفقات (اختياري)</label>
           <input id="replyFiles" type="file" multiple class="w-full text-sm">
         </div>
       </div>
       <div class="mt-4 flex justify-end gap-2">
-        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
-        <button id="saveReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm">حفظ الرد</button>
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm" data-i18n-key="modal-cancel">إلغاء</button>
+        <button id="saveReply" class="h-10 px-4 rounded-xl bg-[#0FA47A] text-white text-sm" data-i18n-key="modal-save-reply">حفظ الرد</button>
       </div>
     </div>
   </div>
@@ -322,7 +321,7 @@
   <div id="transferModal" class="fixed inset-0 z-50 hidden place-items-center">
     <div class="bg-white w-[90%] max-w-2xl rounded-2xl shadow-2xl border border-gray-100 p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-[#002B5B]">تحويل البلاغ</h3>
+        <h3 class="text-lg font-bold text-[#002B5B]" data-i18n-key="modal-transfer-title">تحويل البلاغ</h3>
         <button data-close-modal class="text-gray-500 hover:text-gray-700">✕</button>
       </div>
 
@@ -330,23 +329,23 @@
       <div class="flex flex-wrap gap-2 mb-4">
         <button id="tabDeptBtn"
                 class="tab-btn h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm"
-                data-tab="dept" aria-selected="true">تحويل بين الأقسام</button>
+                data-tab="dept" aria-selected="true" data-i18n-key="modal-transfer-dept">تحويل بين الأقسام</button>
         <button id="tabEmpBtn"
                 class="tab-btn h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm"
-                data-tab="emp" aria-selected="false">تحويل بين الموظفين</button>
+                data-tab="emp" aria-selected="false" data-i18n-key="modal-transfer-emp">تحويل بين الموظفين</button>
         <button id="tabHospBtn"
                 class="tab-btn h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm"
-                data-tab="hosp" aria-selected="false">تحويل بين المستشفيات</button>
+                data-tab="hosp" aria-selected="false" data-i18n-key="modal-transfer-hosp">تحويل بين المستشفيات</button>
       </div>
 
       <!-- لوحة: تحويل بين المستشفيات -->
       <div id="pane-hosp" class="grid md:grid-cols-2 gap-3 hidden">
         <div class="md:col-span-2">
-          <label class="block text-sm text-gray-600 mb-1">المستشفى</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-hospital">المستشفى</label>
           <select id="transferHospital" class="w-full h-10 rounded-xl border border-gray-200 px-2 focus:ring-2 focus:ring-blue-200"></select>
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm text-gray-600 mb-1">ملاحظة التحويل (اختياري)</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-note">ملاحظة التحويل (اختياري)</label>
           <textarea id="transferNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
         </div>
       </div>
@@ -354,19 +353,19 @@
       <!-- لوحة: تحويل بين الأقسام -->
       <div id="pane-dept" class="grid md:grid-cols-2 gap-3">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">القسم الحالي</label>
-          <div id="transferDepartmentCurrent" class="w-full h-10 rounded-xl border border-gray-200 px-3 py-2 bg-gray-50 text-gray-700 flex items-center">
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-current-dept">القسم الحالي</label>
+          <div id="transferDepartmentCurrent" class="w-full h-10 rounded-xl border border-gray-200 px-3 py-2 bg-gray-50 text-gray-700 flex items-center" data-i18n-key="loading">
             جاري التحميل...
           </div>
           <!-- عنصر مخفي لتخزين القسم الحالي -->
           <select id="deptFrom" class="hidden"></select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">القسم الهدف</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-target-dept">القسم الهدف</label>
           <select id="deptTo" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm text-gray-600 mb-1">ملاحظة (اختياري)</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-note-optional">ملاحظة (اختياري)</label>
           <textarea id="deptNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
         </div>
       </div>
@@ -374,26 +373,26 @@
       <!-- لوحة: تحويل بين الموظفين -->
       <div id="pane-emp" class="grid md:grid-cols-2 gap-3 hidden">
         <div class="md:col-span-2">
-          <label class="block text-sm text-gray-600 mb-1">القسم</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-dept-label">القسم</label>
           <select id="empDept" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">الموظف الحالي</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-current-emp">الموظف الحالي</label>
           <select id="empFrom" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">الموظف الهدف</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-target-emp">الموظف الهدف</label>
           <select id="empTo" class="w-full h-10 rounded-xl border border-gray-200 px-2"></select>
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm text-gray-600 mb-1">ملاحظة (اختياري)</label>
+          <label class="block text-sm text-gray-600 mb-1" data-i18n-key="modal-transfer-note-optional">ملاحظة (اختياري)</label>
           <textarea id="empNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200"></textarea>
         </div>
       </div>
 
       <div class="mt-5 flex justify-end gap-2">
-        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</button>
-        <button id="confirmTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm">تحويل</button>
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm" data-i18n-key="modal-cancel">إلغاء</button>
+        <button id="confirmTransfer" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm" data-i18n-key="modal-transfer-confirm">تحويل</button>
       </div>
     </div>
   </div>
@@ -403,29 +402,29 @@
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-bold text-[#002B5B]">تغيير حالة البلاغ</h3>
+        <h3 class="text-xl font-bold text-[#002B5B]" data-i18n-key="modal-change-status-title">تغيير حالة البلاغ</h3>
         <button data-close-modal class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
       </div>
 
       <!-- Body -->
       <div class="space-y-4">
         <div>
-          <label for="statusSelect" class="block text-sm font-medium text-gray-700 mb-2">الحالة الجديدة</label>
+          <label for="statusSelect" class="block text-sm font-medium text-gray-700 mb-2" data-i18n-key="modal-new-status">الحالة الجديدة</label>
           <select id="statusSelect" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-transparent">
-            <option value="">جاري التحميل...</option>
+            <option value="" data-i18n-key="loading">جاري التحميل...</option>
           </select>
         </div>
 
         <div>
-          <label for="statusNote" class="block text-sm font-medium text-gray-700 mb-2">ملاحظة (اختياري)</label>
-          <textarea id="statusNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-transparent" placeholder="أضف ملاحظة حول سبب تغيير الحالة..."></textarea>
+          <label for="statusNote" class="block text-sm font-medium text-gray-700 mb-2" data-i18n-key="modal-status-note">ملاحظة (اختياري)</label>
+          <textarea id="statusNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-transparent" data-i18n-placeholder="modal-status-note-placeholder" placeholder="أضف ملاحظة حول سبب تغيير الحالة..."></textarea>
         </div>
       </div>
 
       <!-- Footer -->
       <div class="mt-6 flex justify-end gap-2">
-        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
-        <button id="applyStatusBtn" class="h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">تطبيق</button>
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200" data-i18n-key="modal-cancel">إلغاء</button>
+        <button id="applyStatusBtn" class="h-10 px-5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700" data-i18n-key="modal-apply">تطبيق</button>
       </div>
     </div>
   </div>
@@ -435,13 +434,13 @@
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-bold text-[#002B5B]">🔺 تغيير الأولوية</h3>
+        <h3 class="text-xl font-bold text-[#002B5B]" data-i18n-key="modal-change-priority-title">🔺 تغيير الأولوية</h3>
         <button data-close-modal class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
       </div>
 
       <!-- Body -->
       <div class="space-y-4">
-        <p class="text-sm text-gray-600 mb-4">اختر الأولوية الجديدة للبلاغ:</p>
+        <p class="text-sm text-gray-600 mb-4" data-i18n-key="modal-priority-select">اختر الأولوية الجديدة للبلاغ:</p>
         
         <div class="grid gap-3">
           <!-- حرجة -->
@@ -452,7 +451,7 @@
             <div class="flex items-center gap-3">
               <span class="text-2xl">🔴</span>
               <div class="text-right">
-                <div class="font-bold text-red-700">حرجة</div>
+                <div class="font-bold text-red-700" data-i18n-key="priority-urgent">حرجة</div>
                 <div class="text-xs text-red-600">URGENT</div>
               </div>
             </div>
@@ -467,7 +466,7 @@
             <div class="flex items-center gap-3">
               <span class="text-2xl">🟠</span>
               <div class="text-right">
-                <div class="font-bold text-yellow-700">متوسطة</div>
+                <div class="font-bold text-yellow-700" data-i18n-key="priority-medium">متوسطة</div>
                 <div class="text-xs text-yellow-600">MEDIUM</div>
               </div>
             </div>
@@ -482,7 +481,7 @@
             <div class="flex items-center gap-3">
               <span class="text-2xl">🟢</span>
               <div class="text-right">
-                <div class="font-bold text-green-700">منخفضة</div>
+                <div class="font-bold text-green-700" data-i18n-key="priority-low">منخفضة</div>
                 <div class="text-xs text-green-600">LOW</div>
               </div>
             </div>
@@ -493,7 +492,7 @@
 
       <!-- Footer -->
       <div class="mt-6 flex justify-end gap-2">
-        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200" data-i18n-key="modal-cancel">إلغاء</button>
       </div>
     </div>
   </div>
@@ -503,27 +502,27 @@
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-bold text-rose-600">⚠️ تأكيد حذف البلاغ</h3>
+        <h3 class="text-xl font-bold text-rose-600" data-i18n-key="modal-delete-title">⚠️ تأكيد حذف البلاغ</h3>
         <button id="cancelDelete" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
       </div>
 
       <!-- Body -->
       <div class="space-y-4">
         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p class="text-sm text-gray-700">هل أنت متأكد من حذف هذا البلاغ؟</p>
-          <p class="text-sm text-gray-600 mt-2">سينتقل البلاغ إلى سلة المحذوفات ويمكن استرجاعه لاحقاً.</p>
+          <p class="text-sm text-gray-700" data-i18n-key="modal-delete-confirm">هل أنت متأكد من حذف هذا البلاغ؟</p>
+          <p class="text-sm text-gray-600 mt-2" data-i18n-key="modal-delete-warning">سينتقل البلاغ إلى سلة المحذوفات ويمكن استرجاعه لاحقاً.</p>
         </div>
 
         <div>
-          <label for="deleteReason" class="block text-sm font-medium text-gray-700 mb-2">سبب الحذف (اختياري)</label>
-          <input id="deleteReason" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-rose-200 focus:border-transparent" placeholder="مثال: تكرار / بلاغ بالخطأ / خارج الصلاحية">
+          <label for="deleteReason" class="block text-sm font-medium text-gray-700 mb-2" data-i18n-key="modal-delete-reason">سبب الحذف (اختياري)</label>
+          <input id="deleteReason" type="text" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-rose-200 focus:border-transparent" data-i18n-placeholder="modal-delete-reason-placeholder" placeholder="مثال: تكرار / بلاغ بالخطأ / خارج الصلاحية">
         </div>
       </div>
 
       <!-- Footer -->
       <div class="mt-6 flex justify-end gap-2">
-        <button id="cancelDeleteBtn" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
-        <button id="confirmDelete" class="h-10 px-5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700">حذف البلاغ</button>
+        <button id="cancelDeleteBtn" class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200" data-i18n-key="modal-cancel">إلغاء</button>
+        <button id="confirmDelete" class="h-10 px-5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700" data-i18n-key="modal-delete-confirm-btn">حذف البلاغ</button>
       </div>
     </div>
   </div>
@@ -533,40 +532,375 @@
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-bold text-[#002B5B]">⏳ تغيير مدة المعالجة</h3>
+        <h3 class="text-xl font-bold text-[#002B5B]" data-i18n-key="modal-duration-title">⏳ تغيير مدة المعالجة</h3>
         <button data-close-modal class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
       </div>
 
       <!-- Body -->
       <div class="space-y-4">
         <div>
-          <label for="newDuration" class="block text-sm font-medium text-gray-700 mb-2">اختر المدة الجديدة</label>
+          <label for="newDuration" class="block text-sm font-medium text-gray-700 mb-2" data-i18n-key="modal-duration-select">اختر المدة الجديدة</label>
           <select id="newDuration" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-transparent">
-            <option value="">اختر المدة</option>
-            <option value="6">6 ساعات</option>
-            <option value="12">12 ساعة</option>
-            <option value="24">يوم واحد</option>
-            <option value="48">يومان</option>
-            <option value="72">3 أيام</option>
-            <option value="120">5 أيام</option>
+            <option value="" data-i18n-key="modal-duration-placeholder">اختر المدة</option>
+            <option value="6" data-i18n-key="modal-duration-6h">6 ساعات</option>
+            <option value="12" data-i18n-key="modal-duration-12h">12 ساعة</option>
+            <option value="24" data-i18n-key="modal-duration-1d">يوم واحد</option>
+            <option value="48" data-i18n-key="modal-duration-2d">يومان</option>
+            <option value="72" data-i18n-key="modal-duration-3d">3 أيام</option>
+            <option value="120" data-i18n-key="modal-duration-5d">5 أيام</option>
           </select>
         </div>
         <div>
-          <label for="durationNote" class="block text-sm font-medium text-gray-700 mb-2">ملاحظة (اختياري)</label>
-          <textarea id="durationNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-transparent" placeholder="أضف سبب تغيير المدة..."></textarea>
+          <label for="durationNote" class="block text-sm font-medium text-gray-700 mb-2" data-i18n-key="modal-duration-note">ملاحظة (اختياري)</label>
+          <textarea id="durationNote" rows="3" class="w-full rounded-xl border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:border-transparent" data-i18n-placeholder="modal-duration-note-placeholder" placeholder="أضف سبب تغيير المدة..."></textarea>
         </div>
       </div>
 
       <!-- Footer -->
       <div class="mt-6 flex justify-end gap-2">
-        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">إلغاء</button>
-        <button id="applyDurationBtn" class="h-10 px-5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700">تطبيق</button>
+        <button data-close-modal class="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 text-sm hover:bg-gray-200" data-i18n-key="modal-cancel">إلغاء</button>
+        <button id="applyDurationBtn" class="h-10 px-5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700" data-i18n-key="modal-apply">تطبيق</button>
       </div>
     </div>
   </div>
 
   <!-- نظام حماية الصفحات - يجب تحميله أولاً -->
   <script src="../../assets/js/auth-check.js"></script>
+  
+  <!-- نظام الترجمة -->
+  <script>
+    (function() {
+      const translations = {
+        ar: {
+          // الهيدر
+          'nav-home': 'الرئيسية',
+          'nav-dashboard': 'لوحة التحكم',
+          'nav-history': 'سجل البلاغات',
+          'nav-about': 'حول النظام',
+          'nav-help': 'المساعدة',
+          'nav-contact': 'اتصل بنا',
+          'languageToggle': '🌐 العربية',
+          
+          // العنوان الرئيسي
+          'page-title': 'تفاصيل البلاغ',
+          'back-to-history': '⟵ رجوع للسجل',
+          
+          // الهيدر المختصر
+          'complaint-number': 'رقم البلاغ',
+          'remaining-time': '📅 المدة المتبقية لمعالجة البلاغ:',
+          
+          // شريط الإجراءات
+          'actions-title': 'إجراءات على البلاغ',
+          'btn-add-reply': 'إضافة رد',
+          'btn-change-status': 'تغيير الحالة',
+          'btn-change-priority': '🔺 تغيير الأولوية',
+          'btn-change-duration': '⏳ تغيير المدة',
+          'btn-transfer': 'تحويل',
+          'btn-delete': '🗑️ حذف البلاغ',
+          
+          // الأقسام
+          'section-referrer': 'بيانات المراجع',
+          'section-complaint-info': 'معلومات البلاغ',
+          'section-target-employee': 'بيانات الموظف المُبلّغ عليه',
+          'section-timeline': 'تتبع الحالة',
+          'section-attachments': 'المرفقات',
+          'section-replies': 'الردود على البلاغ',
+          
+          // التسميات
+          'label-name': 'الاسم:',
+          'label-mobile': 'الجوال:',
+          'label-file-number': 'رقم الملف:',
+          'label-hospital': 'المستشفى:',
+          'label-type': 'التصنيف:',
+          'label-subtype': 'التصنيف الفرعي:',
+          'label-department': 'القسم:',
+          'label-subdepartment': 'القسم الفرعي:',
+          'label-visit-date': 'تاريخ الزيارة:',
+          'label-created': 'تاريخ الإنشاء:',
+          'label-updated': 'آخر تحديث:',
+          'label-description': 'وصف البلاغ:',
+          'label-employee-name': 'اسم الموظف:',
+          'label-employee-id': 'رقم الموظف:',
+          'label-dept-name': 'اسم القسم:',
+          'label-dept-id': 'رقم القسم:',
+          'created-by': 'تم إنشاء البلاغ بواسطة:',
+          'assigned-to': 'الموظف المُسند إليه:',
+          'no-attachments': 'لا توجد مرفقات.',
+          'no-replies': 'لا توجد ردود بعد',
+          'be-first-reply': 'كن أول من يرد على هذا البلاغ',
+          
+          // المودالات
+          'modal-add-reply-title': 'إضافة رد على البلاغ',
+          'modal-reply-type': 'نوع الرد',
+          'modal-reply-type-placeholder': 'اختر نوع الرد',
+          'modal-reply-type-update': 'تحديث الحالة',
+          'modal-reply-type-followup': 'متابعة',
+          'modal-reply-type-resolution': 'حل المشكلة',
+          'modal-reply-type-information': 'معلومات إضافية',
+          'modal-reply-type-request': 'طلب توضيح',
+          'modal-reply-type-escalation': 'تصعيد',
+          'modal-reply-text': 'نص الرد',
+          'modal-reply-files': 'مرفقات (اختياري)',
+          'modal-cancel': 'إلغاء',
+          'modal-save-reply': 'حفظ الرد',
+          
+          'modal-transfer-title': 'تحويل البلاغ',
+          'modal-transfer-dept': 'تحويل بين الأقسام',
+          'modal-transfer-emp': 'تحويل بين الموظفين',
+          'modal-transfer-hosp': 'تحويل بين المستشفيات',
+          'modal-transfer-hospital': 'المستشفى',
+          'modal-transfer-note': 'ملاحظة التحويل (اختياري)',
+          'modal-transfer-current-dept': 'القسم الحالي',
+          'modal-transfer-target-dept': 'القسم الهدف',
+          'modal-transfer-note-optional': 'ملاحظة (اختياري)',
+          'modal-transfer-dept-label': 'القسم',
+          'modal-transfer-current-emp': 'الموظف الحالي',
+          'modal-transfer-target-emp': 'الموظف الهدف',
+          'modal-transfer-confirm': 'تحويل',
+          'loading': 'جاري التحميل...',
+          
+          'modal-change-status-title': 'تغيير حالة البلاغ',
+          'modal-new-status': 'الحالة الجديدة',
+          'modal-status-note': 'ملاحظة (اختياري)',
+          'modal-status-note-placeholder': 'أضف ملاحظة حول سبب تغيير الحالة...',
+          'modal-apply': 'تطبيق',
+          
+          'modal-change-priority-title': '🔺 تغيير الأولوية',
+          'modal-priority-select': 'اختر الأولوية الجديدة للبلاغ:',
+          'priority-urgent': 'حرجة',
+          'priority-medium': 'متوسطة',
+          'priority-low': 'منخفضة',
+          
+          'modal-delete-title': '⚠️ تأكيد حذف البلاغ',
+          'modal-delete-confirm': 'هل أنت متأكد من حذف هذا البلاغ؟',
+          'modal-delete-warning': 'سينتقل البلاغ إلى سلة المحذوفات ويمكن استرجاعه لاحقاً.',
+          'modal-delete-reason': 'سبب الحذف (اختياري)',
+          'modal-delete-reason-placeholder': 'مثال: تكرار / بلاغ بالخطأ / خارج الصلاحية',
+          'modal-delete-confirm-btn': 'حذف البلاغ',
+          
+          'modal-duration-title': '⏳ تغيير مدة المعالجة',
+          'modal-duration-select': 'اختر المدة الجديدة',
+          'modal-duration-placeholder': 'اختر المدة',
+          'modal-duration-6h': '6 ساعات',
+          'modal-duration-12h': '12 ساعة',
+          'modal-duration-1d': 'يوم واحد',
+          'modal-duration-2d': 'يومان',
+          'modal-duration-3d': '3 أيام',
+          'modal-duration-5d': '5 أيام',
+          'modal-duration-note': 'ملاحظة (اختياري)',
+          'modal-duration-note-placeholder': 'أضف سبب تغيير المدة...',
+          
+          // الفوتير
+          'footer-brand': 'تجمع مكة الصحي',
+          'footer-brand-subtitle': 'نظام البلاغات',
+          'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
+          'footer-links-title': 'روابط سريعة',
+          'footer-link-home': 'الرئيسية',
+          'footer-link-submit': 'تقديم بلاغ',
+          'footer-link-track': 'متابعة بلاغ',
+          'footer-link-faq': 'الأسئلة الشائعة',
+          'footer-contact-title': 'معلومات التواصل',
+          'footer-support': 'رقم الدعم: 0559735137',
+          'footer-email': 'support@makkahhealth.gov.sa',
+          'footer-hours': 'ساعات العمل: 24/7',
+          'footer-copyright': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة'
+        },
+        en: {
+          // الهيدر
+          'nav-home': 'Home',
+          'nav-dashboard': 'Dashboard',
+          'nav-history': 'Complaints History',
+          'nav-about': 'About System',
+          'nav-help': 'Help',
+          'nav-contact': 'Contact Us',
+          'languageToggle': '🌐 English',
+          
+          // العنوان الرئيسي
+          'page-title': 'Complaint Details',
+          'back-to-history': '⟵ Back to History',
+          
+          // الهيدر المختصر
+          'complaint-number': 'Complaint Number',
+          'remaining-time': '📅 Remaining processing time:',
+          
+          // شريط الإجراءات
+          'actions-title': 'Actions on Complaint',
+          'btn-add-reply': 'Add Reply',
+          'btn-change-status': 'Change Status',
+          'btn-change-priority': '🔺 Change Priority',
+          'btn-change-duration': '⏳ Change Duration',
+          'btn-transfer': 'Transfer',
+          'btn-delete': '🗑️ Delete Complaint',
+          
+          // الأقسام
+          'section-referrer': 'Referrer Information',
+          'section-complaint-info': 'Complaint Information',
+          'section-target-employee': 'Target Employee Information',
+          'section-timeline': 'Status Tracking',
+          'section-attachments': 'Attachments',
+          'section-replies': 'Replies to Complaint',
+          
+          // التسميات
+          'label-name': 'Name:',
+          'label-mobile': 'Mobile:',
+          'label-file-number': 'File Number:',
+          'label-hospital': 'Hospital:',
+          'label-type': 'Type:',
+          'label-subtype': 'Subtype:',
+          'label-department': 'Department:',
+          'label-subdepartment': 'Sub Department:',
+          'label-visit-date': 'Visit Date:',
+          'label-created': 'Created:',
+          'label-updated': 'Last Updated:',
+          'label-description': 'Description:',
+          'label-employee-name': 'Employee Name:',
+          'label-employee-id': 'Employee ID:',
+          'label-dept-name': 'Department Name:',
+          'label-dept-id': 'Department ID:',
+          'created-by': 'Created by:',
+          'assigned-to': 'Assigned to:',
+          'no-attachments': 'No attachments.',
+          'no-replies': 'No replies yet',
+          'be-first-reply': 'Be the first to reply to this complaint',
+          
+          // المودالات
+          'modal-add-reply-title': 'Add Reply to Complaint',
+          'modal-reply-type': 'Reply Type',
+          'modal-reply-type-placeholder': 'Select reply type',
+          'modal-reply-type-update': 'Status Update',
+          'modal-reply-type-followup': 'Follow-up',
+          'modal-reply-type-resolution': 'Resolution',
+          'modal-reply-type-information': 'Additional Information',
+          'modal-reply-type-request': 'Clarification Request',
+          'modal-reply-type-escalation': 'Escalation',
+          'modal-reply-text': 'Reply Text',
+          'modal-reply-files': 'Attachments (Optional)',
+          'modal-cancel': 'Cancel',
+          'modal-save-reply': 'Save Reply',
+          
+          'modal-transfer-title': 'Transfer Complaint',
+          'modal-transfer-dept': 'Transfer Between Departments',
+          'modal-transfer-emp': 'Transfer Between Employees',
+          'modal-transfer-hosp': 'Transfer Between Hospitals',
+          'modal-transfer-hospital': 'Hospital',
+          'modal-transfer-note': 'Transfer Note (Optional)',
+          'modal-transfer-current-dept': 'Current Department',
+          'modal-transfer-target-dept': 'Target Department',
+          'modal-transfer-note-optional': 'Note (Optional)',
+          'modal-transfer-dept-label': 'Department',
+          'modal-transfer-current-emp': 'Current Employee',
+          'modal-transfer-target-emp': 'Target Employee',
+          'modal-transfer-confirm': 'Transfer',
+          'loading': 'Loading...',
+          
+          'modal-change-status-title': 'Change Complaint Status',
+          'modal-new-status': 'New Status',
+          'modal-status-note': 'Note (Optional)',
+          'modal-status-note-placeholder': 'Add a note about the reason for status change...',
+          'modal-apply': 'Apply',
+          
+          'modal-change-priority-title': '🔺 Change Priority',
+          'modal-priority-select': 'Select new priority for complaint:',
+          'priority-urgent': 'Urgent',
+          'priority-medium': 'Medium',
+          'priority-low': 'Low',
+          
+          'modal-delete-title': '⚠️ Confirm Delete Complaint',
+          'modal-delete-confirm': 'Are you sure you want to delete this complaint?',
+          'modal-delete-warning': 'The complaint will be moved to trash and can be restored later.',
+          'modal-delete-reason': 'Delete Reason (Optional)',
+          'modal-delete-reason-placeholder': 'Example: Duplicate / Wrong complaint / Out of scope',
+          'modal-delete-confirm-btn': 'Delete Complaint',
+          
+          'modal-duration-title': '⏳ Change Processing Duration',
+          'modal-duration-select': 'Select New Duration',
+          'modal-duration-placeholder': 'Select duration',
+          'modal-duration-6h': '6 hours',
+          'modal-duration-12h': '12 hours',
+          'modal-duration-1d': '1 day',
+          'modal-duration-2d': '2 days',
+          'modal-duration-3d': '3 days',
+          'modal-duration-5d': '5 days',
+          'modal-duration-note': 'Note (Optional)',
+          'modal-duration-note-placeholder': 'Add reason for duration change...',
+          
+          // الفوتير
+          'footer-brand': 'Makkah Health Cluster',
+          'footer-brand-subtitle': 'Complaint System',
+          'footer-description': 'Official platform for filing and tracking complaints',
+          'footer-links-title': 'Quick Links',
+          'footer-link-home': 'Home',
+          'footer-link-submit': 'Submit Complaint',
+          'footer-link-track': 'Track Complaint',
+          'footer-link-faq': 'FAQ',
+          'footer-contact-title': 'Contact Information',
+          'footer-support': 'Support: 0559735137',
+          'footer-email': 'support@makkahhealth.gov.sa',
+          'footer-hours': 'Working Hours: 24/7',
+          'footer-copyright': '© 2025 Makkah Health Cluster – All Rights Reserved'
+        }
+      };
+
+      let currentLanguage = 'ar';
+
+      function applyTranslation(lang) {
+        window.currentLanguage = lang;
+        currentLanguage = lang;
+        localStorage.setItem('siteLanguage', lang);
+        
+        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.setAttribute('dir', (lang === 'ar') ? 'rtl' : 'ltr');
+        
+        const elements = translations[lang];
+        if (!elements) return;
+
+        // تطبيق الترجمة على جميع العناصر
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+          const key = el.getAttribute('data-i18n-key');
+          if (key && elements[key]) {
+            el.textContent = elements[key];
+          }
+        });
+
+        // تطبيق الترجمة على placeholders
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+          const key = el.getAttribute('data-i18n-placeholder');
+          if (key && elements[key]) {
+            el.placeholder = elements[key];
+          }
+        });
+
+        // تطبيق الترجمة على options في select
+        document.querySelectorAll('select option[data-i18n-key]').forEach(option => {
+          const key = option.getAttribute('data-i18n-key');
+          if (key && elements[key]) {
+            option.textContent = elements[key];
+          }
+        });
+
+        // تحديث عنوان الصفحة
+        if (elements['page-title']) {
+          document.title = elements['page-title'];
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const savedLanguage = localStorage.getItem('siteLanguage') || 'ar';
+        window.currentLanguage = savedLanguage;
+        document.documentElement.setAttribute('lang', savedLanguage);
+        document.documentElement.setAttribute('dir', (savedLanguage === 'ar') ? 'rtl' : 'ltr');
+        applyTranslation(savedLanguage);
+        
+        const languageToggle = document.getElementById('languageToggle');
+        if (languageToggle) {
+          languageToggle.addEventListener('click', function() {
+            const newLang = (window.currentLanguage === 'ar') ? 'en' : 'ar';
+            applyTranslation(newLang);
+          });
+        }
+      });
+    })();
+  </script>
   
   <script src="complaint-details.js"></script>
 </body>

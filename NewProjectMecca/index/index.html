@@ -754,6 +754,13 @@
 
     // دالة تطبيق الترجمة
     function applyTranslation(lang) {
+      // حفظ اللغة في window.currentLanguage
+      window.currentLanguage = lang;
+      currentLanguage = lang;
+      
+      // حفظ اللغة في localStorage
+      localStorage.setItem('siteLanguage', lang);
+      
       const elements = translations[lang];
       if (!elements) return;
 
@@ -779,17 +786,16 @@
       });
 
       // تغيير اتجاه النص
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', (lang === 'ar') ? 'rtl' : 'ltr');
+      
       if (lang === 'en') {
-        document.documentElement.setAttribute('dir', 'ltr');
-        document.documentElement.setAttribute('lang', 'en');
         // تغيير محاذاة النصوص للعربية
         document.querySelectorAll('[id^="hero"], [id^="services"], [id^="why-choose"]').forEach(el => {
           el.classList.remove('text-right', 'lg:text-right');
           el.classList.add('text-left', 'lg:text-left');
         });
       } else {
-        document.documentElement.setAttribute('dir', 'rtl');
-        document.documentElement.setAttribute('lang', 'ar');
         // استعادة محاذاة النصوص للعربية
         document.querySelectorAll('[id^="hero"], [id^="services"], [id^="why-choose"]').forEach(el => {
           el.classList.remove('text-left', 'lg:text-left');
@@ -797,8 +803,6 @@
         });
       }
 
-      currentLanguage = lang;
-      window.currentLanguage = lang;
       window.dispatchEvent(new CustomEvent('landing-language-change', {
         detail: { lang }
       }));
@@ -806,17 +810,21 @@
 
     // تهيئة النظام عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', function() {
-      // تطبيق اللغة المحفوظة أو الافتراضية
-      const savedLanguage = localStorage.getItem('selectedLanguage') || 'ar';
+      // قراءة اللغة من localStorage أو استخدام العربية كافتراضي
+      const savedLanguage = localStorage.getItem('siteLanguage') || 'ar';
+      window.currentLanguage = savedLanguage;
+      document.documentElement.setAttribute('lang', savedLanguage);
+      document.documentElement.setAttribute('dir', (savedLanguage === 'ar') ? 'rtl' : 'ltr');
+      
+      // تطبيق الترجمة
       applyTranslation(savedLanguage);
       
       // ربط زر اللغة
       const languageToggle = document.getElementById('languageToggle');
       if (languageToggle) {
         languageToggle.addEventListener('click', function() {
-          const newLang = currentLanguage === 'ar' ? 'en' : 'ar';
+          const newLang = (window.currentLanguage === 'ar') ? 'en' : 'ar';
           applyTranslation(newLang);
-          localStorage.setItem('selectedLanguage', newLang);
         });
       }
     });
