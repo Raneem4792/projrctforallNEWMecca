@@ -365,16 +365,28 @@ router.get('/me', async (req, res) => {
     const central = await getCentralPool();
     let userInfo = null;
 
-    // إذا كان المستخدم مركزي (مدير التجمع)
-    if (decoded.scope === 'central' || decoded.HospitalID === null || decoded.hospitalId === null) {
-      // ابحث في جدول users المركزي أولاً
-      const [centralUsers] = await central.query(
-        `SELECT UserID, RoleID, FullName, Username, Email, Mobile, HospitalID, DepartmentID
-         FROM users
-         WHERE UserID = ? AND IsActive = 1 AND HospitalID IS NULL
+    // إذا كان المستخدم مركزي (مدير التجمع) - تحقق من RoleID === 1 أيضاً
+    const roleId = decoded.RoleID || decoded.roleId || decoded.role || 0;
+    if (decoded.scope === 'central' || decoded.HospitalID === null || decoded.hospitalId === null || roleId === 1) {
+      // ابحث أولاً في users_central (جدول مديري التجمع)
+      let [centralUsers] = await central.query(
+        `SELECT UserID, RoleID, FullName, Username, Email, Mobile, NULL AS HospitalID, NULL AS DepartmentID
+         FROM users_central
+         WHERE UserID = ? AND IsActive = 1
          LIMIT 1`,
-        [decoded.userId || decoded.uid]
+        [decoded.userId || decoded.uid || decoded.UserID]
       );
+
+      // إذا لم يُوجد في users_central، ابحث في users (القاعدة المركزية)
+      if (centralUsers.length === 0) {
+        [centralUsers] = await central.query(
+          `SELECT UserID, RoleID, FullName, Username, Email, Mobile, HospitalID, DepartmentID
+           FROM users
+           WHERE UserID = ? AND IsActive = 1 AND HospitalID IS NULL
+           LIMIT 1`,
+          [decoded.userId || decoded.uid || decoded.UserID]
+        );
+      }
 
       if (centralUsers.length > 0) {
         const u = centralUsers[0];
@@ -385,8 +397,8 @@ router.get('/me', async (req, res) => {
           Username: u.Username,
           Email: u.Email,
           Mobile: u.Mobile,
-          RoleID: u.RoleID,
-          roleId: u.RoleID,
+          RoleID: u.RoleID || 1,
+          roleId: u.RoleID || 1,
           HospitalID: null,
           hospitalId: null,
           DepartmentID: null,
@@ -394,35 +406,6 @@ router.get('/me', async (req, res) => {
           role: 'cluster_admin',
           scope: 'central'
         };
-      } else {
-        // جرب users_central
-        const [cmUsers] = await central.query(
-          `SELECT UserID, RoleID, FullName, Username, Email, Mobile
-           FROM users_central
-           WHERE UserID = ? AND IsActive = 1
-           LIMIT 1`,
-          [decoded.userId || decoded.uid]
-        );
-
-        if (cmUsers.length > 0) {
-          const u = cmUsers[0];
-          userInfo = {
-            UserID: u.UserID,
-            userId: u.UserID,
-            FullName: u.FullName,
-            Username: u.Username,
-            Email: u.Email,
-            Mobile: u.Mobile,
-            RoleID: u.RoleID || 1,
-            roleId: u.RoleID || 1,
-            HospitalID: null,
-            hospitalId: null,
-            DepartmentID: null,
-            isClusterManager: true,
-            role: 'cluster_admin',
-            scope: 'central'
-          };
-        }
       }
     } else {
       // مستخدم من قاعدة مستشفى
@@ -544,16 +527,28 @@ router.get('/me-permissions', async (req, res) => {
       userId: decoded.userId || decoded.uid
     });
     
-    if (decoded.scope === 'central' || decoded.HospitalID === null || decoded.hospitalId === null) {
+    if (decoded.scope === 'central' || decoded.HospitalID === null || decoded.hospitalId === null || decoded.RoleID === 1) {
       console.log('🔍 Debug - Detected central admin');
       // مدير التجمع له جميع الصلاحيات
-      const [centralUsers] = await central.query(
-        `SELECT UserID, RoleID, FullName, Username, HospitalID, DepartmentID
-         FROM users
-         WHERE UserID = ? AND IsActive = 1 AND HospitalID IS NULL
+      // البحث أولاً في users_central (جدول مديري التجمع)
+      let [centralUsers] = await central.query(
+        `SELECT UserID, RoleID, FullName, Username, NULL AS HospitalID, NULL AS DepartmentID
+         FROM users_central
+         WHERE UserID = ? AND IsActive = 1
          LIMIT 1`,
-        [decoded.userId || decoded.uid]
+        [decoded.userId || decoded.uid || decoded.UserID]
       );
+      
+      // إذا لم يُوجد في users_central، ابحث في users (القاعدة المركزية)
+      if (centralUsers.length === 0) {
+        [centralUsers] = await central.query(
+          `SELECT UserID, RoleID, FullName, Username, HospitalID, DepartmentID
+           FROM users
+           WHERE UserID = ? AND IsActive = 1 AND HospitalID IS NULL
+           LIMIT 1`,
+          [decoded.userId || decoded.uid || decoded.UserID]
+        );
+      }
       
       console.log('🔍 Debug - Central users found:', centralUsers.length);
 
@@ -562,14 +557,15 @@ router.get('/me-permissions', async (req, res) => {
         console.log('🔍 Debug - Central user found:', {
           UserID: u.UserID,
           RoleID: u.RoleID,
-          FullName: u.FullName
+          FullName: u.FullName,
+          HospitalID: u.HospitalID
         });
         
         userInfo = {
           UserID: u.UserID,
           HospitalID: null,
           DepartmentID: null,
-          RoleID: u.RoleID
+          RoleID: u.RoleID || 1 // تأكد من أن RoleID = 1 لمدير التجمع
         };
         // مدير التجمع له جميع الصلاحيات دائماً
         permissions = {

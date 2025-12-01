@@ -374,15 +374,27 @@
           }
         };
 
-        // التحقق من كون المستخدم مدير التجمع
-        const isCentral = p?.user?.scope === 'central' || p?.user?.HospitalID == null;
-        console.log('🔍 هل مدير التجمع؟', isCentral);
+        // التحقق من كون المستخدم مدير التجمع (RoleID === 1)
+        const roleId = p?.user?.RoleID || p?.user?.roleId || 0;
+        const isClusterManager = roleId === 1;
+        const isCentral = isClusterManager || p?.user?.scope === 'central' || p?.user?.HospitalID == null;
+        console.log('🔍 هل مدير التجمع؟', {
+          isClusterManager,
+          isCentral,
+          roleId,
+          user: p?.user,
+          adminPanel: p.adminPanel,
+          adminDepartments: p.adminDepartments,
+          adminHospital: p.adminHospital,
+          adminClusters: p.adminClusters
+        });
 
         // إظهار/إخفاء البطاقات حسب الصلاحيات
-        show('cardAdminDepts',    isCentral || p.adminDepartments === true);
-        show('cardAdminHospital', isCentral || p.adminHospital    === true);
-        show('cardAdminClusters', isCentral || p.adminClusters    === true);
-        show('cardIconManager',   isCentral || p.adminPanel === true || p.adminHospital === true);
+        // مدير التجمع (RoleID === 1) يرى جميع البطاقات
+        show('cardAdminDepts',    isClusterManager || p.adminDepartments === true);
+        show('cardAdminHospital', isClusterManager || p.adminHospital    === true);
+        show('cardAdminClusters', isClusterManager || p.adminClusters    === true);
+        show('cardIconManager',   isClusterManager || p.adminPanel === true || p.adminHospital === true);
 
       } catch (err) {
         console.error('❌ خطأ في جلب الصلاحيات:', err);
