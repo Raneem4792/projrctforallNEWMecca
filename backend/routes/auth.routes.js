@@ -520,14 +520,16 @@ router.get('/me-permissions', async (req, res) => {
     };
 
     // إذا كان المستخدم مركزي (مدير التجمع)
+    const roleId = decoded.RoleID || decoded.roleId || decoded.role || 0;
     console.log('🔍 Debug - Token decoded:', {
       scope: decoded.scope,
       HospitalID: decoded.HospitalID,
       hospitalId: decoded.hospitalId,
-      userId: decoded.userId || decoded.uid
+      userId: decoded.userId || decoded.uid || decoded.UserID,
+      RoleID: roleId
     });
     
-    if (decoded.scope === 'central' || decoded.HospitalID === null || decoded.hospitalId === null || decoded.RoleID === 1) {
+    if (decoded.scope === 'central' || decoded.HospitalID === null || decoded.hospitalId === null || roleId === 1) {
       console.log('🔍 Debug - Detected central admin');
       // مدير التجمع له جميع الصلاحيات
       // البحث أولاً في users_central (جدول مديري التجمع)
