@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>إدارة المستشفيات</title>
+  <title id="document-title">إدارة المنشآت</title>
   <link rel="icon" href="../assets/img/logo.png" type="image/png">
   <!-- Theme controller -->
   <script src="../assets/js/theme.js"></script>
@@ -48,8 +48,8 @@
   <main class="container mx-auto px-4 pt-24 pb-10 flex-1">
     <div class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-xl font-extrabold text-[#002B5B]" id="hero-title" data-i18n-key="hero-title">إدارة المستشفيات</h2>
-        <p class="text-sm text-gray-600" id="hero-subtitle" data-i18n-key="hero-subtitle">إضافة وتعديل وحذف مستشفيات التجمع</p>
+        <h2 class="text-xl font-extrabold text-[#002B5B]" id="hero-title" data-i18n-key="hero-title">إدارة المنشآت</h2>
+        <p class="text-sm text-gray-600" id="hero-subtitle" data-i18n-key="hero-subtitle">إضافة وتعديل وحذف منشآت التجمع</p>
       </div>
       <div class="flex items-center gap-3">
         <label id="btnImportHospitals" for="excelFileInput" class="h-10 px-4 rounded-xl bg-emerald-600 text-white text-sm hover:bg-emerald-700 transition flex items-center cursor-pointer" style="display: none;" data-i18n-key="btn-import">
@@ -57,13 +57,13 @@
         </label>
         <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" />
         <a id="btnAddHospital" href="hospital-new.html" class="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition flex items-center" style="display: none;" data-i18n-key="btn-add">
-          + إضافة مستشفى جديد
+          + إضافة منشأة جديدة
         </a>
       </div>
     </div>
 
-    <!-- قائمة المستشفيات -->
-    <div id="hospitals-empty" class="col-span-3 text-center text-red-600" style="display: none;" data-i18n-key="list-empty">تعذر تحميل المستشفيات</div>
+    <!-- قائمة المنشآت -->
+    <div id="hospitals-empty" class="col-span-3 text-center text-red-600" style="display: none;" data-i18n-key="list-empty">تعذر تحميل المنشآت</div>
     <div id="hospitalsList" class="grid md:grid-cols-3 sm:grid-cols-2 gap-4"></div>
   </main>
 
@@ -76,12 +76,12 @@
       "nav-about": "حول النظام",
       "nav-help": "المساعدة",
       "nav-contact": "اتصل بنا",
-      "hero-title": "إدارة المستشفيات",
-      "hero-subtitle": "إضافة وتعديل وحذف مستشفيات التجمع",
+      "hero-title": "إدارة المنشآت",
+      "hero-subtitle": "إضافة وتعديل وحذف منشآت التجمع",
       "btn-import": "📥 استيراد من Excel",
-      "btn-add": "+ إضافة مستشفى جديد",
-      "list-empty": "تعذر تحميل المستشفيات",
-      "modal-title": "تعديل بيانات المستشفى",
+      "btn-add": "+ إضافة منشأة جديدة",
+      "list-empty": "تعذر تحميل المنشآت",
+      "modal-title": "تعديل بيانات المنشأة",
       "label-name-ar": "الاسم (عربي)",
       "label-name-en": "الاسم (إنجليزي)",
       "label-city-ar": "المدينة (ع)",
@@ -94,7 +94,7 @@
       "label-phone": "الهاتف",
       "label-facility-type": "نوع المنشأة",
       "option-facility-placeholder": "اختر نوع المنشأة",
-      "option-facility-hospital": "مستشفى",
+      "option-facility-hospital": "منشأة",
       "option-facility-center": "مركز صحي",
       "option-facility-admin": "إدارة",
       "label-code": "الكود",
@@ -108,20 +108,20 @@
       "status-inactive": "غير مفعّل",
       "action-edit": "✏️ تعديل",
       "action-delete": "🗑️ حذف",
-      "confirm-delete": "هل أنت متأكد من حذف هذا المستشفى؟",
+      "confirm-delete": "هل أنت متأكد من حذف هذه المنشأة؟",
       "delete-error": "حدث خطأ أثناء الحذف:",
       "name-required": "الاسم العربي مطلوب",
       "code-required": "الكود مطلوب",
-      "toast-update": "تم تحديث المستشفى",
+      "toast-update": "تم تحديث المنشأة",
       "save-error": "تعذر حفظ التعديلات",
-      "modal-load-error": "تعذر تحميل بيانات المستشفى",
+      "modal-load-error": "تعذر تحميل بيانات المنشأة",
       "import-invalid": "⚠️ يجب رفع ملف Excel فقط (.xlsx أو .xls)",
       "import-confirm": "هل أنت متأكد من استيراد المستشفيات من هذا الملف؟\n\nملاحظة: سيتم إنشاء مستشفيات جديدة فقط.",
       "import-progress": "⏳ جاري الاستيراد...",
       "import-success-title": "✅ تم استيراد المستشفيات بنجاح!",
       "import-summary-title": "📊 النتائج:",
-      "import-created": "• تم إنشاء: {count} مستشفى",
-      "import-updated": "• تم تحديث: {count} مستشفى",
+      "import-created": "• تم إنشاء: {count} منشأة",
+      "import-updated": "• تم تحديث: {count} منشأة",
       "import-skipped": "• تم تخطي: {count} صف",
       "import-errors": "• أخطاء: {count}",
       "import-details": "تفاصيل:",
@@ -139,7 +139,8 @@
       "footer-support-number": "رقم الدعم: 0559735137",
       "footer-support-email": "support@makkahhealth.gov.sa",
       "footer-working-hours": "ساعات العمل: 24/7",
-      "footer-rights": "© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة"
+      "footer-rights": "© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة",
+      "document-title": "إدارة المنشآت"
     },
     en: {
       "language-button": "🌐 العربية",
@@ -211,11 +212,13 @@
       "footer-support-number": "Support: 0559735137",
       "footer-support-email": "support@makkahhealth.gov.sa",
       "footer-working-hours": "Working Hours: 24/7",
-      "footer-rights": "© 2025 Makkah Health Cluster – All rights reserved"
+      "footer-rights": "© 2025 Makkah Health Cluster – All rights reserved",
+      "document-title": "Hospital Management"
     }
   };
 
-  let currentAdminHospLang = localStorage.getItem('adminHospitalsLanguage') || 'ar';
+    let currentAdminHospLang = 'ar';
+    window.currentLanguage = 'ar';
 
   function tHosp(key, fallback = '') {
     return adminHospitalsTranslations[currentAdminHospLang]?.[key]
@@ -227,22 +230,64 @@
   function applyAdminHospitalsTranslation(lang) {
     const dict = adminHospitalsTranslations[lang] || adminHospitalsTranslations.ar;
     currentAdminHospLang = lang;
+    window.currentLanguage = lang;
+    
+    // حفظ اللغة في localStorage الموحد
+    localStorage.setItem('siteLanguage', lang);
+    
     document.documentElement.setAttribute('lang', lang);
     document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
 
     document.querySelectorAll('[data-i18n-key]').forEach((el) => {
       const key = el.dataset.i18nKey;
-      if (dict[key] !== undefined) el.textContent = dict[key];
+      if (dict[key] !== undefined) {
+        if (el.tagName === 'OPTION') {
+          el.textContent = dict[key];
+        } else {
+          el.textContent = dict[key];
+        }
+      }
     });
+    
+    // تحديث عنوان الصفحة
+    if (dict['document-title']) {
+      document.title = dict['document-title'];
+    }
+    
+    // تحديث اتجاه النص
+    if (lang === 'en') {
+      document.querySelectorAll('h1, h2, h3, p, div, label, span').forEach(el => {
+        if (el.classList.contains('text-center')) return;
+        if (el.classList.contains('text-right')) {
+          el.classList.remove('text-right');
+          el.classList.add('text-left');
+        }
+      });
+    } else {
+      document.querySelectorAll('h1, h2, h3, p, div, label, span').forEach(el => {
+        if (el.classList.contains('text-center')) return;
+        if (el.classList.contains('text-left')) {
+          el.classList.remove('text-left');
+          el.classList.add('text-right');
+        }
+      });
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    applyAdminHospitalsTranslation(currentAdminHospLang);
+    // قراءة اللغة من localStorage الموحد
+    const savedLanguage = localStorage.getItem('siteLanguage') || 'ar';
+    currentAdminHospLang = savedLanguage;
+    window.currentLanguage = savedLanguage;
+    document.documentElement.setAttribute('lang', savedLanguage);
+    document.documentElement.setAttribute('dir', (savedLanguage === 'ar') ? 'rtl' : 'ltr');
+    
+    applyAdminHospitalsTranslation(savedLanguage);
+    
     const toggle = document.getElementById('languageToggle');
     if (toggle) {
       toggle.addEventListener('click', () => {
         const next = currentAdminHospLang === 'ar' ? 'en' : 'ar';
-        localStorage.setItem('adminHospitalsLanguage', next);
         applyAdminHospitalsTranslation(next);
         if (window.__cachedHospitals) {
           renderHospitals(window.__cachedHospitals);
@@ -315,7 +360,7 @@
           return;
         }
 
-        const confirmImport = confirm(tHosp('import-confirm', 'هل أنت متأكد من استيراد المستشفيات من هذا الملف؟\n\nملاحظة: سيتم إنشاء مستشفيات جديدة فقط.'));
+        const confirmImport = confirm(tHosp('import-confirm', 'هل أنت متأكد من استيراد المنشآت من هذا الملف؟\n\nملاحظة: سيتم إنشاء منشآت جديدة فقط.'));
         if (!confirmImport) {
           excelFileInput.value = '';
           return;
@@ -449,7 +494,7 @@
     }
 
     async function deleteHospital(id){
-      if(!confirm(tHosp('confirm-delete', 'هل أنت متأكد من حذف هذا المستشفى؟'))) return;
+      if(!confirm(tHosp('confirm-delete', 'هل أنت متأكد من حذف هذه المنشأة؟'))) return;
       try{
         const res = await fetch(`${API_BASE}/api/hospitals/${id}`, { 
           method:'DELETE', 
@@ -532,8 +577,8 @@
         </div>
       </div>
 
-      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300" data-i18n-key="footer-rights">
-        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        <span data-i18n-key="footer-rights">© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
       </div>
     </div>
   </footer>
@@ -546,7 +591,7 @@
     <!-- card -->
     <div class="absolute inset-x-0 top-16 mx-auto w-[min(1000px,95vw)] rounded-2xl bg-white shadow-xl" style="max-height: 90vh; overflow-y: auto;">
       <div class="flex items-center justify-between px-5 py-4 border-b">
-        <h3 class="text-lg font-bold text-[#002B5B]" data-i18n-key="modal-title">تعديل بيانات المستشفى</h3>
+        <h3 class="text-lg font-bold text-[#002B5B]" data-i18n-key="modal-title">تعديل بيانات المنشأة</h3>
         <button class="text-gray-500 hover:text-gray-700" onclick="closeEdit()">✕</button>
       </div>
 
@@ -603,7 +648,7 @@
           <label class="block text-sm mb-1" data-i18n-key="label-facility-type">نوع المنشأة</label>
           <select id="f_FacilityType" class="w-full rounded-xl border px-3 py-2 bg-white" required>
             <option value="" data-i18n-key="option-facility-placeholder">اختر نوع المنشأة</option>
-            <option value="hospital" data-i18n-key="option-facility-hospital">مستشفى</option>
+            <option value="hospital" data-i18n-key="option-facility-hospital">منشأة</option>
             <option value="center" data-i18n-key="option-facility-center">مركز صحي</option>
             <option value="administration" data-i18n-key="option-facility-admin">إدارة</option>
           </select>
@@ -686,7 +731,7 @@
         })
         .catch(err => {
           console.error('openEdit error', err);
-          alert(tHosp('modal-load-error','تعذر تحميل بيانات المستشفى'));
+          alert(tHosp('modal-load-error','تعذر تحميل بيانات المنشأة'));
         });
     }
 
@@ -734,7 +779,7 @@
         if(!res.ok) throw new Error('HTTP '+res.status);
 
         closeEdit();
-        showToast(tHosp('toast-update','تم تحديث المستشفى'));
+        showToast(tHosp('toast-update','تم تحديث المنشأة'));
         await loadHospitals(); // إعادة تحميل القائمة
       }catch(err){
         console.error('saveEdit error', err);

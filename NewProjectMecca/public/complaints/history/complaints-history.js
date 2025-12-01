@@ -142,6 +142,97 @@ async function loadHospitalsForCluster() {
 const params = new URLSearchParams(location.search);
 const hname = params.get('hname');
 
+// دالة حفظ الفلاتر في URL
+function saveFiltersToURL() {
+  const filters = getFilters();
+  const urlParams = new URLSearchParams();
+  
+  // حفظ الفلاتر في URL
+  if (filters.name) urlParams.set('name', filters.name);
+  if (filters.mobile) urlParams.set('mobile', filters.mobile);
+  if (filters.file) urlParams.set('file', filters.file);
+  if (filters.ticket) urlParams.set('ticket', filters.ticket);
+  if (filters.status && filters.status !== 'ALL') urlParams.set('status', filters.status);
+  if (filters.hospital && filters.hospital !== 'ALL') urlParams.set('hospital', filters.hospital);
+  if (filters.type && filters.type !== 'ALL') urlParams.set('type', filters.type);
+  if (filters.from) urlParams.set('from', filters.from);
+  if (filters.to) urlParams.set('to', filters.to);
+  if (assignedOnly) urlParams.set('assigned', 'me');
+  if (page > 1) urlParams.set('page', String(page));
+  
+  // حفظ فلتر المستشفى لمدير التجمع (hospitalSelect)
+  const hospitalSelect = document.getElementById('hospitalSelect');
+  if (hospitalSelect && hospitalSelect.value) {
+    urlParams.set('hospitalId', hospitalSelect.value);
+  }
+  
+  // تحديث URL بدون إعادة تحميل الصفحة
+  const newURL = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+  window.history.replaceState({}, '', newURL);
+}
+
+// دالة استعادة الفلاتر من URL
+function restoreFiltersFromURL() {
+  const urlParams = new URLSearchParams(location.search);
+  
+  // التحقق من وجود معاملات return_ (من صفحة التفاصيل)
+  const hasReturnParams = Array.from(urlParams.keys()).some(key => key.startsWith('return_'));
+  
+  if (hasReturnParams) {
+    // استعادة الفلاتر من معاملات return_
+    if (urlParams.get('return_name')) els.qName.value = urlParams.get('return_name');
+    if (urlParams.get('return_mobile')) els.qMobile.value = urlParams.get('return_mobile');
+    if (urlParams.get('return_file')) els.qFile.value = urlParams.get('return_file');
+    if (urlParams.get('return_ticket')) els.qTicket.value = urlParams.get('return_ticket');
+    if (urlParams.get('return_status')) els.fStatus.value = urlParams.get('return_status');
+    if (urlParams.get('return_hospital')) els.fHospital.value = urlParams.get('return_hospital');
+    if (urlParams.get('return_type')) els.fType.value = urlParams.get('return_type');
+    if (urlParams.get('return_from')) els.fFrom.value = urlParams.get('return_from');
+    if (urlParams.get('return_to')) els.fTo.value = urlParams.get('return_to');
+    if (urlParams.get('return_assigned') === 'me') {
+      assignedOnly = true;
+      const btnAssigned = document.getElementById('btnAssignedMe');
+      if (btnAssigned) {
+        btnAssigned.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+      }
+    }
+    if (urlParams.get('return_page')) page = parseInt(urlParams.get('return_page'), 10) || 1;
+    
+    // استعادة فلتر المستشفى لمدير التجمع (hospitalSelect) - سيتم تطبيقه بعد تحميل المستشفيات
+    
+    // تنظيف URL من معاملات return_ بعد الاستعادة
+    const cleanParams = new URLSearchParams();
+    urlParams.forEach((value, key) => {
+      if (!key.startsWith('return_')) {
+        cleanParams.set(key, value);
+      }
+    });
+    const newURL = window.location.pathname + (cleanParams.toString() ? '?' + cleanParams.toString() : '');
+    window.history.replaceState({}, '', newURL);
+  } else {
+    // استعادة الفلاتر من URL العادية (إذا لم تكن هناك معاملات return_)
+    if (urlParams.get('name')) els.qName.value = urlParams.get('name');
+    if (urlParams.get('mobile')) els.qMobile.value = urlParams.get('mobile');
+    if (urlParams.get('file')) els.qFile.value = urlParams.get('file');
+    if (urlParams.get('ticket')) els.qTicket.value = urlParams.get('ticket');
+    if (urlParams.get('status')) els.fStatus.value = urlParams.get('status');
+    if (urlParams.get('hospital')) els.fHospital.value = urlParams.get('hospital');
+    if (urlParams.get('type')) els.fType.value = urlParams.get('type');
+    if (urlParams.get('from')) els.fFrom.value = urlParams.get('from');
+    if (urlParams.get('to')) els.fTo.value = urlParams.get('to');
+    if (urlParams.get('assigned') === 'me') {
+      assignedOnly = true;
+      const btnAssigned = document.getElementById('btnAssignedMe');
+      if (btnAssigned) {
+        btnAssigned.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+      }
+    }
+    if (urlParams.get('page')) page = parseInt(urlParams.get('page'), 10) || 1;
+    
+    // استعادة فلتر المستشفى لمدير التجمع (hospitalSelect) - سيتم تطبيقه بعد تحميل المستشفيات
+  }
+}
+
 // قراءة الفلاتر من النموذج مع تنظيف القيم التجريبية
 function getFilters() {
   const v = (id) => (document.getElementById(id)?.value || '').trim();
@@ -214,6 +305,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         // تحميل المستشفيات
         await loadHospitalsForCluster();
         
+        // استعادة فلتر المستشفى من URL بعد تحميل المستشفيات
+        const urlParamsForHospital = new URLSearchParams(location.search);
+        const savedHospitalId = urlParamsForHospital.get('hospitalId') || urlParamsForHospital.get('return_hospitalId');
+        if (savedHospitalId) {
+          const hospitalSelect = document.getElementById('hospitalSelect');
+          if (hospitalSelect) {
+            // التحقق من أن الخيار موجود في القائمة
+            const optionExists = Array.from(hospitalSelect.options).some(opt => opt.value === savedHospitalId);
+            if (optionExists) {
+              hospitalSelect.value = savedHospitalId;
+              // تحميل التصنيفات للمستشفى المحدد
+              await loadComplaintTypes();
+              console.log(`✅ تم استعادة فلتر المستشفى: ${savedHospitalId}`);
+            }
+          }
+        }
+        
         // ربط تغيير المستشفى
         const hospitalSelect = document.getElementById('hospitalSelect');
         if (hospitalSelect) {
@@ -221,6 +329,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // تحديث التصنيفات عند تغيير المستشفى
             await loadComplaintTypes();
             page = 1;
+            saveFiltersToURL(); // حفظ الفلاتر في URL عند تغيير المستشفى
             runSearch();
           });
         }
@@ -241,8 +350,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  els.btnSearch.addEventListener('click', () => { page = 1; runSearch(); });
-  els.btnReset.addEventListener('click', resetFilters);
+  els.btnSearch.addEventListener('click', () => { 
+    page = 1; 
+    saveFiltersToURL(); // حفظ الفلاتر في URL عند البحث
+    runSearch(); 
+  });
+  els.btnReset.addEventListener('click', () => {
+    resetFilters();
+    // مسح الفلاتر من URL عند إعادة الضبط
+    window.history.replaceState({}, '', window.location.pathname);
+  });
   
   // ربط أزرار التصدير
   const btnExportExcel = document.getElementById('btnExportExcel');
@@ -310,6 +427,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // تحميل التصنيفات من قاعدة البيانات
   await loadComplaintTypes();
+  
+  // استعادة الفلاتر من URL (إذا كانت موجودة)
+  restoreFiltersFromURL();
   
   // تحميل البيانات تلقائياً عند فتح الصفحة
   console.log('🚀 تحميل البيانات تلقائياً عند فتح الصفحة');
@@ -953,11 +1073,40 @@ function render(items, curPage, totalPages) {
     `;
 
     card.addEventListener('click', () => {
+      // ✅ حفظ الفلاتر الحالية في URL قبل الانتقال
+      saveFiltersToURL();
+      
       // ✅ إرسال HospitalID مع رقم التذكرة لضمان قراءة البيانات من القاعدة الصحيحة
       const hospitalId = c.hospitalId || c.HospitalID || '';
-      const url = `complaint-details.html?ticket=${encodeURIComponent(c.ticket)}${hospitalId ? `&hid=${hospitalId}` : ''}`;
       
-      console.log('🔗 فتح تفاصيل البلاغ:', { ticket: c.ticket, hospitalId, url });
+      // ✅ إضافة الفلاتر الحالية إلى رابط التفاصيل
+      const filters = getFilters();
+      const returnParams = new URLSearchParams();
+      returnParams.set('ticket', c.ticket);
+      if (hospitalId) returnParams.set('hid', hospitalId);
+      
+      // إضافة الفلاتر للرجوع
+      if (filters.name) returnParams.set('return_name', filters.name);
+      if (filters.mobile) returnParams.set('return_mobile', filters.mobile);
+      if (filters.file) returnParams.set('return_file', filters.file);
+      if (filters.ticket) returnParams.set('return_ticket', filters.ticket);
+      if (filters.status && filters.status !== 'ALL') returnParams.set('return_status', filters.status);
+      if (filters.hospital && filters.hospital !== 'ALL') returnParams.set('return_hospital', filters.hospital);
+      if (filters.type && filters.type !== 'ALL') returnParams.set('return_type', filters.type);
+      if (filters.from) returnParams.set('return_from', filters.from);
+      if (filters.to) returnParams.set('return_to', filters.to);
+      if (assignedOnly) returnParams.set('return_assigned', 'me');
+      if (page > 1) returnParams.set('return_page', String(page));
+      
+      // إضافة فلتر المستشفى لمدير التجمع (hospitalSelect)
+      const hospitalSelect = document.getElementById('hospitalSelect');
+      if (hospitalSelect && hospitalSelect.value) {
+        returnParams.set('return_hospitalId', hospitalSelect.value);
+      }
+      
+      const url = `complaint-details.html?${returnParams.toString()}`;
+      
+      console.log('🔗 فتح تفاصيل البلاغ مع حفظ الفلاتر:', { ticket: c.ticket, hospitalId, url });
       window.location.href = url;
     });
 

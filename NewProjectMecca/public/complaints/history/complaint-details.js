@@ -1,4 +1,37 @@
 // ✅ تم الاستبدال بـ API حقيقي - البيانات الوهمية معطلة الآن
+// دالة بناء رابط الرجوع مع الفلاتر
+function buildBackLink() {
+  const urlParams = new URLSearchParams(location.search);
+  const returnParams = new URLSearchParams();
+  
+  // جمع جميع معاملات return_ من URL
+  const returnFilters = {};
+  urlParams.forEach((value, key) => {
+    if (key.startsWith('return_')) {
+      const filterKey = key.replace('return_', '');
+      returnFilters[filterKey] = value;
+    }
+  });
+  
+  // بناء رابط الرجوع مع الفلاتر
+  if (Object.keys(returnFilters).length > 0) {
+    Object.entries(returnFilters).forEach(([key, value]) => {
+      returnParams.set(key, value);
+    });
+    return `complaints-history.html?${returnParams.toString()}`;
+  }
+  
+  return 'complaints-history.html';
+}
+
+// تحديث رابط الرجوع عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+  const backLink = document.getElementById('backToHistoryLink');
+  if (backLink) {
+    backLink.href = buildBackLink();
+  }
+});
+
 // إذا أردت الرجوع للوضع الوهمي للاختبار، فعّل السطور التالية:
 // const MOCK = window.MOCK_COMPLAINTS ?? [...];
 
@@ -2121,8 +2154,8 @@ if (confirmDelete) {
           // التوجيه لسلة المحذوفات للمستشفى
           window.location.href = `../../admin/admin-trash.html?hospitalId=${hospitalId}`;
         } else {
-          // التوجيه لسجل البلاغات
-          window.location.href = 'complaints-history.html';
+          // التوجيه لسجل البلاغات مع استعادة الفلاتر
+          window.location.href = buildBackLink();
         }
       }, 1500);
 
@@ -2477,9 +2510,9 @@ async function handleOtherTransfers(activeTab) {
       // إغلاق المودال
       closeModals();
       
-      // إعادة توجيه إلى صفحة البلاغات بعد ثانية واحدة
+      // إعادة توجيه إلى صفحة البلاغات بعد ثانية واحدة مع استعادة الفلاتر
       setTimeout(() => {
-        window.location.href = 'complaints-history.html';
+        window.location.href = buildBackLink();
       }, 1000);
 
     } catch (error) {

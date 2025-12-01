@@ -60,6 +60,7 @@ import improvementsRoutes from './routes/improvements.routes.js';
 import improvements937Routes from './routes/improvements937.routes.js';
 import imports937Routes from './routes/imports937.routes.js';
 import importsDepartmentsAssignRoutes from './routes/importsDepartmentsAssign.routes.js';
+import satisfactionWeeksRoutes from './routes/satisfactionWeeks.routes.js';
 import mysteryComplaintsRoutes from './routes/mystery-complaints.routes.js';
 import mysteryDashboardRoutes from './routes/mystery-dashboard.routes.js';
 import centralRoutes from './routes/central.routes.js';
@@ -281,6 +282,7 @@ app.use('/api/complaints-list', complaintsListRoutes);
 app.use('/api', hospitalTripsRoutes);
 app.use('/api', imports937Routes); // استيراد 937
 app.use('/api/imports', importsDepartmentsAssignRoutes); // توزيع الأقسام
+app.use('/api', satisfactionWeeksRoutes); // تقارير الرضا الأسبوعي
 app.use('/api', mysteryComplaintsRoutes); // بلاغات الزائر السري
 app.use('/api', mysteryDashboardRoutes); // لوحة تحكم الزائر السري
 app.use('/api', centralRoutes); // القاعدة المركزية

@@ -3060,6 +3060,9 @@ async function initializeDashboard() {
     // توليد قوائم الفلترة (المستشفيات والمراكز الصحية)
     generateHospitalFilterList();
     generateCenterFilterList();
+    
+    // تحميل بيانات الرضا الأسبوعي
+    loadSatisfactionCharts();
 
     // 🔹 تحديث أزرار الفلترة عند تغيير اللغة
     const langBtn = document.getElementById('languageToggle');
@@ -5438,5 +5441,437 @@ async function exportHospitalPDF(data, hospitalName, classificationsData = null)
     console.error('❌ خطأ في تصدير PDF:', error);
     throw error;
   }
+}
+
+// ========================================
+// تقرير الرضا الأسبوعي
+// Satisfaction Weeks Report
+// ========================================
+
+/**
+ * اختبار API الرضا الأسبوعي (للتشخيص)
+ */
+window.testSatisfactionAPI = async function() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    console.log('🔍 [testSatisfactionAPI] جاري اختبار API...');
+    console.log('🔗 [testSatisfactionAPI] الرابط:', `${API_BASE}/api/dashboard/satisfaction-weeks`);
+    
+    const res = await authFetch(`${API_BASE}/api/dashboard/satisfaction-weeks`);
+    
+    console.log('📡 [testSatisfactionAPI] حالة الاستجابة:', {
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText,
+      headers: Object.fromEntries(res.headers.entries())
+    });
+    
+    const data = await res.json();
+    
+    console.log('📥 [testSatisfactionAPI] البيانات المستلمة:', JSON.stringify(data, null, 2));
+    
+    return data;
+  } catch (error) {
+    console.error('❌ [testSatisfactionAPI] خطأ:', error);
+    throw error;
+  }
+};
+
+/**
+ * تحميل بيانات الرضا الأسبوعي وعرض الرسوم البيانية
+ */
+async function loadSatisfactionCharts() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    const res = await authFetch(`${API_BASE}/api/dashboard/satisfaction-weeks`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    
+    // تسجيل البيانات المستلمة للتشخيص
+    console.log('📥 [satisfaction-weeks] البيانات المستلمة من API:', {
+      hasCluster: !!data.cluster,
+      clusterKeys: data.cluster ? Object.keys(data.cluster) : [],
+      weeks: data.weeks || [],
+      hospitalsCount: data.hospitals ? Object.keys(data.hospitals).length : 0,
+      totalWeeks: data.totalWeeks || 0,
+      totalHospitals: data.totalHospitals || 0,
+      fullData: data
+    });
+    
+    if (!data.cluster || Object.keys(data.cluster).length === 0) {
+      console.warn('⚠️ [satisfaction-weeks] لا توجد بيانات في cluster');
+      // لا توجد بيانات - إخفاء الرسوم البيانية وعرض رسالة
+      const tbody = document.getElementById('tblSatisfactionBody');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">لا توجد بيانات متاحة. يرجى رفع ملف تقرير الرضا الأسبوعي أولاً.</td></tr>';
+      }
+      
+      // إخفاء الرسوم البيانية أو عرض رسالة
+      const chartSection = document.getElementById('satisfaction-weeks-section');
+      if (chartSection) {
+        const chartContainers = chartSection.querySelectorAll('canvas');
+        chartContainers.forEach(canvas => {
+          const parent = canvas.closest('.bg-gray-50');
+          if (parent) {
+            parent.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">لا توجد بيانات لعرضها</div>';
+          }
+        });
+      }
+      
+      return;
+    }
+    
+    console.log('✅ [satisfaction-weeks] بدء رسم الرسوم البيانية...');
+    drawClusterCharts(data);
+    fillHospitalsTable(data.hospitals, data.weeks);
+    renderSatisfactionSummary(data.summary);
+    console.log('✅ [satisfaction-weeks] تم رسم الرسوم البيانية بنجاح');
+    
+  } catch (error) {
+    console.error('❌ خطأ في تحميل بيانات الرضا الأسبوعي:', error);
+    const tbody = document.getElementById('tblSatisfactionBody');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">خطأ في تحميل البيانات: ${error.message}</td></tr>`;
+    }
+  }
+}
+
+/**
+ * رسم ملخص الرضا (الكروت العلوية)
+ */
+function renderSatisfactionSummary(summary) {
+  const container = document.getElementById('satisfactionSummary');
+  if (!container) return;
+  
+  if (!summary) {
+    container.innerHTML = '<div class="col-span-4 text-center text-gray-500 py-4">لا تتوفر بيانات ملخص</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="p-5 rounded-xl shadow bg-white text-center border border-gray-100">
+      <div class="text-gray-600 text-sm mb-2 font-medium">عدد التذاكر</div>
+      <div class="text-3xl font-bold text-black font-mono">${(summary.tickets || 0).toLocaleString()}</div>
+    </div>
+
+    <div class="p-5 rounded-xl shadow bg-white text-center border border-gray-100">
+      <div class="text-gray-600 text-sm mb-2 font-medium">متوسط الرضا العام</div>
+      <div class="text-3xl font-bold text-black font-mono">${summary.general || 0}%</div>
+    </div>
+
+    <div class="p-5 rounded-xl shadow bg-white text-center border border-gray-100">
+      <div class="text-gray-600 text-sm mb-2 font-medium">الرضا عن التواصل</div>
+      <div class="text-3xl font-bold text-black font-mono">${summary.comm || 0}%</div>
+    </div>
+
+    <div class="p-5 rounded-xl shadow bg-white text-center border border-gray-100">
+      <div class="text-gray-600 text-sm mb-2 font-medium">الرضا عن الإجراء</div>
+      <div class="text-3xl font-bold text-black font-mono">${summary.serv || 0}%</div>
+    </div>
+  `;
+}
+
+/**
+ * رسم الرسوم البيانية الثلاثة للتجمع
+ */
+function drawClusterCharts(data) {
+  const weekList = data.weeks || [];
+  const cluster = data.cluster || {};
+  
+  console.log('🎨 [drawClusterCharts] بدء الرسم:', {
+    weeksCount: weekList.length,
+    weeks: weekList,
+    clusterKeys: Object.keys(cluster)
+  });
+  
+  if (weekList.length === 0) {
+    console.warn('⚠️ [drawClusterCharts] لا توجد أسابيع لعرضها');
+    return;
+  }
+  
+  // دالة لتحويل القيم من 0-1 إلى 0-100 (نسب مئوية)
+  const convert = (v) => {
+    if (v === null || v === undefined) return 0;
+    return Math.round(v * 100);
+  };
+  
+  // تحويل البيانات
+  const avgData = weekList.map(w => {
+    const value = convert(cluster[w]?.avg);
+    console.log(`📊 [drawClusterCharts] ${w}: avg = ${cluster[w]?.avg} -> ${value}%`);
+    return value;
+  });
+  
+  const commData = weekList.map(w => {
+    const value = convert(cluster[w]?.comm);
+    console.log(`📊 [drawClusterCharts] ${w}: comm = ${cluster[w]?.comm} -> ${value}%`);
+    return value;
+  });
+  
+  const servData = weekList.map(w => {
+    const value = convert(cluster[w]?.serv);
+    console.log(`📊 [drawClusterCharts] ${w}: serv = ${cluster[w]?.serv} -> ${value}%`);
+    return value;
+  });
+  
+  console.log('📈 [drawClusterCharts] البيانات المحضرة:', {
+    weekList: weekList,
+    avgData: avgData,
+    commData: commData,
+    servData: servData
+  });
+  
+  // رسم الرسوم البيانية بالألوان الرسمية (أسود وأبيض)
+  // متوسط الرضا العام
+  drawLineChart('chartClusterAvg', weekList, avgData, '#000000', cluster, 'avg');
+  // الرضا عن التواصل
+  drawLineChart('chartClusterComm', weekList, commData, '#000000', cluster, 'comm');
+  // الرضا عن الإجراء
+  drawLineChart('chartClusterService', weekList, servData, '#000000', cluster, 'serv');
+  
+  console.log('✅ [drawClusterCharts] تم رسم جميع الرسوم البيانية');
+}
+
+/**
+ * دالة مساعدة لرسم رسم بياني خطي (تصميم رسمي أبيض وأسود)
+ */
+function drawLineChart(id, labels, values, color, clusterData = null, type = null) {
+  const ctx = document.getElementById(id);
+  if (!ctx) {
+    console.warn(`⚠️ العنصر ${id} غير موجود`);
+    return;
+  }
+  
+  // تدمير الرسم السابق إن وجد
+  const chartKey = `satisfactionChart_${id}`;
+  if (window[chartKey]) {
+    window[chartKey].destroy();
+  }
+  
+  console.log(`🎨 [drawLineChart] رسم ${id}:`, {
+    labelsCount: labels.length,
+    values: values
+  });
+  
+  window[chartKey] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '',
+        data: values,
+        borderColor: '#000000',   // خط أسود
+        backgroundColor: '#000000', // نقطة سوداء
+        tension: 0.3,
+        borderWidth: 1.8,        // خط نحيف
+        pointRadius: 5,          // حجم النقطة
+        pointBackgroundColor: '#000000',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        fill: false              // بدون تعبئة
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 30,    // مساحة علوية كافية للنص
+          right: 25,  // مساحة يمنى للنقطة الأخيرة
+          left: 15,   // مساحة يسرى للنقطة الأولى
+          bottom: 10
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = `${context.parsed.y}%`;
+              if (clusterData) {
+                const weekKey = labels[context.dataIndex];
+                const weekData = clusterData[weekKey];
+                if (weekData && weekData.tickets) {
+                  label += ` (التذاكر: ${weekData.tickets})`;
+                }
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          min: 0,
+          max: 100,
+          ticks: {
+            color: '#444444',       // رمادي غامق
+            font: { size: 12 },
+            callback: function(value) {
+              return value + '%';
+            },
+            stepSize: 10
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)' // خطوط رمادية هادئة
+          }
+        },
+        x: {
+          ticks: {
+            display: false, // إخفاء أسماء الأسابيع
+            color: '#444444',
+            font: { size: 12 },
+            maxRotation: 45,
+            minRotation: 45
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)' // خطوط عرضية خفيفة
+          }
+        }
+      }
+    },
+    plugins: [{
+      id: 'ticketsLabel',
+      afterDatasetsDraw: function(chart) {
+        if (!clusterData) return;
+        
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+          const meta = chart.getDatasetMeta(i);
+          if (!meta.hidden) {
+            meta.data.forEach((element, index) => {
+              // عرض النسبة المئوية فوق النقطة بدلاً من التذاكر
+              const value = chart.data.datasets[i].data[index];
+              
+              // إعدادات النص
+              ctx.font = 'bold 11px Tajawal, sans-serif';
+              const text = value + '%';
+              const textWidth = ctx.measureText(text).width;
+              
+              // رسم خلفية للنص
+              const x = element.x;
+              const y = element.y - 25; // مسافة أعلى النقطة
+              const padding = 4;
+              
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+              ctx.beginPath();
+              // استخدام rect بدلاً من roundRect لدعم المتصفحات القديمة
+              ctx.rect(x - textWidth/2 - padding, y - 10, textWidth + padding*2, 14);
+              ctx.fill();
+              
+              // رسم النص
+              ctx.fillStyle = '#000000'; // نص أسود
+              ctx.textAlign = 'center';
+              ctx.fillText(text, x, y);
+            });
+          }
+        });
+      }
+    }]
+  });
+  
+  console.log(`✅ [drawLineChart] تم رسم ${id} بنجاح (نمط رسمي)`);
+}
+
+/**
+ * ملء جدول المستشفيات - يعرض صف واحد فقط لكل مستشفى (آخر أسبوع)
+ */
+function fillHospitalsTable(hospitals, weeks) {
+  const tbody = document.getElementById('tblSatisfactionBody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '';
+  
+    if (!hospitals || Object.keys(hospitals).length === 0 || !weeks || weeks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
+      return;
+    }
+  
+  // ترتيب المستشفيات حسب الاسم
+  const sortedHospitalNames = Object.keys(hospitals).sort((a, b) => {
+    return a.localeCompare(b, 'ar');
+  });
+  
+  // آخر أسبوع (الأسبوع الحالي)
+  const currentWeek = weeks[weeks.length - 1];
+  // الأسبوع السابق (إن وجد)
+  const previousWeek = weeks.length > 1 ? weeks[weeks.length - 2] : null;
+  
+  sortedHospitalNames.forEach(hospitalName => {
+    const hospitalData = hospitals[hospitalName];
+    
+    // إنشاء خريطة للبيانات حسب الأسبوع
+    const rowByWeek = {};
+    hospitalData.forEach(r => {
+      rowByWeek[r.WeekLabel] = r;
+    });
+    
+    // بيانات الأسبوع الحالي والسابق
+    const curr = rowByWeek[currentWeek];
+    const prev = previousWeek ? rowByWeek[previousWeek] : null;
+    
+    // إذا لم توجد بيانات للأسبوع الحالي، نتخطى هذا المستشفى
+    if (!curr) {
+      return;
+    }
+    
+    // حساب الفرق بين الأسبوع الحالي والسابق
+    let diff = null;
+    let diffClass = '';
+    let diffIcon = '';
+    
+    if (prev && curr.SatisfactionGeneral !== undefined && prev.SatisfactionGeneral !== undefined) {
+      diff = ((curr.SatisfactionGeneral - prev.SatisfactionGeneral) * 100).toFixed(1);
+      const diffNum = parseFloat(diff);
+      
+      if (diffNum > 0) {
+        diffClass = 'text-green-600';
+        diffIcon = '↑';
+      } else if (diffNum < 0) {
+        diffClass = 'text-red-600';
+        diffIcon = '↓';
+      } else {
+        diffClass = 'text-gray-500';
+        diffIcon = '→';
+      }
+    }
+    
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-gray-50';
+    
+    // عرض الفرق في عمود متوسط الرضا
+    const avgCell = diff !== null 
+      ? `<span>${((curr.SatisfactionGeneral || 0) * 100).toFixed(1)}%</span> <span class="${diffClass} text-xs">(${diffIcon} ${Math.abs(parseFloat(diff))}%)</span>`
+      : `${((curr.SatisfactionGeneral || 0) * 100).toFixed(1)}%`;
+    
+    tr.innerHTML = `
+      <td class="border border-gray-300 p-3 text-right font-medium">${escapeHtml(hospitalName)}</td>
+      <td class="border border-gray-300 p-3 text-center font-semibold">${avgCell}</td>
+      <td class="border border-gray-300 p-3 text-center font-semibold">${((curr.SatisfactionCommunication || 0) * 100).toFixed(1)}%</td>
+      <td class="border border-gray-300 p-3 text-center font-semibold">${((curr.SatisfactionService || 0) * 100).toFixed(1)}%</td>
+      <td class="border border-gray-300 p-3 text-center">${curr.TicketsCount || 0}</td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * دالة مساعدة لتنظيف HTML
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 

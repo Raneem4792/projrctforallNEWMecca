@@ -413,6 +413,27 @@
           </div>
         </div>
       </section>
+
+      <!-- إكسل تقرير الرضا الأسبوعي -->
+      <section class="card-hover bg-white rounded-xl shadow-lg border p-6 animate-fade-in-up">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold">إكسل تقرير الرضا الأسبوعي</h2>
+        </div>
+
+        <form id="formSatisfaction" class="space-y-3">
+          <input type="file" name="file" accept=".xlsx,.xls,.csv" required
+                 class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+          <button class="px-4 py-2 rounded-lg text-white" style="background:#0A3871" type="submit">
+            رفع الملف
+          </button>
+          <span id="statusSatisfaction" class="text-sm text-gray-500"></span>
+        </form>
+      </section>
     </div>
   </main>
 
@@ -972,6 +993,73 @@
         }
       });
     }
+
+    // نموذج تقرير الرضا الأسبوعي
+    const formSatisfaction = document.getElementById('formSatisfaction');
+    const statusSatisfaction = document.getElementById('statusSatisfaction');
+    
+    if (formSatisfaction) {
+      formSatisfaction.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const file = formSatisfaction.querySelector('input[type=file]').files[0];
+        if (!file) {
+          statusSatisfaction.textContent = 'الرجاء اختيار ملف.';
+          statusSatisfaction.className = 'text-red-600 text-sm';
+          return;
+        }
+        
+        statusSatisfaction.textContent = 'جاري الرفع والمعالجة...';
+        statusSatisfaction.className = 'text-gray-500 text-sm';
+
+        const fd = new FormData();
+        fd.append('file', file);
+        
+        try {
+          const res = await fetch(`${API_BASE}/api/imports/satisfaction-weeks`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: fd
+          });
+          
+          const data = await res.json();
+          
+          if (!res.ok) {
+            throw new Error(data?.message || `HTTP ${res.status}`);
+          }
+          
+          // عرض النتائج
+          if (data.inserted > 0) {
+            statusSatisfaction.textContent = `تم استيراد ${data.inserted} سجل بنجاح من أصل ${data.total || 0} صف.`;
+            statusSatisfaction.className = 'text-green-600 text-sm';
+          } else {
+            let message = `لم يتم استيراد أي سجل.`;
+            if (data.skipped > 0) {
+              message += ` تم تخطي ${data.skipped} صف.`;
+            }
+            if (data.errors > 0) {
+              message += ` حدثت ${data.errors} أخطاء.`;
+            }
+            statusSatisfaction.textContent = message;
+            statusSatisfaction.className = 'text-yellow-600 text-sm';
+            
+            // عرض تفاصيل الصفوف المتخطاة
+            if (data.skippedDetails && data.skippedDetails.length > 0) {
+              console.log('تفاصيل الصفوف المتخطاة:', data.skippedDetails);
+              alert('تفاصيل الصفوف المتخطاة:\n' + data.skippedDetails.join('\n'));
+            }
+            
+            // عرض أسماء الأعمدة الموجودة (للمساعدة في التشخيص)
+            if (data.availableColumns) {
+              console.log('أسماء الأعمدة الموجودة في الملف:', data.availableColumns);
+            }
+          }
+          
+        } catch (err) {
+          statusSatisfaction.textContent = 'فشل الرفع: ' + err.message;
+          statusSatisfaction.className = 'text-red-600 text-sm';
+        }
+      });
+    }
   </script>
 
   <!-- نظام الترجمة -->
@@ -1401,7 +1489,7 @@
       function buildCategoriesEndpoint() {
         const sel = document.getElementById('categoriesHospitalSelect');
         const wrap = document.getElementById('categoriesHospitalWrap');
-        if (sel && wrap && !wrap.classList.contains('hidden') && sel.value) {
+        if (sel && wrap && !wrap.classList.contains('hidden') && sel.value && sel.value !== 'all') {
           return `/api/imports/categories?hospitalId=${encodeURIComponent(sel.value)}`;
         }
         return '/api/imports/categories';
@@ -1421,6 +1509,12 @@
 
         wrap.classList.remove('hidden');
         sel.innerHTML = '<option value="">— اختر مستشفى —</option>';
+
+        // إضافة خيار "الكل"
+        const allOption = document.createElement('option');
+        allOption.value = 'all';
+        allOption.textContent = 'الكل';
+        sel.appendChild(allOption);
 
         try {
           const hospitals = await fetchHospitalsActive();
@@ -1466,82 +1560,223 @@
         statusEl.textContent = 'جاري الرفع...';
         statusEl.className = 'text-gray-600';
 
-        const fd = new FormData();
-        fd.append('file', file);
+        const sel = document.getElementById('categoriesHospitalSelect');
+        const isAllSelected = sel?.value === 'all';
 
         try {
-          const url = buildCategoriesEndpoint();
-          const res = await fetch(`${API_BASE}${url}`, {
-            method: 'POST',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: fd
-          });
-
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            statusEl.textContent = 'خطأ: ' + (data?.message || res.statusText);
-            statusEl.className = 'text-red-600';
-            return;
-          }
-
-          statusEl.textContent = 'تم بنجاح!';
-          statusEl.className = 'text-green-600';
-
-          // تحديث العدادات
-          document.getElementById('catTotal').textContent = data.total ?? 0;
-          insertEl.textContent = data.inserted ?? 0;
-          updateEl.textContent = data.updated ?? 0;
-          skipEl.textContent = data.skipped ?? 0;
-          const dupEl = document.getElementById('catDup');
-          if (dupEl) dupEl.textContent = data.duplicates ?? 0;
-          errEl.textContent = data.errors ?? 0;
-
-          // عرض تفاصيل المكررة
-          const dupDetailsDiv = document.getElementById('catDuplicatesDetails');
-          const dupListDiv = document.getElementById('catDuplicatesList');
-          if (data.duplicateDetails && data.duplicateDetails.length > 0) {
-            dupDetailsDiv.classList.remove('hidden');
-            dupListDiv.innerHTML = data.duplicateDetails.slice(0, 20).map(item => 
-              `<div class="p-1 bg-orange-50 rounded text-gray-700">• ${item.main} → ${item.sub}</div>`
-            ).join('');
-            if (data.duplicateDetails.length > 20) {
-              dupListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.duplicateDetails.length - 20} أخرى</div>`;
+          // إذا تم اختيار "الكل"، نرسل لكل المستشفيات
+          if (isAllSelected && isClusterCategories()) {
+            const hospitals = await fetchHospitalsActive();
+            if (!Array.isArray(hospitals) || hospitals.length === 0) {
+              statusEl.textContent = 'لا توجد مستشفيات متاحة.';
+              statusEl.className = 'text-red-600';
+              return;
             }
-          } else {
-            dupDetailsDiv.classList.add('hidden');
-          }
 
-          // عرض تفاصيل المتخطاة
-          const skippedDetailsDiv = document.getElementById('catSkippedDetails');
-          const skippedListDiv = document.getElementById('catSkippedList');
-          if (data.skippedDetails && data.skippedDetails.length > 0) {
-            skippedDetailsDiv.classList.remove('hidden');
-            skippedListDiv.innerHTML = data.skippedDetails.slice(0, 20).map(item => 
-              `<div class="p-1 bg-yellow-50 rounded text-gray-700">• صف ${item.row}: ${item.reason} (${item.main} → ${item.sub})</div>`
-            ).join('');
-            if (data.skippedDetails.length > 20) {
-              skippedListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.skippedDetails.length - 20} أخرى</div>`;
+            // تجميع النتائج من كل المستشفيات
+            let totalInserted = 0;
+            let totalUpdated = 0;
+            let totalSkipped = 0;
+            let totalDuplicates = 0;
+            let totalErrors = 0;
+            let totalRows = 0;
+            const allDuplicateDetails = [];
+            const allSkippedDetails = [];
+            const allErrorDetails = [];
+
+            statusEl.textContent = `جاري الرفع لـ ${hospitals.length} مستشفى...`;
+            statusEl.className = 'text-gray-600';
+
+            // إرسال لكل مستشفى
+            for (let i = 0; i < hospitals.length; i++) {
+              const hospital = hospitals[i];
+              statusEl.textContent = `جاري الرفع للمستشفى ${i + 1}/${hospitals.length}: ${hospital.NameAr || hospital.NameEn}...`;
+              
+              const fd = new FormData();
+              fd.append('file', file);
+              
+              const url = `/api/imports/categories?hospitalId=${encodeURIComponent(hospital.HospitalID)}`;
+              const res = await fetch(`${API_BASE}${url}`, {
+                method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: fd
+              });
+
+              const data = await res.json().catch(() => ({}));
+              
+              if (res.ok && data) {
+                totalRows += data.total ?? 0;
+                totalInserted += data.inserted ?? 0;
+                totalUpdated += data.updated ?? 0;
+                totalSkipped += data.skipped ?? 0;
+                totalDuplicates += data.duplicates ?? 0;
+                totalErrors += data.errors ?? 0;
+
+                // تجميع التفاصيل
+                if (data.duplicateDetails) {
+                  data.duplicateDetails.forEach(item => {
+                    allDuplicateDetails.push({ ...item, hospital: hospital.NameAr || hospital.NameEn });
+                  });
+                }
+                if (data.skippedDetails) {
+                  data.skippedDetails.forEach(item => {
+                    allSkippedDetails.push({ ...item, hospital: hospital.NameAr || hospital.NameEn });
+                  });
+                }
+                if (data.errorDetails) {
+                  data.errorDetails.forEach(item => {
+                    allErrorDetails.push({ ...item, hospital: hospital.NameAr || hospital.NameEn });
+                  });
+                }
+              } else {
+                console.warn(`فشل الرفع للمستشفى ${hospital.NameAr}:`, data?.message || res.statusText);
+                totalErrors += 1;
+                allErrorDetails.push({
+                  row: 0,
+                  error: `فشل الرفع: ${data?.message || res.statusText}`,
+                  main: '',
+                  sub: '',
+                  hospital: hospital.NameAr || hospital.NameEn
+                });
+              }
             }
-          } else {
-            skippedDetailsDiv.classList.add('hidden');
-          }
 
-          // عرض تفاصيل الأخطاء
-          const errorsDetailsDiv = document.getElementById('catErrorsDetails');
-          const errorsListDiv = document.getElementById('catErrorsList');
-          if (data.errorDetails && data.errorDetails.length > 0) {
-            errorsDetailsDiv.classList.remove('hidden');
-            errorsListDiv.innerHTML = data.errorDetails.slice(0, 10).map(item => 
-              `<div class="p-1 bg-red-50 rounded text-gray-700">• صف ${item.row}: ${item.error} (${item.main} → ${item.sub})</div>`
-            ).join('');
-            if (data.errorDetails.length > 10) {
-              errorsListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.errorDetails.length - 10} أخرى</div>`;
+            // عرض النتائج المجمعة
+            statusEl.textContent = `تم الرفع بنجاح لـ ${hospitals.length} مستشفى!`;
+            statusEl.className = 'text-green-600';
+
+            document.getElementById('catTotal').textContent = totalRows;
+            insertEl.textContent = totalInserted;
+            updateEl.textContent = totalUpdated;
+            skipEl.textContent = totalSkipped;
+            const dupEl = document.getElementById('catDup');
+            if (dupEl) dupEl.textContent = totalDuplicates;
+            errEl.textContent = totalErrors;
+
+            // عرض تفاصيل المكررة
+            const dupDetailsDiv = document.getElementById('catDuplicatesDetails');
+            const dupListDiv = document.getElementById('catDuplicatesList');
+            if (allDuplicateDetails.length > 0) {
+              dupDetailsDiv.classList.remove('hidden');
+              dupListDiv.innerHTML = allDuplicateDetails.slice(0, 20).map(item => 
+                `<div class="p-1 bg-orange-50 rounded text-gray-700">• ${item.main} → ${item.sub} (${item.hospital})</div>`
+              ).join('');
+              if (allDuplicateDetails.length > 20) {
+                dupListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${allDuplicateDetails.length - 20} أخرى</div>`;
+              }
+            } else {
+              dupDetailsDiv.classList.add('hidden');
             }
-          } else {
-            errorsDetailsDiv.classList.add('hidden');
-          }
 
-          resultsBox.classList.remove('hidden');
+            // عرض تفاصيل المتخطاة
+            const skippedDetailsDiv = document.getElementById('catSkippedDetails');
+            const skippedListDiv = document.getElementById('catSkippedList');
+            if (allSkippedDetails.length > 0) {
+              skippedDetailsDiv.classList.remove('hidden');
+              skippedListDiv.innerHTML = allSkippedDetails.slice(0, 20).map(item => 
+                `<div class="p-1 bg-yellow-50 rounded text-gray-700">• صف ${item.row}: ${item.reason} (${item.main} → ${item.sub}) - ${item.hospital}</div>`
+              ).join('');
+              if (allSkippedDetails.length > 20) {
+                skippedListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${allSkippedDetails.length - 20} أخرى</div>`;
+              }
+            } else {
+              skippedDetailsDiv.classList.add('hidden');
+            }
+
+            // عرض تفاصيل الأخطاء
+            const errorsDetailsDiv = document.getElementById('catErrorsDetails');
+            const errorsListDiv = document.getElementById('catErrorsList');
+            if (allErrorDetails.length > 0) {
+              errorsDetailsDiv.classList.remove('hidden');
+              errorsListDiv.innerHTML = allErrorDetails.slice(0, 10).map(item => 
+                `<div class="p-1 bg-red-50 rounded text-gray-700">• ${item.hospital}: ${item.error || (item.row ? `صف ${item.row}: ${item.error}` : '')}</div>`
+              ).join('');
+              if (allErrorDetails.length > 10) {
+                errorsListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${allErrorDetails.length - 10} أخرى</div>`;
+              }
+            } else {
+              errorsDetailsDiv.classList.add('hidden');
+            }
+
+            resultsBox.classList.remove('hidden');
+          } else {
+            // الحالة العادية: مستشفى واحد
+            const fd = new FormData();
+            fd.append('file', file);
+
+            const url = buildCategoriesEndpoint();
+            const res = await fetch(`${API_BASE}${url}`, {
+              method: 'POST',
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+              body: fd
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              statusEl.textContent = 'خطأ: ' + (data?.message || res.statusText);
+              statusEl.className = 'text-red-600';
+              return;
+            }
+
+            statusEl.textContent = 'تم بنجاح!';
+            statusEl.className = 'text-green-600';
+
+            // تحديث العدادات
+            document.getElementById('catTotal').textContent = data.total ?? 0;
+            insertEl.textContent = data.inserted ?? 0;
+            updateEl.textContent = data.updated ?? 0;
+            skipEl.textContent = data.skipped ?? 0;
+            const dupEl = document.getElementById('catDup');
+            if (dupEl) dupEl.textContent = data.duplicates ?? 0;
+            errEl.textContent = data.errors ?? 0;
+
+            // عرض تفاصيل المكررة
+            const dupDetailsDiv = document.getElementById('catDuplicatesDetails');
+            const dupListDiv = document.getElementById('catDuplicatesList');
+            if (data.duplicateDetails && data.duplicateDetails.length > 0) {
+              dupDetailsDiv.classList.remove('hidden');
+              dupListDiv.innerHTML = data.duplicateDetails.slice(0, 20).map(item => 
+                `<div class="p-1 bg-orange-50 rounded text-gray-700">• ${item.main} → ${item.sub}</div>`
+              ).join('');
+              if (data.duplicateDetails.length > 20) {
+                dupListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.duplicateDetails.length - 20} أخرى</div>`;
+              }
+            } else {
+              dupDetailsDiv.classList.add('hidden');
+            }
+
+            // عرض تفاصيل المتخطاة
+            const skippedDetailsDiv = document.getElementById('catSkippedDetails');
+            const skippedListDiv = document.getElementById('catSkippedList');
+            if (data.skippedDetails && data.skippedDetails.length > 0) {
+              skippedDetailsDiv.classList.remove('hidden');
+              skippedListDiv.innerHTML = data.skippedDetails.slice(0, 20).map(item => 
+                `<div class="p-1 bg-yellow-50 rounded text-gray-700">• صف ${item.row}: ${item.reason} (${item.main} → ${item.sub})</div>`
+              ).join('');
+              if (data.skippedDetails.length > 20) {
+                skippedListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.skippedDetails.length - 20} أخرى</div>`;
+              }
+            } else {
+              skippedDetailsDiv.classList.add('hidden');
+            }
+
+            // عرض تفاصيل الأخطاء
+            const errorsDetailsDiv = document.getElementById('catErrorsDetails');
+            const errorsListDiv = document.getElementById('catErrorsList');
+            if (data.errorDetails && data.errorDetails.length > 0) {
+              errorsDetailsDiv.classList.remove('hidden');
+              errorsListDiv.innerHTML = data.errorDetails.slice(0, 10).map(item => 
+                `<div class="p-1 bg-red-50 rounded text-gray-700">• صف ${item.row}: ${item.error} (${item.main} → ${item.sub})</div>`
+              ).join('');
+              if (data.errorDetails.length > 10) {
+                errorsListDiv.innerHTML += `<div class="text-gray-500 italic">... و ${data.errorDetails.length - 10} أخرى</div>`;
+              }
+            } else {
+              errorsDetailsDiv.classList.add('hidden');
+            }
+
+            resultsBox.classList.remove('hidden');
+          }
         } catch (error) {
           statusEl.textContent = 'فشل الرفع: ' + error.message;
           statusEl.className = 'text-red-600';

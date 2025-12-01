@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>إضافة مستشفى جديد</title>
+  <title>إضافة منشأة جديدة</title>
   <!-- Theme controller -->
   <script src="../assets/js/theme.js"></script>
 
@@ -36,7 +36,7 @@
       <section class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
         <div class="flex items-center gap-2 mb-4">
           <span class="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 grid place-items-center">🏥</span>
-          <h2 class="text-xl font-extrabold text-[#002B5B]">بيانات المستشفى</h2>
+          <h2 class="text-xl font-extrabold text-[#002B5B]">بيانات المنشأة</h2>
         </div>
 
         <div class="grid md:grid-cols-2 gap-4">
@@ -109,14 +109,14 @@
           </div>
 
           <div>
-            <label class="block text-sm text-gray-600 mb-1">شعار المستشفى (اختياري)</label>
+            <label class="block text-sm text-gray-600 mb-1">شعار المنشأة (اختياري)</label>
             <input id="hLogo" type="file" accept="image/*" class="w-full h-11 rounded-xl border border-gray-200 px-3 py-2"/>
           </div>
         </div>
 
         <div class="mt-4 flex items-center gap-3">
           <input id="hActive" type="checkbox" class="w-4 h-4 rounded border-gray-300" checked/>
-          <label for="hActive" class="text-sm text-gray-700">تفعيل المستشفى عند الإنشاء</label>
+          <label for="hActive" class="text-sm text-gray-700">تفعيل المنشأة عند الإنشاء</label>
         </div>
       </section>
 
@@ -142,7 +142,7 @@
       <section class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
         <div class="flex items-center gap-2 mb-4">
           <span class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center">👤</span>
-          <h2 class="text-xl font-extrabold text-[#002B5B]">مدير النظام في المستشفى</h2>
+          <h2 class="text-xl font-extrabold text-[#002B5B]">مدير النظام في المنشأة</h2>
         </div>
 
         <div class="grid md:grid-cols-2 gap-4">
@@ -170,13 +170,13 @@
           </div>
         </div>
 
-        <p class="text-xs text-gray-500 mt-2">سيتم إنشاء حساب مدير نظام للمستشفى الجديد ويمكنك تغيير صلاحياته لاحقًا.</p>
+        <p class="text-xs text-gray-500 mt-2">سيتم إنشاء حساب مدير نظام للمنشأة الجديدة ويمكنك تغيير صلاحياته لاحقًا.</p>
       </section>
 
       <!-- أزرار -->
       <div class="flex items-center justify-end gap-3">
         <a href="admin-hospitals.html" class="h-11 px-5 rounded-xl bg-gray-100 text-gray-700 text-sm">إلغاء</a>
-        <button id="saveHospital" type="submit" class="h-11 px-5 rounded-xl bg-[#0FA47A] text-white text-sm">حفظ المستشفى</button>
+        <button id="saveHospital" type="submit" class="h-11 px-5 rounded-xl bg-[#0FA47A] text-white text-sm">حفظ المنشأة</button>
       </div>
     </form>
   </main>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>مركز الإدارة</title>
+  <title id="document-title">مركز الإدارة</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;800&display=swap" rel="stylesheet">
   <!-- Theme controller -->
   <script src="../assets/js/theme.js"></script>
@@ -51,7 +51,7 @@
     </section>
 
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-      <!-- إدارة المستشفيات (التجمع) -->
+      <!-- إدارة المنشآت (التجمع) -->
       <a id="cardAdminClusters" href="admin-hospitals.html"
          class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
         <div class="w-16 h-16 mb-4 rounded-full bg-indigo-50 flex items-center justify-center">
@@ -60,11 +60,11 @@
             <path stroke-width="2" d="M7 10h3M7 14h3M15 9h3M15 13h3M15 17h3"/>
           </svg>
         </div>
-        <h3 class="text-xl font-extrabold text-[#002B5B]" data-i18n-key="card-clusters-title">إدارة المستشفيات</h3>
-        <p class="text-gray-600 mt-1" data-i18n-key="card-clusters-desc">إضافة/إدارة المستشفيات في التجمع</p>
+        <h3 class="text-xl font-extrabold text-[#002B5B]" data-i18n-key="card-clusters-title">إدارة المنشآت</h3>
+        <p class="text-gray-600 mt-1" data-i18n-key="card-clusters-desc">إضافة/إدارة المنشآت في التجمع</p>
       </a>
 
-      <!-- إدارة المستشفى -->
+      <!-- إدارة المنشأة -->
       <a id="cardAdminHospital" href="admin-hospital.html"
          class="block bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl hover:-translate-y-0.5 transition hidden">
         <div class="w-16 h-16 mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -73,7 +73,7 @@
             <path stroke-width="2" d="M9 8h6M9 12h6M9 16h6"/>
           </svg>
         </div>
-        <h3 class="text-xl font-extrabold text-[#002B5B]" data-i18n-key="card-hospital-title">إدارة المستشفى</h3>
+        <h3 class="text-xl font-extrabold text-[#002B5B]" data-i18n-key="card-hospital-title">إدارة المنشأة</h3>
         <p class="text-gray-600 mt-1" data-i18n-key="card-hospital-desc">مستخدمون، صلاحيات، السجلات، المحذوفات</p>
       </a>
 
@@ -99,7 +99,7 @@
           </svg>
         </div>
         <h3 class="text-xl font-extrabold text-[#002B5B]" data-i18n-key="card-depts-title">إدارة الأقسام</h3>
-        <p class="text-gray-600 mt-1" data-i18n-key="card-depts-desc">إضافة وتعديل وحذف الأقسام في المستشفيات</p>
+        <p class="text-gray-600 mt-1" data-i18n-key="card-depts-desc">إضافة وتعديل وحذف الأقسام في المنشآت</p>
       </a>
     </div>
   </main>
@@ -164,8 +164,8 @@
         </div>
       </div>
 
-      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300" data-i18n-key="footer-rights">
-        © 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+        <span data-i18n-key="footer-rights">© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة</span>
       </div>
     </div>
   </footer>
@@ -181,14 +181,14 @@
         'nav-contact': 'اتصل بنا',
         'hero-title': 'مركز الإدارة',
         'hero-subtitle': 'إدارة شاملة للنظام',
-        'card-clusters-title': 'إدارة المستشفيات',
-        'card-clusters-desc': 'إضافة/إدارة المستشفيات في التجمع',
-        'card-hospital-title': 'إدارة المستشفى',
+        'card-clusters-title': 'إدارة المنشآت',
+        'card-clusters-desc': 'إضافة/إدارة المنشآت في التجمع',
+        'card-hospital-title': 'إدارة المنشأة',
         'card-hospital-desc': 'مستخدمون، صلاحيات، السجلات، المحذوفات',
         'card-icons-title': 'إدارة الأيقونات',
         'card-icons-desc': 'تحديث أسماء وصور الأيقونات في الصفحة الرئيسية',
         'card-depts-title': 'إدارة الأقسام',
-        'card-depts-desc': 'إضافة وتعديل وحذف الأقسام في المستشفيات',
+        'card-depts-desc': 'إضافة وتعديل وحذف الأقسام في المنشآت',
         'footer-org-name': 'تجمع مكة الصحي',
         'footer-system-name': 'نظام البلاغات',
         'footer-description': 'منصة رسمية لتقديم ومتابعة البلاغات',
@@ -201,7 +201,8 @@
         'footer-support-number': 'رقم الدعم: 0559735137',
         'footer-support-email': 'support@makkahhealth.gov.sa',
         'footer-working-hours': 'ساعات العمل: 24/7',
-        'footer-rights': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة'
+        'footer-rights': '© 2025 تجمع مكة المكرمة الصحي – جميع الحقوق محفوظة',
+        'document-title': 'مركز الإدارة'
       },
       en: {
         'language-button': '🌐 العربية',
@@ -232,31 +233,75 @@
         'footer-support-number': 'Support: 0559735137',
         'footer-support-email': 'support@makkahhealth.gov.sa',
         'footer-working-hours': 'Working Hours: 24/7',
-        'footer-rights': '© 2025 Makkah Health Cluster – All rights reserved'
+        'footer-rights': '© 2025 Makkah Health Cluster – All rights reserved',
+        'document-title': 'Administration Hub'
       }
     };
 
-    let currentAdminHubLanguage = localStorage.getItem('adminHubLanguage') || 'ar';
+    let currentAdminHubLanguage = 'ar';
+    window.currentLanguage = 'ar';
 
     function applyAdminHubTranslation(lang) {
       const dict = adminHubTranslations[lang] || adminHubTranslations.ar;
       currentAdminHubLanguage = lang;
+      window.currentLanguage = lang;
+      
+      // حفظ اللغة في localStorage الموحد
+      localStorage.setItem('siteLanguage', lang);
+      
       document.documentElement.setAttribute('lang', lang);
       document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
 
       document.querySelectorAll('[data-i18n-key]').forEach((el) => {
         const key = el.dataset.i18nKey;
-        if (dict[key]) el.textContent = dict[key];
+        if (dict[key]) {
+          if (el.tagName === 'OPTION') {
+            el.textContent = dict[key];
+          } else {
+            el.textContent = dict[key];
+          }
+        }
       });
+      
+      // تحديث عنوان الصفحة
+      if (dict['document-title']) {
+        document.title = dict['document-title'];
+      }
+      
+      // تحديث اتجاه النص
+      if (lang === 'en') {
+        document.querySelectorAll('h1, h2, h3, p, div, label, span').forEach(el => {
+          if (el.classList.contains('text-center')) return;
+          if (el.classList.contains('text-right')) {
+            el.classList.remove('text-right');
+            el.classList.add('text-left');
+          }
+        });
+      } else {
+        document.querySelectorAll('h1, h2, h3, p, div, label, span').forEach(el => {
+          if (el.classList.contains('text-center')) return;
+          if (el.classList.contains('text-left')) {
+            el.classList.remove('text-left');
+            el.classList.add('text-right');
+          }
+        });
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      applyAdminHubTranslation(currentAdminHubLanguage);
+      // قراءة اللغة من localStorage الموحد
+      const savedLanguage = localStorage.getItem('siteLanguage') || 'ar';
+      currentAdminHubLanguage = savedLanguage;
+      window.currentLanguage = savedLanguage;
+      document.documentElement.setAttribute('lang', savedLanguage);
+      document.documentElement.setAttribute('dir', (savedLanguage === 'ar') ? 'rtl' : 'ltr');
+      
+      applyAdminHubTranslation(savedLanguage);
+      
       const toggle = document.getElementById('languageToggle');
       if (toggle) {
         toggle.addEventListener('click', () => {
           const next = currentAdminHubLanguage === 'ar' ? 'en' : 'ar';
-          localStorage.setItem('adminHubLanguage', next);
           applyAdminHubTranslation(next);
         });
       }
