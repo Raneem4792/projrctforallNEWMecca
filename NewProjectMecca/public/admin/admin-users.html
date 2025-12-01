@@ -294,19 +294,19 @@
         </div>
         <div>
           <label class="block text-sm mb-1">الدور</label>
-          <select id="ua_RoleID" class="w-full rounded-xl border px-3 py-2">
-            <option value="1">سوبر أدمن</option>
-            <option value="2" selected>موظف</option>
-            <option value="3">مدير قسم</option>
-            <option value="4">مدير</option>
+          <select id="ua_RoleID" class="w-full rounded-xl border px-3 py-2" onchange="handleRoleChange()">
+            <option value="1">مدير تجمع (سوبر أدمن)</option>
+            <option value="2" selected>مدير نظام</option>
+            <option value="3">موظف</option>
+            <option value="4">مدير قسم</option>
           </select>
         </div>
 
-        <div>
+        <div id="ua_HospitalWrapper">
           <label class="block text-sm mb-1">المستشفى</label>
           <select id="ua_HospitalID" class="w-full rounded-xl border px-3 py-2" required></select>
         </div>
-        <div>
+        <div id="ua_DepartmentWrapper">
           <label class="block text-sm mb-1">القسم</label>
           <select id="ua_DepartmentID" class="w-full rounded-xl border px-3 py-2">
             <option value="">— بدون قسم —</option>
@@ -744,6 +744,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // إعداد معالجات الجدول
     setupTableEventListeners();
     
+    // إخفاء خيار "مدير تجمع" إذا لم يكن المستخدم مدير تجمع
+    hideClusterManagerOption();
+    
     // تحميل المستخدمين بعد تعيين المستشفى
     await loadUsers();
     
@@ -1074,11 +1077,19 @@ async function fillAddDepartments(hid){
 
 // فتح/إغلاق المودال
 function openUserAdd(){
-  const hid = getActiveHospitalId();
-  if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
+  // التحقق من المستشفى فقط للمستخدمين العاديين (ليس مدير تجمع)
+  const roleId = Number(ua_RoleID.value || 2);
+  const isClusterManager = roleId === 1;
+  
+  if (!isClusterManager) {
+    const hid = getActiveHospitalId();
+    if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
+  }
   
   userAddModal.classList.remove('hidden');
   fillAddSelects();
+  hideClusterManagerOption(); // إخفاء خيار مدير التجمع إذا لم يكن المستخدم مدير تجمع
+  handleRoleChange(); // تطبيق إخفاء/إظهار الحقول حسب الدور
 }
 function closeUserAdd(){
   userAddModal.classList.add('hidden');
@@ -1097,15 +1108,66 @@ ua_HospitalID.addEventListener('change', ()=> fillAddDepartments(ua_HospitalID.v
 // تم إزالة دالة hashPasswordSHA256 - السيرفر سيتولى تشفير كلمة السر بـ bcrypt
 
 // حفظ مستخدم جديد
+// دالة لإخفاء/إظهار حقول المستشفى والقسم حسب الدور
+function handleRoleChange() {
+  const roleId = Number(ua_RoleID.value);
+  const isClusterManager = roleId === 1;
+  const hospitalWrapper = document.getElementById('ua_HospitalWrapper');
+  const departmentWrapper = document.getElementById('ua_DepartmentWrapper');
+  const hospitalSelect = document.getElementById('ua_HospitalID');
+  
+  if (isClusterManager) {
+    // إخفاء حقول المستشفى والقسم لمدير التجمع
+    if (hospitalWrapper) hospitalWrapper.style.display = 'none';
+    if (departmentWrapper) departmentWrapper.style.display = 'none';
+    if (hospitalSelect) hospitalSelect.removeAttribute('required');
+  } else {
+    // إظهار حقول المستشفى والقسم للمستخدمين العاديين
+    if (hospitalWrapper) hospitalWrapper.style.display = 'block';
+    if (departmentWrapper) departmentWrapper.style.display = 'block';
+    if (hospitalSelect) hospitalSelect.setAttribute('required', 'required');
+  }
+}
+
+// دالة لإخفاء خيار "مدير تجمع" من القائمة إذا لم يكن المستخدم مدير تجمع
+function hideClusterManagerOption() {
+  const { user } = getAuth();
+  const role = Number(user?.RoleID || user?.roleId || user?.role_id || 0);
+  const isCurrentUserClusterManager = role === 1;
+  
+  const roleSelect = document.getElementById('ua_RoleID');
+  if (!roleSelect) return;
+  
+  // البحث عن خيار "مدير تجمع" (value="1")
+  const clusterManagerOption = roleSelect.querySelector('option[value="1"]');
+  
+  if (clusterManagerOption) {
+    if (isCurrentUserClusterManager) {
+      // إظهار الخيار لمدير التجمع
+      clusterManagerOption.style.display = 'block';
+      clusterManagerOption.hidden = false;
+    } else {
+      // إخفاء الخيار للمستخدمين الآخرين
+      clusterManagerOption.style.display = 'none';
+      clusterManagerOption.hidden = true;
+      
+      // إذا كان الخيار المحدد هو "مدير تجمع"، قم بتغييره إلى "مدير نظام"
+      if (roleSelect.value === '1') {
+        roleSelect.value = '2';
+        handleRoleChange();
+      }
+    }
+  }
+}
+
 async function saveUserAdd(e){
   e.preventDefault();
-
-  const hid = getActiveHospitalId();
-  if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
 
   // تحقق الحقول الأساسية
   const fullName = ua_FullName.value.trim();
   const username = ua_Username.value.trim();
+  const roleId = Number(ua_RoleID.value || 2);
+  const isClusterManager = roleId === 1;
 
   if(!fullName || !username) return alert('تأكد من إدخال الاسم واسم المستخدم.');
   
@@ -1115,35 +1177,83 @@ async function saveUserAdd(e){
     return alert('❌ البريد الإلكتروني غير صحيح');
   }
 
-  // كلمة السر (اختياريًا مع التأكد)
+  // كلمة السر (إلزامية لمدير التجمع)
   const pwd = ua_Password.value;
   const pwdConfirm = ua_PasswordConfirm.value;
-  if (pwd || pwdConfirm){
+  if (isClusterManager) {
+    if (!pwd || pwd.length < 6) return alert('كلمة السر إلزامية ويجب أن تكون 6 أحرف على الأقل لمدير التجمع.');
+    if (pwd !== pwdConfirm) return alert('كلمة السر وتأكيدها غير متطابقين.');
+  } else if (pwd || pwdConfirm) {
     if (pwd.length < 6) return alert('كلمة السر يجب أن تكون 6 أحرف على الأقل.');
     if (pwd !== pwdConfirm) return alert('كلمة السر وتأكيدها غير متطابقين.');
   }
 
-  const payload = {
-    RoleID: Number(ua_RoleID.value || 2),
-    HospitalID: hid,
-    DepartmentID: ua_DepartmentID.value ? Number(ua_DepartmentID.value) : null,
-    FullName: fullName,
-    Username: username,
-    Email: ua_Email.value.trim(),
-    Mobile: ua_Mobile.value.trim(),
-    NationalID: ua_NationalID.value.trim(),
-    Password: pwd || undefined,
-    IsActive: ua_IsActive.checked ? 1 : 0
-  };
+  try {
+    let res, data;
+    
+    // إذا كان مدير تجمع، استخدم endpoint القاعدة المركزية
+    if (isClusterManager) {
+      const payload = {
+        fullName: fullName,
+        username: username,
+        email: email || null,
+        mobile: ua_Mobile.value.trim() || null,
+        password: pwd
+      };
 
-  try{
-    const res = await fetch(`${API_BASE}/api/users?hospitalId=${hid}`, {
+      res = await fetch(`${API_BASE}/api/auth/register-cluster-manager`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', ...authHeaders() },
+        body: JSON.stringify(payload)
+      });
+      
+      data = await res.json();
+      
+      if(!res.ok){
+        console.error('saveUserAdd (cluster manager) failed', res.status, data);
+        
+        if (res.status === 409) {
+          alert('❌ اسم المستخدم موجود مسبقاً في القاعدة المركزية');
+        } else if (res.status === 400) {
+          alert('❌ بيانات ناقصة: ' + (data.message || 'يرجى ملء جميع الحقول المطلوبة'));
+        } else {
+          alert('❌ خطأ في الخادم: ' + (data.message || 'HTTP ' + res.status));
+        }
+        return;
+      }
+      
+      // نجح الإضافة
+      closeUserAdd();
+      alert('✅ تم إضافة مدير التجمع بنجاح في القاعدة المركزية');
+      // إعادة تحميل الصفحة لعرض التغييرات
+      window.location.reload();
+      return;
+    }
+
+    // للمستخدمين العاديين، استخدم endpoint قاعدة المستشفى
+    const hid = getActiveHospitalId();
+    if (!hid) return alert('اختَر مستشفى أولاً من القائمة بالأعلى.');
+
+    const payload = {
+      RoleID: roleId,
+      HospitalID: hid,
+      DepartmentID: ua_DepartmentID.value ? Number(ua_DepartmentID.value) : null,
+      FullName: fullName,
+      Username: username,
+      Email: email,
+      Mobile: ua_Mobile.value.trim(),
+      NationalID: ua_NationalID.value.trim(),
+      Password: pwd || undefined,
+      IsActive: ua_IsActive.checked ? 1 : 0
+    };
+
+    res = await fetch(`${API_BASE}/api/users?hospitalId=${hid}`, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', ...authHeaders() },
       body: JSON.stringify(payload)
     });
     
-    const data = await res.json();
+    data = await res.json();
     
     if(!res.ok){
       console.error('saveUserAdd failed', res.status, data);

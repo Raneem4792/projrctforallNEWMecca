@@ -1460,6 +1460,14 @@ CREATE TABLE `roles` (
   PRIMARY KEY (`RoleID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+INSERT INTO roles (Code, NameAr)
+VALUES
+('CLUSTER_MANAGER', 'مدير التجمع'),
+('HOSPITAL_ADMIN', 'مدير النظام بالمستشفى'),
+('EMPLOYEE', 'موظف');
+
+
+
 
 INSERT IGNORE INTO permissions (PermissionKey, NameAr, Category) VALUES
 

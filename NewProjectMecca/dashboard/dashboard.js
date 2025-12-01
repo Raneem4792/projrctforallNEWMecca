@@ -3061,8 +3061,21 @@ async function initializeDashboard() {
     generateHospitalFilterList();
     generateCenterFilterList();
     
-    // تحميل بيانات الرضا الأسبوعي
-    loadSatisfactionCharts();
+    // تحميل بيانات الرضا الأسبوعي (فقط لمدير التجمع)
+    if (isClusterManager) {
+      // إظهار قسم الرضا الأسبوعي لمدير التجمع
+      const satisfactionSection = document.getElementById('satisfaction-weeks-section');
+      if (satisfactionSection) {
+        satisfactionSection.classList.remove('hidden');
+      }
+      loadSatisfactionCharts();
+    } else {
+      // إخفاء قسم الرضا الأسبوعي للموظفين ومديري النظام
+      const satisfactionSection = document.getElementById('satisfaction-weeks-section');
+      if (satisfactionSection) {
+        satisfactionSection.classList.add('hidden');
+      }
+    }
 
     // 🔹 تحديث أزرار الفلترة عند تغيير اللغة
     const langBtn = document.getElementById('languageToggle');
@@ -3577,7 +3590,7 @@ async function loadStatusChart() {
     // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
     // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
     if (!hospitalId && !isCluster) {
-      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || userHospitalId;
     } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
       // مدير تجمع بدون تصفية = جميع المستشفيات
       hospitalId = null;
@@ -3766,11 +3779,28 @@ async function load937SLAChart() {
       ? 'http://localhost:3001'
       : '';
 
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+
     // قراءة قيم الفلاتر
     const startDate = document.getElementById('sla937-start-date')?.value || '';
     const endDate = document.getElementById('sla937-end-date')?.value || '';
-    // قراءة فلتر المستشفى العام (نعتمد على filteredHospitalId الموجود في الـ scope)
-    const hospitalId = window.filteredHospitalId || '';
+    
+    // تحديد hospitalId حسب دور المستخدم أو التصفية النشطة
+    let hospitalId = window.filteredHospitalId || null;
+    const urlParams = new URLSearchParams(location.search);
+    const urlHospitalId = urlParams.get('hospitalId');
+    
+    if (urlHospitalId) {
+      hospitalId = urlHospitalId;
+    } else if (!hospitalId && !isCluster) {
+      // موظف عادي أو مدير نظام: فقط مستشفاه
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || userHospitalId;
+    } else if (isCluster && !hospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
 
     // بناء مسار الطلب مع الباراميترات
     const params = new URLSearchParams();
@@ -4338,7 +4368,7 @@ async function loadCategoriesChart() {
     // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
     // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
     if (!hospitalId && !isCluster) {
-      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || window.userHospitalId;
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || userHospitalId;
     } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
       // مدير تجمع بدون تصفية = جميع المستشفيات
       hospitalId = null;
@@ -5484,6 +5514,17 @@ window.testSatisfactionAPI = async function() {
  */
 async function loadSatisfactionCharts() {
   try {
+    // التحقق من أن المستخدم هو مدير تجمع فقط
+    if (!currentUser) await loadCurrentUser();
+    if (!isClusterManager) {
+      console.log('⚠️ [satisfaction-weeks] تقرير الرضا الأسبوعي متاح فقط لمدير التجمع');
+      const satisfactionSection = document.getElementById('satisfaction-weeks-section');
+      if (satisfactionSection) {
+        satisfactionSection.style.display = 'none';
+      }
+      return;
+    }
+    
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
       ? 'http://localhost:3001' : '';
     

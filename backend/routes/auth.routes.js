@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { getCentralPool } from '../db/centralPool.js';
 import { getTenantPoolByHospitalId } from '../db/tenantManager.js';
 import config from '../config/multi-tenant.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -63,9 +64,33 @@ router.post('/register', async (req, res) => {
 });
 
 // تسجيل حساب "مدير التجمّع" في القاعدة المركزية فقط (مرّة واحدة عادةً)
-router.post('/register-cluster-manager', async (req, res) => {
+router.post('/register-cluster-manager', requireAuth, async (req, res) => {
   try {
+    // التحقق من أن المستخدم الحالي هو مدير تجمع (RoleID === 1)
+    const currentUser = req.user;
+    if (!currentUser || (currentUser.RoleID !== 1 && currentUser.roleId !== 1)) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'غير مصرح لك بإضافة مدير تجمع. يجب أن تكون مدير تجمع.' 
+      });
+    }
+
     const { fullName, username, email, mobile, password } = req.body;
+    
+    if (!fullName || !username || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'الاسم الكامل واسم المستخدم وكلمة السر مطلوبة' 
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'كلمة السر يجب أن تكون 6 أحرف على الأقل' 
+      });
+    }
+
     const pool = await getCentralPool();
 
     const [u] = await pool.query('SELECT UserID FROM users_central WHERE Username=? LIMIT 1', [username]);
@@ -75,20 +100,23 @@ router.post('/register-cluster-manager', async (req, res) => {
     });
 
     const hash = await bcrypt.hash(password, 10);
-    await pool.query(`
-      INSERT INTO users_central (RoleID, FullName, Username, Email, Mobile, PasswordHash, IsActive)
-      VALUES (?, ?, ?, ?, ?, ?, 1)
-    `, [config.roles.CLUSTER_MANAGER, fullName, username, email, mobile, hash]);
+    const [result] = await pool.query(`
+      INSERT INTO users_central (RoleID, FullName, Username, Email, Mobile, PasswordHash, IsActive, CreatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, 1, NOW())
+    `, [config.roles.CLUSTER_MANAGER, fullName, username, email || null, mobile || null, hash]);
+
+    console.log(`✅ تم إضافة مدير تجمع جديد في القاعدة المركزية: ${username} (UserID: ${result.insertId})`);
 
     return res.json({ 
       success: true,
-      message: 'تم إنشاء حساب مدير التجمّع بنجاح' 
+      message: 'تم إنشاء حساب مدير التجمّع بنجاح في القاعدة المركزية',
+      userId: result.insertId
     });
   } catch (err) {
     console.error('register CM error', err);
     return res.status(500).json({ 
       success: false,
-      message: 'Server error' 
+      message: 'Server error: ' + err.message 
     });
   }
 });
