@@ -309,7 +309,18 @@
     <section id="satisfaction-weeks-section" class="py-10 hidden">
       <div class="container mx-auto px-4">
         <div class="bg-white rounded-xl p-6 shadow border border-gray-100">
-          <h2 class="text-2xl font-bold mb-6" style="color:#002B5B" data-i18n-key="satisfaction-weeks-title">تقرير الرضا الأسبوعي</h2>
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+            <h2 class="text-2xl font-bold" style="color:#002B5B" data-i18n-key="satisfaction-weeks-title">تقرير الرضا الأسبوعي</h2>
+            
+            <!-- قائمة منسدلة للتصفية حسب المستشفى -->
+            <div class="flex items-center gap-3">
+              <label for="satisfaction-hospital-filter" class="text-sm font-medium text-gray-700" data-i18n-key="filter-by-hospital">تصفية حسب المستشفى:</label>
+              <select id="satisfaction-hospital-filter" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[200px]" style="color:#002B5B;">
+                <option value="" data-i18n-key="all-hospitals">جميع المستشفيات</option>
+                <!-- سيتم تعبئة الخيارات هنا ديناميكياً -->
+              </select>
+            </div>
+          </div>
           
           <!-- ملخص الرضا (الكروت) -->
           <div id="satisfactionSummary" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
@@ -385,6 +396,37 @@
         </div>
       </div>
     </section>
+
+    <!-- معدل معالجة بلاغات الزائر السري -->
+    <section id="secret-visitor-delay-section" data-perm="DASH_CHART_MYSTERY_BY_DEPT" class="py-10 hidden">
+      <div class="container mx-auto px-4">
+        <div class="bg-white p-5 rounded-xl shadow border">
+          <h3 class="text-xl font-bold mb-3">معدل معالجة بلاغات الزائر السري</h3>
+          <p class="text-xs text-gray-500 mb-3">انقر على أي عمود لعرض البلاغات</p>
+          <div style="height: 260px;">
+            <canvas id="secretVisitorDelayChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal لعرض بلاغات الزائر السري -->
+    <div id="secret-visitor-delay-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" style="display: none;">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 class="text-xl font-bold" style="color:#002B5B" id="secret-visitor-modal-title">بلاغات الزائر السري</h3>
+            <p id="secret-visitor-modal-subtitle" class="text-sm text-gray-600 mt-1"></p>
+          </div>
+          <button id="secret-visitor-modal-close" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="secret-visitor-modal-content" class="space-y-3">
+            <div class="text-center text-gray-500 py-8">جاري تحميل البيانات...</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- جدول تكرار الشكاوى حسب رقم الهوية -->
     <section id="patient-frequency-section" class="py-10">

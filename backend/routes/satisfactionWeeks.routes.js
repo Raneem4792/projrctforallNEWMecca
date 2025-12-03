@@ -8,7 +8,87 @@ import { getCentralPool } from '../db/centralPool.js';
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
+// =========================================================
+// 🔥 نظام التعرف الذكي على المستشفيات (Smart Name Matching)
+// يعتمد فقط على قاعدة البيانات - بدون Mapping ثابت
+// =========================================================
+
+/**
+ * دالة ذكية لربط اسم المستشفى بـ HospitalID
+ * تبحث مباشرة في جدول hospitals مع دعم مطابقة ذكية
+ */
+async function resolveHospitalId(rawName, db) {
+  if (!rawName) return null;
+
+  // 1) Normalize (تنظيف الاسم)
+  let norm = String(rawName)
+    .replace(/مستشفى|مركز|مجمع|مدينة|صحي|العام|التخصصي|الطبية|الطبي/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+  // 2) جلب جميع أسماء المستشفيات من قاعدة البيانات
+  const [hospitals] = await db.query(`
+    SELECT HospitalID, NameAr, NameEn
+    FROM hospitals 
+    WHERE IsActive = 1
+  `);
+
+  if (!hospitals || hospitals.length === 0) {
+    console.warn(`⚠️ [resolveHospitalId] لا توجد مستشفيات نشطة في قاعدة البيانات`);
+    return null;
+  }
+
+  // 3) أفضل تطابق باستخدام LIKE + contains
+  for (const h of hospitals) {
+    const name = h.NameAr || h.NameEn || "";
+    const normDB = name
+      .replace(/مستشفى|مركز|مجمع|مدينة|صحي|العام|التخصصي|الطبية|الطبي/gi, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+
+    // exact match after normalize  
+    if (norm === normDB) {
+      console.log(`✅ [resolveHospitalId] تطابق تام: "${rawName}" -> ${h.HospitalID} (${name})`);
+      return h.HospitalID;
+    }
+
+    // partial match  
+    if (normDB.includes(norm) || norm.includes(normDB)) {
+      console.log(`✅ [resolveHospitalId] تطابق جزئي: "${rawName}" -> ${h.HospitalID} (${name})`);
+      return h.HospitalID;
+    }
+  }
+
+  // 4) محاولات مطابقة أخف (كلمة من الاسم)
+  for (const h of hospitals) {
+    const name = h.NameAr || h.NameEn || "";
+    const dbWords = name
+      .replace(/مستشفى|مركز|مجمع|مدينة|صحي|العام|التخصصي|الطبية|الطبي/gi, "")
+      .split(" ")
+      .map(w => w.trim().toLowerCase())
+      .filter(w => w.length > 2); // تجاهل الكلمات القصيرة جداً
+    
+    const excelWords = norm.split(" ")
+      .map(w => w.trim().toLowerCase())
+      .filter(w => w.length > 2);
+
+    // التحقق من وجود كلمة مشتركة مهمة
+    const commonWords = excelWords.filter(w => dbWords.includes(w));
+    if (commonWords.length > 0 && commonWords.some(w => w.length > 3)) {
+      console.log(`✅ [resolveHospitalId] تطابق بكلمة مشتركة: "${rawName}" -> ${h.HospitalID} (${name}) - كلمات: ${commonWords.join(', ')}`);
+      return h.HospitalID;
+    }
+  }
+
+  console.warn(`⚠️ [resolveHospitalId] لم يتم العثور على HospitalID للاسم: "${rawName}"`);
+  return null;
+}
+
+// =========================================================
 // دالة لتحويل تواريخ Excel إلى صيغة DATE
+// =========================================================
 function asDate(val) {
   // يقبل Excel serial أو نص تاريخ
   if (val == null || val === '' || val === '-') return null;
@@ -515,17 +595,13 @@ router.post('/imports/satisfaction-weeks',
             finalWeekNumber = null; // NULL بدلاً من 0 للسماح بإدخال البيانات
           }
 
-          // البحث عن HospitalID من اسم المستشفى
+          // البحث عن HospitalID من اسم المستشفى (باستخدام النظام الذكي)
           let hospitalId = null;
           if (hospitalName) {
-            const [hospitalRows] = await centralPool.query(
-              `SELECT HospitalID FROM hospitals 
-               WHERE (NameAr = ? OR NameEn = ?) AND IsActive = 1 
-               LIMIT 1`,
-              [hospitalName, hospitalName]
-            );
-            if (hospitalRows.length > 0) {
-              hospitalId = hospitalRows[0].HospitalID;
+            hospitalId = await resolveHospitalId(hospitalName, centralPool);
+            
+            if (!hospitalId) {
+              console.warn(`⚠️ لم يتم العثور على HospitalID لـ "${hospitalName}" بعد التطبيع والبحث`);
             }
           }
 
@@ -643,7 +719,10 @@ router.get('/dashboard/satisfaction-weeks', requireAuth, async (req, res) => {
   try {
     const centralPool = await getCentralPool();
     
-    const [rows] = await centralPool.query(`
+    // قراءة hospitalId من query parameter (إن وجد)
+    let filterHospital = req.query.hospitalId || null;
+    
+    let sql = `
       SELECT 
         HospitalName, 
         WeekLabel, 
@@ -660,8 +739,19 @@ router.get('/dashboard/satisfaction-weeks', requireAuth, async (req, res) => {
         AND (SatisfactionGeneral IS NOT NULL 
           OR SatisfactionCommunication IS NOT NULL 
           OR SatisfactionService IS NOT NULL)
-      ORDER BY WeekNumber ASC, HospitalName ASC
-    `);
+    `;
+    
+    let params = [];
+    
+    if (filterHospital) {
+      sql += ` AND HospitalID = ?`;
+      params.push(filterHospital);
+      console.log(`🔍 [satisfaction-weeks] تصفية حسب المستشفى: ${filterHospital}`);
+    }
+    
+    sql += ` ORDER BY WeekNumber ASC, HospitalName ASC`;
+    
+    const [rows] = await centralPool.query(sql, params);
     
     console.log(`📊 [satisfaction-weeks] عدد الصفوف المسترجعة: ${rows.length}`);
     

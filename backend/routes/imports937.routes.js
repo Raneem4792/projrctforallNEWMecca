@@ -143,16 +143,67 @@ function toGenderCode(val) {
   return null; // لو مو موجود نخليها NULL
 }
 
-function asDate(val) {
-  // يقبل Excel serial أو نص تاريخ
-  if (val == null || val === '') return null;
-  if (typeof val === 'number') {
-    // Excel serial base (assuming 1900)
-    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-    return isNaN(d) ? null : d.toISOString().slice(0, 10);
+/**
+ * دالة للكشف عن بلاغات الزائر السري
+ * تتحقق من 3 طرق: اسم المتصل (مطابقة تامة فقط)، رقم الجوال، رقم الهوية
+ * ⚠️ مهم: نستخدم مطابقة تامة فقط لتجنب False Positives (مثل: "زيارة" أو "زائرين")
+ * @param {string} callerName - اسم المتصل
+ * @param {string} mobile - رقم الجوال
+ * @param {string} nationalID - رقم الهوية
+ * @returns {number} 1 إذا كان زائر سري، 0 إذا كان عادي
+ */
+function detectSecretVisitor(callerName = '', mobile = '', nationalID = '') {
+  // 1) الكشف من اسم المتصل (مطابقة تامة فقط - بدون includes)
+  const name = String(callerName || '').trim();
+  if (name === 'الزائر السري' || name === 'زائر سري') {
+    console.log(`🔍 [Secret Visitor] تم الكشف من اسم المتصل: "${name}"`);
+    return 1;
   }
+  
+  // 2) الكشف من رقم الجوال (الأرقام الرسمية للزائر السري)
+  const mobileTrimmed = String(mobile || '').trim();
+  if (
+    mobileTrimmed === '0511111111' ||
+    mobileTrimmed === '0555555555' ||
+    mobileTrimmed === '1111111111' ||
+    /^05(1{8}|5{8})$/.test(mobileTrimmed) // نمط تكرار (05 + 8 أرقام متكررة)
+  ) {
+    console.log(`🔍 [Secret Visitor] تم الكشف من رقم الجوال: "${mobileTrimmed}"`);
+    return 1;
+  }
+  
+  // 3) الكشف من رقم الهوية (قيم وهمية فقط - لا نعتبر الفراغ زائر سري)
+  // ⚠️ مهم: كثير من البلاغات العادية لا تحتوي على رقم هوية، لذلك لا نعتبر الفراغ زائر سري
+  const id = String(nationalID || '').trim();
+  if (id === '1' || id === '1111111111') {
+    console.log(`🔍 [Secret Visitor] تم الكشف من رقم الهوية: "${id}"`);
+    return 1;
+  }
+  
+  return 0;
+}
+
+/**
+ * تحويل قيمة من Excel إلى تاريخ (بدعم الوقت)
+ * @param {any} val - القيمة من Excel (رقم serial أو نص تاريخ)
+ * @param {boolean} includeTime - إذا كان true، يُرجع التاريخ مع الوقت، وإلا التاريخ فقط
+ * @returns {string|null} تاريخ بصيغة ISO (yyyy-mm-dd أو yyyy-mm-ddTHH:mm:ss.sssZ)
+ */
+function asDate(val, includeTime = false) {
+  if (val == null || val === '') return null;
+  
+  // إذا كان رقم Excel serial (يدعم التاريخ والوقت)
+  if (typeof val === 'number') {
+    // Excel serial date + time (1900-01-01 = 1)
+    const excelDate = new Date((val - 25569) * 86400 * 1000);
+    if (isNaN(excelDate.getTime())) return null;
+    return includeTime ? excelDate.toISOString() : excelDate.toISOString().slice(0, 10);
+  }
+  
+  // إذا كان نص تاريخ (يدعم التاريخ والوقت)
   const d = new Date(val);
-  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+  if (isNaN(d.getTime())) return null;
+  return includeTime ? d.toISOString() : d.toISOString().slice(0, 10);
 }
 
 // خريطة أسماء الأعمدة المحتملة من تقرير 937 إلى حقولنا
@@ -172,15 +223,40 @@ const HEADER_MAP = {
     'Hospital'
   ],
   patientFullName: ['اسم المريض/المتصل', 'اسم المتصل', 'اسم المريض', 'Caller Name', 'Patient Name'],
-  patientIDNumber: ['رقم هوية المتصل', 'رقم الهوية', 'هوية المتصل', 'National ID', 'Caller ID'],
+  patientIDNumber: [
+    'رقم هوية المتصل',
+    'رقم الهوية',
+    'رقم الهوية الوطنية',
+    'هوية المتصل',
+    'هوية',
+    'ID',
+    'National ID',
+    'Caller ID',
+    'رقم الهوية / الجنسية',
+    'الهوية الوطنية'
+  ],
   patientMobile: ['رقم الجوال للمتصل', 'رقم الجوال', 'جوال', 'Mobile', 'Caller Phone'],
   gender: ['الجنس', 'Gender'],
   visitDate: ['تاريخ الزيارة', 'تاريخ البلاغ', 'Visit Date', 'Date'],
+  ticketCreatedAt: ['تاريخ إنشاء التذكرة', 'تاريخ الانشاء', 'تاريخ الإنشاء', 'Created At', 'Creation Date', 'تاريخ الإنشاء'],
+  ticketClosedAt: ['تاريخ الحل من المنسق', 'تاريخ الحل', 'تاريخ الإغلاق', 'Closed At', 'Resolution Date', 'تاريخ الحل'],
   complaintTypeName: ['التصنيف الرئيسي', 'نوع البلاغ', 'Main Type'],
   subTypeName: ['التصنيف الفرعي للتذكرة', 'التصنيف الفرعي', 'Sub Type', 'Subtype'],
   description: ['الوصف', 'وصف البلاغ', 'Description'],
   priority: ['الأولوية', 'Priority'],
-  status: ['الحالة', 'Status'],
+  status: [
+    'الحالة',
+    'Status',
+    'القرار الأخير من المنطقة',
+    'القرار الاخير من المنطقة',
+    'قرار التنفيذ',
+    'قرار التنفيذ من المنطقة',
+    'Decision',
+    'Final Decision',
+    'Resolution',
+    'حالة البلاغ',
+    'حالة المعالجة'
+  ],
 };
 
 function detectHeaderRow(aoa) {
@@ -312,6 +388,39 @@ async function findTypeIdByName(pool, name) {
     [name, name]
   );
   return rows?.[0]?.ComplaintTypeID || null;
+}
+
+/**
+ * البحث عن التصنيف الرئيسي أو إنشاؤه تلقائياً إذا لم يكن موجوداً
+ * @param {object} pool - اتصال قاعدة البيانات
+ * @param {string} name - اسم التصنيف الرئيسي
+ * @returns {number|null} ComplaintTypeID أو null
+ */
+async function findOrCreateType(pool, name) {
+  if (!name) return null;
+  
+  // البحث عن التصنيف الموجود
+  const [rows] = await pool.query(
+    'SELECT ComplaintTypeID FROM complaint_types WHERE TypeName = ? OR TypeNameEn = ? LIMIT 1',
+    [name, name]
+  );
+  
+  if (rows.length > 0) {
+    return rows[0].ComplaintTypeID;
+  }
+  
+  // إنشاء تصنيف جديد تلقائياً
+  try {
+    const [ins] = await pool.query(
+      'INSERT INTO complaint_types (TypeName) VALUES (?)',
+      [name.trim()]
+    );
+    console.log(`✅ تم إنشاء التصنيف الرئيسي تلقائياً: "${name}" (ID: ${ins.insertId})`);
+    return ins.insertId;
+  } catch (error) {
+    console.error(`❌ خطأ في إنشاء التصنيف الرئيسي "${name}":`, error.message);
+    return null;
+  }
 }
 
 async function findSubTypeIdByName(pool, name, complaintTypeID = null) {
@@ -482,11 +591,50 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
           const PatientMobile = (get('patientMobile') || '').toString().trim() || null;
           const GenderCode = toGenderCode(get('gender'));
           const Description = (get('description') || '').toString().trim() || null;
+          
+          // --- قراءة تواريخ الإنشاء والحل من Excel (بدعم الوقت) ---
+          const CreatedAtExcel = asDate(get('ticketCreatedAt'), true); // true = مع الوقت
+          const ClosedAtExcel = asDate(get('ticketClosedAt'), true);   // true = مع الوقت
+          
+          // --- حساب ActualClosingHours (عدد الساعات بين تاريخ الإنشاء وتاريخ الحل) ---
+          let ActualClosingHours = null;
+          if (CreatedAtExcel && ClosedAtExcel) {
+            const start = new Date(CreatedAtExcel);
+            const end = new Date(ClosedAtExcel);
+            
+            // التحقق من أن التواريخ صحيحة
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+              const diffMs = end - start;
+              const diffHours = diffMs / (1000 * 60 * 60); // تحويل من ميلي ثانية إلى ساعات
+              
+              // نستخدم Math.round لتقريب الساعات
+              ActualClosingHours = Math.round(diffHours);
+              
+              // التحقق من أن النتيجة منطقية (لا تكون سالبة)
+              if (ActualClosingHours < 0) {
+                console.warn(`⚠️ [Row ${idx}] ActualClosingHours سالب: ${ActualClosingHours} (CreatedAt: ${CreatedAtExcel}, ClosedAt: ${ClosedAtExcel})`);
+                ActualClosingHours = null; // نضع null إذا كان سالب
+              } else {
+                console.log(`⏱️ [Row ${idx}] ActualClosingHours = ${ActualClosingHours} ساعة (من ${CreatedAtExcel} إلى ${ClosedAtExcel})`);
+              }
+            }
+          } else {
+            if (idx <= 3) {
+              console.log(`📅 [Row ${idx}] تواريخ غير متوفرة - CreatedAtExcel: ${CreatedAtExcel || 'null'}, ClosedAtExcel: ${ClosedAtExcel || 'null'}`);
+            }
+          }
+          
+          // --- الكشف عن الزائر السري ---
+          const IsSecretVisitor = detectSecretVisitor(PatientFullName, PatientMobile, PatientIDNumber);
+          if (IsSecretVisitor === 1) {
+            console.log(`✅ [Row ${idx}] تم اكتشاف بلاغ زائر سري - Ticket: ${ticketNumber || 'N/A'}`);
+          }
 
           // --- التصنيفات ---
           const complaintTypeName = (get('complaintTypeName') || '').toString().trim() || null;
           const subTypeName = (get('subTypeName') || '').toString().trim() || null;
-          const ComplaintTypeID = complaintTypeName ? await findTypeIdByName(conn, complaintTypeName) : null;
+          // استخدام findOrCreateType لإنشاء التصنيف الرئيسي تلقائياً إذا لم يكن موجوداً
+          const ComplaintTypeID = complaintTypeName ? await findOrCreateType(conn, complaintTypeName) : null;
           // نمرر ComplaintTypeID لإنشاء التصنيف الفرعي تلقائياً إذا لم يكن موجوداً
           const SubTypeID = subTypeName ? await findSubTypeIdByName(conn, subTypeName, ComplaintTypeID) : null;
           
@@ -495,35 +643,64 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
             console.log(`📝 Row ${idx}: SubTypeName="${subTypeName}", SubTypeID=${SubTypeID}, ComplaintTypeID=${ComplaintTypeID}`);
           }
 
-          // --- تحديد الأولوية: إذا كان التصنيف "الأدوية" (ComplaintTypeID = 6) أو "سوء معاملة" (ComplaintTypeID = 17) → URGENT
+          // --- تحديد الأولوية: فقط حسب التصنيفات المحددة (بدون استخدام الكلمات المفتاحية) ---
+          // ⚠️ تم تعطيل ميزة الكلمات المفتاحية لتجنب False Positives
+          // التصنيفات الحرجة فقط: الأدوية (6)، سوء معاملة (17)، التطعيمات (12)
+          // ملاحظة: يمكن إضافة ID للتحرش لاحقاً إذا كان موجوداً في قاعدة البيانات
           let PriorityCode = 'MEDIUM';
-          if (ComplaintTypeID === 6) {
-            // الأدوية → حرج/عاجل
+          
+          // قائمة التصنيفات الحرجة
+          const URGENT_TYPES = [6, 17, 12]; // 6=أدوية، 17=سوء معاملة، 12=تطعيمات
+          
+          if (ComplaintTypeID && URGENT_TYPES.includes(ComplaintTypeID)) {
             PriorityCode = 'URGENT';
-            console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "الأدوية"');
-          } else if (ComplaintTypeID === 17) {
-            // سوء معاملة → حرج/عاجل
-            PriorityCode = 'URGENT';
-            console.log('🚨 تم تعيين الأولوية إلى URGENT لأن التصنيف هو "سوء معاملة"');
+            const typeNames = { 6: 'الأدوية', 17: 'سوء معاملة', 12: 'التطعيمات' };
+            console.log(`🚨 [Row ${idx}] تم تعيين الأولوية إلى URGENT لأن التصنيف هو "${typeNames[ComplaintTypeID] || ComplaintTypeID}"`);
           } else {
-            // --- تحديد الأولوية من جدول priority_keywords ---
-            try {
-              if (Description || complaintTypeName || subTypeName) {
-                const text = `${Description || ''} ${complaintTypeName || ''} ${subTypeName || ''}`;
-                const [keywords] = await conn.query('SELECT Keyword, PriorityCode FROM priority_keywords');
-                for (const k of keywords) {
-                  if (text.includes(k.Keyword)) {
-                    PriorityCode = k.PriorityCode;
-                    break;
-                  }
-                }
-              }
-            } catch {
-              PriorityCode = 'MEDIUM';
+            // جميع التصنيفات الأخرى = MEDIUM (لا نستخدم الكلمات المفتاحية)
+            PriorityCode = 'MEDIUM';
+            if (idx <= 3 && ComplaintTypeID) {
+              console.log(`ℹ️ [Row ${idx}] الأولوية = MEDIUM (التصنيف: ${ComplaintTypeID} - "${complaintTypeName || 'غير محدد'}")`);
             }
           }
 
-          const StatusCode = (get('status') || '').toString().trim() || 'OPEN';
+          // --- تحديد الحالة (StatusCode) ---
+          let StatusCode = (get('status') || '').toString().trim();
+          
+          // تحويل جميع الصيغ التي تدل على "مغلق" إلى CLOSED
+          // ⚠️ مهم: نستخدم normalizeAr() لتنظيف النص من المسافات المخفية والرموز Unicode
+          if (StatusCode) {
+            // تطبيع النص العربي (يشيل التشكيل، المسافات المخفية، الرموز الغريبة، يوحد الحروف)
+            // ثم إزالة المسافات تماماً للمقارنة
+            const normStatus = normalizeAr(StatusCode).replace(/\s+/g, '');
+            
+            // قائمة بالكلمات/الصيغ التي تدل على الحل/المعالجة/الإغلاق (بعد التطبيع)
+            if (
+              normStatus.includes('تمالحل') ||
+              normStatus.includes('تمحل') ||
+              normStatus.includes('تمتامعالجه') ||
+              normStatus.includes('تمالمعالجه') ||
+              normStatus.includes('معالجه') ||
+              normStatus.includes('تمالتنفيذ') ||
+              normStatus.includes('منفذ') ||
+              normStatus.includes('انهاء') ||
+              normStatus.includes('انتهى') ||
+              normStatus.includes('closed') ||
+              normStatus.includes('مغلق')
+            ) {
+              StatusCode = 'CLOSED';
+              console.log(`✅ [Row ${idx}] تم تحويل الحالة إلى CLOSED من: "${get('status')}" (مطبّع: "${normStatus}")`);
+            } else {
+              // إذا لم تطابق أي شرط، نستخدم OPEN
+              StatusCode = 'OPEN';
+              if (idx <= 3) {
+                console.log(`ℹ️ [Row ${idx}] الحالة = OPEN من: "${get('status')}" (مطبّع: "${normStatus}")`);
+              }
+            }
+          } else {
+            // إذا لم تكن هناك حالة محددة، نستخدم OPEN كافتراضي
+            StatusCode = 'OPEN';
+          }
 
           // استخدام القسم الافتراضي إذا لم يتم تحديد قسم
           const departmentId = defaultDepartmentId; // دائماً نستخدم القسم الافتراضي "غير مصنف"
@@ -532,11 +709,11 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
             INSERT INTO complaints
             (GlobalID, TicketNumber, HospitalID, DepartmentID, AssignedToUserID, AssignedAt, AssignedByUserID,
              SubmissionType, VisitDate, PatientFullName, PatientIDNumber, PatientMobile, GenderCode, FileNumber,
-             ComplaintTypeID, SubTypeID, Description, PriorityCode, StatusCode, CreatedByUserID, CreatedAt,
+             ComplaintTypeID, SubTypeID, Description, PriorityCode, StatusCode, IsSecretVisitor, ActualClosingHours, CreatedByUserID, CreatedAt,
              UpdatedAt, PatientID, IsDeleted)
             VALUES (UUID(), ?, ?, ?, NULL, NULL, NULL,
                     '937', ?, ?, ?, ?, ?, NULL,
-                    ?, ?, ?, ?, ?, NULL, NOW(),
+                    ?, ?, ?, ?, ?, ?, ?, NULL, NOW(),
                     NOW(), NULL, 0)
           `;
           try {
@@ -554,6 +731,8 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
               Description,
               PriorityCode || 'LOW',
               StatusCode || 'OPEN',
+              IsSecretVisitor, // 👈 إضافة قيمة الزائر السري
+              ActualClosingHours, // 👈 عدد الساعات بين تاريخ الإنشاء وتاريخ الحل
             ]);
             result.inserted++;
           } catch (e) {

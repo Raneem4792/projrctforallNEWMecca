@@ -585,8 +585,17 @@ function generateHospitalFilterList() {
     const isEnglish = getDashboardLang() === 'en';
     btn.textContent = isEnglish ? (h.NameEn || h.name) : (h.NameAr || h.name);
 
-    btn.onclick = () => {
-      window.location.href = `dashboard.html?hospitalId=${h.id}`;
+    btn.onclick = async () => {
+      // 1) استدعاء التصفية العامة للداشبورد
+      await filterDashboardByFacility('hospital', h.id);
+
+      // 2) تحديث تقرير الرضا الأسبوعي فقط
+      const satisfactionFilter = document.getElementById("satisfaction-hospital-filter");
+
+      if (satisfactionFilter) {
+        satisfactionFilter.value = h.id;        // تغيير اختيار المستشفى في تقرير الرضا
+        loadSatisfactionCharts();               // إعادة تحميل الرسومات الثلاثة
+      }
     };
 
     list.appendChild(btn);
@@ -622,8 +631,17 @@ function generateCenterFilterList() {
     const isEnglish = getDashboardLang() === 'en';
     btn.textContent = isEnglish ? (c.NameEn || c.name) : (c.NameAr || c.name);
 
-    btn.onclick = () => {
-      window.location.href = `dashboard.html?centerId=${c.id}`;
+    btn.onclick = async () => {
+      // 1) استدعاء التصفية العامة للداشبورد
+      await filterDashboardByFacility('center', c.id);
+
+      // 2) تحديث تقرير الرضا الأسبوعي فقط
+      const satisfactionFilter = document.getElementById("satisfaction-hospital-filter");
+
+      if (satisfactionFilter) {
+        satisfactionFilter.value = c.id;        // تغيير اختيار المستشفى في تقرير الرضا
+        loadSatisfactionCharts();               // إعادة تحميل الرسومات الثلاثة
+      }
     };
 
     list.appendChild(btn);
@@ -3068,6 +3086,17 @@ async function initializeDashboard() {
       if (satisfactionSection) {
         satisfactionSection.classList.remove('hidden');
       }
+      
+      // ملء قائمة المستشفيات في السيلكت
+      populateSatisfactionHospitalFilter();
+      
+      // ربط السيلكت الموجود داخل تقرير الرضا الأسبوعي
+      const satisfactionFilter = document.getElementById("satisfaction-hospital-filter");
+      if (satisfactionFilter) {
+        satisfactionFilter.addEventListener("change", loadSatisfactionCharts);
+        console.log('✅ تم ربط event listener للسيلكت satisfaction-hospital-filter');
+      }
+      
       loadSatisfactionCharts();
     } else {
       // إخفاء قسم الرضا الأسبوعي للموظفين ومديري النظام
@@ -3089,6 +3118,10 @@ async function initializeDashboard() {
             generateCenterFilterList();
             populateWeeklyHospitalFilter();
             renderWeeklyBoardCharts();
+            // تحديث قائمة المستشفيات في تقرير الرضا الأسبوعي
+            if (isClusterManager) {
+              populateSatisfactionHospitalFilter();
+            }
             updateDepartmentsChart();
             renderTopRedList();
             loadPatientFrequencyTable(currentPatientFrequencyPage);
@@ -3110,6 +3143,7 @@ async function initializeDashboard() {
     await loadStatusChart();
     await loadCategoriesChart();
     await load937SLAChart();
+    await loadSecretVisitorDelayChart();
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
@@ -3729,6 +3763,266 @@ async function loadStatusChart() {
     });
   } catch (error) {
     console.error('❌ خطأ في تحميل مخطط حالة البلاغ:', error);
+  }
+}
+
+/**
+ * تحميل مخطط معدل معالجة بلاغات الزائر السري
+ */
+async function loadSecretVisitorDelayChart() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+    
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
+    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
+    
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+
+    const res = await authFetch(`${API_BASE}/api/dashboard/secret-visitor/delay${qs}`);
+    
+    if (!res.ok) {
+      console.error("❌ فشل API الزائر السري");
+      return;
+    }
+
+    const js = await res.json();
+    const delayed = js.data.delayed || 0;
+    const notDelayed = js.data.notDelayed || 0;
+
+    // 🔍 تسجيل البيانات للتشخيص
+    console.log("DELAY API RESULT = ", delayed, notDelayed);
+
+    const ctx = document.getElementById("secretVisitorDelayChart");
+    if (!ctx) return;
+
+    // تدمير المخطط السابق إن وُجد
+    Chart.helpers.each(Chart.instances, ins => {
+      if (ins.canvas.id === 'secretVisitorDelayChart') ins.destroy();
+    });
+
+    // حساب الحد الأقصى المقترح للمحور Y (لضمان وضوح الأعمدة الصغيرة)
+    const maxValue = Math.max(delayed, notDelayed, 1);
+    const suggestedMax = maxValue <= 5 ? 5 : Math.ceil(maxValue * 1.2);
+
+    // حفظ hospitalId للاستخدام في onClick
+    const currentHospitalId = hospitalId;
+
+    new Chart(ctx.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: ["غير متأخر", "متأخر أكثر من 7 أيام"],
+        datasets: [{
+          label: "عدد البلاغات",
+          data: [notDelayed, delayed],
+          backgroundColor: ["#00A37A", "#FF0000"],
+          borderColor: ["#007A5A", "#B40000"],
+          borderWidth: 2,
+          borderRadius: 8,
+          barThickness: 40
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            color: '#000',
+            font: { 
+              weight: 'bold',
+              size: 14,
+              family: 'Tajawal'
+            },
+            formatter: (value) => value || '0'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            suggestedMax: suggestedMax,
+            ticks: { 
+              color: getChartTextColor(),
+              stepSize: 1
+            }
+          },
+          x: {
+            ticks: { color: getChartTextColor() }
+          }
+        },
+        onHover: (evt, activeEls, chart) => {
+          const pts = chart.getElementsAtEventForMode(evt, 'nearest', {intersect: true}, true);
+          chart.canvas.style.cursor = pts.length ? 'pointer' : 'default';
+        },
+        onClick: async (evt, els, chart) => {
+          const pts = chart.getElementsAtEventForMode(evt, 'nearest', {intersect: true}, true);
+          if (!pts.length) return;
+          
+          const idx = pts[0].index;
+          const type = idx === 0 ? 'notDelayed' : 'delayed';
+          const typeLabel = idx === 0 ? 'غير متأخر' : 'متأخر أكثر من 7 أيام';
+          
+          await showSecretVisitorDelayModal(type, typeLabel, currentHospitalId);
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحميل مخطط معدل معالجة بلاغات الزائر السري:', error);
+  }
+}
+
+/**
+ * عرض Modal بلاغات الزائر السري
+ */
+async function showSecretVisitorDelayModal(type, typeLabel, hospitalId = null) {
+  try {
+    const modal = document.getElementById('secret-visitor-delay-modal');
+    const modalTitle = document.getElementById('secret-visitor-modal-title');
+    const modalSubtitle = document.getElementById('secret-visitor-modal-subtitle');
+    const modalContent = document.getElementById('secret-visitor-modal-content');
+    const modalClose = document.getElementById('secret-visitor-modal-close');
+
+    if (!modal) {
+      console.error('Modal not found');
+      return;
+    }
+
+    // إظهار الـ modal
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    modalTitle.textContent = `بلاغات الزائر السري - ${typeLabel}`;
+    modalSubtitle.textContent = 'جاري تحميل البيانات...';
+    modalContent.innerHTML = '<div class="text-center text-gray-500 py-8">جاري تحميل البيانات...</div>';
+
+    // إغلاق الـ modal عند النقر على X
+    modalClose.onclick = () => {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    };
+
+    // إغلاق الـ modal عند النقر خارج المحتوى
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+    };
+
+    // جلب البيانات
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}&type=${type}` : `?type=${type}`;
+    const res = await authFetch(`${API_BASE}/api/dashboard/secret-visitor/delay/list${qs}`);
+
+    if (!res.ok) {
+      modalContent.innerHTML = '<div class="text-center text-red-500 py-8">فشل تحميل البيانات</div>';
+      return;
+    }
+
+    const js = await res.json();
+    const complaints = js.data || [];
+
+    modalSubtitle.textContent = `عدد البلاغات: ${complaints.length}`;
+
+    if (complaints.length === 0) {
+      modalContent.innerHTML = '<div class="text-center text-gray-500 py-8">لا توجد بلاغات</div>';
+      return;
+    }
+
+    // عرض البلاغات
+    modalContent.innerHTML = complaints.map(c => {
+      const createdAt = new Date(c.CreatedAt).toLocaleDateString('ar-SA');
+      
+      // حساب الأيام من الساعات
+      const hoursDiff = c.hoursDiff || 0;
+      const daysDiff = Math.floor(hoursDiff / 24);
+      const remainingHours = hoursDiff % 24;
+      
+      // عرض الأيام والساعات
+      let timeDisplay = '';
+      if (daysDiff > 0) {
+        timeDisplay = `${daysDiff} يوم`;
+        if (remainingHours > 0) {
+          timeDisplay += ` و ${remainingHours} ساعة`;
+        }
+      } else if (hoursDiff > 0) {
+        timeDisplay = `${hoursDiff} ساعة`;
+      } else {
+        timeDisplay = 'أقل من ساعة';
+      }
+      
+      const statusColor = c.StatusCode === 'CLOSED' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
+      const statusText = c.StatusCode === 'CLOSED' ? 'مغلق' : 'مفتوح';
+      const priorityColor = c.PriorityCode === 'CRITICAL' || c.PriorityCode === 'حرجة' 
+        ? 'bg-red-100 text-red-800' 
+        : c.PriorityCode === 'HIGH' || c.PriorityCode === 'عالية'
+        ? 'bg-orange-100 text-orange-800'
+        : 'bg-yellow-100 text-yellow-800';
+
+      // بناء رابط صفحة التفاصيل
+      const q = new URLSearchParams();
+      if (c.TicketNumber) q.set('ticket', c.TicketNumber);
+      if (c.ComplaintID) q.set('complaintId', c.ComplaintID);
+      if (c.HospitalID) q.set('hospitalId', c.HospitalID);
+      const detailsUrl = `../public/complaints/history/complaint-details.html?${q.toString()}`;
+
+      return `
+        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer" 
+             onclick="window.location.href='${detailsUrl}'">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-bold text-lg" style="color:#002B5B">#${c.TicketNumber || c.ComplaintID}</span>
+                <span class="px-2 py-1 rounded text-xs ${statusColor}">${statusText}</span>
+                <span class="px-2 py-1 rounded text-xs ${priorityColor}">${c.PriorityCode || 'عادي'}</span>
+              </div>
+              <div class="text-sm text-gray-600 mb-1">
+                <span class="font-semibold">المستشفى:</span> ${c.HospitalName || 'غير محدد'}
+              </div>
+              <div class="text-sm text-gray-600 mb-1">
+                <span class="font-semibold">المريض:</span> ${c.PatientFullName || 'غير محدد'}
+              </div>
+              <div class="text-sm text-gray-600 mb-2">
+                <span class="font-semibold">تاريخ الإنشاء:</span> ${createdAt}
+                <span class="mr-4">|</span>
+                <span class="font-semibold">المدة:</span> ${timeDisplay}
+              </div>
+              <div class="text-sm text-gray-700">
+                ${c.Description ? (c.Description.length > 150 ? c.Description.substring(0, 150) + '...' : c.Description) : 'لا يوجد وصف'}
+              </div>
+              <div class="mt-2 text-xs text-blue-600 hover:text-blue-800">
+                انقر لعرض التفاصيل الكاملة →
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('❌ خطأ في عرض Modal بلاغات الزائر السري:', error);
+    const modalContent = document.getElementById('secret-visitor-modal-content');
+    if (modalContent) {
+      modalContent.innerHTML = '<div class="text-center text-red-500 py-8">حدث خطأ أثناء تحميل البيانات</div>';
+    }
   }
 }
 
@@ -5510,6 +5804,51 @@ window.testSatisfactionAPI = async function() {
 };
 
 /**
+ * ملء قائمة المستشفيات في السيلكت
+ */
+function populateSatisfactionHospitalFilter() {
+  const select = document.getElementById("satisfaction-hospital-filter");
+  if (!select) return;
+  
+  // حفظ القيمة الحالية
+  const currentValue = select.value;
+  
+  // مسح الخيارات الحالية (باستثناء "الكل")
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+  
+  // التأكد من وجود hospitalsData
+  if (!hospitalsData || hospitalsData.length === 0) {
+    console.warn('⚠️ [populateSatisfactionHospitalFilter] لا توجد بيانات مستشفيات');
+    return;
+  }
+  
+  // فلترة فقط المستشفيات (FacilityType = 'hospital')
+  const hospitalsOnly = hospitalsData.filter(h =>
+    (h.FacilityType || '').toLowerCase() === 'hospital'
+  );
+  
+  // دعم الترجمة
+  const isEnglish = getDashboardLang() === 'en';
+  
+  // إضافة خيارات المستشفيات
+  hospitalsOnly.forEach(h => {
+    const option = document.createElement('option');
+    option.value = h.id;
+    option.textContent = isEnglish ? (h.NameEn || h.name) : (h.NameAr || h.name);
+    select.appendChild(option);
+  });
+  
+  // استعادة القيمة السابقة إن وجدت
+  if (currentValue) {
+    select.value = currentValue;
+  }
+  
+  console.log(`✅ [populateSatisfactionHospitalFilter] تم ملء ${hospitalsOnly.length} مستشفى في القائمة`);
+}
+
+/**
  * تحميل بيانات الرضا الأسبوعي وعرض الرسوم البيانية
  */
 async function loadSatisfactionCharts() {
@@ -5528,7 +5867,15 @@ async function loadSatisfactionCharts() {
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
       ? 'http://localhost:3001' : '';
     
-    const res = await authFetch(`${API_BASE}/api/dashboard/satisfaction-weeks`);
+    // قراءة hospitalId من السيلكت (إن وجد)
+    let hospitalId = document.getElementById("satisfaction-hospital-filter")?.value || "";
+    const url = hospitalId 
+      ? `${API_BASE}/api/dashboard/satisfaction-weeks?hospitalId=${hospitalId}`
+      : `${API_BASE}/api/dashboard/satisfaction-weeks`;
+    
+    console.log('🔍 [loadSatisfactionCharts] جلب بيانات الرضا الأسبوعي:', { hospitalId, url });
+    
+    const res = await authFetch(url);
     
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);

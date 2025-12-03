@@ -1951,3 +1951,5 @@ COMMENT 'الوقت الفعلي للإغلاق بالساعات (من CreatedAt
 AFTER ProcessingDurationHours;
 
 
+ALTER TABLE complaints
+ADD COLUMN IsSecretVisitor TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Secret Visitor Complaint';
