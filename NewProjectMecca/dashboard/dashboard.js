@@ -761,6 +761,7 @@ async function reloadFilteredData(hospitalId) {
     await loadStatusChart();
     await loadCategoriesChart();
     await load937SLAChart();
+    await loadSecretVisitorDelayChart();
 
     // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
