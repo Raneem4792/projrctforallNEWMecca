@@ -18,8 +18,8 @@ if (missingVars.length > 0) {
   console.error('\nأضف هذه المتغيرات إلى ملف .env:');
   console.error('CENTRAL_DB_HOST=127.0.0.1');
   console.error('CENTRAL_DB_USER=root');
-  console.error('CENTRAL_DB_PASS=SamarAmer12345@');
-  console.error('CENTRAL_DB_NAME=hospitals_mecca3\n');
+  console.error('CENTRAL_DB_PASS=Raneem11');
+  console.error('CENTRAL_DB_NAME=hospitals_mecca4\n');
   // لا نوقف التطبيق، فقط تحذير
 }
 

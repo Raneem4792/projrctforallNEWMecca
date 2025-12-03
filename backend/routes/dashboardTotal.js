@@ -3772,4 +3772,112 @@ router.get('/sla-delays/list', async (req, res) => {
   }
 });
 
+// ========== GET /api/dashboard/compare/937-mystery ==========
+router.get('/compare/937-mystery',
+  requireAuth,
+  requirePermission('DASH_CHART_MYSTERY_BY_DEPT'),
+  async (req, res) => {
+  try {
+    // التحقق من صلاحيات المستخدم
+    const userRoleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+    const userHospitalId = Number(req.user?.HospitalID || req.user?.hospitalId || 0);
+    const isCluster = userRoleId === 1 || userRoleId === 4; // مدير تجمع أو مركزي
+    
+    // فلترة حسب hospitalId من query parameter أو من بيانات المستخدم
+    const requestedHospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    let targetHospitalId = null;
+    
+    if (isCluster) {
+      // مدير التجمع: يمكنه رؤية جميع المستشفيات أو مستشفى محدد
+      targetHospitalId = requestedHospitalId;
+    } else {
+      // موظف أو مدير نظام: فقط مستشفاه
+      targetHospitalId = userHospitalId || requestedHospitalId;
+    }
+    
+    // بناء SQL query لجلب المستشفيات
+    let hospitalQuery = `
+      SELECT HospitalID, NameAr AS HospitalName
+      FROM hospitals 
+      WHERE IsActive = 1
+    `;
+    const queryParams = [];
+    
+    if (targetHospitalId) {
+      hospitalQuery += ` AND HospitalID = ?`;
+      queryParams.push(targetHospitalId);
+    }
+    
+    hospitalQuery += ` ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC`;
+    
+    // جلب المستشفيات المفلترة
+    const [allHospitals] = await pool.query(hospitalQuery, queryParams);
+    
+    const results = [];
+    
+    // معالجة كل مستشفى
+    for (const hospital of allHospitals) {
+      try {
+        const { getHospitalPool } = await import('../config/db.js');
+        const hospitalPool = await getHospitalPool(hospital.HospitalID);
+        
+        // جلب بيانات بلاغات 937
+        const [complaints937] = await hospitalPool.query(`
+          SELECT 
+            COUNT(*) AS reports937,
+            SUM(CASE WHEN StatusCode = 'CLOSED' THEN 1 ELSE 0 END) AS closed937
+          FROM complaints
+          WHERE SubmissionType = '937'
+            AND (IsDeleted = 0 OR IsDeleted IS NULL)
+        `);
+        
+        // جلب بيانات الزائر السري (mystery_complaints)
+        const [mysteryData] = await hospitalPool.query(`
+          SELECT 
+            COUNT(*) AS mysteryTotal,
+            SUM(CASE WHEN Status = 'CLOSED' OR Status = 'مغلقة' THEN 1 ELSE 0 END) AS mysteryClosed
+          FROM mystery_complaints
+        `);
+        
+        const reports937 = Number(complaints937[0]?.reports937 || 0);
+        const closed937 = Number(complaints937[0]?.closed937 || 0);
+        const mysteryTotal = Number(mysteryData[0]?.mysteryTotal || 0);
+        const mysteryClosed = Number(mysteryData[0]?.mysteryClosed || 0);
+        
+        results.push({
+          HospitalID: hospital.HospitalID,
+          HospitalName: hospital.HospitalName,
+          reports937: reports937,
+          closed937: closed937,
+          mysteryTotal: mysteryTotal,
+          mysteryClosed: mysteryClosed
+        });
+      } catch (error) {
+        console.error(`❌ خطأ في جلب بيانات مستشفى ${hospital.HospitalID}:`, error.message);
+        // إضافة بيانات فارغة في حالة الخطأ
+        results.push({
+          HospitalID: hospital.HospitalID,
+          HospitalName: hospital.HospitalName,
+          reports937: 0,
+          closed937: 0,
+          mysteryTotal: 0,
+          mysteryClosed: 0
+        });
+      }
+    }
+    
+    // ترتيب النتائج حسب عدد بلاغات 937 (تنازلي)
+    results.sort((a, b) => b.reports937 - a.reports937);
+    
+    res.json(results);
+  } catch (error) {
+    console.error('GET /dashboard/compare/937-mystery', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Database error', 
+      message: error.message 
+    });
+  }
+});
+
 export default router;

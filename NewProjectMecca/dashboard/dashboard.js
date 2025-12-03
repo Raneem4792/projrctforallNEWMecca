@@ -3146,6 +3146,9 @@ async function initializeDashboard() {
     await load937SLAChart();
     await loadSecretVisitorDelayChart();
     
+    // 🔹 تحميل جدول مقارنة 937 و الزائر السري
+    await load937MysteryCompareTable();
+    
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
     
@@ -4800,6 +4803,124 @@ async function loadCategoriesChart() {
   }
 }
 
+
+/**
+ * تحميل وعرض جدول مقارنة 937 و الزائر السري
+ */
+async function load937MysteryCompareTable() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : '';
+
+    // التحقق من دور المستخدم
+    if (!currentUser) await loadCurrentUser();
+    const isCluster = App.isClusterManager();
+    
+    const urlParams = new URLSearchParams(location.search);
+    let hospitalId = urlParams.get('hospitalId') || window.filteredHospitalId;
+    
+    // إذا كان مدير تجمع ولا يوجد تصفية من URL، لا نرسل hospitalId لعرض جميع المستشفيات
+    // إذا كان مدير نظام/موظف، نرسل hospitalId الخاص به
+    if (!hospitalId && !isCluster) {
+      hospitalId = currentUser?.HospitalID || currentUser?.hospitalId || userHospitalId;
+    } else if (isCluster && !hospitalId && !window.filteredHospitalId) {
+      // مدير تجمع بدون تصفية = جميع المستشفيات
+      hospitalId = null;
+    }
+    
+    const qs = hospitalId ? `?hospitalId=${encodeURIComponent(hospitalId)}` : '';
+
+    const res = await authFetch(`${API_BASE}/api/dashboard/total/compare/937-mystery${qs}`);
+    
+    if (!res.ok) {
+      console.warn('❌ فشل تحميل المقارنة');
+      const tbody = document.getElementById('compare-body');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="10" class="py-8 text-red-500">فشل تحميل البيانات</td></tr>';
+      }
+      return;
+    }
+
+    const data = await res.json();
+    const tbody = document.getElementById('compare-body');
+    
+    if (!tbody) {
+      console.warn('❌ لم يتم العثور على compare-body');
+      return;
+    }
+    
+    tbody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" class="py-8 text-gray-500">لا توجد بيانات</td></tr>';
+      return;
+    }
+
+    data.forEach(row => {
+      const total = Number(row.reports937 || 0) + Number(row.mysteryTotal || 0);
+
+      const rate937 = row.reports937 > 0
+        ? ((Number(row.closed937 || 0) / Number(row.reports937)) * 100).toFixed(2)
+        : 0;
+
+      const rateMystery = row.mysteryTotal > 0
+        ? ((Number(row.mysteryClosed || 0) / Number(row.mysteryTotal)) * 100).toFixed(2)
+        : 0;
+
+      const finalRate = total > 0
+        ? (((Number(row.closed937 || 0) + Number(row.mysteryClosed || 0)) / total) * 100).toFixed(2)
+        : 0;
+
+      // 🔵 الرضا عن الإغلاق
+      const satisfactionRate = (
+        (parseFloat(rate937) * 0.5) +
+        (parseFloat(rateMystery) * 0.5)
+      ).toFixed(2);
+
+      // 🟢 المؤشر العام
+      const overallIndex = (
+        (parseFloat(satisfactionRate) * 0.70) +
+        (parseFloat(finalRate) * 0.30)
+      ).toFixed(2);
+
+      // لون الحالة النهائي بناءً على المؤشر العام
+      let status = '';
+      const overallIndexNum = parseFloat(overallIndex);
+      if (overallIndexNum >= 95) {
+        status = 'ممتاز 🟢';
+      } else if (overallIndexNum >= 85) {
+        status = 'متوسط 🟡';
+      } else {
+        status = 'منخفض 🔴';
+      }
+
+      tbody.insertAdjacentHTML(
+        'beforeend',
+        `
+        <tr>
+          <td class="py-2 px-4 border">${row.HospitalName || 'غير محدد'}</td>
+          <td class="py-2 px-4 border">${row.reports937 || 0}</td>
+          <td class="py-2 px-4 border">${row.mysteryTotal || 0}</td>
+          <td class="py-2 px-4 border">${total}</td>
+          <td class="py-2 px-4 border">${rate937}%</td>
+          <td class="py-2 px-4 border">${rateMystery}%</td>
+          <td class="py-2 px-4 border font-bold">${finalRate}%</td>
+          <td class="py-2 px-4 border font-bold">${satisfactionRate}%</td>
+          <td class="py-2 px-4 border font-bold">${overallIndex}%</td>
+          <td class="py-2 px-4 border">${status}</td>
+        </tr>
+        `
+      );
+    });
+  } catch (error) {
+    console.error('❌ خطأ في تحميل جدول المقارنة:', error);
+    const tbody = document.getElementById('compare-body');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="10" class="py-8 text-red-500">حدث خطأ أثناء تحميل البيانات</td></tr>';
+    }
+  }
+}
 
 /**
  * تحميل وعرض جدول تكرار الشكاوى حسب رقم الهوية

@@ -410,6 +410,39 @@
       </div>
     </section>
 
+    <!-- جدول مقارنة 937 و الزائر السري -->
+    <section id="compare-table-section" data-perm="DASH_CHART_MYSTERY_BY_DEPT" class="py-10 hidden">
+      <div class="container mx-auto px-4">
+        <div class="bg-white border rounded-xl p-6 shadow">
+          <h3 class="text-xl font-bold mb-4 text-blue-900">مقارنة بلاغات 937 و الزائر السري</h3>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-center border-collapse" id="compare-table">
+              <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                  <th class="py-3 px-4 border">المستشفى</th>
+                  <th class="py-3 px-4 border">بلاغات 937</th>
+                  <th class="py-3 px-4 border">بلاغات الزائر السري</th>
+                  <th class="py-3 px-4 border">إجمالي البلاغات</th>
+                  <th class="py-3 px-4 border">% إغلاق 937</th>
+                  <th class="py-3 px-4 border">% إغلاق الزائر السري</th>
+                  <th class="py-3 px-4 border">% الإغلاق العام</th>
+                  <th class="py-3 px-4 border">% رضا الإغلاق</th>
+                  <th class="py-3 px-4 border">% المؤشر العام</th>
+                  <th class="py-3 px-4 border">الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="compare-body">
+                <tr>
+                  <td colspan="10" class="py-8 text-gray-500">جاري تحميل البيانات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Modal لعرض بلاغات الزائر السري -->
     <div id="secret-visitor-delay-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" style="display: none;">
       <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
