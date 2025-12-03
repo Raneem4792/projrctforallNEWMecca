@@ -139,7 +139,7 @@ router.get('/dashboard/secret-visitor/delay',
           const hospitalPool = await getHospitalPool(h.HospitalID);
           
           // استعلامين منفصلين لتجنب التعقيد
-          // حساب الأيام من الساعات: FLOOR(hours / 24)
+          // استخدام ActualClosingHours إذا كان موجوداً، وإلا نحسب من CreatedAt
           const [delayedRows] = await hospitalPool.query(`
             SELECT COUNT(*) AS count
             FROM complaints
@@ -147,10 +147,13 @@ router.get('/dashboard/secret-visitor/delay',
               AND (IsDeleted = 0 OR IsDeleted IS NULL)
               AND CreatedAt IS NOT NULL
               AND FLOOR(
-                TIMESTAMPDIFF(
-                  HOUR,
-                  CreatedAt,
-                  IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                COALESCE(
+                  ActualClosingHours,
+                  TIMESTAMPDIFF(
+                    HOUR,
+                    CreatedAt,
+                    IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                  )
                 ) / 24
               ) > 7
           `);
@@ -162,10 +165,13 @@ router.get('/dashboard/secret-visitor/delay',
               AND (IsDeleted = 0 OR IsDeleted IS NULL)
               AND CreatedAt IS NOT NULL
               AND FLOOR(
-                TIMESTAMPDIFF(
-                  HOUR,
-                  CreatedAt,
-                  IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                COALESCE(
+                  ActualClosingHours,
+                  TIMESTAMPDIFF(
+                    HOUR,
+                    CreatedAt,
+                    IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                  )
                 ) / 24
               ) <= 7
           `);
@@ -266,27 +272,37 @@ router.get('/dashboard/secret-visitor/delay/list',
               PriorityCode,
               CreatedAt,
               UpdatedAt,
+              ActualClosingHours,
               FLOOR(
+                COALESCE(
+                  ActualClosingHours,
+                  TIMESTAMPDIFF(
+                    HOUR,
+                    CreatedAt,
+                    IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                  )
+                ) / 24
+              ) AS daysDiff,
+              COALESCE(
+                ActualClosingHours,
                 TIMESTAMPDIFF(
                   HOUR,
                   CreatedAt,
                   IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
-                ) / 24
-              ) AS daysDiff,
-              TIMESTAMPDIFF(
-                HOUR,
-                CreatedAt,
-                IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                )
               ) AS hoursDiff
             FROM complaints
             WHERE IsSecretVisitor = 1 
               AND (IsDeleted = 0 OR IsDeleted IS NULL)
               AND CreatedAt IS NOT NULL
               AND FLOOR(
-                TIMESTAMPDIFF(
-                  HOUR,
-                  CreatedAt,
-                  IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                COALESCE(
+                  ActualClosingHours,
+                  TIMESTAMPDIFF(
+                    HOUR,
+                    CreatedAt,
+                    IF(StatusCode = 'CLOSED', UpdatedAt, NOW())
+                  )
                 ) / 24
               ) ${isDelayed ? '>' : '<='} 7
             ORDER BY CreatedAt DESC
