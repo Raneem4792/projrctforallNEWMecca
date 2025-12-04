@@ -2220,6 +2220,8 @@ router.get('/critical-reports',
           r.HospitalNameEn = hospitalNameEn || hospitalName;
           r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
           r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+          r.SubTypeNameAr = r.SubTypeNameAr || null;
+          r.SubTypeNameEn = r.SubTypeNameEn || null;
         });
       } else {
         // حتى لو لم نمرر الاسم، نضيف الحقول
@@ -2228,6 +2230,8 @@ router.get('/critical-reports',
           r.HospitalNameEn = r.HospitalNameEn || r.HospitalName || null;
           r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
           r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+          r.SubTypeNameAr = r.SubTypeNameAr || null;
+          r.SubTypeNameEn = r.SubTypeNameEn || null;
         });
       }
       return rows;
@@ -2250,6 +2254,8 @@ router.get('/critical-reports',
             r.HospitalNameEn = r.HospitalNameEn || h.NameEn || h.NameAr;
             r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
             r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+            r.SubTypeNameAr = r.SubTypeNameAr || null;
+            r.SubTypeNameEn = r.SubTypeNameEn || null;
             all.push(r);
           });
         } catch (e) {
@@ -2291,6 +2297,8 @@ router.get('/critical-reports',
       r.HospitalNameEn = r.HospitalNameEn || r.HospitalName || null;
       r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
       r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+      r.SubTypeNameAr = r.SubTypeNameAr || null;
+      r.SubTypeNameEn = r.SubTypeNameEn || null;
     });
     
     const affectedHospitals = new Set(rows.map(r => r.HospitalID)).size;
@@ -2313,6 +2321,340 @@ router.get('/critical-reports',
   } catch (err) {
     console.error('critical-reports error:', err);
     res.status(500).json({ success:false, message:'خطأ في جلب البلاغات الحرجة' });
+  }
+});
+
+/**
+ * GET /api/dashboard/total/misbehavior-reports
+ * جلب بلاغات سوء المعاملة
+ */
+router.get('/misbehavior-reports',
+  requireAuth,
+  requirePermission('DASH_URGENT_LIST'),
+  async (req, res) => {
+  try {
+    const isCluster = Boolean(
+      req.user?.isClusterManager === true ||
+      req.user?.is_cluster_manager === true ||
+      req.user?.role === 'cluster_admin' ||
+      req.user?.RoleID === 1 || req.user?.roleId === 1 || req.user?.role_id === 1
+    );
+
+    const qHosp      = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    const userHospId = (req.user?.HospitalID ?? req.user?.hospitalId ?? null);
+
+    // إذا كان مدير: استخدم باراميتر الاستعلام إن وُجد، وإلا = null (يعني كل المستشفيات)
+    // إذا كان موظف: استخدم HospitalID من المستخدم، أو من الاستعلام إن وُجد
+    const hospitalId = isCluster ? (qHosp || null) : (userHospId || qHosp || null);
+
+    // موظف بدون مستشفى معروف → فقط هنا نرجّع 400
+    if (!isCluster && !hospitalId) {
+      return res.status(400).json({ success:false, message:'hospitalId مطلوب' });
+    }
+
+    // SQL الشرط الأساسي لسوء المعاملة - يعتمد على التصنيفات الرسمية فقط
+    // ComplaintTypeID 17 = سوء معاملة
+    // SubTypeID 34 = سوء معاملة (مرتبط بـ ComplaintTypeID 7)
+    // استثناء: كلمة "تحرش" في الوصف
+    const MISBEHAVIOR_TYPE_IDS = [17]; // ComplaintTypeID لسوء المعاملة
+    const MISBEHAVIOR_SUBTYPE_IDS = [34]; // SubTypeID لسوء المعاملة
+    
+    const MISBEHAVIOR_CONDITION = `
+      (
+        c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS.join(',')})
+        OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS.join(',')})
+        OR c.Description LIKE '%تحرش%'
+      )
+    `;
+    const NOT_DELETED = `(c.IsDeleted = 0 OR c.IsDeleted IS NULL)`;
+
+    // دالة تساعدنا نقرأ من مستشفى واحد
+    async function fetchOneHospital(hId, hospitalName=null, hospitalNameEn=null) {
+      const { getHospitalPool } = await import('../config/db.js');
+      const pool = await getHospitalPool(hId);
+      const [[{ db }]] = await pool.query('SELECT DATABASE() AS db');
+      const selectHospitalName = db?.startsWith('hosp_')
+        ? 'NULL AS HospitalName'
+        : 'h.NameAr AS HospitalName';
+      const joinHospital = db?.startsWith('hosp_')
+        ? ''
+        : 'LEFT JOIN hospitals h ON h.HospitalID = c.HospitalID';
+
+      // شرط سوء المعاملة بدون استخدام ct.TypeName (للتوافق مع قواعد البيانات القديمة)
+      // يعتمد على التصنيفات الرسمية فقط
+      const MISBEHAVIOR_TYPE_IDS_SIMPLE = [17]; // ComplaintTypeID لسوء المعاملة
+      const MISBEHAVIOR_SUBTYPE_IDS_SIMPLE = [34]; // SubTypeID لسوء المعاملة
+      
+      const MISBEHAVIOR_CONDITION_SIMPLE = `
+        (
+          c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS_SIMPLE.join(',')})
+          OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS_SIMPLE.join(',')})
+          OR c.Description LIKE '%تحرش%'
+        )
+      `;
+
+      // محاولة الاستعلام الكامل أولاً (مع JOIN complaint_types و complaint_subtypes)
+      let sql = `
+        SELECT
+          c.ComplaintID,
+          c.TicketNumber,
+          c.HospitalID,
+          ${selectHospitalName},
+          d.NameAr AS DepartmentName,
+          t.TypeName AS TypeNameAr,
+          t.TypeNameEn,
+          st.SubTypeName AS SubTypeNameAr,
+          st.SubTypeNameEn AS SubTypeNameEn,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          c.Description
+        FROM complaints c
+        ${joinHospital}
+        LEFT JOIN departments     d ON d.DepartmentID     = c.DepartmentID
+        LEFT JOIN complaint_types t ON t.ComplaintTypeID  = c.ComplaintTypeID
+        LEFT JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+        WHERE ${MISBEHAVIOR_CONDITION} AND ${NOT_DELETED}
+        ORDER BY c.CreatedAt DESC
+        LIMIT 500
+      `;
+      
+      let rows;
+      try {
+        [rows] = await pool.query(sql);
+      } catch (err) {
+        // إذا فشل بسبب عدم وجود جدول أو عمود، حاول استعلام بديل مع محاولة جلب SubTypeID
+        if (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE') {
+          console.warn(`⚠️ [MISBEHAVIOR] Hospital ${hId}: ${err.message}, trying alternative query`);
+          
+          // محاولة استعلام بديل مع محاولة JOIN subtypes إذا كان الجدول موجوداً
+          try {
+            sql = `
+              SELECT
+                c.ComplaintID,
+                c.TicketNumber,
+                c.HospitalID,
+                ${selectHospitalName},
+                d.NameAr AS DepartmentName,
+                t.TypeName AS TypeNameAr,
+                t.TypeNameEn,
+                c.SubTypeID,
+                COALESCE(st.SubTypeName, NULL) AS SubTypeNameAr,
+                COALESCE(st.SubTypeNameEn, NULL) AS SubTypeNameEn,
+                c.PriorityCode,
+                c.StatusCode,
+                c.CreatedAt,
+                c.Description
+              FROM complaints c
+              ${joinHospital}
+              LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+              LEFT JOIN complaint_types t ON t.ComplaintTypeID = c.ComplaintTypeID
+              LEFT JOIN complaint_subtypes st ON st.SubTypeID = c.SubTypeID
+              WHERE ${MISBEHAVIOR_CONDITION_SIMPLE} AND ${NOT_DELETED}
+              ORDER BY c.CreatedAt DESC
+              LIMIT 500
+            `;
+            [rows] = await pool.query(sql);
+          } catch (err2) {
+            // إذا فشل أيضاً، استخدم استعلام بسيط بدون JOIN subtypes
+            console.warn(`⚠️ [MISBEHAVIOR] Hospital ${hId}: subtypes table not available, using minimal query`);
+            sql = `
+              SELECT
+                c.ComplaintID,
+                c.TicketNumber,
+                c.HospitalID,
+                ${selectHospitalName},
+                d.NameAr AS DepartmentName,
+                NULL AS TypeNameAr,
+                NULL AS TypeNameEn,
+                c.SubTypeID,
+                NULL AS SubTypeNameAr,
+                NULL AS SubTypeNameEn,
+                c.PriorityCode,
+                c.StatusCode,
+                c.CreatedAt,
+                c.Description
+              FROM complaints c
+              ${joinHospital}
+              LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+              WHERE ${MISBEHAVIOR_CONDITION_SIMPLE} AND ${NOT_DELETED}
+              ORDER BY c.CreatedAt DESC
+              LIMIT 500
+            `;
+            [rows] = await pool.query(sql);
+          }
+        } else {
+          // إذا كان الخطأ مختلفاً، أعد رفعه
+          throw err;
+        }
+      }
+
+      // إن كنا على قاعدة مستشفى والاسم مفقود، نحط الاسم الممرّر (إن وُجد)
+      if (hospitalName) {
+        rows.forEach(r => {
+          r.HospitalNameAr = hospitalName;
+          r.HospitalNameEn = hospitalNameEn || hospitalName;
+          r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+          r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+          // التأكد من أن SubTypeName موجود (حتى لو كان null)
+          r.SubTypeNameAr = r.SubTypeNameAr !== undefined ? r.SubTypeNameAr : null;
+          r.SubTypeNameEn = r.SubTypeNameEn !== undefined ? r.SubTypeNameEn : null;
+          // حفظ SubTypeID أيضاً للاستخدام لاحقاً
+          r.SubTypeID = r.SubTypeID || null;
+        });
+      } else {
+        // حتى لو لم نمرر الاسم، نضيف الحقول
+        rows.forEach(r => {
+          r.HospitalNameAr = r.HospitalName || null;
+          r.HospitalNameEn = r.HospitalNameEn || r.HospitalName || null;
+          r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+          r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+          // التأكد من أن SubTypeName موجود (حتى لو كان null)
+          r.SubTypeNameAr = r.SubTypeNameAr !== undefined ? r.SubTypeNameAr : null;
+          r.SubTypeNameEn = r.SubTypeNameEn !== undefined ? r.SubTypeNameEn : null;
+          // حفظ SubTypeID أيضاً للاستخدام لاحقاً
+          r.SubTypeID = r.SubTypeID || null;
+        });
+      }
+      
+      // Log للتحقق من البيانات
+      if (rows.length > 0) {
+        const sample = rows[0];
+        const withSubType = rows.filter(r => r.SubTypeNameAr || r.SubTypeNameEn).length;
+        console.log(`✅ [MISBEHAVIOR] Hospital ${hId}: Fetched ${rows.length} reports (${withSubType} with SubTypeName). Sample:`, {
+          ComplaintID: sample.ComplaintID,
+          TicketNumber: sample.TicketNumber,
+          SubTypeID: sample.SubTypeID,
+          SubTypeNameAr: sample.SubTypeNameAr,
+          SubTypeNameEn: sample.SubTypeNameEn
+        });
+      }
+      
+      return rows;
+    }
+
+    // مدير التجمع ولم يحدد مستشفى → كل المستشفيات
+    if (isCluster && !hospitalId) {
+      const { centralDb } = await import('../config/db.js');
+      const [hospitals] = await centralDb.query(
+        `SELECT HospitalID, NameAr, NameEn FROM hospitals WHERE IsActive = 1`
+      );
+
+      const all = [];
+      for (const h of hospitals) {
+        try {
+          const rows = await fetchOneHospital(h.HospitalID, h.NameAr, h.NameEn);
+          rows.forEach(r => {
+            r.HospitalID = h.HospitalID;
+            r.HospitalNameAr = r.HospitalNameAr || r.HospitalName || h.NameAr;
+            r.HospitalNameEn = r.HospitalNameEn || h.NameEn || h.NameAr;
+            r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+            r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+            r.SubTypeNameAr = r.SubTypeNameAr || null;
+            r.SubTypeNameEn = r.SubTypeNameEn || null;
+            all.push(r);
+          });
+        } catch (e) {
+          console.warn('skip hospital', h.HospitalID, e.message);
+        }
+      }
+
+      // ملخّص
+      const affectedHospitals = new Set(all.map(r => r.HospitalID)).size;
+      
+      // حساب التصنيف الفرعي الأكثر تكراراً
+      const subTypeCounts = all.reduce((acc, r) => {
+        const k = r.SubTypeNameAr || r.SubTypeNameEn || null;
+        if (k && k !== 'null' && k !== 'NULL' && k.trim() && k !== 'غير مصنف') {
+          acc[k] = (acc[k] || 0) + 1;
+        }
+        return acc;
+      }, {});
+      const mostFrequentSubType = Object.keys(subTypeCounts).length
+        ? Object.entries(subTypeCounts).sort((a,b)=>b[1]-a[1])[0][0]
+        : 'غير مصنف';
+      
+      // أيضاً نحسب التصنيف الرئيسي للتوافق
+      const typeCounts = all.reduce((acc, r) => {
+        const k = r.TypeNameAr || r.TypeName || 'غير محدد';
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      }, {});
+      const mostFrequentType = Object.keys(typeCounts).length
+        ? Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0][0]
+        : 'غير محدد';
+
+      return res.json({
+        success: true,
+        data: {
+          summary: { 
+            totalMisbehavior: all.length, 
+            affectedHospitals, 
+            mostFrequentType,
+            mostFrequentSubType 
+          },
+          reports: all
+        }
+      });
+    }
+
+    // موظف (أو مدير حدّد hospitalId) → مستشفى واحد
+    if (!hospitalId) {
+      // حماية من NaN: لا نكمل بدون hospitalId
+      return res.status(400).json({ success:false, message:'hospitalId مطلوب' });
+    }
+
+    const rows = await fetchOneHospital(Number(hospitalId));
+
+    // إضافة الأسماء للصفوف إذا لم تكن موجودة
+    rows.forEach(r => {
+      r.HospitalNameAr = r.HospitalNameAr || r.HospitalName || null;
+      r.HospitalNameEn = r.HospitalNameEn || r.HospitalName || null;
+      r.TypeNameAr = r.TypeNameAr || r.TypeName || 'غير محدد';
+      r.TypeNameEn = r.TypeNameEn || r.TypeNameAr || 'Not specified';
+      r.SubTypeNameAr = r.SubTypeNameAr || null;
+      r.SubTypeNameEn = r.SubTypeNameEn || null;
+    });
+    
+    const affectedHospitals = new Set(rows.map(r => r.HospitalID)).size;
+    
+    // حساب التصنيف الفرعي الأكثر تكراراً
+    const subTypeCounts = rows.reduce((acc, r) => {
+      const k = r.SubTypeNameAr || r.SubTypeNameEn || null;
+      if (k && k !== 'null' && k !== 'NULL' && k.trim() && k !== 'غير مصنف') {
+        acc[k] = (acc[k] || 0) + 1;
+      }
+      return acc;
+    }, {});
+    const mostFrequentSubType = Object.keys(subTypeCounts).length
+      ? Object.entries(subTypeCounts).sort((a,b)=>b[1]-a[1])[0][0]
+      : 'غير مصنف';
+    
+    // أيضاً نحسب التصنيف الرئيسي للتوافق
+    const typeCounts = rows.reduce((acc, r) => {
+      const k = r.TypeNameAr || r.TypeName || 'غير محدد';
+      acc[k] = (acc[k] || 0) + 1;
+      return acc;
+    }, {});
+    const mostFrequentType = Object.keys(typeCounts).length
+      ? Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0][0]
+      : 'غير محدد';
+
+    return res.json({
+      success: true,
+      data: {
+        summary: { 
+          totalMisbehavior: rows.length, 
+          affectedHospitals, 
+          mostFrequentType,
+          mostFrequentSubType 
+        },
+        reports: rows
+      }
+    });
+  } catch (err) {
+    console.error('misbehavior-reports error:', err);
+    res.status(500).json({ success:false, message:'خطأ في جلب بلاغات سوء المعاملة' });
   }
 });
 

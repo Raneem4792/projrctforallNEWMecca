@@ -41,7 +41,7 @@ import hospitalRoutes from './routes/hospitals.js';
 import hospitalsRoutes from './routes/hospitals.routes.js';
 import permissionsRoutes from './routes/permissions.routes.js';
 import userRoutes from './routes/users.js';
-import usersRoutes from './routes/users.js'; // Multi-tenant users
+// import usersRoutes from './routes/users.js'; // Multi-tenant users - مكرر مع userRoutes
 import logsRoutes from './routes/logs.js';
 import dashboardTotalRouter from './routes/dashboardTotal.js';
 import complaintsRouter from './routes/complaints.js';
@@ -60,6 +60,7 @@ import improvementsRoutes from './routes/improvements.routes.js';
 import improvements937Routes from './routes/improvements937.routes.js';
 import imports937Routes from './routes/imports937.routes.js';
 import importsDepartmentsAssignRoutes from './routes/importsDepartmentsAssign.routes.js';
+import importMisbehaviorRoutes from './routes/importMisbehavior.routes.js';
 import satisfactionWeeksRoutes from './routes/satisfactionWeeks.routes.js';
 import mysteryComplaintsRoutes from './routes/mystery-complaints.routes.js';
 import mysteryDashboardRoutes from './routes/mystery-dashboard.routes.js';
@@ -282,6 +283,7 @@ app.use('/api/complaints-list', complaintsListRoutes);
 app.use('/api', hospitalTripsRoutes);
 app.use('/api', imports937Routes); // استيراد 937
 app.use('/api/imports', importsDepartmentsAssignRoutes); // توزيع الأقسام
+app.use('/api/import', importMisbehaviorRoutes); // استيراد إكسل سوء المعاملة
 app.use('/api', satisfactionWeeksRoutes); // تقارير الرضا الأسبوعي
 app.use('/api', mysteryComplaintsRoutes); // بلاغات الزائر السري
 app.use('/api', mysteryDashboardRoutes); // لوحة تحكم الزائر السري
@@ -318,7 +320,8 @@ console.log('   - POST /api/archive/upload');
 console.log('   - GET  /api/archive/list');
 console.log('   - GET  /api/archive/download/:fileId');
 
-// 1.5. Public meta routes (قبل أي middleware يتطلب hospitalId)
+// 1.5. Public meta routes (بعد /api/users لتجنب التقاط /api/users/cluster-managers)
+// ⚠️ يجب أن يكون /api/users قبل /api لتجنب التقاط /api/users من metaRoutes
 app.use('/api', metaRoutes);
 app.use('/api/meta', metaRoutesNew);
 
@@ -333,7 +336,8 @@ app.use('/api', complaintTargetsRoutes); // /api/complaint-targets - بلاغا�
 app.use('/api', departmentsRoutes); // Multi-tenant departments
 app.use('/api', complaintTransfersRoutes); // Transfer routes
 app.use('/api/complaints', complaintsTransferRoutes); // New transfer routes
-app.use('/api', usersRoutes); // Multi-tenant users - ⚠️ يجب أن يكون بعد reply-types
+// ⚠️ تم إزالة usersRoutes لأنه مكرر مع userRoutes (نفس الملف)
+// app.use('/api', usersRoutes); // Multi-tenant users - مكرر مع userRoutes
 app.use('/api/utils', utilsRoutes); // مسارات الأدوات المساعدة
 
 console.log('✅ Mounted routes in correct order:');

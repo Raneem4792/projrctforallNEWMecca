@@ -201,6 +201,318 @@ router.get('/list',
   }
 );
 
+/* =============== [GET] /api/users/general-stats =================
+   - جلب إحصائيات عامة لجميع المستخدمين من جميع المستشفيات + مديري التجمع
+   - إجمالي المستخدمين، النشطين، غير النشطين
+   - متاح فقط لمديري التجمع (RoleID = 1 أو 4)
+========================================================= */
+router.get('/general-stats',
+  requireAuth,
+  async (req, res) => {
+    try {
+      // التحقق من أن المستخدم هو مدير تجمع
+      const roleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+      const isCluster = [1, 4].includes(roleId);
+      
+      if (!isCluster) {
+        return res.status(403).json({ 
+          ok: false, 
+          message: 'غير مصرح - مديري التجمع فقط' 
+        });
+      }
+
+      const centralPool = await getCentralPool();
+      
+      // 1. جلب إحصائيات مديري التجمع من القاعدة المركزية
+      const [clusterStats] = await centralPool.query(`
+        SELECT 
+          COUNT(*) AS total,
+          SUM(CASE WHEN COALESCE(IsActive, 1) = 1 THEN 1 ELSE 0 END) AS active,
+          SUM(CASE WHEN COALESCE(IsActive, 1) = 0 THEN 1 ELSE 0 END) AS inactive
+        FROM users_central
+        WHERE RoleID = 1
+      `);
+      
+      let totalUsers = Number(clusterStats[0]?.total || 0);
+      let activeUsers = Number(clusterStats[0]?.active || 0);
+      let inactiveUsers = Number(clusterStats[0]?.inactive || 0);
+
+      // 2. جلب جميع المستشفيات النشطة
+      const [hospitals] = await centralPool.query(`
+        SELECT HospitalID, NameAr
+        FROM hospitals
+        WHERE IsActive = 1
+      `);
+
+      // 3. المرور على كل مستشفى وجمع إحصائيات المستخدمين
+      for (const hospital of hospitals) {
+        try {
+          const hospitalPool = await getTenantPoolByHospitalId(hospital.HospitalID);
+          const [hospitalStats] = await hospitalPool.query(`
+            SELECT 
+              COUNT(*) AS total,
+              SUM(CASE WHEN COALESCE(IsActive, 1) = 1 AND COALESCE(IsDeleted, 0) = 0 THEN 1 ELSE 0 END) AS active,
+              SUM(CASE WHEN COALESCE(IsActive, 1) = 0 AND COALESCE(IsDeleted, 0) = 0 THEN 1 ELSE 0 END) AS inactive
+            FROM users
+            WHERE HospitalID = ? AND COALESCE(IsDeleted, 0) = 0
+          `, [hospital.HospitalID]);
+
+          totalUsers += Number(hospitalStats[0]?.total || 0);
+          activeUsers += Number(hospitalStats[0]?.active || 0);
+          inactiveUsers += Number(hospitalStats[0]?.inactive || 0);
+        } catch (err) {
+          console.warn(`⚠️ خطأ في جلب إحصائيات المستخدمين من ${hospital.NameAr} (HospitalID: ${hospital.HospitalID}):`, err.message);
+          // نكمل مع المستشفيات الأخرى
+        }
+      }
+
+      res.json({ 
+        ok: true, 
+        total: totalUsers,
+        active: activeUsers,
+        inactive: inactiveUsers
+      });
+    } catch (e) {
+      console.error('GET /users/general-stats error:', e);
+      res.status(500).json({ 
+        ok: false, 
+        message: 'server error',
+        error: e.message 
+      });
+    }
+  }
+);
+
+/* =============== [GET] /api/users/stats =================
+   - جلب إحصائيات المستخدمين لمستشفى معين
+   - إجمالي المستخدمين، النشطين، غير النشطين
+========================================================= */
+router.get('/stats',
+  requireAuth, resolveHospitalId, attachHospitalPool,
+  async (req, res) => {
+    try {
+      const hospitalId = Number(req.hospitalId);
+      if (!hospitalId) {
+        return res.status(400).json({ 
+          ok: false, 
+          message: 'hospitalId مطلوب' 
+        });
+      }
+
+      const [rows] = await req.hospitalPool.query(`
+        SELECT 
+          COUNT(*) AS total,
+          SUM(CASE WHEN COALESCE(IsActive, 1) = 1 AND COALESCE(IsDeleted, 0) = 0 THEN 1 ELSE 0 END) AS active,
+          SUM(CASE WHEN COALESCE(IsActive, 1) = 0 AND COALESCE(IsDeleted, 0) = 0 THEN 1 ELSE 0 END) AS inactive
+        FROM users
+        WHERE HospitalID = ? AND COALESCE(IsDeleted, 0) = 0
+      `, [hospitalId]);
+
+      const stats = rows[0] || { total: 0, active: 0, inactive: 0 };
+      
+      res.json({ 
+        ok: true, 
+        total: Number(stats.total) || 0,
+        active: Number(stats.active) || 0,
+        inactive: Number(stats.inactive) || 0
+      });
+    } catch (e) {
+      console.error('GET /users/stats error:', e);
+      res.status(500).json({ 
+        ok: false, 
+        message: 'server error',
+        error: e.message 
+      });
+    }
+  }
+);
+
+/* =============== [GET] /api/users/cluster-managers/stats =================
+   - جلب إحصائيات مديري التجمع من القاعدة المركزية
+   - إجمالي مديري التجمع، النشطين، غير النشطين
+   - متاح فقط لمديري التجمع (RoleID = 1)
+========================================================= */
+router.get('/cluster-managers/stats',
+  requireAuth,
+  async (req, res) => {
+    try {
+      // التحقق من وجود المستخدم في الطلب
+      if (!req.user) {
+        console.error('❌ [cluster-managers/stats] req.user غير موجود');
+        return res.status(401).json({ 
+          ok: false, 
+          message: 'غير مصرح - يجب تسجيل الدخول' 
+        });
+      }
+
+      // التحقق من أن المستخدم هو مدير تجمع
+      const roleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+      const isCluster = [1, 4].includes(roleId);
+      
+      if (!isCluster) {
+        console.log('❌ [cluster-managers/stats] محاولة وصول غير مصرح:', {
+          UserID: req.user?.UserID,
+          RoleID: roleId
+        });
+        return res.status(403).json({ 
+          ok: false, 
+          message: 'غير مصرح - مديري التجمع فقط' 
+        });
+      }
+
+      // التحقق من الاتصال بالقاعدة المركزية
+      let centralPool;
+      try {
+        centralPool = await getCentralPool();
+      } catch (poolError) {
+        console.error('❌ [cluster-managers/stats] خطأ في الاتصال بالقاعدة المركزية:', poolError);
+        return res.status(500).json({ 
+          ok: false, 
+          message: 'خطأ في الاتصال بالقاعدة المركزية',
+          error: poolError.message 
+        });
+      }
+
+      const [rows] = await centralPool.query(`
+        SELECT 
+          COUNT(*) AS total,
+          SUM(CASE WHEN COALESCE(IsActive, 1) = 1 THEN 1 ELSE 0 END) AS active,
+          SUM(CASE WHEN COALESCE(IsActive, 1) = 0 THEN 1 ELSE 0 END) AS inactive
+        FROM users_central
+        WHERE RoleID = 1
+      `);
+
+      const stats = rows[0] || { total: 0, active: 0, inactive: 0 };
+      
+      console.log('✅ [cluster-managers/stats] تم جلب الإحصائيات:', stats);
+      
+      res.json({ 
+        ok: true, 
+        total: Number(stats.total) || 0,
+        active: Number(stats.active) || 0,
+        inactive: Number(stats.inactive) || 0
+      });
+    } catch (e) {
+      console.error('❌ GET /users/cluster-managers/stats error:', e);
+      res.status(500).json({ 
+        ok: false, 
+        message: 'server error',
+        error: e.message 
+      });
+    }
+  }
+);
+
+/* =============== [GET] /api/users/cluster-managers =================
+   - جلب قائمة مديري التجمع من القاعدة المركزية
+   - متاح فقط لمديري التجمع (RoleID = 1)
+   - يدعم البحث بالاسم/البريد/اليوزر/الجوال
+   - ⚠️ يجب أن يكون قبل /:id لتجنب التقاط cluster-managers كـ id
+========================================================= */
+router.get('/cluster-managers',
+  requireAuth,
+  async (req, res) => {
+    try {
+      // التحقق من وجود المستخدم في الطلب
+      if (!req.user) {
+        console.error('❌ [cluster-managers] req.user غير موجود');
+        return res.status(401).json({ 
+          ok: false, 
+          message: 'غير مصرح - يجب تسجيل الدخول' 
+        });
+      }
+
+      // التحقق من أن المستخدم هو مدير تجمع
+      const roleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+      const isCluster = [1, 4].includes(roleId);
+      
+      console.log('🔍 [cluster-managers] التحقق من الصلاحيات:', {
+        UserID: req.user?.UserID,
+        RoleID: roleId,
+        isCluster
+      });
+      
+      if (!isCluster) {
+        console.log('❌ [cluster-managers] محاولة وصول غير مصرح:', {
+          UserID: req.user?.UserID,
+          RoleID: roleId
+        });
+        return res.status(403).json({ 
+          ok: false, 
+          message: 'غير مصرح - مديري التجمع فقط' 
+        });
+      }
+
+      const { search } = req.query;
+      
+      // التحقق من الاتصال بالقاعدة المركزية
+      let centralPool;
+      try {
+        centralPool = await getCentralPool();
+      } catch (poolError) {
+        console.error('❌ [cluster-managers] خطأ في الاتصال بالقاعدة المركزية:', poolError);
+        return res.status(500).json({ 
+          ok: false, 
+          message: 'خطأ في الاتصال بالقاعدة المركزية',
+          error: poolError.message 
+        });
+      }
+      
+      let where = ' WHERE RoleID = 1 '; // مدير تجمع فقط
+      const args = [];
+      
+      if (search && String(search).trim()) {
+        where += ` AND ( FullName LIKE ? OR Username LIKE ? OR Email LIKE ? OR Mobile LIKE ? ) `;
+        const s = `%${String(search).trim()}%`;
+        args.push(s, s, s, s);
+      }
+
+      const sql = `
+        SELECT UserID, RoleID, FullName, Username, Email, Mobile,
+               IsActive, CreatedAt, UpdatedAt,
+               NULL AS HospitalID, NULL AS DepartmentID,
+               'مدير تجمع' AS HospitalNameAr
+        FROM users_central
+        ${where}
+        ORDER BY FullName
+        LIMIT 200
+      `;
+      
+      console.log('🔍 [cluster-managers] جلب مديري التجمع:', { 
+        search, 
+        sql: sql.substring(0, 100) + '...',
+        argsCount: args.length 
+      });
+      
+      let rows;
+      try {
+        [rows] = await centralPool.query(sql, args);
+        console.log('✅ [cluster-managers] تم جلب', rows.length, 'مدير تجمع');
+      } catch (queryError) {
+        console.error('❌ [cluster-managers] خطأ في استعلام قاعدة البيانات:', queryError);
+        // إذا كان الخطأ بسبب عدم وجود الجدول، أعط رسالة واضحة
+        if (queryError.code === 'ER_NO_SUCH_TABLE' || queryError.message.includes('doesn\'t exist')) {
+          return res.status(500).json({ 
+            ok: false, 
+            message: 'جدول users_central غير موجود في القاعدة المركزية',
+            error: 'Table users_central does not exist'
+          });
+        }
+        throw queryError;
+      }
+
+      res.json({ ok: true, items: rows });
+    } catch (e) {
+      console.error('❌ GET /users/cluster-managers error:', e);
+      res.status(500).json({ 
+        ok: false, 
+        message: 'server error',
+        error: e.message 
+      });
+    }
+  }
+);
+
 /* =============== [GET] /api/users/:id ================= */
 router.get('/:id',
   requireAuth, resolveHospitalId, attachHospitalPool,

@@ -151,6 +151,22 @@
               <div id="card-hospitals" class="text-lg font-bold" style="color:#002B5B">0</div>
             </div>
           </div>
+
+          <!-- بلاغات سوء المعاملة -->
+          <a href="misbehavior.html" 
+             class="bg-white rounded-xl p-3 shadow border border-gray-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M18 8a6 6 0 11-12 0 6 6 0 0112 0zM6 14a6 6 0 0112 0v2a2 2 0 01-2
+                         2H8a2 2 0 01-2-2v-2z" />
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500">بلاغات سوء المعاملة</div>
+              <div id="card-misbehavior" class="text-lg font-bold" style="color:#002B5B">0</div>
+            </div>
+          </a>
         </div>
 
       </div>
@@ -467,10 +483,30 @@
             <h3 class="font-bold text-xl" style="color:#002B5B" data-i18n-key="patient-frequency-title">تكرار الشكاوى حسب رقم الهوية</h3>
           </div>
           
-          <!-- الجدول -->
-          <div class="overflow-x-auto">
+          <!-- شريط البحث والتحكم في الصفحات -->
+          <div class="flex justify-between items-center mb-3">
+            <input id="patient-frequency-search" type="text" placeholder="بحث..." 
+                   class="px-3 py-2 border rounded-lg w-60 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <div class="flex gap-2 items-center">
+              <button id="patient-frequency-prev" 
+                      class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      disabled>
+                السابق
+              </button>
+              <span id="patient-frequency-page-info" class="px-2 text-sm text-gray-600"></span>
+              <button id="patient-frequency-next" 
+                      class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      disabled>
+                التالي
+              </button>
+            </div>
+          </div>
+          
+          <!-- حاوية Scroll للجدول -->
+          <div class="table-container" style="max-height: 500px; overflow-y: auto; border:1px solid #eee; border-radius: 8px;">
             <table id="patient-frequency-table" class="min-w-full text-sm text-center border-collapse">
-              <thead>
+              <thead class="sticky top-0 bg-gray-100 z-10">
                 <tr class="bg-gray-100 text-gray-700">
                   <th class="py-3 px-4 border font-semibold" data-i18n-key="patient-id-header">الهويه</th>
                   <th class="py-3 px-4 border font-semibold" data-i18n-key="patient-frequency-header">التكرار</th>
@@ -485,22 +521,10 @@
             </table>
           </div>
           
-          <!-- Pagination -->
-          <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+          <!-- معلومات Pagination -->
+          <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
             <div id="patient-frequency-info" class="text-sm text-gray-600">
               جاري التحميل...
-            </div>
-            <div class="flex items-center gap-2">
-              <button id="patient-frequency-prev" 
-                      class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled>
-                <span aria-hidden="true">&lt;</span>
-              </button>
-              <button id="patient-frequency-next" 
-                      class="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled>
-                <span aria-hidden="true">&gt;</span>
-              </button>
             </div>
           </div>
         </div>

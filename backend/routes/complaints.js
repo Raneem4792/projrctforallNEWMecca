@@ -1117,6 +1117,101 @@ router.get('/937-range', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/complaints/misbehavior-count
+ * جلب عدد بلاغات سوء المعاملة
+ * ⚠️ يجب أن يكون قبل route /:id لتجنب التطابق الخاطئ
+ */
+router.get('/misbehavior-count', optionalAuth, async (req, res) => {
+  let connection;
+  try {
+    const pool = await getCentralPool();
+    if (!pool) {
+      return res.status(500).json({ error: 'Central database connection failed', count: 0 });
+    }
+    connection = await pool.getConnection();
+    
+    // الحصول على نطاق المستشفى
+    const scope = hospitalScopeSQL(req.user, 'c', req);
+    
+    // بناء قائمة المعاملات
+    const params = scope.params || [];
+    
+    // البحث عن بلاغات سوء المعاملة - يعتمد على التصنيفات الرسمية فقط
+    // ملاحظة: hospitalScopeSQL يضيف شرط IsDeleted تلقائياً
+    // ComplaintTypeID 17 = سوء معاملة
+    // SubTypeID 34 = سوء معاملة
+    // استثناء: كلمة "تحرش" في الوصف
+    
+    const MISBEHAVIOR_TYPE_IDS = [17]; // ComplaintTypeID لسوء المعاملة
+    const MISBEHAVIOR_SUBTYPE_IDS = [34]; // SubTypeID لسوء المعاملة
+    
+    // شرط شامل مع TypeName (للتحقق من التصنيفات)
+    const queryWithType = `
+      SELECT COUNT(*) AS count 
+      FROM complaints c
+      LEFT JOIN complaint_types ct ON c.ComplaintTypeID = ct.ComplaintTypeID
+      WHERE 1=1
+        ${scope.where || ''}
+        AND (
+          c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS.join(',')})
+          OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS.join(',')})
+          OR c.Description LIKE '%تحرش%'
+        )
+    `;
+    
+    // شرط بديل بدون TypeName (للتوافق مع قواعد البيانات القديمة)
+    const querySimple = `
+      SELECT COUNT(*) AS count 
+      FROM complaints c
+      WHERE 1=1
+        ${scope.where || ''}
+        AND (
+          c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS.join(',')})
+          OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS.join(',')})
+          OR c.Description LIKE '%تحرش%'
+        )
+    `;
+    
+    console.log('🔍 [MISBEHAVIOR-COUNT] Scope:', JSON.stringify(scope, null, 2));
+    console.log('🔍 [MISBEHAVIOR-COUNT] Params:', params);
+    
+    let rows;
+    let count = 0;
+    
+    try {
+      // محاولة الاستعلام الكامل أولاً
+      [rows] = await connection.query(queryWithType, params);
+      count = rows[0]?.count || 0;
+      console.log('✅ [MISBEHAVIOR-COUNT] Result (with TypeName):', count);
+    } catch (err) {
+      // إذا فشل بسبب عدم وجود ct.TypeName، استخدم الاستعلام البديل
+      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('TypeName')) {
+        console.warn('⚠️ [MISBEHAVIOR-COUNT] TypeName column not found, using simple query');
+        [rows] = await connection.query(querySimple, params);
+        count = rows[0]?.count || 0;
+        console.log('✅ [MISBEHAVIOR-COUNT] Result (simple):', count);
+      } else {
+        // إذا كان الخطأ مختلفاً، أعد رفعه
+        throw err;
+      }
+    }
+    console.log('✅ [MISBEHAVIOR-COUNT] Result:', count);
+    
+    res.json({ count });
+  } catch (err) {
+    console.error('❌ خطأ في جلب عدد بلاغات سوء المعاملة:', err);
+    console.error('❌ Error message:', err.message);
+    console.error('❌ Error code:', err.code);
+    console.error('❌ Stack:', err.stack);
+    res.status(500).json({ error: err.message, count: 0 });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
+/**
  * GET /api/complaints/:id
  * يُعيد تفاصيل البلاغ + المرفقات + السجل
  */

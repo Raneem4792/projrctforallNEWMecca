@@ -104,9 +104,14 @@ export async function getHospitalPool(hospitalId) {
 /**
  * Middleware: إضافة Hospital Pool للطلب
  * يقبل hospitalId من مصادر مختلفة: query, body, headers, user
+ * لمديري التجمع المركزيين (RoleID = 1): hospitalId اختياري
  */
 export async function attachHospitalPool(req, res, next) {
   try {
+    // التحقق من أن المستخدم مدير تجمع مركزي
+    const roleId = Number(req.user?.RoleID || req.user?.roleId || 0);
+    const isCentralAdmin = roleId === 1; // مدير تجمع مركزي
+    
     // البحث عن hospitalId من مصادر مختلفة
     const hid =
       Number(req.query.hospitalId) ||
@@ -117,6 +122,14 @@ export async function attachHospitalPool(req, res, next) {
       Number(req.user?.hosp) ||
       Number(req.user?.HospitalID) ||
       req.hospitalId; // من middleware سابق
+
+    // لمديري التجمع المركزيين: hospitalId اختياري
+    if (isCentralAdmin && (!hid || Number.isNaN(hid))) {
+      console.log('✅ [attachHospitalPool] مدير تجمع مركزي - تخطي hospitalId');
+      req.hospitalId = null;
+      req.hospitalPool = null;
+      return next();
+    }
 
     if (!hid || Number.isNaN(hid)) {
       return res.status(400).json({ 

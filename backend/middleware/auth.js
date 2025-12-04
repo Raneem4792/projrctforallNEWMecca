@@ -53,7 +53,11 @@ export async function requireAuth(req, res, next) {
     });
     
     // إذا لم يكن DepartmentID موجوداً في التوكن، اقرأه من قاعدة البيانات
-    if (!req.user.DepartmentID && req.user.HospitalID && req.user.UserID) {
+    // لكن فقط إذا كان المستخدم ليس مدير تجمع مركزي (RoleID = 1)
+    const roleId = Number(req.user.RoleID || req.user.roleId || 0);
+    const isCentralAdmin = roleId === 1; // مدير تجمع مركزي
+    
+    if (!isCentralAdmin && !req.user.DepartmentID && req.user.HospitalID && req.user.UserID) {
       try {
         const tenant = await getTenantPoolByHospitalId(req.user.HospitalID);
         const [[row]] = await tenant.query(
@@ -69,6 +73,8 @@ export async function requireAuth(req, res, next) {
         console.error('⚠️ [AUTH] خطأ في قراءة DepartmentID:', err.message);
         // نستمر بدون DepartmentID
       }
+    } else if (isCentralAdmin) {
+      console.log('✅ [AUTH] مدير تجمع مركزي - تخطي قراءة DepartmentID من قاعدة المستشفى');
     }
     
     next();

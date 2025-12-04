@@ -82,6 +82,63 @@
       </div>
     </div>
 
+    <!-- قسم مديري التجمع (يظهر فقط لمدير التجمّع) -->
+    <div id="clusterManagersSection" class="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-6 hidden">
+      <h2 class="text-xl font-bold text-[#002B5B] mb-4">مديرو التجمع</h2>
+      
+      <!-- بطاقات الإحصائيات لمديري التجمع -->
+      <div id="clusterManagersStatsContainer" class="flex flex-wrap gap-5 mb-6" style="display: none;">
+        <div class="stat-card bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex-1 min-w-[200px]">
+          <h4 class="m-0 text-gray-600 text-sm font-semibold mb-2">إجمالي مديري التجمع</h4>
+          <h2 id="clusterTotalUsers" class="mt-2 text-3xl font-bold text-[#002B5B]">0</h2>
+        </div>
+        <div class="stat-card bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex-1 min-w-[200px]">
+          <h4 class="m-0 text-gray-600 text-sm font-semibold mb-2">مديرو التجمع النشطين</h4>
+          <h2 id="clusterActiveUsers" class="mt-2 text-3xl font-bold text-green-600">0</h2>
+        </div>
+        <div class="stat-card bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex-1 min-w-[200px]">
+          <h4 class="m-0 text-gray-600 text-sm font-semibold mb-2">مديرو التجمع غير النشطين</h4>
+          <h2 id="clusterInactiveUsers" class="mt-2 text-3xl font-bold text-red-600">0</h2>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">#</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">الاسم الكامل</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">اسم المستخدم</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">البريد الإلكتروني</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">الدور</th>
+              <th class="text-right py-3 px-4 font-semibold text-gray-700">الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="clusterManagersTbody">
+            <tr>
+              <td colspan="6" class="p-6 text-center text-gray-500">جاري التحميل...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- بطاقات الإحصائيات العامة (لجميع المستخدمين) -->
+    <div id="generalStatsContainer" class="flex flex-wrap gap-5 mb-6">
+      <div class="stat-card bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl shadow-lg border border-blue-100 flex-1 min-w-[200px]">
+        <h4 class="m-0 text-gray-700 text-sm font-semibold mb-2">إجمالي المستخدمين (جميع المستشفيات)</h4>
+        <h2 id="generalTotalUsers" class="mt-2 text-3xl font-bold text-[#002B5B]">0</h2>
+      </div>
+      <div class="stat-card bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl shadow-lg border border-green-100 flex-1 min-w-[200px]">
+        <h4 class="m-0 text-gray-700 text-sm font-semibold mb-2">المستخدمين النشطين (جميع المستشفيات)</h4>
+        <h2 id="generalActiveUsers" class="mt-2 text-3xl font-bold text-green-600">0</h2>
+      </div>
+      <div class="stat-card bg-gradient-to-br from-red-50 to-rose-50 p-5 rounded-xl shadow-lg border border-red-100 flex-1 min-w-[200px]">
+        <h4 class="m-0 text-gray-700 text-sm font-semibold mb-2">الحسابات غير النشطة (جميع المستشفيات)</h4>
+        <h2 id="generalInactiveUsers" class="mt-2 text-3xl font-bold text-red-600">0</h2>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between mb-4">
       <div class="text-left flex gap-3">
         <button id="btnOpenAddUser"
@@ -96,6 +153,22 @@
       <div class="w-full max-w-sm">
         <input id="searchInput" type="text" data-i18n-key="search-placeholder" placeholder="ابحث عن مستخدم..."
                class="w-full rounded-xl border-gray-300 focus:border-[#002B5B] focus:ring-[#002B5B]">
+      </div>
+    </div>
+
+    <!-- بطاقات الإحصائيات الخاصة (للمستشفى المحدد) -->
+    <div id="statsContainer" class="flex flex-wrap gap-5 mb-6" style="display: none;">
+      <div class="stat-card bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex-1 min-w-[200px]">
+        <h4 class="m-0 text-gray-600 text-sm font-semibold mb-2">إجمالي المستخدمين</h4>
+        <h2 id="totalUsers" class="mt-2 text-3xl font-bold text-[#002B5B]">0</h2>
+      </div>
+      <div class="stat-card bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex-1 min-w-[200px]">
+        <h4 class="m-0 text-gray-600 text-sm font-semibold mb-2">المستخدمين النشطين</h4>
+        <h2 id="activeUsers" class="mt-2 text-3xl font-bold text-green-600">0</h2>
+      </div>
+      <div class="stat-card bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex-1 min-w-[200px]">
+        <h4 class="m-0 text-gray-600 text-sm font-semibold mb-2">الحسابات غير النشطة</h4>
+        <h2 id="inactiveUsers" class="mt-2 text-3xl font-bold text-red-600">0</h2>
       </div>
     </div>
 
@@ -471,8 +544,18 @@ document.addEventListener("DOMContentLoaded", () => {
       
       console.log('🏥 Hospitals loaded:', items);
 
-      hospitalSelect.innerHTML = '<option value="">— اختر المستشفى —</option>' +
-        items.map(h => `<option value="${h.HospitalID}">${h.NameAr}</option>`).join('');
+      const { user } = getAuth();
+      const userMode = getUserMode(user);
+      const clusterMode = userMode === 'cluster' || userMode === 'central';
+
+      // إضافة خيار "مديرو التجمع" في البداية إذا كان المستخدم مدير تجمع
+      let options = '<option value="">— اختر المستشفى —</option>';
+      if (clusterMode) {
+        options += '<option value="cluster-managers">👥 مديرو التجمع</option>';
+      }
+      options += items.map(h => `<option value="${h.HospitalID}">${h.NameAr}</option>`).join('');
+      
+      hospitalSelect.innerHTML = options;
       return items;
     }catch(err){
       console.error('❌ loadHospitals error:', err);
@@ -481,9 +564,142 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 2) تحميل المستخدمين حسب المستشفى والبحث
+  // 2) تحميل مديري التجمع (للمديرين فقط)
+  async function loadClusterManagers(){
+    try{
+      const { user } = getAuth();
+      const userMode = getUserMode(user);
+      const clusterMode = userMode === 'cluster' || userMode === 'central';
+      
+      if (!clusterMode) {
+        // إخفاء القسم إذا لم يكن المستخدم مدير تجمع
+        const section = document.getElementById('clusterManagersSection');
+        if (section) section.classList.add('hidden');
+        return;
+      }
+
+      // تحقق من أن المستخدم اختار "مديرو التجمع" من القائمة
+      const selectedValue = hospitalSelect.value;
+      if (selectedValue !== 'cluster-managers') {
+        // إخفاء القسم إذا لم يكن الاختيار هو "مديرو التجمع"
+        const section = document.getElementById('clusterManagersSection');
+        if (section) section.classList.add('hidden');
+        return;
+      }
+
+      const params = new URLSearchParams();
+      const q = (searchInput.value || '').trim();
+      if (q) params.set('search', q);
+
+      const headers = {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      };
+
+      console.log('🔍 [loadClusterManagers] جلب مديري التجمع:', {
+        url: `${API_BASE}/api/users/cluster-managers?${params.toString()}`,
+        hasToken: !!headers.Authorization
+      });
+
+      const res = await fetch(`${API_BASE}/api/users/cluster-managers?${params.toString()}`, { 
+        headers,
+        credentials: 'include'
+      });
+      
+      if(!res.ok) {
+        // محاولة قراءة رسالة الخطأ من الـ response
+        let errorMessage = `HTTP ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+          console.error('❌ [loadClusterManagers] خطأ من السيرفر:', errorData);
+        } catch (e) {
+          console.error('❌ [loadClusterManagers] فشل قراءة رسالة الخطأ:', e);
+        }
+
+        if (res.status === 403) {
+          // المستخدم ليس مدير تجمع، أخفي القسم
+          const section = document.getElementById('clusterManagersSection');
+          if (section) section.classList.add('hidden');
+          return;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const data = await res.json();
+      renderClusterManagers(data.items || []);
+      
+      // إظهار القسم
+      const section = document.getElementById('clusterManagersSection');
+      if (section) section.classList.remove('hidden');
+      
+      // تحميل إحصائيات مديري التجمع
+      await loadClusterManagersStats();
+
+    }catch(err){
+      console.error('❌ [loadClusterManagers] خطأ:', err);
+      const tbody = document.getElementById('clusterManagersTbody');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-600">
+          <div class="font-semibold">تعذر تحميل مديري التجمع</div>
+          <div class="text-sm mt-2">${err.message || 'خطأ غير معروف'}</div>
+          <div class="text-xs mt-1 text-gray-500">تحقق من console للمزيد من التفاصيل</div>
+        </td></tr>`;
+      }
+    }
+  }
+
+  // دالة جلب إحصائيات مديري التجمع
+  async function loadClusterManagersStats() {
+    try {
+      const res = await fetch(`${API_BASE}/api/users/cluster-managers/stats`, { 
+        headers: authHeaders() 
+      });
+      
+      if (!res.ok) {
+        console.error('❌ Failed to load cluster managers stats:', res.status);
+        return;
+      }
+
+      const data = await res.json();
+      
+      if (data.ok) {
+        // تحديث الأرقام في البطاقات الخاصة بمديري التجمع (داخل clusterManagersSection)
+        const totalEl = document.getElementById('clusterTotalUsers');
+        const activeEl = document.getElementById('clusterActiveUsers');
+        const inactiveEl = document.getElementById('clusterInactiveUsers');
+        const statsContainer = document.getElementById('clusterManagersStatsContainer');
+
+        if (totalEl) totalEl.textContent = data.total || 0;
+        if (activeEl) activeEl.textContent = data.active || 0;
+        if (inactiveEl) inactiveEl.textContent = data.inactive || 0;
+        
+        // إظهار بطاقات الإحصائيات الخاصة بمديري التجمع
+        if (statsContainer) statsContainer.style.display = 'flex';
+      }
+    } catch (err) {
+      console.error('❌ loadClusterManagersStats error:', err);
+      // لا نعرض خطأ للمستخدم، فقط نترك الأرقام كما هي
+    }
+  }
+
+  // 3) تحميل المستخدمين حسب المستشفى والبحث
   async function loadUsers(){
     try{
+      const selectedValue = hospitalSelect.value;
+      
+      // إذا تم اختيار "مديرو التجمع"، لا تحمّل مستخدمي المستشفى
+      if (selectedValue === 'cluster-managers') {
+        const tbody = document.getElementById('usersTbody');
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">تم اختيار مديري التجمع - راجع القسم أعلاه</td></tr>`;
+        }
+        // إخفاء بطاقات الإحصائيات عند اختيار مديري التجمع
+        const statsContainer = document.getElementById('statsContainer');
+        if (statsContainer) statsContainer.style.display = 'none';
+        return;
+      }
+
       const hid = getActiveHospitalId();
       if (!hid) {
         console.log('⏸️ No hospital selected, skipping load');
@@ -491,6 +707,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (tbody) {
           tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">اختر مستشفى أولاً لعرض المستخدمين</td></tr>`;
         }
+        // إخفاء بطاقات الإحصائيات عند عدم اختيار مستشفى
+        const statsContainer = document.getElementById('statsContainer');
+        if (statsContainer) statsContainer.style.display = 'none';
         return;
       }
 
@@ -512,6 +731,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // تحديث صلاحيات التعديل والحذف بعد رندر الجدول
       checkEditUserPermission();
       checkDeleteUserPermission();
+      
+      // تحميل الإحصائيات بعد تحميل المستخدمين
+      await loadUserStats(hid);
 
     }catch(err){
       console.error('loadUsers', err);
@@ -522,7 +744,114 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 3) عرض المستخدمين في الجدول
+  // دالة جلب الإحصائيات العامة (جميع المستخدمين من جميع المستشفيات + مديري التجمع)
+  async function loadGeneralStats() {
+    try {
+      const { user } = getAuth();
+      const role = Number(user?.RoleID || user?.roleId || user?.role_id || 0);
+      const isCluster = [1, 4].includes(role);
+      
+      // الإحصائيات العامة متاحة فقط لمديري التجمع
+      if (!isCluster) {
+        const statsContainer = document.getElementById('generalStatsContainer');
+        if (statsContainer) statsContainer.style.display = 'none';
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/users/general-stats`, { 
+        headers: authHeaders() 
+      });
+      
+      if (!res.ok) {
+        console.error('❌ Failed to load general stats:', res.status);
+        return;
+      }
+
+      const data = await res.json();
+      
+      if (data.ok) {
+        // تحديث الأرقام في البطاقات العامة
+        const totalEl = document.getElementById('generalTotalUsers');
+        const activeEl = document.getElementById('generalActiveUsers');
+        const inactiveEl = document.getElementById('generalInactiveUsers');
+        const statsContainer = document.getElementById('generalStatsContainer');
+
+        if (totalEl) totalEl.textContent = data.total || 0;
+        if (activeEl) activeEl.textContent = data.active || 0;
+        if (inactiveEl) inactiveEl.textContent = data.inactive || 0;
+        
+        // إظهار بطاقات الإحصائيات العامة
+        if (statsContainer) statsContainer.style.display = 'flex';
+      }
+    } catch (err) {
+      console.error('❌ loadGeneralStats error:', err);
+      // لا نعرض خطأ للمستخدم، فقط نترك الأرقام كما هي
+    }
+  }
+
+  // دالة جلب إحصائيات المستخدمين
+  async function loadUserStats(hospitalId) {
+    try {
+      if (!hospitalId || hospitalId === 0) {
+        // إخفاء بطاقات الإحصائيات إذا لم يكن هناك مستشفى محدد
+        const statsContainer = document.getElementById('statsContainer');
+        if (statsContainer) statsContainer.style.display = 'none';
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set('hospitalId', hospitalId);
+
+      const res = await fetch(`${API_BASE}/api/users/stats?${params.toString()}`, { 
+        headers: authHeaders() 
+      });
+      
+      if (!res.ok) {
+        console.error('❌ Failed to load stats:', res.status);
+        return;
+      }
+
+      const data = await res.json();
+      
+      if (data.ok) {
+        // تحديث الأرقام في البطاقات
+        const totalEl = document.getElementById('totalUsers');
+        const activeEl = document.getElementById('activeUsers');
+        const inactiveEl = document.getElementById('inactiveUsers');
+        const statsContainer = document.getElementById('statsContainer');
+
+        if (totalEl) totalEl.textContent = data.total || 0;
+        if (activeEl) activeEl.textContent = data.active || 0;
+        if (inactiveEl) inactiveEl.textContent = data.inactive || 0;
+        
+        // إظهار بطاقات الإحصائيات
+        if (statsContainer) statsContainer.style.display = 'flex';
+      }
+    } catch (err) {
+      console.error('❌ loadUserStats error:', err);
+      // لا نعرض خطأ للمستخدم، فقط نترك الأرقام كما هي
+    }
+  }
+
+  // 4) عرض مديري التجمع في الجدول
+  function renderClusterManagers(rows){
+    const tbody = document.getElementById('clusterManagersTbody');
+    if (!tbody) return;
+    
+    if (!rows || rows.length === 0){
+      tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">لا يوجد مديري تجمع</td></tr>`;
+      return;
+    }
+    
+    tbody.innerHTML = rows.map((u, i) => rowHtmlClusterManager(u, i + 1)).join('');
+    
+    // تهيئة أيقونات Lucide بعد تحديث الجدول
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  }
+
+  // 5) عرض المستخدمين في الجدول
   function renderUsers(rows, clusterMode = false){
     const tbody = document.getElementById('usersTbody');
     if (!tbody) return;
@@ -622,6 +951,34 @@ document.addEventListener("DOMContentLoaded", () => {
     </tr>`;
   }
 
+  function rowHtmlClusterManager(u, idx){
+    const name = u.FullName || '—';
+    return `
+    <tr class="border-b" data-id="${u.UserID}">
+      <td class="p-3 text-center">${idx}</td>
+      <td class="p-3">
+        <div class="font-bold">${name}</div>
+        ${u.Mobile ? `<div class="text-xs text-gray-500">📱 ${u.Mobile}</div>` : ''}
+      </td>
+      <td class="p-3">
+        <div class="font-mono text-sm">@${u.Username || '—'}</div>
+      </td>
+      <td class="p-3">
+        ${u.Email ? `<div class="text-sm">${u.Email}</div>` : '—'}
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-1 rounded text-xs bg-purple-100 text-purple-700">
+          مدير تجمع
+        </span>
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-1 rounded ${u.IsActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+          ${u.IsActive ? 'مفعل' : 'موقف'}
+        </span>
+      </td>
+    </tr>`;
+  }
+
   // اسم الدور (اختياري — غيّريه حسب نظامك)
   function roleName(roleId){
     if (roleId == 1) return 'سوبر أدمن';
@@ -688,11 +1045,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // أحداث
   hospitalSelect.addEventListener('change', () => {
-    localStorage.setItem('adminUsers.hid', hospitalSelect.value || '');
-    loadUsers();
+    const selectedValue = hospitalSelect.value;
+    localStorage.setItem('adminUsers.hid', selectedValue || '');
+    
+    // إذا تم اختيار "مديرو التجمع"، أظهر قسم مديري التجمع وأخفِ جدول المستخدمين
+    if (selectedValue === 'cluster-managers') {
+      const section = document.getElementById('clusterManagersSection');
+      if (section) section.classList.remove('hidden');
+      loadClusterManagers(); // سيتم تحميل الإحصائيات تلقائياً داخل loadClusterManagers
+      loadUsers(); // سيظهر رسالة أن مديري التجمع تم اختيارهم
+    } else {
+      // إخفاء قسم مديري التجمع عند اختيار مستشفى
+      const section = document.getElementById('clusterManagersSection');
+      if (section) section.classList.add('hidden');
+      loadUsers(); // سيتم تحميل الإحصائيات تلقائياً داخل loadUsers
+    }
   });
   searchInput.addEventListener('input', () => {
-    clearTimeout(window.__t); window.__t = setTimeout(loadUsers, 300);
+    clearTimeout(window.__t); 
+    window.__t = setTimeout(() => {
+      const selectedValue = hospitalSelect.value;
+      if (selectedValue === 'cluster-managers') {
+        // إذا كان الاختيار هو "مديرو التجمع"، ابحث فقط في مديري التجمع
+        loadClusterManagers();
+      } else {
+        // وإلا ابحث في المستخدمين العاديين
+        loadUsers();
+      }
+    }, 300);
   });
 
   // تشغيل أولي
@@ -725,7 +1105,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!hospitalSelect.value && items.length) {
         // جرب استرجاع آخر اختيار محفوظ
         const saved = localStorage.getItem('adminUsers.hid');
-        if (saved && items.find(h => String(h.HospitalID) === saved)) {
+        if (saved === 'cluster-managers') {
+          hospitalSelect.value = 'cluster-managers';
+          console.log('💾 Restored saved selection: cluster-managers');
+        } else if (saved && items.find(h => String(h.HospitalID) === saved)) {
           hospitalSelect.value = saved;
           console.log('💾 Restored saved hospital:', saved);
         } else {
@@ -733,6 +1116,12 @@ document.addEventListener("DOMContentLoaded", () => {
           hospitalSelect.value = String(items[0].HospitalID);
           console.log('🎯 Auto-selected first hospital:', items[0].HospitalID);
         }
+      }
+      
+      // إذا كان الاختيار المحفوظ هو "مديرو التجمع"، أظهر القسم
+      if (hospitalSelect.value === 'cluster-managers') {
+        const section = document.getElementById('clusterManagersSection');
+        if (section) section.classList.remove('hidden');
       }
     } else {
       console.log('🏥 Setting up hospital employee mode...');
@@ -747,8 +1136,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // إخفاء خيار "مدير تجمع" إذا لم يكن المستخدم مدير تجمع
     hideClusterManagerOption();
     
+    // تحميل الإحصائيات العامة أولاً (لجميع المستخدمين)
+    await loadGeneralStats();
+    
     // تحميل المستخدمين بعد تعيين المستشفى
     await loadUsers();
+    
+    // تحميل مديري التجمع فقط إذا تم اختيارهم من القائمة
+    if (hospitalSelect.value === 'cluster-managers') {
+      await loadClusterManagers();
+    }
     
     console.log('✅ Initialization complete');
   })();
@@ -819,13 +1216,20 @@ function getActiveHospitalId() {
 
   if (isCluster) {
     const sel = document.getElementById('hospitalSelect');
-    const val = Number(sel?.value);
+    const val = sel?.value;
+    
+    // إذا كان الاختيار هو "مديرو التجمع"، أرجع 0
+    if (val === 'cluster-managers') {
+      return 0;
+    }
+    
+    const numVal = Number(val);
     console.log('🔍 Cluster manager:', { 
       selExists: !!sel, 
-      rawValue: sel?.value, 
-      numericValue: val 
+      rawValue: val, 
+      numericValue: numVal 
     });
-    return Number.isFinite(val) && val > 0 ? val : 0;
+    return Number.isFinite(numVal) && numVal > 0 ? numVal : 0;
   }
   
   console.log('✅ Hospital employee hospital ID:', hospitalId);

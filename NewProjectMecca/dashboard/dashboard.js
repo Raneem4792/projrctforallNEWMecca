@@ -1567,9 +1567,35 @@ function updateMainStatsCards() {
   
   // تحديث قسم "الاشكاليات"
   updateComplaintTypesChart();
-  
-  // تحديث الرسم البياني اليومي
-  updateDailyComplaintsChart();
+}
+
+/**
+ * تحميل عدد بلاغات سوء المعاملة
+ */
+async function loadMisbehaviorCount() {
+  try {
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001' : '';
+    
+    const response = await authFetch(`${API_BASE}/api/complaints/misbehavior-count`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const misbehaviorCard = document.getElementById('card-misbehavior');
+    
+    if (misbehaviorCard) {
+      misbehaviorCard.textContent = data.count || 0;
+    }
+  } catch (err) {
+    console.error('❌ خطأ في تحميل عدد بلاغات سوء المعاملة:', err);
+    const misbehaviorCard = document.getElementById('card-misbehavior');
+    if (misbehaviorCard) {
+      misbehaviorCard.textContent = '0';
+    }
+  }
 }
 
 /**
@@ -3154,6 +3180,9 @@ async function initializeDashboard() {
     
     // 🔹 تحميل جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
+    
+    // 🔹 تحميل عدد بلاغات سوء المعاملة
+    await loadMisbehaviorCount();
     
     // 🔹 تحديث تاريخ الأسبوع الحالي
     updateWeeklyPeriod();
@@ -4927,25 +4956,18 @@ async function load937MysteryCompareTable() {
 
 /**
  * تحميل وعرض جدول تكرار الشكاوى حسب رقم الهوية
+ * مع دعم البحث والتقسيم المحسّن والتمرير الداخلي
  */
 let currentPatientFrequencyPage = 1;
-const patientFrequencyLimit = 100;
+const patientFrequencyLimit = 100; // عدد السجلات من API
+let patientFrequencyTableData = []; // تخزين جميع البيانات المحملة
+let patientFrequencyRowsPerPage = 10; // عدد الصفوف في الصفحة الواحدة
 
-async function loadPatientFrequencyTable(page = 1) {
+/**
+ * جلب جميع البيانات من API
+ */
+async function loadPatientFrequencyTableData() {
   try {
-    const tbody = document.getElementById('patient-frequency-tbody');
-    const infoDiv = document.getElementById('patient-frequency-info');
-    const prevBtn = document.getElementById('patient-frequency-prev');
-    const nextBtn = document.getElementById('patient-frequency-next');
-    
-    if (!tbody) return;
-    
-    // عرض حالة التحميل
-    tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-gray-500">جاري تحميل البيانات...</td></tr>';
-    if (infoDiv) infoDiv.textContent = 'جاري التحميل...';
-    if (prevBtn) prevBtn.disabled = true;
-    if (nextBtn) nextBtn.disabled = true;
-    
     const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
       ? 'http://localhost:3001' : '';
     
@@ -4962,8 +4984,9 @@ async function loadPatientFrequencyTable(page = 1) {
       hospitalId = Number(currentUser?.HospitalID || currentUser?.hospitalId || 0);
     }
     
+    // جلب جميع البيانات (بدون pagination من API)
     const params = new URLSearchParams({
-      page: page.toString(),
+      page: '1',
       limit: patientFrequencyLimit.toString()
     });
     
@@ -4980,65 +5003,161 @@ async function loadPatientFrequencyTable(page = 1) {
     const json = await response.json();
     
     if (!json.success || !json.data || !json.data.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-gray-500">لا توجد بيانات</td></tr>';
-      if (infoDiv) infoDiv.textContent = 'لا توجد بيانات';
+      patientFrequencyTableData = [];
       return;
     }
     
-    // عرض البيانات
-    tbody.innerHTML = '';
-    json.data.forEach((row, index) => {
-        const tr = document.createElement('tr');
-        tr.className = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} cursor-pointer hover:bg-blue-50 transition-colors`;
-        
-        // تحديد الاسم بناءً على اللغة
-        const isEnglish = getDashboardLang() === 'en';
-        const hospitalName = isEnglish ? (row.HospitalNameEn || row.HospitalName) : (row.HospitalName);
-        
-        tr.innerHTML = `
-          <td class="py-3 px-4 border">${row.PatientIDNumber || 'غير محدد'}</td>
-          <td class="py-3 px-4 border font-semibold">${row.frequency || 0}</td>
-          <td class="py-3 px-4 border">${hospitalName || 'غير محدد'}</td>
-        `;
-        
-        // إضافة event listener لفتح الـ modal
-        tr.addEventListener('click', () => {
-          openPatientComplaintsModal(row.PatientIDNumber, row.HospitalID, hospitalName);
-        });
-        
-        tbody.appendChild(tr);
+    // حفظ البيانات مع إضافة hospitalName
+    const isEnglish = getDashboardLang() === 'en';
+    patientFrequencyTableData = json.data.map(row => ({
+      ...row,
+      hospitalName: isEnglish ? (row.HospitalNameEn || row.HospitalName) : (row.HospitalName),
+      searchText: `${row.PatientIDNumber || ''} ${row.HospitalName || ''} ${row.HospitalNameEn || ''}`.toLowerCase()
+    }));
+    
+  } catch (error) {
+    console.error('❌ خطأ في تحميل بيانات جدول تكرار الشكاوى:', error);
+    patientFrequencyTableData = [];
+  }
+}
+
+/**
+ * عرض الجدول مع البحث والتقسيم
+ */
+function renderPatientFrequencyTable() {
+  const tbody = document.getElementById('patient-frequency-tbody');
+  const infoDiv = document.getElementById('patient-frequency-info');
+  const pageInfoDiv = document.getElementById('patient-frequency-page-info');
+  const prevBtn = document.getElementById('patient-frequency-prev');
+  const nextBtn = document.getElementById('patient-frequency-next');
+  const searchInput = document.getElementById('patient-frequency-search');
+  
+  if (!tbody) return;
+  
+  // فلترة البيانات حسب البحث
+  let filtered = patientFrequencyTableData;
+  
+  if (searchInput && searchInput.value.trim() !== '') {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    filtered = patientFrequencyTableData.filter(row => 
+      row.searchText.includes(searchTerm)
+    );
+  }
+  
+  // حساب الصفحات
+  const totalPages = Math.ceil(filtered.length / patientFrequencyRowsPerPage) || 1;
+  const start = (currentPatientFrequencyPage - 1) * patientFrequencyRowsPerPage;
+  const end = start + patientFrequencyRowsPerPage;
+  const paginated = filtered.slice(start, end);
+  
+  // عرض البيانات
+  tbody.innerHTML = '';
+  
+  if (paginated.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-gray-500">لا توجد بيانات</td></tr>';
+    if (infoDiv) infoDiv.textContent = 'لا توجد بيانات';
+    if (pageInfoDiv) pageInfoDiv.textContent = '';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+  
+  paginated.forEach((row, index) => {
+    const tr = document.createElement('tr');
+    tr.className = `${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} cursor-pointer hover:bg-blue-50 transition-colors`;
+    
+    tr.innerHTML = `
+      <td class="py-3 px-4 border">${row.PatientIDNumber || 'غير محدد'}</td>
+      <td class="py-3 px-4 border font-semibold">${row.frequency || 0}</td>
+      <td class="py-3 px-4 border">${row.hospitalName || 'غير محدد'}</td>
+    `;
+    
+    // إضافة event listener لفتح الـ modal
+    tr.addEventListener('click', () => {
+      openPatientComplaintsModal(row.PatientIDNumber, row.HospitalID, row.hospitalName);
     });
     
-    // تحديث معلومات Pagination
-    const pagination = json.pagination || {};
-    if (infoDiv) {
-      const start = (pagination.page - 1) * pagination.limit + 1;
-      const end = Math.min(start + pagination.limit - 1, pagination.total);
-      infoDiv.textContent = `${start} - ${end} / ${pagination.total}`;
-    }
-    
-    // تحديث أزرار Pagination
-    if (prevBtn) {
-      prevBtn.disabled = !pagination.hasPrev;
-      prevBtn.onclick = () => {
-        if (pagination.hasPrev) {
-          currentPatientFrequencyPage = pagination.page - 1;
-          loadPatientFrequencyTable(currentPatientFrequencyPage);
+    tbody.appendChild(tr);
+  });
+  
+  // تحديث معلومات Pagination
+  if (infoDiv) {
+    const startNum = filtered.length > 0 ? start + 1 : 0;
+    const endNum = Math.min(end, filtered.length);
+    infoDiv.textContent = `${startNum} - ${endNum} / ${filtered.length}`;
+  }
+  
+  if (pageInfoDiv) {
+    pageInfoDiv.textContent = `صفحة ${currentPatientFrequencyPage} من ${totalPages}`;
+  }
+  
+  // تحديث أزرار Pagination
+  if (prevBtn) {
+    prevBtn.disabled = currentPatientFrequencyPage <= 1;
+    prevBtn.onclick = () => {
+      if (currentPatientFrequencyPage > 1) {
+        currentPatientFrequencyPage--;
+        renderPatientFrequencyTable();
+        // التمرير لأعلى الجدول
+        const tableContainer = document.querySelector('#patient-frequency-section .table-container');
+        if (tableContainer) {
+          tableContainer.scrollTop = 0;
         }
+      }
+    };
+  }
+  
+  if (nextBtn) {
+    nextBtn.disabled = currentPatientFrequencyPage >= totalPages;
+    nextBtn.onclick = () => {
+      if (currentPatientFrequencyPage < totalPages) {
+        currentPatientFrequencyPage++;
+        renderPatientFrequencyTable();
+        // التمرير لأعلى الجدول
+        const tableContainer = document.querySelector('#patient-frequency-section .table-container');
+        if (tableContainer) {
+          tableContainer.scrollTop = 0;
+        }
+      }
+    };
+  }
+}
+
+/**
+ * تحميل وعرض جدول تكرار الشكاوى حسب رقم الهوية
+ */
+async function loadPatientFrequencyTable(page = 1) {
+  try {
+    const tbody = document.getElementById('patient-frequency-tbody');
+    const infoDiv = document.getElementById('patient-frequency-info');
+    const prevBtn = document.getElementById('patient-frequency-prev');
+    const nextBtn = document.getElementById('patient-frequency-next');
+    
+    if (!tbody) return;
+    
+    // عرض حالة التحميل
+    tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-gray-500">جاري تحميل البيانات...</td></tr>';
+    if (infoDiv) infoDiv.textContent = 'جاري التحميل...';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    
+    // جلب البيانات من API
+    await loadPatientFrequencyTableData();
+    
+    // إعادة تعيين الصفحة الحالية
+    currentPatientFrequencyPage = 1;
+    
+    // عرض الجدول
+    renderPatientFrequencyTable();
+    
+    // إضافة event listener للبحث
+    const searchInput = document.getElementById('patient-frequency-search');
+    if (searchInput) {
+      searchInput.oninput = () => {
+        currentPatientFrequencyPage = 1;
+        renderPatientFrequencyTable();
       };
     }
-    
-    if (nextBtn) {
-      nextBtn.disabled = !pagination.hasNext;
-      nextBtn.onclick = () => {
-        if (pagination.hasNext) {
-          currentPatientFrequencyPage = pagination.page + 1;
-          loadPatientFrequencyTable(currentPatientFrequencyPage);
-        }
-      };
-    }
-    
-    currentPatientFrequencyPage = pagination.page || page;
     
   } catch (error) {
     console.error('❌ خطأ في تحميل جدول تكرار الشكاوى:', error);

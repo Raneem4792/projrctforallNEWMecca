@@ -434,6 +434,27 @@
           <span id="statusSatisfaction" class="text-sm text-gray-500"></span>
         </form>
       </section>
+
+      <!-- إكسل سوء المعاملة (الموظفين) -->
+      <section class="card-hover bg-white rounded-xl shadow-lg border p-6 animate-fade-in-up">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 8a6 6 0 11-12 0 6 6 0 0112 0zM6 14a6 6 0 0112 0v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2z" />
+            </svg>
+          </div>
+          <h2 class="text-lg font-semibold">إكسل سوء المعاملة (الموظفين)</h2>
+        </div>
+
+        <div class="space-y-3">
+          <input id="misbehaviorExcel" type="file" accept=".xlsx,.xls" 
+                 class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+          <button id="btnMisbehaviorUpload" class="px-4 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition" onclick="uploadMisbehaviorExcel()">
+            رفع الملف
+          </button>
+          <p id="misbehaviorStatus" class="text-sm text-gray-500"></p>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -1059,6 +1080,54 @@
           statusSatisfaction.className = 'text-red-600 text-sm';
         }
       });
+    }
+
+    // دالة رفع إكسل سوء المعاملة
+    async function uploadMisbehaviorExcel() {
+      const fileInput = document.getElementById("misbehaviorExcel");
+      const status = document.getElementById("misbehaviorStatus");
+      
+      if (!fileInput || !fileInput.files.length) {
+        if (status) {
+          status.textContent = "📌 الرجاء اختيار ملف إكسل";
+          status.className = "text-red-600 text-sm";
+        }
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      if (status) {
+        status.textContent = "⏳ جاري الرفع...";
+        status.className = "text-blue-600 text-sm";
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/import/misbehavior`, {
+          method: "POST",
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          status.textContent = `✔️ تم استيراد البيانات بنجاح! (${result.inserted || 0} سجل)`;
+          status.className = "text-green-600 text-sm";
+          // إعادة تعيين حقل الملف
+          if (fileInput) fileInput.value = '';
+        } else {
+          status.textContent = `❌ فشل الاستيراد: ${result.message || result.error || 'خطأ غير معروف'}`;
+          status.className = "text-red-600 text-sm";
+        }
+      } catch (err) {
+        console.error('خطأ في رفع إكسل سوء المعاملة:', err);
+        if (status) {
+          status.textContent = "❌ حدث خطأ أثناء الرفع: " + err.message;
+          status.className = "text-red-600 text-sm";
+        }
+      }
     }
   </script>
 
