@@ -763,7 +763,10 @@ async function reloadFilteredData(hospitalId) {
     await load937SLAChart();
     await loadSecretVisitorDelayChart();
 
-    // 7) تحديث جدول تكرار الشكاوى حسب رقم الهوية
+    // 7) تحديث جدول مقارنة 937 و الزائر السري
+    await load937MysteryCompareTable();
+
+    // 8) تحديث جدول تكرار الشكاوى حسب رقم الهوية
     await loadPatientFrequencyTable(1);
 
     console.log('✅ تم إعادة تحميل جميع البيانات المفلترة');

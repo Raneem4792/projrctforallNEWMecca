@@ -7,7 +7,7 @@ dotenv.config();
 const DB_CONFIG = {
   host: process.env.CENTRAL_DB_HOST || '127.0.0.1',
   user: process.env.CENTRAL_DB_USER || 'root',
-  password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+  password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
   waitForConnections: true,
   connectionLimit: 10,
   charset: 'utf8mb4_general_ci'
@@ -16,11 +16,11 @@ const DB_CONFIG = {
 // القاعدة المركزية (للمديرين والبحث العام)
 export const centralDb = mysql.createPool({
   ...DB_CONFIG,
-  database: process.env.CENTRAL_DB_NAME || 'hospitals_mecca4'
+  database: process.env.CENTRAL_DB_NAME || 'hospitals_mecca3'
 });
 
 // إضافة معلومات للتشخيص
-centralDb._dbName = 'hospitals_mecca4';
+centralDb._dbName = 'hospitals_mecca3';
 centralDb._hospitalId = 'CENTRAL';
 
 // كاش لاتصالات المستشفيات
@@ -61,7 +61,7 @@ export async function getHospitalPool(hospitalId) {
     const pool = mysql.createPool({
       host: process.env.CENTRAL_DB_HOST || '127.0.0.1',
       user: process.env.CENTRAL_DB_USER || 'root', // نفس المستخدم للمستشفيات
-      password: process.env.CENTRAL_DB_PASS || 'Raneem11',
+      password: process.env.CENTRAL_DB_PASS || 'SamarAmer12345@',
       database: dbName,
       waitForConnections: true,
       connectionLimit: 5,
@@ -158,7 +158,7 @@ export const pool = centralDb;
 export async function testConnection() {
   try {
     const connection = await centralDb.getConnection();
-    console.log('✅ تم الاتصال بالقاعدة المركزية:', process.env.CENTRAL_DB_NAME || 'hospitals_mecca4');
+    console.log('✅ تم الاتصال بالقاعدة المركزية:', process.env.CENTRAL_DB_NAME || 'hospitals_mecca3');
     connection.release();
     return true;
   } catch (error) {
@@ -167,7 +167,7 @@ export async function testConnection() {
     console.error('🔧 تأكد من:');
     console.error('   1. تشغيل MySQL');
     console.error('   2. صحة إعدادات قاعدة البيانات في ملف .env');
-    console.error('   3. وجود قاعدة البيانات:', process.env.CENTRAL_DB_NAME || 'hospitals_mecca4');
+    console.error('   3. وجود قاعدة البيانات:', process.env.CENTRAL_DB_NAME || 'hospitals_mecca3');
     return false;
   }
 }

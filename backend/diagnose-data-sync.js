@@ -6,7 +6,7 @@ async function diagnoseDataSync() {
 
   try {
     // 1. فحص القاعدة المركزية
-    console.log('📊 القاعدة المركزية (hospitals_mecca4):');
+    console.log('📊 القاعدة المركزية (hospitals_mecca3):');
     const [centralStats] = await centralDb.query(`
       SELECT 
         COUNT(*) as total_complaints,

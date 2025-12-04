@@ -125,11 +125,9 @@ async function initHospitalsPage() {
     // تحويل البيانات إلى التنسيق المطلوب للعرض
     const lang = localStorage.getItem("siteLanguage") || currentLang || 'ar';
     const hospitals = hospitalsData.map(hospital => {
-      const totalReports = hospital.counts.complaint + hospital.counts.suggestion + hospital.counts.critical;
-      const openReports = hospital.latest.filter(report => 
-        report.status !== 'مغلقة' && report.status !== 'محلولة' && report.status !== 'CLOSED' && report.status !== 'RESOLVED'
-      ).length;
-      const closedReports = totalReports - openReports;
+      const totalReports = hospital.counts.total || (hospital.counts.complaint + hospital.counts.suggestion + hospital.counts.critical);
+      const openReports = hospital.counts.open || 0; // استخدام القيمة من API مباشرة
+      const closedReports = hospital.counts.closed || (totalReports - openReports);
       const solveRate = totalReports > 0 ? Math.round((closedReports / totalReports) * 100) : 0;
       
       // تحديد اسم المستشفى حسب اللغة

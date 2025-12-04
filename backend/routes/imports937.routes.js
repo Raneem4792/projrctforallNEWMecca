@@ -257,6 +257,16 @@ const HEADER_MAP = {
     'حالة البلاغ',
     'حالة المعالجة'
   ],
+  officerReply: [
+    'إفادة الضابط',
+    'افادة الضابط',
+    'إفادة الضابط',
+    'رد الضابط',
+    'رد ضابط',
+    'Officer Reply',
+    'Officer Response',
+    'Officer Statement'
+  ],
 };
 
 function detectHeaderRow(aoa) {
@@ -717,7 +727,8 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
                     NOW(), NULL, 0)
           `;
           try {
-            await conn.query(insertSql, [
+            // إدراج البلاغ والحصول على ComplaintID و GlobalID
+            const [insertResult] = await conn.query(insertSql, [
               ticketNumber || null,
               hospitalId,
               departmentId, // القسم الافتراضي "غير مصنف"
@@ -734,6 +745,81 @@ router.post('/imports/937', requireAuth, requirePermission('IMPORTS_937'), uploa
               IsSecretVisitor, // 👈 إضافة قيمة الزائر السري
               ActualClosingHours, // 👈 عدد الساعات بين تاريخ الإنشاء وتاريخ الحل
             ]);
+            
+            const complaintId = insertResult.insertId;
+            
+            // جلب GlobalID للبلاغ الجديد
+            const [globalIdRows] = await conn.query(
+              'SELECT GlobalID FROM complaints WHERE ComplaintID = ? LIMIT 1',
+              [complaintId]
+            );
+            const globalId = globalIdRows[0]?.GlobalID || null;
+            
+            // قراءة إفادة الضابط من Excel
+            const officerReply = (get('officerReply') || '').toString().trim();
+            
+            // إذا كانت هناك إفادة ضابط، نضيفها كرد في complaint_responses
+            if (officerReply) {
+              try {
+                // البحث عن ReplyTypeID المناسب (نستخدم "حل المشكلة" = 3 كافتراضي)
+                // أو يمكن البحث عن "رد الضابط" إذا كان موجوداً
+                let replyTypeId = 3; // افتراضي: "حل المشكلة"
+                
+                // محاولة البحث عن "رد الضابط" أو "إفادة الضابط" في reply_types
+                const [replyTypeRows] = await conn.query(
+                  `SELECT ReplyTypeID FROM reply_types 
+                   WHERE (NameAr LIKE '%ضابط%' OR NameAr LIKE '%إفادة%' OR NameEn LIKE '%Officer%')
+                   AND IsActive = 1 
+                   LIMIT 1`
+                );
+                
+                if (replyTypeRows.length > 0) {
+                  replyTypeId = replyTypeRows[0].ReplyTypeID;
+                }
+                
+                // إدراج الرد في complaint_responses
+                // إنشاء GlobalID جديد للرد
+                const [uuidResult] = await conn.query('SELECT UUID() AS uuid');
+                const responseGlobalId = uuidResult[0]?.uuid || null;
+                
+                // البحث عن مستخدم النظام (System User) أو استخدام 1 كافتراضي
+                let responderUserId = 1; // افتراضي: مستخدم النظام
+                try {
+                  const [systemUserRows] = await conn.query(
+                    `SELECT UserID FROM users 
+                     WHERE (Username = 'system' OR Username = 'admin' OR RoleID = 1)
+                     AND IsActive = 1 
+                     LIMIT 1`
+                  );
+                  if (systemUserRows.length > 0) {
+                    responderUserId = systemUserRows[0].UserID;
+                  }
+                } catch (userError) {
+                  // في حالة عدم وجود مستخدم نظام، نستخدم 1
+                  console.warn(`⚠️ [Row ${idx}] لم يتم العثور على مستخدم نظام، استخدام ID=1`);
+                }
+                
+                await conn.query(
+                  `INSERT INTO complaint_responses 
+                   (GlobalID, ComplaintID, ResponderUserID, ReplyTypeID, TargetStatusCode, Message, IsInternal, CreatedAt)
+                   VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
+                  [
+                    responseGlobalId, // GlobalID للرد
+                    complaintId, // ComplaintID
+                    responderUserId, // ResponderUserID (مستخدم النظام أو 1)
+                    replyTypeId, // ReplyTypeID
+                    StatusCode === 'CLOSED' ? 'CLOSED' : null, // إذا كانت الحالة مغلقة، نضع TargetStatusCode
+                    officerReply // Message
+                  ]
+                );
+                
+                console.log(`✅ [Row ${idx}] تم حفظ إفادة الضابط للبلاغ ${complaintId}`);
+              } catch (responseError) {
+                // في حالة فشل إدراج الرد، نسجّل الخطأ لكن لا نوقف عملية الاستيراد
+                console.error(`⚠️ [Row ${idx}] فشل حفظ إفادة الضابط:`, responseError.message);
+              }
+            }
+            
             result.inserted++;
           } catch (e) {
             result.errors++;

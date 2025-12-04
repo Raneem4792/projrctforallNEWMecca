@@ -308,6 +308,39 @@ router.get('/hospital/:id', async (req, res) => {
     const closedReports = parseInt(stat.closed_reports || 0);
     const resolutionRate = totalReports > 0 ? Math.round((closedReports / totalReports) * 100) : 0;
 
+    // حساب SLA (البلاغات المغلقة خلال 72 ساعة)
+    const [slaStats] = await hospitalPool.query(`
+      SELECT
+        COUNT(*) as sla_compliant_count
+      FROM complaints
+      WHERE HospitalID = ?
+        AND (IsDeleted = 0 OR IsDeleted IS NULL)
+        AND StatusCode IN ('closed','CLOSED', 'مغلقة', 'محلولة','مكتمل')
+        AND (
+          COALESCE(ActualClosingHours, TIMESTAMPDIFF(HOUR, CreatedAt, UpdatedAt)) <= 72
+          OR (ActualClosingHours IS NULL AND UpdatedAt IS NOT NULL AND TIMESTAMPDIFF(HOUR, CreatedAt, UpdatedAt) <= 72)
+        )
+    `, [hospitalId]);
+    const slaCompliantCount = parseInt(slaStats[0]?.sla_compliant_count || 0);
+    const slaRate = closedReports > 0 ? Math.round((slaCompliantCount / closedReports) * 100) : 0;
+
+    // حساب التكرارات (مرضى لديهم أكثر من بلاغ واحد في آخر 30 يوم)
+    const [repeatedStats] = await hospitalPool.query(`
+      SELECT COUNT(DISTINCT PatientIDNumber) as repeated_count
+      FROM (
+        SELECT PatientIDNumber
+        FROM complaints
+        WHERE HospitalID = ?
+          AND (IsDeleted = 0 OR IsDeleted IS NULL)
+          AND PatientIDNumber IS NOT NULL
+          AND PatientIDNumber != ''
+          AND CreatedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY PatientIDNumber
+        HAVING COUNT(*) > 1
+      ) AS repeated_patients
+    `, [hospitalId]);
+    const repeated30Days = parseInt(repeatedStats[0]?.repeated_count || 0);
+
     // جلب أحدث البلاغات من قاعدة بيانات المستشفى
     const [recentReports] = await hospitalPool.query(`
       SELECT
@@ -367,6 +400,8 @@ router.get('/hospital/:id', async (req, res) => {
       openReports: openReports,
       closedReports: closedReports,
       resolutionRate: resolutionRate,
+      slaRate: slaRate,
+      repeated30Days: repeated30Days,
       priorityCounts: {
         red: parseInt(stat.critical_count || 0),
         orange: parseInt(stat.complaint_count || 0),
@@ -394,6 +429,158 @@ router.get('/hospital/:id', async (req, res) => {
   } catch (e) {
     console.error('GET /dashboard/total/hospital/:id', e);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ========== GET /api/dashboard/total/hospital/:id/complaints ==========
+router.get('/hospital/:id/complaints', async (req, res) => {
+  try {
+    const hospitalId = parseInt(req.params.id);
+    const { status, sla, repeated } = req.query;
+    
+    if (!hospitalId || isNaN(hospitalId)) {
+      return res.status(400).json({ error: 'Invalid hospital ID' });
+    }
+
+    const { getHospitalPool } = await import('../config/db.js');
+    const hospitalPool = await getHospitalPool(hospitalId);
+    
+    let query = '';
+    let params = [hospitalId];
+    
+    if (status === 'open') {
+      query = `
+        SELECT
+          c.ComplaintID,
+          c.TicketNumber,
+          c.PatientFullName,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          ct.TypeName,
+          d.NameAr as DepartmentName
+        FROM complaints c
+        LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+        LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+        WHERE c.HospitalID = ? 
+          AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+          AND LOWER(c.StatusCode) NOT IN ('closed', 'مغلق', 'محلول', 'مكتمل')
+        ORDER BY c.CreatedAt DESC
+        LIMIT 500
+      `;
+    } else if (status === 'closed') {
+      query = `
+        SELECT
+          c.ComplaintID,
+          c.TicketNumber,
+          c.PatientFullName,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          ct.TypeName,
+          d.NameAr as DepartmentName
+        FROM complaints c
+        LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+        LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+        WHERE c.HospitalID = ? 
+          AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+          AND c.StatusCode IN ('closed','CLOSED', 'مغلقة', 'محلولة','مكتمل')
+        ORDER BY c.CreatedAt DESC
+        LIMIT 500
+      `;
+    } else if (sla === 'true') {
+      query = `
+        SELECT
+          c.ComplaintID,
+          c.TicketNumber,
+          c.PatientFullName,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          ct.TypeName,
+          d.NameAr as DepartmentName
+        FROM complaints c
+        LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+        LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+        WHERE c.HospitalID = ? 
+          AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+          AND c.StatusCode IN ('closed','CLOSED', 'مغلقة', 'محلولة','مكتمل')
+          AND (
+            COALESCE(c.ActualClosingHours, TIMESTAMPDIFF(HOUR, c.CreatedAt, c.UpdatedAt)) <= 72
+            OR (c.ActualClosingHours IS NULL AND c.UpdatedAt IS NOT NULL AND TIMESTAMPDIFF(HOUR, c.CreatedAt, c.UpdatedAt) <= 72)
+          )
+        ORDER BY c.CreatedAt DESC
+        LIMIT 500
+      `;
+    } else if (repeated === 'true') {
+      query = `
+        SELECT
+          c.ComplaintID,
+          c.TicketNumber,
+          c.PatientFullName,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          ct.TypeName,
+          d.NameAr as DepartmentName
+        FROM complaints c
+        INNER JOIN (
+          SELECT PatientIDNumber
+          FROM complaints
+          WHERE PatientIDNumber IS NOT NULL
+            AND PatientIDNumber != ''
+            AND CreatedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND HospitalID = ?
+          GROUP BY PatientIDNumber
+          HAVING COUNT(*) > 1
+        ) AS repeated_patients ON c.PatientIDNumber = repeated_patients.PatientIDNumber
+        LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+        LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+        WHERE c.HospitalID = ? AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+        ORDER BY c.CreatedAt DESC
+        LIMIT 500
+      `;
+      params.push(hospitalId); // Add hospitalId for the subquery
+    } else {
+      // All complaints
+      query = `
+        SELECT
+          c.ComplaintID,
+          c.TicketNumber,
+          c.PatientFullName,
+          c.PriorityCode,
+          c.StatusCode,
+          c.CreatedAt,
+          ct.TypeName,
+          d.NameAr as DepartmentName
+        FROM complaints c
+        LEFT JOIN complaint_types ct ON ct.ComplaintTypeID = c.ComplaintTypeID
+        LEFT JOIN departments d ON d.DepartmentID = c.DepartmentID
+        WHERE c.HospitalID = ? AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
+        ORDER BY c.CreatedAt DESC
+        LIMIT 500
+      `;
+    }
+    
+    const [rows] = await hospitalPool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: rows.map(r => ({
+        id: r.ComplaintID,
+        ticket: r.TicketNumber || `C-${r.ComplaintID}`,
+        patientName: r.PatientFullName || 'غير محدد',
+        priority: r.PriorityCode,
+        status: r.StatusCode,
+        createdAt: r.CreatedAt,
+        typeName: r.TypeName || 'غير محدد',
+        departmentName: r.DepartmentName || 'غير محدد'
+      })),
+      total: rows.length
+    });
+  } catch (e) {
+    console.error('GET /dashboard/total/hospital/:id/complaints', e);
+    res.status(500).json({ error: 'Database error', message: e.message });
   }
 });
 
