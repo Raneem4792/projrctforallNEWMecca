@@ -1118,96 +1118,122 @@ router.get('/937-range', requireAuth, async (req, res) => {
 
 /**
  * GET /api/complaints/misbehavior-count
- * جلب عدد بلاغات سوء المعاملة
+ * جلب عدد بلاغات سوء المعاملة من جميع قواعد بيانات المستشفيات
  * ⚠️ يجب أن يكون قبل route /:id لتجنب التطابق الخاطئ
  */
 router.get('/misbehavior-count', optionalAuth, async (req, res) => {
-  let connection;
   try {
-    const pool = await getCentralPool();
-    if (!pool) {
+    const centralPool = await getCentralPool();
+    if (!centralPool) {
       return res.status(500).json({ error: 'Central database connection failed', count: 0 });
     }
-    connection = await pool.getConnection();
     
-    // الحصول على نطاق المستشفى
-    const scope = hospitalScopeSQL(req.user, 'c', req);
+    // تحديد المستخدم والمستشفى
+    const user = req.user || {};
+    const isCluster = Boolean(
+      user.isClusterManager === true ||
+      user.is_cluster_manager === true ||
+      user.role === 'cluster_admin' ||
+      user.RoleID === 1 || user.roleId === 1 || user.role_id === 1
+    );
     
-    // بناء قائمة المعاملات
-    const params = scope.params || [];
+    const qHosp = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    const userHospId = (user.HospitalID ?? user.hospitalId ?? null);
     
-    // البحث عن بلاغات سوء المعاملة - يعتمد على التصنيفات الرسمية فقط
-    // ملاحظة: hospitalScopeSQL يضيف شرط IsDeleted تلقائياً
-    // ComplaintTypeID 17 = سوء معاملة
-    // SubTypeID 34 = سوء معاملة
-    // استثناء: كلمة "تحرش" في الوصف
+    // إذا كان مدير: استخدم باراميتر الاستعلام إن وُجد، وإلا = null (يعني كل المستشفيات)
+    // إذا كان موظف: استخدم HospitalID من المستخدم، أو من الاستعلام إن وُجد
+    const hospitalId = isCluster ? (qHosp || null) : (userHospId || qHosp || null);
     
+    // موظف بدون مستشفى معروف → فقط هنا نرجّع 0
+    if (!isCluster && !hospitalId) {
+      return res.json({ count: 0 });
+    }
+    
+    // شرط سوء المعاملة - يعتمد على التصنيفات الرسمية فقط
     const MISBEHAVIOR_TYPE_IDS = [17]; // ComplaintTypeID لسوء المعاملة
     const MISBEHAVIOR_SUBTYPE_IDS = [34]; // SubTypeID لسوء المعاملة
     
-    // شرط شامل مع TypeName (للتحقق من التصنيفات)
-    const queryWithType = `
-      SELECT COUNT(*) AS count 
-      FROM complaints c
-      LEFT JOIN complaint_types ct ON c.ComplaintTypeID = ct.ComplaintTypeID
-      WHERE 1=1
-        ${scope.where || ''}
-        AND (
-          c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS.join(',')})
-          OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS.join(',')})
-          OR c.Description LIKE '%تحرش%'
-        )
+    const MISBEHAVIOR_CONDITION = `
+      (
+        c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS.join(',')})
+        OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS.join(',')})
+        OR c.Description LIKE '%تحرش%'
+      )
     `;
+    const NOT_DELETED = `(c.IsDeleted = 0 OR c.IsDeleted IS NULL)`;
     
-    // شرط بديل بدون TypeName (للتوافق مع قواعد البيانات القديمة)
-    const querySimple = `
-      SELECT COUNT(*) AS count 
-      FROM complaints c
-      WHERE 1=1
-        ${scope.where || ''}
-        AND (
-          c.ComplaintTypeID IN (${MISBEHAVIOR_TYPE_IDS.join(',')})
-          OR c.SubTypeID IN (${MISBEHAVIOR_SUBTYPE_IDS.join(',')})
-          OR c.Description LIKE '%تحرش%'
-        )
-    `;
+    let totalCount = 0;
     
-    console.log('🔍 [MISBEHAVIOR-COUNT] Scope:', JSON.stringify(scope, null, 2));
-    console.log('🔍 [MISBEHAVIOR-COUNT] Params:', params);
-    
-    let rows;
-    let count = 0;
-    
-    try {
-      // محاولة الاستعلام الكامل أولاً
-      [rows] = await connection.query(queryWithType, params);
-      count = rows[0]?.count || 0;
-      console.log('✅ [MISBEHAVIOR-COUNT] Result (with TypeName):', count);
-    } catch (err) {
-      // إذا فشل بسبب عدم وجود ct.TypeName، استخدم الاستعلام البديل
-      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('TypeName')) {
-        console.warn('⚠️ [MISBEHAVIOR-COUNT] TypeName column not found, using simple query');
-        [rows] = await connection.query(querySimple, params);
-        count = rows[0]?.count || 0;
-        console.log('✅ [MISBEHAVIOR-COUNT] Result (simple):', count);
-      } else {
-        // إذا كان الخطأ مختلفاً، أعد رفعه
-        throw err;
+    // دالة لجلب العدد من مستشفى واحد
+    async function fetchCountFromHospital(hId) {
+      try {
+        const { getHospitalPool } = await import('../config/db.js');
+        const hospitalPool = await getHospitalPool(hId);
+        
+        // محاولة الاستعلام الكامل أولاً
+        let sql = `
+          SELECT COUNT(*) AS count
+          FROM complaints c
+          WHERE ${MISBEHAVIOR_CONDITION} AND ${NOT_DELETED}
+        `;
+        
+        let rows;
+        try {
+          [rows] = await hospitalPool.query(sql);
+        } catch (err) {
+          // إذا فشل، استخدم استعلام بسيط
+          if (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE') {
+            console.warn(`⚠️ [MISBEHAVIOR-COUNT] Hospital ${hId}: ${err.message}, using simple query`);
+            sql = `
+              SELECT COUNT(*) AS count
+              FROM complaints c
+              WHERE ${MISBEHAVIOR_CONDITION} AND ${NOT_DELETED}
+            `;
+            [rows] = await hospitalPool.query(sql);
+          } else {
+            throw err;
+          }
+        }
+        
+        return Number(rows[0]?.count || 0);
+      } catch (error) {
+        console.error(`❌ [MISBEHAVIOR-COUNT] خطأ في المستشفى ${hId}:`, error.message);
+        return 0;
       }
     }
-    console.log('✅ [MISBEHAVIOR-COUNT] Result:', count);
     
-    res.json({ count });
+    // إذا كان مدير التجمع بدون تحديد مستشفى → نجمع من جميع المستشفيات
+    if (isCluster && !hospitalId) {
+      const [hospitals] = await centralPool.query(`
+        SELECT HospitalID, NameAr, DbName 
+        FROM hospitals 
+        WHERE IsActive = 1 AND DbName IS NOT NULL
+        ORDER BY SortOrder
+      `);
+      
+      console.log(`🔍 [MISBEHAVIOR-COUNT] مدير التجمع - البحث في ${hospitals.length} مستشفى`);
+      
+      for (const hospital of hospitals) {
+        const count = await fetchCountFromHospital(hospital.HospitalID);
+        totalCount += count;
+      }
+    } else {
+      // موظف (أو مدير حدّد hospitalId) → مستشفى واحد
+      if (!hospitalId) {
+        return res.json({ count: 0 });
+      }
+      
+      totalCount = await fetchCountFromHospital(Number(hospitalId));
+    }
+    
+    console.log('✅ [MISBEHAVIOR-COUNT] Total count:', totalCount);
+    
+    res.json({ count: totalCount });
   } catch (err) {
     console.error('❌ خطأ في جلب عدد بلاغات سوء المعاملة:', err);
     console.error('❌ Error message:', err.message);
     console.error('❌ Error code:', err.code);
-    console.error('❌ Stack:', err.stack);
     res.status(500).json({ error: err.message, count: 0 });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 });
 
