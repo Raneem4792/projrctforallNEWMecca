@@ -3184,6 +3184,9 @@ async function initializeDashboard() {
     // 🔹 تحميل عدد بلاغات سوء المعاملة
     await loadMisbehaviorCount();
     
+    // 🔹 تحديث الشكوى اليومية
+    await updateDailyComplaintsChart();
+    
     // 🔹 تحديث تاريخ الأسبوع الحالي
     updateWeeklyPeriod();
 
