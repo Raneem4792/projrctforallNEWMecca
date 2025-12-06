@@ -1888,21 +1888,31 @@ router.get('/top-employees/:id',
     const { getHospitalPool } = await import('../config/db.js');
     const hospitalPool = await getHospitalPool(hospitalId);
 
+    // التحقق من وجود الجدول أولاً
+    const [tables] = await hospitalPool.query(`
+      SHOW TABLES LIKE 'complaint_targets'
+    `);
+    
+    if (tables.length === 0) {
+      console.warn(`⚠️ [top-employees] الجدول complaint_targets غير موجود في قاعدة بيانات المستشفى ${hospitalId}`);
+      return res.json({ success: true, data: [] });
+    }
+
     // جلب الموظفين الأكثر تكررًا في البلاغات
+    // ✅ نفس منطق employee-complaints-chart - لا نشترط TargetEmployeeID
     const [employeeData] = await hospitalPool.query(`
       SELECT 
-        ct.TargetEmployeeID,
         ct.TargetEmployeeName,
-        ct.TargetDepartmentID,
         ct.TargetDepartmentName,
         COUNT(*) AS complaintCount,
         MIN(ct.CreatedAt) AS firstComplaint,
         MAX(ct.CreatedAt) AS lastComplaint
       FROM complaint_targets ct
-      WHERE ct.TargetEmployeeID IS NOT NULL 
-        AND ct.TargetEmployeeName IS NOT NULL
+      WHERE ct.TargetEmployeeName IS NOT NULL
         AND ct.TargetEmployeeName != ''
-      GROUP BY ct.TargetEmployeeID, ct.TargetEmployeeName, ct.TargetDepartmentID, ct.TargetDepartmentName
+        AND ct.TargetEmployeeName != 'غير معروف'
+        AND ct.TargetEmployeeName != 'غير محدد'
+      GROUP BY ct.TargetEmployeeName, ct.TargetDepartmentName
       HAVING COUNT(*) >= 1
       ORDER BY complaintCount DESC
       LIMIT ?
@@ -1910,14 +1920,16 @@ router.get('/top-employees/:id',
 
     // معالجة البيانات للعرض
     const processedData = employeeData.map(item => ({
-      employeeId: item.TargetEmployeeID,
+      employeeId: item.TargetEmployeeID || null,
       employeeName: item.TargetEmployeeName,
-      departmentId: item.TargetDepartmentID,
-      departmentName: item.TargetDepartmentName,
+      departmentId: item.TargetDepartmentID || null,
+      departmentName: item.TargetDepartmentName || 'غير محدد',
       complaintCount: Number(item.complaintCount),
       firstComplaint: item.firstComplaint,
       lastComplaint: item.lastComplaint,
-      displayName: `${item.TargetEmployeeName} - ${item.TargetDepartmentName}`
+      displayName: item.TargetDepartmentName 
+        ? `${item.TargetEmployeeName} — ${item.TargetDepartmentName}`
+        : item.TargetEmployeeName
     }));
 
     res.json({ success: true, data: processedData });
@@ -2655,6 +2667,639 @@ router.get('/misbehavior-reports',
   } catch (err) {
     console.error('misbehavior-reports error:', err);
     res.status(500).json({ success:false, message:'خطأ في جلب بلاغات سوء المعاملة' });
+  }
+});
+
+// ========== GET /api/dashboard/total/employee-complaints-chart ==========
+/**
+ * جلب بيانات الرسم البياني لعدد بلاغات الموظفين من جدول complaint_targets
+ * يجلب البيانات من قواعد بيانات المستشفيات (ليس القاعدة المركزية)
+ */
+router.get('/employee-complaints-chart',
+  requireAuth,
+  async (req, res) => {
+  try {
+    const { getCentralPool } = await import('../db/centralPool.js');
+    const { getHospitalPool } = await import('../config/db.js');
+    const centralPool = await getCentralPool();
+
+    // فحص صلاحيات المستخدم للفلترة حسب المستشفى
+    const isCluster = Boolean(
+      req.user?.isClusterManager === true ||
+      req.user?.is_cluster_manager === true ||
+      req.user?.role === 'cluster_admin' ||
+      req.user?.RoleID === 1 || req.user?.roleId === 1 || req.user?.role_id === 1
+    );
+
+    const qHosp = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    const userHospId = (req.user?.HospitalID ?? req.user?.hospitalId ?? null);
+
+    // إذا كان مدير: استخدم باراميتر الاستعلام إن وُجد، وإلا = null (يعني كل المستشفيات)
+    // إذا كان موظف: استخدم HospitalID من المستخدم، أو من الاستعلام إن وُجد
+    const targetHospitalId = isCluster ? (qHosp || null) : (userHospId || qHosp || null);
+
+    // تحديد قائمة المستشفيات المطلوبة
+    let hospitalsToProcess = [];
+    if (targetHospitalId) {
+      // مستشفى واحد فقط
+      const [hosp] = await centralPool.query(
+        `SELECT HospitalID, NameAr FROM hospitals WHERE HospitalID = ? LIMIT 1`,
+        [targetHospitalId]
+      );
+      if (hosp.length > 0) {
+        hospitalsToProcess = [hosp[0]];
+      }
+    } else if (isCluster) {
+      // جميع المستشفيات (للمدير فقط)
+      const [hospitals] = await centralPool.query(
+        `SELECT HospitalID, NameAr FROM hospitals WHERE IsActive = 1`
+      );
+      hospitalsToProcess = hospitals;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'hospitalId مطلوب'
+      });
+    }
+
+    // تجميع البيانات من جميع المستشفيات المطلوبة
+    let allRows = [];
+    
+    if (hospitalsToProcess.length === 0) {
+      console.warn(`⚠️ [employee-complaints-chart] لا توجد مستشفيات للمعالجة`);
+    } else {
+      // البحث في قواعد بيانات المستشفيات أولاً
+      for (const hospital of hospitalsToProcess) {
+        try {
+          console.log(`🔍 [employee-complaints-chart] معالجة المستشفى: ${hospital.NameAr} (ID: ${hospital.HospitalID})`);
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          
+          // التحقق من وجود الجدول أولاً
+          const [tables] = await hospitalPool.query(`
+            SHOW TABLES LIKE 'complaint_targets'
+          `);
+          
+          if (tables.length === 0) {
+            console.warn(`⚠️ [employee-complaints-chart] الجدول complaint_targets غير موجود في قاعدة بيانات المستشفى ${hospital.HospitalID}`);
+            continue;
+          }
+          
+          // عد السجلات الإجمالية أولاً للتشخيص
+          try {
+            const [[countResult]] = await hospitalPool.query(`
+              SELECT COUNT(*) AS total FROM complaint_targets
+            `);
+            console.log(`📊 [employee-complaints-chart] المستشفى ${hospital.NameAr}: إجمالي السجلات في الجدول = ${countResult?.total || 0}`);
+            
+            // عد السجلات التي تطابق الشروط
+            const [[filteredCount]] = await hospitalPool.query(`
+              SELECT COUNT(*) AS total
+              FROM complaint_targets
+              WHERE TargetEmployeeName IS NOT NULL 
+                AND TargetEmployeeName != ''
+                AND TargetEmployeeName != 'غير معروف'
+                AND TargetEmployeeName != 'غير محدد'
+            `);
+            console.log(`📊 [employee-complaints-chart] المستشفى ${hospital.NameAr}: السجلات المطابقة للشروط = ${filteredCount?.total || 0}`);
+          } catch (countErr) {
+            console.warn(`⚠️ [employee-complaints-chart] خطأ في عد السجلات:`, countErr.message);
+          }
+          
+          // جلب البيانات - جميع الأعمدة موجودة حسب المخطط
+          let rows = [];
+          
+          // التحقق من الأعمدة الموجودة أولاً لتجنب الأخطاء
+          let [columns] = await hospitalPool.query(`SHOW COLUMNS FROM complaint_targets`);
+          let columnNames = columns.map(col => col.Field);
+          let hasTargetHospitalName = columnNames.includes('TargetHospitalName');
+          let hasHospitalID = columnNames.includes('HospitalID');
+          
+          // ✅ إضافة الأعمدة المفقودة تلقائياً
+          try {
+            if (!hasTargetHospitalName) {
+              await hospitalPool.query(`
+                ALTER TABLE complaint_targets 
+                ADD COLUMN TargetHospitalName VARCHAR(200) NULL COMMENT 'اسم المستشفى'
+              `);
+              console.log(`   ✅ [employee-complaints-chart] تم إضافة عمود TargetHospitalName للمستشفى ${hospital.HospitalID}`);
+              hasTargetHospitalName = true;
+            }
+            if (!hasHospitalID) {
+              await hospitalPool.query(`
+                ALTER TABLE complaint_targets 
+                ADD COLUMN HospitalID INT UNSIGNED NULL COMMENT 'معرف المستشفى',
+                ADD INDEX idx_hospital_id (HospitalID)
+              `);
+              console.log(`   ✅ [employee-complaints-chart] تم إضافة عمود HospitalID للمستشفى ${hospital.HospitalID}`);
+              // تحديث السجلات الموجودة بـ HospitalID للمستشفى الحالي
+              await hospitalPool.query(`
+                UPDATE complaint_targets 
+                SET HospitalID = ? 
+                WHERE HospitalID IS NULL
+              `, [hospital.HospitalID]);
+              console.log(`   ✅ [employee-complaints-chart] تم تحديث السجلات الموجودة بـ HospitalID = ${hospital.HospitalID}`);
+              hasHospitalID = true;
+              // إعادة قراءة الأعمدة بعد التحديث
+              [columns] = await hospitalPool.query(`SHOW COLUMNS FROM complaint_targets`);
+              columnNames = columns.map(col => col.Field);
+            }
+          } catch (alterErr) {
+            console.warn(`   ⚠️ [employee-complaints-chart] خطأ في إضافة الأعمدة:`, alterErr.message);
+          }
+          
+          // بناء قائمة SELECT مع التعامل مع الأعمدة المفقودة
+          const selectFields = [
+            'TargetEmployeeName',
+            columnNames.includes('TargetDepartmentName') ? 'TargetDepartmentName' : 'NULL AS TargetDepartmentName',
+            hasTargetHospitalName ? 'TargetHospitalName' : `'${hospital.NameAr.replace(/'/g, "''")}' AS TargetHospitalName`,
+            columnNames.includes('CaseStatus') ? 'CaseStatus' : 'NULL AS CaseStatus',
+            columnNames.includes('DidLegalReferral') ? 'DidLegalReferral' : 'NULL AS DidLegalReferral',
+            columnNames.includes('DidDirectorAction') ? 'DidDirectorAction' : 'NULL AS DidDirectorAction',
+            columnNames.includes('RepeatCount') ? 'RepeatCount' : 'NULL AS RepeatCount'
+          ];
+          
+          // بناء شرط WHERE (لا حاجة للفلترة بـ HospitalID لأن كل قاعدة بيانات تحتوي على بيانات مستشفى واحد فقط)
+          // نفس طريقة dashboard - نصل مباشرة لقاعدة بيانات المستشفى المحدد
+          const whereConditions = [
+            'TargetEmployeeName IS NOT NULL',
+            "TargetEmployeeName != ''",
+            "TargetEmployeeName != 'غير معروف'",
+            "TargetEmployeeName != 'غير محدد'"
+          ];
+          
+          // ✅ لا حاجة للفلترة بـ HospitalID داخل قاعدة بيانات المستشفى
+          // لأن كل قاعدة بيانات تحتوي على بيانات مستشفى واحد فقط
+          // التصفية تتم عن طريق اختيار قاعدة البيانات الصحيحة (getHospitalPool)
+          let queryParams = [];
+          
+          const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+          
+          const query = `
+            SELECT ${selectFields.join(', ')}
+            FROM complaint_targets
+            ${whereClause}
+            ORDER BY TargetEmployeeName, CreatedAt DESC
+          `;
+          
+          // ✅ التحقق من عدم وجود أخطاء إملائية قبل التنفيذ
+          if (query.includes('TargetHospitalNamme')) {
+            console.error(`❌ [employee-complaints-chart] خطأ إملائي في الاستعلام! تم العثور على TargetHospitalNamme`);
+            throw new Error('خطأ إملائي في اسم العمود: TargetHospitalNamme يجب أن يكون TargetHospitalName');
+          }
+          
+          try {
+            console.log(`🔍 [employee-complaints-chart] تنفيذ الاستعلام للمستشفى ${hospital.NameAr} (ID: ${hospital.HospitalID})...`);
+            [rows] = await hospitalPool.query(query, queryParams);
+          } catch (queryErr) {
+            console.error(`❌ [employee-complaints-chart] خطأ في الاستعلام:`, queryErr.message);
+            console.error(`   الاستعلام:`, query.substring(0, 300));
+            throw queryErr;
+          }
+          
+          console.log(`✅ [employee-complaints-chart] المستشفى ${hospital.NameAr}: تم جلب ${rows.length} سجل`);
+          
+          // إضافة اسم المستشفى إذا لم يكن موجوداً
+          rows.forEach(row => {
+            if (!row.TargetHospitalName) {
+              row.TargetHospitalName = hospital.NameAr;
+            }
+          });
+          
+          allRows = allRows.concat(rows);
+        } catch (err) {
+          console.error(`❌ [employee-complaints-chart] خطأ في جلب بيانات المستشفى ${hospital.HospitalID} (${hospital.NameAr}):`, err.message);
+          console.error(`   Stack:`, err.stack);
+          // نتابع مع المستشفيات الأخرى
+        }
+      }
+    }
+    
+    // ✅ إذا لم نجد بيانات في قواعد بيانات المستشفيات:
+    // - إذا كان المستخدم قد اختار مستشفى محدد → لا نبحث في القاعدة المركزية (البيانات موجودة فقط في قواعد المستشفيات)
+    // - إذا كان مدير تجمع ولم يختر مستشفى (جميع المستشفيات) → يمكن البحث في القاعدة المركزية كخيار بديل
+    if (allRows.length === 0 && !targetHospitalId) {
+      console.log(`⚠️ [employee-complaints-chart] لم يتم العثور على بيانات في قواعد بيانات المستشفيات، البحث في القاعدة المركزية...`);
+      try {
+        const [centralRows] = await centralPool.query(`
+          SELECT 
+            TargetEmployeeName,
+            TargetDepartmentName,
+            TargetHospitalName,
+            CaseStatus,
+            DidLegalReferral,
+            DidDirectorAction,
+            RepeatCount
+          FROM complaint_targets
+          WHERE TargetEmployeeName IS NOT NULL 
+            AND TargetEmployeeName != ''
+            AND TargetEmployeeName != 'غير معروف'
+            AND TargetEmployeeName != 'غير محدد'
+          ORDER BY TargetEmployeeName, CreatedAt DESC
+        `);
+        
+        if (centralRows.length > 0) {
+          console.log(`✅ [employee-complaints-chart] تم العثور على ${centralRows.length} سجل في القاعدة المركزية`);
+          allRows = centralRows;
+        }
+      } catch (centralErr) {
+        console.warn(`⚠️ [employee-complaints-chart] خطأ في البحث في القاعدة المركزية:`, centralErr.message);
+      }
+    } else if (allRows.length === 0 && targetHospitalId) {
+      console.warn(`⚠️ [employee-complaints-chart] لم يتم العثور على بيانات للمستشفى ${targetHospitalId} في قاعدة بياناته. البيانات موجودة فقط في قواعد بيانات المستشفيات.`);
+    }
+
+    console.log(`📊 [employee-complaints-chart] إجمالي السجلات المجلوبة: ${allRows.length} من ${hospitalsToProcess.length} مستشفى`);
+
+    // تجميع البيانات حسب اسم الموظف (بدون تقسيم الفئات)
+    const employees = {};
+    
+    allRows.forEach(row => {
+      const employeeName = row.TargetEmployeeName || 'غير معروف';
+      
+      if (!employees[employeeName]) {
+        employees[employeeName] = {
+          name: employeeName,
+          department: row.TargetDepartmentName || null,
+          count: 0
+        };
+      }
+      
+      // زيادة العدد الإجمالي فقط
+      employees[employeeName].count += 1;
+    });
+    
+    // تحويل إلى مصفوفة وترتيبها (جميع الموظفين بدون حد)
+    const result = Object.values(employees)
+      .map(emp => ({
+        name: emp.name,
+        department: emp.department,
+        count: emp.count
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    console.log(`✅ [employee-complaints-chart] تم تجميع البيانات إلى ${result.length} موظف`);
+
+    // إضافة معلومات تشخيصية في الاستجابة (للتصحيح فقط)
+    if (result.length === 0) {
+      console.warn(`⚠️ [employee-complaints-chart] لا توجد بيانات بعد التجميع`);
+      console.warn(`   - عدد السجلات الخام: ${allRows.length}`);
+      console.warn(`   - عدد المستشفيات المعالجة: ${hospitalsToProcess.length}`);
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      debug: process.env.NODE_ENV === 'development' ? {
+        totalRows: allRows.length,
+        hospitalsProcessed: hospitalsToProcess.length,
+        employeesFound: result.length
+      } : undefined
+    });
+  } catch (err) {
+    console.error('❌ [employee-complaints-chart] خطأ:', err);
+    console.error('   Message:', err.message);
+    console.error('   Stack:', err.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في جلب بيانات الرسم البياني للموظفين',
+      error: err.message 
+    });
+  }
+});
+
+// ========== GET /api/dashboard/total/employee-complaints-table ==========
+/**
+ * جلب بيانات جدول الموظفين من جدول complaint_targets
+ * يجلب البيانات من قواعد بيانات المستشفيات (ليس القاعدة المركزية)
+ */
+router.get('/employee-complaints-table',
+  requireAuth,
+  async (req, res) => {
+  try {
+    const { getCentralPool } = await import('../db/centralPool.js');
+    const { getHospitalPool } = await import('../config/db.js');
+    const centralPool = await getCentralPool();
+
+    // فحص صلاحيات المستخدم للفلترة حسب المستشفى
+    const isCluster = Boolean(
+      req.user?.isClusterManager === true ||
+      req.user?.is_cluster_manager === true ||
+      req.user?.role === 'cluster_admin' ||
+      req.user?.RoleID === 1 || req.user?.roleId === 1 || req.user?.role_id === 1
+    );
+
+    const qHosp = req.query.hospitalId ? Number(req.query.hospitalId) : null;
+    const userHospId = (req.user?.HospitalID ?? req.user?.hospitalId ?? null);
+
+    // إذا كان مدير: استخدم باراميتر الاستعلام إن وُجد، وإلا = null (يعني كل المستشفيات)
+    // إذا كان موظف: استخدم HospitalID من المستخدم، أو من الاستعلام إن وُجد
+    const targetHospitalId = isCluster ? (qHosp || null) : (userHospId || qHosp || null);
+
+    // تحديد قائمة المستشفيات المطلوبة
+    let hospitalsToProcess = [];
+    if (targetHospitalId) {
+      // مستشفى واحد فقط
+      const [hosp] = await centralPool.query(
+        `SELECT HospitalID, NameAr FROM hospitals WHERE HospitalID = ? LIMIT 1`,
+        [targetHospitalId]
+      );
+      if (hosp.length > 0) {
+        hospitalsToProcess = [hosp[0]];
+      }
+    } else if (isCluster) {
+      // جميع المستشفيات (للمدير فقط)
+      const [hospitals] = await centralPool.query(
+        `SELECT HospitalID, NameAr FROM hospitals WHERE IsActive = 1`
+      );
+      hospitalsToProcess = hospitals;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'hospitalId مطلوب'
+      });
+    }
+
+    // تجميع البيانات من جميع المستشفيات المطلوبة
+    let allRows = [];
+    
+    if (hospitalsToProcess.length > 0) {
+      for (const hospital of hospitalsToProcess) {
+        try {
+          console.log(`🔍 [employee-complaints-table] معالجة المستشفى: ${hospital.NameAr} (ID: ${hospital.HospitalID})`);
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          
+          // التحقق من وجود الجدول أولاً
+          const [tables] = await hospitalPool.query(`
+            SHOW TABLES LIKE 'complaint_targets'
+          `);
+          
+          if (tables.length === 0) {
+            console.warn(`⚠️ [employee-complaints-table] الجدول complaint_targets غير موجود في قاعدة بيانات المستشفى ${hospital.HospitalID}`);
+            continue;
+          }
+          
+          // جلب البيانات - جميع الأعمدة موجودة حسب المخطط
+          let rows = [];
+          
+          // التحقق من الأعمدة الموجودة أولاً لتجنب الأخطاء
+          let [columns] = await hospitalPool.query(`SHOW COLUMNS FROM complaint_targets`);
+          let columnNames = columns.map(col => col.Field);
+          let hasTargetHospitalName = columnNames.includes('TargetHospitalName');
+          let hasHospitalID = columnNames.includes('HospitalID');
+          
+          // ✅ إضافة الأعمدة المفقودة تلقائياً
+          try {
+            if (!hasTargetHospitalName) {
+              await hospitalPool.query(`
+                ALTER TABLE complaint_targets 
+                ADD COLUMN TargetHospitalName VARCHAR(200) NULL COMMENT 'اسم المستشفى'
+              `);
+              console.log(`   ✅ [employee-complaints-table] تم إضافة عمود TargetHospitalName للمستشفى ${hospital.HospitalID}`);
+              hasTargetHospitalName = true;
+            }
+            if (!hasHospitalID) {
+              await hospitalPool.query(`
+                ALTER TABLE complaint_targets 
+                ADD COLUMN HospitalID INT UNSIGNED NULL COMMENT 'معرف المستشفى',
+                ADD INDEX idx_hospital_id (HospitalID)
+              `);
+              console.log(`   ✅ [employee-complaints-table] تم إضافة عمود HospitalID للمستشفى ${hospital.HospitalID}`);
+              // تحديث السجلات الموجودة بـ HospitalID للمستشفى الحالي
+              await hospitalPool.query(`
+                UPDATE complaint_targets 
+                SET HospitalID = ? 
+                WHERE HospitalID IS NULL
+              `, [hospital.HospitalID]);
+              console.log(`   ✅ [employee-complaints-table] تم تحديث السجلات الموجودة بـ HospitalID = ${hospital.HospitalID}`);
+              hasHospitalID = true;
+              // إعادة قراءة الأعمدة بعد التحديث
+              [columns] = await hospitalPool.query(`SHOW COLUMNS FROM complaint_targets`);
+              columnNames = columns.map(col => col.Field);
+            }
+          } catch (alterErr) {
+            console.warn(`   ⚠️ [employee-complaints-table] خطأ في إضافة الأعمدة:`, alterErr.message);
+          }
+          
+          // بناء قائمة SELECT مع التعامل مع الأعمدة المفقودة
+          const hospitalNameEscaped = hospital.NameAr.replace(/'/g, "''");
+          const selectFields = [
+            columnNames.includes('TargetID') ? 'TargetID' : 'NULL AS TargetID',
+            'TargetEmployeeName',
+            columnNames.includes('TargetEmployeeID') ? 'TargetEmployeeID' : 'NULL AS TargetEmployeeID',
+            columnNames.includes('TargetDepartmentName') ? 'TargetDepartmentName' : 'NULL AS TargetDepartmentName',
+            hasTargetHospitalName ? 'TargetHospitalName' : `'${hospitalNameEscaped}' AS TargetHospitalName`,
+            columnNames.includes('CaseStatus') ? 'CaseStatus' : 'NULL AS CaseStatus',
+            columnNames.includes('RepeatCount') ? 'RepeatCount' : 'NULL AS RepeatCount',
+            columnNames.includes('DidGuidanceSession') ? 'DidGuidanceSession' : '0 AS DidGuidanceSession',
+            columnNames.includes('DidDirectorAction') ? 'DidDirectorAction' : '0 AS DidDirectorAction',
+            columnNames.includes('DidLegalReferral') ? 'DidLegalReferral' : '0 AS DidLegalReferral',
+            columnNames.includes('DidAnnualEvaluation') ? 'DidAnnualEvaluation' : '0 AS DidAnnualEvaluation',
+            columnNames.includes('CreatedAt') ? 'CreatedAt' : 'NOW() AS CreatedAt'
+          ];
+          
+          // بناء شرط WHERE (لا حاجة للفلترة بـ HospitalID لأن كل قاعدة بيانات تحتوي على بيانات مستشفى واحد فقط)
+          // نفس طريقة dashboard - نصل مباشرة لقاعدة بيانات المستشفى المحدد
+          const whereConditions = [
+            'TargetEmployeeName IS NOT NULL',
+            "TargetEmployeeName != ''"
+          ];
+          
+          // ✅ لا حاجة للفلترة بـ HospitalID داخل قاعدة بيانات المستشفى
+          // لأن كل قاعدة بيانات تحتوي على بيانات مستشفى واحد فقط
+          // التصفية تتم عن طريق اختيار قاعدة البيانات الصحيحة (getHospitalPool)
+          let queryParams = [];
+          
+          const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+          
+          const query = `
+            SELECT ${selectFields.join(', ')}
+            FROM complaint_targets
+            ${whereClause}
+            ORDER BY TargetEmployeeName, CreatedAt DESC
+          `;
+          
+          // ✅ التحقق من عدم وجود أخطاء إملائية قبل التنفيذ
+          if (query.includes('TargetHospitalNamme')) {
+            console.error(`❌ [employee-complaints-table] خطأ إملائي في الاستعلام! تم العثور على TargetHospitalNamme`);
+            throw new Error('خطأ إملائي في اسم العمود: TargetHospitalNamme يجب أن يكون TargetHospitalName');
+          }
+          
+          try {
+            console.log(`🔍 [employee-complaints-table] تنفيذ الاستعلام للمستشفى ${hospital.NameAr} (ID: ${hospital.HospitalID})...`);
+            [rows] = await hospitalPool.query(query, queryParams);
+          } catch (queryErr) {
+            console.error(`❌ [employee-complaints-table] خطأ في الاستعلام:`, queryErr.message);
+            console.error(`   الاستعلام:`, query.substring(0, 300));
+            throw queryErr;
+          }
+          
+          console.log(`✅ [employee-complaints-table] المستشفى ${hospital.NameAr}: تم جلب ${rows.length} سجل`);
+          
+          // إضافة اسم المستشفى إذا لم يكن موجوداً
+          rows.forEach(row => {
+            if (!row.TargetHospitalName) {
+              row.TargetHospitalName = hospital.NameAr;
+            }
+          });
+          
+          allRows = allRows.concat(rows);
+        } catch (err) {
+          console.error(`❌ [employee-complaints-table] خطأ في جلب بيانات المستشفى ${hospital.HospitalID}:`, err.message);
+          // نتابع مع المستشفيات الأخرى
+        }
+      }
+    }
+    
+    // ✅ إذا لم نجد بيانات في قواعد بيانات المستشفيات:
+    // - إذا كان المستخدم قد اختار مستشفى محدد → لا نبحث في القاعدة المركزية (البيانات موجودة فقط في قواعد المستشفيات)
+    // - إذا كان مدير تجمع ولم يختر مستشفى (جميع المستشفيات) → يمكن البحث في القاعدة المركزية كخيار بديل
+    if (allRows.length === 0 && !targetHospitalId) {
+      console.log(`⚠️ [employee-complaints-table] لم يتم العثور على بيانات في قواعد بيانات المستشفيات، البحث في القاعدة المركزية...`);
+      try {
+        const [centralRows] = await centralPool.query(`
+          SELECT 
+            TargetID,
+            TargetEmployeeName,
+            TargetEmployeeID,
+            TargetDepartmentName,
+            TargetHospitalName,
+            CaseStatus,
+            RepeatCount,
+            DidGuidanceSession,
+            DidDirectorAction,
+            DidLegalReferral,
+            DidAnnualEvaluation,
+            CreatedAt
+          FROM complaint_targets
+          WHERE TargetEmployeeName IS NOT NULL 
+            AND TargetEmployeeName != ''
+          ORDER BY TargetEmployeeName, CreatedAt DESC
+        `);
+        
+        if (centralRows.length > 0) {
+          console.log(`✅ [employee-complaints-table] تم العثور على ${centralRows.length} سجل في القاعدة المركزية`);
+          allRows = centralRows;
+        }
+      } catch (centralErr) {
+        console.warn(`⚠️ [employee-complaints-table] خطأ في البحث في القاعدة المركزية:`, centralErr.message);
+      }
+    } else if (allRows.length === 0 && targetHospitalId) {
+      console.warn(`⚠️ [employee-complaints-table] لم يتم العثور على بيانات للمستشفى ${targetHospitalId} في قاعدة بياناته. البيانات موجودة فقط في قواعد بيانات المستشفيات.`);
+    }
+
+    console.log(`📊 [employee-complaints-table] تم جلب ${allRows.length} سجل من complaint_targets`);
+
+    // تجميع البيانات حسب الموظف
+    const employees = {};
+    
+    allRows.forEach(row => {
+      const employeeName = row.TargetEmployeeName || 'غير معروف';
+      const employeeKey = `${employeeName}_${row.TargetHospitalName || 'unknown'}`;
+      
+      if (!employees[employeeKey]) {
+        employees[employeeKey] = {
+          name: employeeName,
+          employeeId: row.TargetEmployeeID || '—',
+          hospitalName: row.TargetHospitalName || 'غير محدد',
+          department: row.TargetDepartmentName || 'غير محدد',
+          records: [],
+          totalCount: 0,
+          countA: 0,
+          countB: 0
+        };
+      }
+      
+      // تحديد الفئة بناءً على CaseStatus و DidLegalReferral
+      const caseStatus = (row.CaseStatus || '').toLowerCase().trim();
+      const isCategoryB = 
+        caseStatus.includes('جسيمة') || 
+        caseStatus.includes('b') || 
+        caseStatus.includes('serious') ||
+        row.DidLegalReferral === 1 ||
+        (Number(row.RepeatCount) || 0) >= 5;
+      
+      if (isCategoryB) {
+        employees[employeeKey].countB++;
+      } else {
+        employees[employeeKey].countA++;
+      }
+      
+      employees[employeeKey].totalCount++;
+      employees[employeeKey].records.push({
+        repeatCount: row.RepeatCount || '0',
+        didGuidanceSession: row.DidGuidanceSession || 0,
+        didDirectorAction: row.DidDirectorAction || 0,
+        didLegalReferral: row.DidLegalReferral || 0,
+        didAnnualEvaluation: row.DidAnnualEvaluation || 0,
+        caseStatus: row.CaseStatus || 'غير محدد',
+        createdAt: row.CreatedAt
+      });
+    });
+    
+    // تحويل إلى مصفوفة وترتيبها
+    const result = Object.values(employees)
+      .map(emp => {
+        // الحصول على أحدث سجل
+        const latestRecord = emp.records.sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        )[0];
+        
+        // تحديد الفئة النهائية
+        const category = emp.countB > 0 ? 'B' : 'A';
+        
+        // تحديد الإجراء المطلوب
+        let requiredAction = '—';
+        if (emp.countB >= 1) {
+          requiredAction = '⚠️ يحتاج إفادة فورية';
+        } else if (emp.countA >= 8) {
+          requiredAction = '⚠️ تجاوز 8 بلاغات – إفادة مطلوبة';
+        } else if (emp.totalCount >= 5) {
+          requiredAction = '🔴 مكرر جدًا (5+ بلاغات)';
+        } else if (emp.countA >= 3) {
+          requiredAction = '⚠️ تنبيه متوسط (3+ بلاغات فئة A)';
+        }
+        
+        // استخراج الشهر من أحدث سجل
+        let month = '—';
+        if (latestRecord?.createdAt) {
+          const date = new Date(latestRecord.createdAt);
+          const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                          'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+          month = months[date.getMonth()] || date.toLocaleDateString('ar-SA', { month: 'long' });
+        }
+        
+        return {
+          name: emp.name,
+          employeeId: emp.employeeId,
+          hospitalName: emp.hospitalName,
+          department: emp.department,
+          month: month,
+          repeatCount: latestRecord?.repeatCount || '0',
+          category: category,
+          didGuidanceSession: latestRecord?.didGuidanceSession || 0,
+          didDirectorAction: latestRecord?.didDirectorAction || 0,
+          didLegalReferral: latestRecord?.didLegalReferral || 0,
+          didAnnualEvaluation: latestRecord?.didAnnualEvaluation || 0,
+          caseStatus: latestRecord?.caseStatus || 'غير محدد',
+          totalCount: emp.totalCount,
+          requiredAction: requiredAction
+        };
+      })
+      .sort((a, b) => b.totalCount - a.totalCount);
+
+    console.log(`✅ [employee-complaints-table] تم تجميع البيانات إلى ${result.length} موظف`);
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    console.error('employee-complaints-table error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'خطأ في جلب بيانات جدول الموظفين',
+      error: err.message 
+    });
   }
 });
 

@@ -103,25 +103,18 @@
       </div>
     </div>
 
-    <!-- 🔹 رسم بياني دائري - نسبة الرضا العام -->
+    <!-- 🔹 Gauge Chart - متوسط السكور العام -->
     <section class="bg-white shadow rounded-lg p-6 mb-8">
-      <h2 class="text-lg font-semibold mb-4 text-center text-gray-700">نسبة الرضا العام للمستشفى</h2>
-      <div class="flex flex-col md:flex-row items-center justify-center gap-8">
-        <div class="flex flex-col gap-3">
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded-full bg-green-500"></div>
-            <span class="text-gray-700">راضي</span>
-            <span id="satisfiedPercent" class="font-bold text-gray-800">0%</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded-full bg-red-500"></div>
-            <span class="text-gray-700">غير راضي</span>
-            <span id="notSatisfiedPercent" class="font-bold text-gray-800">0%</span>
-          </div>
+      <h2 class="text-lg font-semibold mb-4 text-center text-gray-700">
+        متوسط السكور العام – PressGaney Mean Score
+      </h2>
+      <div class="flex flex-col items-center justify-center gap-3">
+        <div class="w-48 h-24">
+          <canvas id="meanGauge"></canvas>
         </div>
-        <div class="w-64 h-64">
-          <canvas id="pressganeyChart"></canvas>
-        </div>
+        <p id="meanScoreLabel" class="text-2xl font-bold text-gray-700">0.00</p>
+        <p id="meanNsize" class="text-sm text-gray-600">n-size: 0</p>
+        <p id="meanDepartmentName" class="text-xs text-gray-500"></p>
       </div>
     </section>
 
@@ -469,6 +462,13 @@
           const list = await res.json();
           if (Array.isArray(list)) {
             const saved = localStorage.getItem('selectedHospitalId') || '';
+            
+            // إضافة خيار "الكل" في البداية
+            const allOption = document.createElement('option');
+            allOption.value = 'ALL';
+            allOption.textContent = '📌 جميع المستشفيات (All Facilities)';
+            select?.appendChild(allOption);
+            
             list
               .sort((a, b) => (a.SortOrder ?? 999) - (b.SortOrder ?? 999) || String(a.NameAr || '').localeCompare(String(b.NameAr || ''), 'ar'))
               .forEach(h => {
@@ -481,15 +481,30 @@
               select.value = saved || '';
               select.addEventListener('change', () => {
                 const val = select.value;
+                
+                if (val === 'ALL') {
+                  // وضع الكل
+                  localStorage.setItem('pressganey-mode', 'ALL');
+                  info.textContent = 'تم اختيار جميع المستشفيات';
+                  return; // لا نغير الصفحة ولا نعرض شيء جديد
+                }
+                
+                // وضع مستشفى واحد
+                localStorage.setItem('pressganey-mode', 'HOSPITAL');
                 info.textContent = val ? `المستشفى المختار: ${select.options[select.selectedIndex]?.textContent || ''}` : 'اختر المستشفى لعرض بيانات مؤشر الرضا.';
                 setHospitalId(val);
+                if (typeof loadData === 'function') {
+                  loadData();
+                }
               });
-              if (saved) {
+              if (saved && saved !== 'ALL') {
+                localStorage.setItem('pressganey-mode', 'HOSPITAL');
                 info.textContent = `المستشفى المختار: ${select.options[select.selectedIndex]?.textContent || ''}`;
                 setHospitalId(saved);
-              } else if (list.length) {
+              } else if (list.length && !saved) {
                 const firstId = list[0]?.HospitalID;
                 select.value = firstId || '';
+                localStorage.setItem('pressganey-mode', 'HOSPITAL');
                 info.textContent = `المستشفى المختار: ${select.options[select.selectedIndex]?.textContent || ''}`;
                 setHospitalId(firstId);
               }

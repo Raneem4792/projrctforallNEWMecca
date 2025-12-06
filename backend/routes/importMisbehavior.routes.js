@@ -1,10 +1,10 @@
-// routes/importMisbehavior.routes.js
 import express from 'express';
 import multer from 'multer';
 import JSZip from 'jszip';
 import { parseStringPromise } from 'xml2js';
 import { requireAuth } from '../middleware/auth.js';
 import { getCentralPool } from '../db/centralPool.js';
+import { getHospitalPool } from '../config/db.js';
 
 const router = express.Router();
 const upload = multer({ 
@@ -30,11 +30,13 @@ async function readExcel(buffer) {
 
   // Sheet XML
   const sheetFile = zip.file('xl/worksheets/sheet1.xml');
-  if (!sheetFile) {
-    throw new Error('لم يتم العثور على sheet1.xml في الملف');
+  // لا نلقي خطأ هنا فوراً، قد يكون الملف يعتمد كلياً على PivotCache
+  let sheetXML = null;
+  let sheet = null;
+  if (sheetFile) {
+    sheetXML = await sheetFile.async('string');
+    sheet = await parseStringPromise(sheetXML);
   }
-  const sheetXML = await sheetFile.async('string');
-  const sheet = await parseStringPromise(sheetXML);
 
   // Shared Strings
   let sharedStrings = [];
@@ -97,18 +99,121 @@ async function readExcel(buffer) {
     }
   }
 
-  return { sheet, sharedStrings, drawingTexts };
+  // Pivot Cache
+  let pivotData = null;
+  const pivotDefFile = zip.file('xl/pivotCache/pivotCacheDefinition1.xml');
+  const pivotRecFile = zip.file('xl/pivotCache/pivotCacheRecords1.xml');
+  
+  if (pivotDefFile && pivotRecFile) {
+      try {
+        const defXML = await pivotDefFile.async('string');
+        const recXML = await pivotRecFile.async('string');
+        const pivotDef = await parseStringPromise(defXML);
+        const pivotRec = await parseStringPromise(recXML);
+        pivotData = { pivotDef, pivotRec };
+      } catch (err) {
+        console.warn('⚠️ [MISBEHAVIOR-IMPORT] خطأ في قراءة PivotCache:', err.message);
+      }
+  }
+
+  return { sheet, sharedStrings, drawingTexts, pivotData };
 }
 
 /**
- * استخراج الصفوف من sheet1.xml
+ * استخراج Shared Items من PivotCacheDefinition
+ */
+function loadSharedItems(def) {
+    const cacheFields = def.pivotCacheDefinition?.cacheFields?.[0]?.cacheField;
+    if (!cacheFields) return {};
+
+    const items = {};
+
+    cacheFields.forEach((f) => {
+        const fieldName = f.$.name.trim();
+        items[fieldName] = [];
+
+        if (f.sharedItems && f.sharedItems[0] && f.sharedItems[0].s) {
+            const shared = f.sharedItems[0].s;
+            shared.forEach(s => {
+                // قد تكون القيمة في s.$.v أو s.v
+                const val = s.$ && s.$.v !== undefined ? s.$.v : (s.v || '');
+                items[fieldName].push(val);
+            });
+        }
+    });
+
+    return items;
+}
+
+/**
+ * فك PivotCacheRecords
+ */
+function parsePivotRecords(records, sharedItems) {
+    const rList = records.pivotCacheRecords?.r;
+    if (!rList) return [];
+
+    const rows = [];
+
+    rList.forEach(rec => {
+        // helper لاستخراج القيمة من المصفوفات x, s, n, b
+        const getVal = (arr, idx) => arr && arr[idx] && arr[idx].$ ? arr[idx].$.v : null;
+
+        // 1. استخراج القيم من sharedItems باستخدام المؤشرات في x
+        const facilityIdx = getVal(rec.x, 0);
+        const monthIdx = getVal(rec.x, 1);
+        const statusIdx = getVal(rec.x, 2); // قد يختلف الترتيب، لكن نتبع افتراض المستخدم
+
+        const facility = facilityIdx !== null && sharedItems["اسم المنشأة"] ? sharedItems["اسم المنشأة"][parseInt(facilityIdx)] : null;
+        const month = monthIdx !== null && sharedItems["الشهر"] ? sharedItems["الشهر"][parseInt(monthIdx)] : null;
+        
+        // تنظيف اسم الحالة (قد يحتوي على مسافة)
+        let statusKey = "حالة البلاغ";
+        if (!sharedItems[statusKey] && sharedItems["حالة البلاغ "]) statusKey = "حالة البلاغ ";
+        const status = statusIdx !== null && sharedItems[statusKey] ? sharedItems[statusKey][parseInt(statusIdx)] : null;
+
+        // 2. استخراج القيم النصية والرقمية المباشرة (s, n)
+        const employee = getVal(rec.s, 0);
+        
+        let repeatCount = getVal(rec.s, 1); // قد يكون مخزناً كنص
+        if (!repeatCount) repeatCount = getVal(rec.n, 1); // أو كرقم
+
+        // 3. القيم المنطقية (b)
+        const b0 = getVal(rec.b, 0);
+        const b1 = getVal(rec.b, 1);
+        const b2 = getVal(rec.b, 2);
+        const b3 = getVal(rec.b, 3);
+
+        const row = {
+            'اسم المنشأة': clean(facility),
+            'الشهر': clean(month),
+            'اسم الموظف': clean(employee),
+            'عدد مرات التكرار': clean(repeatCount),
+            'هل تم عمل جلسة استرشادية': b0 === '1' ? '1' : '0',
+            'هل تم توقيعها من مدير المنشأة': b1 === '1' ? '1' : '0',
+            'هل تم إحالة الموظف للتدوين القانونية': b2 === '1' ? '1' : '0',
+            'هل تم ربطها بتقييم الموظف السنوي': b3 === '1' ? '1' : '0',
+            'حالة البلاغ': clean(status),
+            // حقول قد تكون ناقصة من البنية المقترحة:
+            'القسم': null, 
+            'الرقم الوظيفي': null
+        };
+
+        // تحقق بسيط: يجب أن يكون هناك منشأة
+        if (row['اسم المنشأة']) {
+            rows.push(row);
+        }
+    });
+
+    return rows;
+}
+
+/**
+ * استخراج الصفوف من sheet1.xml (للملفات العادية)
  */
 function extractSheetRows(sheet, sharedStrings) {
-  // محاولة قراءة البنية بطرق مختلفة
   let rows = [];
   
-  // الطريقة 1: sheet.worksheet.sheetData[0].row
-  if (sheet.worksheet && sheet.worksheet.sheetData) {
+  if (sheet && sheet.worksheet && sheet.worksheet.sheetData) {
     const sheetData = Array.isArray(sheet.worksheet.sheetData) 
       ? sheet.worksheet.sheetData[0] 
       : sheet.worksheet.sheetData;
@@ -118,8 +223,7 @@ function extractSheetRows(sheet, sharedStrings) {
     }
   }
   
-  // الطريقة 2: sheet.sheetData.row
-  if (rows.length === 0 && sheet.sheetData) {
+  if (rows.length === 0 && sheet && sheet.sheetData) {
     const sheetData = Array.isArray(sheet.sheetData) 
       ? sheet.sheetData[0] 
       : sheet.sheetData;
@@ -130,7 +234,8 @@ function extractSheetRows(sheet, sharedStrings) {
   }
 
   if (rows.length === 0) {
-    console.error('❌ [MISBEHAVIOR-IMPORT] لم يتم العثور على صفوف في XML');
+    // قد لا يكون خطأ إذا كنا سنستخدم PivotCache
+    console.log('ℹ️ [MISBEHAVIOR-IMPORT] لم يتم العثور على صفوف في sheet1.xml');
     return [];
   }
 
@@ -151,7 +256,6 @@ function extractSheetRows(sheet, sharedStrings) {
         const cellValue = Array.isArray(c.v) ? c.v[0] : c.v;
         val = String(cellValue || '');
 
-        // إذا كانت القيمة من sharedStrings
         if (c.$.t === 's' && sharedStrings.length > 0) {
           const index = parseInt(val);
           if (!isNaN(index) && index >= 0 && index < sharedStrings.length) {
@@ -165,40 +269,6 @@ function extractSheetRows(sheet, sharedStrings) {
 
     return obj;
   });
-}
-
-/**
- * استخراج الأعمدة (الهيدر) من الرسم
- */
-function detectHeaders(drawingTexts) {
-  const headers = [
-    'اسم المنشأة',
-    'الشهر',
-    'اسم الموظف',
-    'الرقم الوظيفي',
-    'القسم',
-    'عدد مرات التكرار',
-    'هل تم عمل جلسة استرشادية',
-    'هل تم توقيعها من مدير المنشأة',
-    'هل تم إحالة الموظف للتدوين القانونية',
-    'هل تم ربطها بتقييم الموظف السنوي',
-    'حالة البلاغ'
-  ];
-
-  // إذا كان هناك نصوص من Drawings، نبحث عن العناوين فيها
-  if (drawingTexts.length > 0) {
-    const found = drawingTexts.filter((t) =>
-      headers.some((h) => t.includes(h))
-    );
-
-    if (found.length > 0) {
-      console.log('🎨 [MISBEHAVIOR-IMPORT] تم العثور على رؤوس أعمدة من Drawings:', found.slice(0, 11));
-      return found.slice(0, 11);
-    }
-  }
-
-  console.log('📋 [MISBEHAVIOR-IMPORT] استخدام أسماء أعمدة افتراضية');
-  return headers;
 }
 
 /**
@@ -218,60 +288,53 @@ function cellRefToColumn(cellRef) {
 }
 
 /**
- * تحويل الصفوف إلى JSON بناءً على عدد الأعمدة المتوقعة
+ * تحويل الصفوف إلى JSON بناءً على عدد الأعمدة المتوقعة (للملفات العادية)
  */
-function mapRowsToJSON(headers, sheetRows) {
-  const cols = headers.length;
+function mapRowsToJSON(sheetRows) {
   const json = [];
 
-  // البحث عن أول صف بيانات (عادة يبدأ من الصف 14)
-  let dataStartRow = 13; // الصف 14 (0-based = 13)
-  
-  for (let i = 0; i < sheetRows.length; i++) {
-    const row = sheetRows[i];
-    const rowValues = Object.values(row).filter(v => v && v.trim().length > 0);
-    
-    if (rowValues.length >= 3) {
-      const rowText = rowValues.join(' ').toLowerCase();
-      if (rowText.includes('مستشفى') || rowText.includes('مركز') || 
-          rowText.includes('محمد') || rowText.includes('احمد') ||
-          rowText.match(/\d+/)) {
-        dataStartRow = i;
-        console.log(`📊 [MISBEHAVIOR-IMPORT] تم اكتشاف بداية البيانات في الصف ${i + 1}`);
-        break;
-      }
-    }
-  }
+  // التعيين الثابت (Hardcoded Mapping)
+  const columnMap = {
+    'اسم المنشأة': 1,
+    'الشهر': 2,
+    'اسم الموظف': 3,
+    'الرقم الوظيفي': 4,
+    'القسم': 5,
+    'عدد مرات التكرار': 6,
+    'هل تم عمل جلسة استرشادية': 7,
+    'هل تم توقيعها من مدير المنشأة': 8,
+    'هل تم إحالة الموظف للتدوين القانونية': 9,
+    'هل تم ربطها بتقييم الموظف السنوي': 10,
+    'حالة البلاغ': 11
+  };
 
-  // قراءة البيانات من الصف المكتشف
-  for (let i = dataStartRow; i < sheetRows.length; i++) {
+  console.log(`✅ [MISBEHAVIOR-IMPORT] (Sheet Mode) استخدام التعيين الثابت`);
+
+  for (let i = 0; i < sheetRows.length; i++) {
     const row = sheetRows[i];
     if (!row || Object.keys(row).length === 0) continue;
 
-    // تجميع الخلايا حسب رقم العمود
     const rowCells = {};
     Object.keys(row).forEach(cellRef => {
       const colNum = cellRefToColumn(cellRef);
-      if (colNum >= 0 && colNum < cols) {
-        // نأخذ القيمة الأولى إذا كان هناك عدة خلايا في نفس العمود
-        if (!rowCells[colNum] || !rowCells[colNum].trim()) {
-          rowCells[colNum] = row[cellRef];
-        }
-      }
+      if (colNum >= 0) rowCells[colNum] = row[cellRef];
     });
 
-    // إنشاء كائن من القيم
-    const values = [];
-    for (let h = 0; h < cols; h++) {
-      values.push(rowCells[h] || '');
-    }
-
-    // التحقق من وجود بيانات
-    if (values.filter(v => v && v.trim().length > 0).length < 3) continue;
+    const facilityVal = (rowCells[1] || '').trim(); 
+    const isFacility = facilityVal.includes('مستشفى') || facilityVal.includes('مركز') || facilityVal.includes('مدينة') || facilityVal.includes('إدارة') || facilityVal.includes('مجمع');
+    
+    if (!isFacility) continue;
 
     let obj = {};
-    for (let h = 0; h < cols; h++) {
-      obj[headers[h]] = clean(values[h] || '');
+    for (const [key, colIdx] of Object.entries(columnMap)) {
+      obj[key] = clean(rowCells[colIdx] || '');
+    }
+
+    let employeeName = obj['اسم الموظف'];
+    let facilityName = obj['اسم المنشأة'];
+    
+    if (!facilityName && !employeeName) {
+        continue;
     }
 
     json.push(obj);
@@ -290,46 +353,167 @@ function toBool(v) {
 }
 
 /**
- * إدخال البيانات في complaint_targets
+ * إدخال البيانات في complaint_targets داخل قاعدة بيانات المستشفى
  */
-async function saveToDB(rows, connection) {
+async function saveToDB(rows, centralPool) {
   let inserted = 0;
   let errors = 0;
   const errorDetails = [];
+  const skippedHospitals = [];
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     
     try {
-      const employee = row['اسم الموظف'] || '';
-      if (!employee || !employee.trim()) {
-        errors++;
-        errorDetails.push(`الصف ${i + 2}: اسم الموظف مطلوب`);
+      const facilityName = (row['اسم المنشأة'] || '').trim();
+      
+      // إذا لم يكن هناك اسم منشأة، نتخطى
+      if (!facilityName) {
+        console.warn(`⚠️ [MISBEHAVIOR-IMPORT] الصف ${i + 2}: اسم المنشأة فارغ`);
         continue;
       }
 
-      await connection.query(
-        `
-        INSERT INTO complaint_targets 
-        (ComplaintID, TargetEmployeeName, TargetDepartmentName, RepeatCount,
-         DidGuidanceSession, DidDirectorAction, DidLegalReferral,
-         DidAnnualEvaluation, CaseStatus, CreatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        `,
-        [
-          null, // ComplaintID = NULL للبيانات من الإكسل
-          employee.trim(),
-          (row['القسم'] || '').trim() || null,
-          (row['عدد مرات التكرار'] || '').trim() || null,
-          toBool(row['هل تم عمل جلسة استرشادية'] || ''),
-          toBool(row['هل تم توقيعها من مدير المنشأة'] || ''),
-          toBool(row['هل تم إحالة الموظف للتدوين القانونية'] || ''),
-          toBool(row['هل تم ربطها بتقييم الموظف السنوي'] || ''),
-          (row['حالة البلاغ'] || '').trim() || null
-        ]
+      // 1️⃣ البحث عن المستشفى في القاعدة المركزية باستخدام LIKE للبحث المرن
+      // أولاً: محاولة تطابق حرفي (أدق)
+      let [hospRows] = await centralPool.query(
+        `SELECT HospitalID, NameAr FROM hospitals WHERE NameAr = ? LIMIT 1`,
+        [facilityName]
       );
 
-      inserted++;
+      // إذا لم يتم العثور، استخدم LIKE للبحث المرن
+      if (hospRows.length === 0) {
+        // استخراج الكلمات المهمة من اسم المنشأة (إزالة الكلمات الشائعة)
+        const importantWords = facilityName
+          .replace(/\s+(مستشفى|مستوصف|مركز|صحي|طبي|تخصصي|عام)\s+/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        if (importantWords) {
+          // البحث باستخدام LIKE مع عدة محاولات
+          [hospRows] = await centralPool.query(
+            `SELECT HospitalID, NameAr FROM hospitals 
+             WHERE NameAr LIKE ? 
+                OR NameAr LIKE ?
+                OR NameAr LIKE ?
+             ORDER BY 
+               CASE 
+                 WHEN NameAr = ? THEN 1
+                 WHEN NameAr LIKE ? THEN 2
+                 WHEN NameAr LIKE ? THEN 3
+                 ELSE 4
+               END
+             LIMIT 1`,
+            [
+              `%${facilityName}%`,      // البحث بكامل الاسم
+              `%${importantWords}%`,     // البحث بالكلمات المهمة
+              `${importantWords}%`,      // البحث ببداية الكلمات المهمة
+              facilityName,              // للتطابق الحرفي في ORDER BY
+              `${facilityName}%`,        // لبداية التطابق في ORDER BY
+              `%${importantWords}%`      // لاحتواء الكلمات المهمة في ORDER BY
+            ]
+          );
+        }
+      }
+
+      // 2️⃣ إذا المستشفى غير موجود → نخزّنه في skipped
+      if (hospRows.length === 0) {
+        if (!skippedHospitals.includes(facilityName)) {
+          skippedHospitals.push(facilityName);
+          console.warn(`⚠️ [MISBEHAVIOR-IMPORT] المستشفى غير موجود: ${facilityName}`);
+        }
+        continue;
+      }
+
+      const hospitalId = hospRows[0].HospitalID;
+      const matchedHospitalName = hospRows[0].NameAr;
+      
+      // تسجيل مطابقة المستشفى (للتشخيص)
+      if (matchedHospitalName !== facilityName) {
+        console.log(`ℹ️ [MISBEHAVIOR-IMPORT] مطابقة: "${facilityName}" → "${matchedHospitalName}" (ID: ${hospitalId})`);
+      }
+
+      // 3️⃣ جلب قاعدة بيانات المستشفى
+      let hospitalPool;
+      try {
+        hospitalPool = await getHospitalPool(hospitalId);
+      } catch (poolErr) {
+        errors++;
+        errorDetails.push(`الصف ${i + 2}: فشل الاتصال بقاعدة بيانات المستشفى ${facilityName} (${poolErr.message})`);
+        console.error(`❌ [MISBEHAVIOR-IMPORT] خطأ في الاتصال بقاعدة بيانات المستشفى ${hospitalId}:`, poolErr.message);
+        continue;
+      }
+
+      // 4️⃣ تجهيز البيانات
+      const employee = row['اسم الموظف'] || '';
+      const employeeName = (employee && employee.trim()) ? employee.trim() : 'غير محدد';
+      
+      if (employeeName === 'غير محدد') {
+        if (!row['القسم']) {
+          continue;
+        }
+      }
+
+      // 5️⃣ تخزين داخل قاعدة المستشفى فقط
+      const connection = await hospitalPool.getConnection();
+      try {
+        // التحقق من وجود عمود HospitalID أولاً
+        const [columns] = await connection.query(`SHOW COLUMNS FROM complaint_targets LIKE 'HospitalID'`);
+        const hasHospitalID = columns.length > 0;
+
+        if (hasHospitalID) {
+          // ✅ إدراج مع HospitalID
+          await connection.query(
+            `
+            INSERT INTO complaint_targets 
+            (ComplaintID, TargetEmployeeName, TargetDepartmentName, RepeatCount,
+             DidGuidanceSession, DidDirectorAction, DidLegalReferral,
+             DidAnnualEvaluation, CaseStatus, TargetHospitalName, HospitalID, CreatedAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `,
+            [
+              null,
+              employeeName,
+              (row['القسم'] || '').trim() || null,
+              (row['عدد مرات التكرار'] || '').trim() || null,
+              toBool(row['هل تم عمل جلسة استرشادية'] || ''),
+              toBool(row['هل تم توقيعها من مدير المنشأة'] || ''),
+              toBool(row['هل تم إحالة الموظف للتدوين القانونية'] || ''),
+              toBool(row['هل تم ربطها بتقييم الموظف السنوي'] || ''),
+              (row['حالة البلاغ'] || '').trim() || null,
+              matchedHospitalName || facilityName,  // حفظ اسم المستشفى المطابق
+              hospitalId  // ✅ إضافة HospitalID
+            ]
+          );
+        } else {
+          // إدراج بدون HospitalID (للتوافق مع القواعد القديمة)
+          await connection.query(
+            `
+            INSERT INTO complaint_targets 
+            (ComplaintID, TargetEmployeeName, TargetDepartmentName, RepeatCount,
+             DidGuidanceSession, DidDirectorAction, DidLegalReferral,
+             DidAnnualEvaluation, CaseStatus, TargetHospitalName, CreatedAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `,
+            [
+              null,
+              employeeName,
+              (row['القسم'] || '').trim() || null,
+              (row['عدد مرات التكرار'] || '').trim() || null,
+              toBool(row['هل تم عمل جلسة استرشادية'] || ''),
+              toBool(row['هل تم توقيعها من مدير المنشأة'] || ''),
+              toBool(row['هل تم إحالة الموظف للتدوين القانونية'] || ''),
+              toBool(row['هل تم ربطها بتقييم الموظف السنوي'] || ''),
+              (row['حالة البلاغ'] || '').trim() || null,
+              matchedHospitalName || facilityName  // حفظ اسم المستشفى المطابق
+            ]
+          );
+        }
+
+        inserted++;
+      } finally {
+        connection.release();
+      }
+
     } catch (err) {
       errors++;
       errorDetails.push(`الصف ${i + 2}: ${err.message}`);
@@ -337,7 +521,7 @@ async function saveToDB(rows, connection) {
     }
   }
 
-  return { inserted, errors, errorDetails };
+  return { inserted, errors, errorDetails, skippedHospitals };
 }
 
 /**
@@ -355,34 +539,39 @@ router.post('/misbehavior', requireAuth, upload.single('file'), async (req, res)
 
     console.log('📥 [MISBEHAVIOR-IMPORT] بدء استيراد ملف سوء المعاملة...');
 
-    const { sheet, sharedStrings, drawingTexts } = await readExcel(req.file.buffer);
+    const { sheet, sharedStrings, pivotData } = await readExcel(req.file.buffer);
     
-    console.log(`📚 [MISBEHAVIOR-IMPORT] تم قراءة ${sharedStrings.length} نص من sharedStrings`);
-    console.log(`🎨 [MISBEHAVIOR-IMPORT] تم قراءة ${drawingTexts.length} نص من Drawings`);
+    let jsonRows = [];
 
-    const sheetRows = extractSheetRows(sheet, sharedStrings);
-    
-    if (sheetRows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'الملف فارغ أو لا يحتوي على بيانات'
-      });
+    // الأولوية لـ PivotCache إذا وجد
+    if (pivotData) {
+        console.log('✅ [MISBEHAVIOR-IMPORT] تم العثور على PivotCache, جاري القراءة منه...');
+        try {
+            const sharedItems = loadSharedItems(pivotData.pivotDef);
+            jsonRows = parsePivotRecords(pivotData.pivotRec, sharedItems);
+            console.log(`✅ [MISBEHAVIOR-IMPORT] تم استخراج ${jsonRows.length} صف من PivotCache`);
+        } catch (err) {
+            console.error('❌ [MISBEHAVIOR-IMPORT] فشل قراءة PivotCache:', err);
+            // سنحاول السقوط للخيار الثاني (Sheet)
+        }
     }
 
-    const headers = detectHeaders(drawingTexts);
-    console.log('📌 [MISBEHAVIOR-IMPORT] رؤوس الأعمدة:', headers);
-
-    const jsonRows = mapRowsToJSON(headers, sheetRows);
-    console.log(`✅ [MISBEHAVIOR-IMPORT] تم تحويل ${jsonRows.length} صف إلى JSON`);
+    // إذا فشل PivotCache أو لم يوجد، نحاول قراءة Sheet1
+    if (jsonRows.length === 0 && sheet) {
+        console.log('ℹ️ [MISBEHAVIOR-IMPORT] المحاولة باستخدام Sheet1...');
+        const sheetRows = extractSheetRows(sheet, sharedStrings);
+        if (sheetRows.length > 0) {
+            jsonRows = mapRowsToJSON(sheetRows);
+        }
+    }
 
     if (jsonRows.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'الملف فارغ أو لا يحتوي على بيانات. تأكد من أن الملف يحتوي على جدول بيانات يبدأ من الصف 14.'
+        message: 'الملف فارغ أو لا يحتوي على بيانات (تم فحص PivotTable و Sheet1)'
       });
     }
 
-    // عرض عينة من البيانات
     if (jsonRows.length > 0) {
       console.log(`📋 [MISBEHAVIOR-IMPORT] عينة من البيانات:`, {
         'اسم المنشأة': jsonRows[0]['اسم المنشأة'],
@@ -391,17 +580,28 @@ router.post('/misbehavior', requireAuth, upload.single('file'), async (req, res)
       });
     }
 
-    // الاتصال بقاعدة البيانات
-    const pool = await getCentralPool();
-    if (!pool) {
-      throw new Error('فشل الاتصال بقاعدة البيانات');
+    // الحصول على القاعدة المركزية للبحث عن المستشفيات فقط
+    const centralPool = await getCentralPool();
+    if (!centralPool) {
+      throw new Error('فشل الاتصال بقاعدة البيانات المركزية');
     }
 
-    connection = await pool.getConnection();
-
-    const { inserted, errors, errorDetails } = await saveToDB(jsonRows, connection);
+    // حفظ البيانات في قواعد بيانات المستشفيات
+    const { inserted, errors, errorDetails, skippedHospitals } = await saveToDB(jsonRows, centralPool);
 
     console.log(`✅ [MISBEHAVIOR-IMPORT] اكتمل الاستيراد: ${inserted} سجل تم إدراجه، ${errors} خطأ`);
+    if (skippedHospitals.length > 0) {
+      console.warn(`⚠️ [MISBEHAVIOR-IMPORT] تم تخطي ${skippedHospitals.length} منشأة غير موجودة:`, skippedHospitals);
+    }
+
+    // بناء رسالة شاملة
+    let message = `تم استيراد ${inserted} سجل بنجاح`;
+    if (errors > 0) {
+      message += ` (${errors} خطأ)`;
+    }
+    if (skippedHospitals.length > 0) {
+      message += `. تم تخطي ${skippedHospitals.length} منشأة غير موجودة`;
+    }
 
     return res.json({
       success: true,
@@ -409,7 +609,8 @@ router.post('/misbehavior', requireAuth, upload.single('file'), async (req, res)
       total: jsonRows.length,
       errors,
       errorDetails: errors > 0 ? errorDetails.slice(0, 10) : [],
-      message: `تم استيراد ${inserted} سجل بنجاح${errors > 0 ? ` (${errors} خطأ)` : ''}`
+      skippedHospitals: skippedHospitals.length > 0 ? skippedHospitals : undefined,
+      message: message
     });
 
   } catch (err) {
@@ -419,10 +620,6 @@ router.post('/misbehavior', requireAuth, upload.single('file'), async (req, res)
       message: 'حدث خطأ أثناء الاستيراد',
       error: err.message
     });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 });
 

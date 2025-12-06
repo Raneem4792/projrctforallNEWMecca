@@ -1953,3 +1953,18 @@ AFTER ProcessingDurationHours;
 
 ALTER TABLE complaints
 ADD COLUMN IsSecretVisitor TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Secret Visitor Complaint';
+
+
+ALTER TABLE complaint_targets 
+ADD COLUMN TargetHospitalName varchar(150) NULL,
+ADD COLUMN RepeatCount varchar(20) NULL,
+ADD COLUMN DidGuidanceSession tinyint(1) DEFAULT 0,
+ADD COLUMN DidDirectorAction tinyint(1) DEFAULT 0,
+ADD COLUMN DidLegalReferral tinyint(1) DEFAULT 0,
+ADD COLUMN DidAnnualEvaluation tinyint(1) DEFAULT 0,
+ADD COLUMN CaseStatus varchar(50) NULL;
+
+ALTER TABLE complaint_targets DROP FOREIGN KEY fk_ct_c;
+
+ALTER TABLE complaint_targets 
+MODIFY COLUMN ComplaintID bigint NULL;

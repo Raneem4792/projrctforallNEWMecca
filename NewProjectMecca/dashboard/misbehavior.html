@@ -146,31 +146,42 @@
       </div>
     </section>
 
-    <!-- قسم الإشعارات والإجراءات المطلوبة -->
-    <section class="container mx-auto px-4 my-10">
-      <div class="bg-white rounded-2xl p-8 shadow-xl border">
-        <div class="flex items-center mb-6">
-          <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center ml-4">
-            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
+    <!-- 📊 بلاغات سوء التعامل مقابل زمن الإغلاق -->
+    <section class="py-6">
+      <div class="container mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow border border-gray-100 p-6">
+          <h3 class="text-2xl font-semibold mb-2" style="color:#002B5B" data-i18n-key="chart-mistreatment-time-title">
+            بلاغات سوء التعامل ومتوسط زمن الإغلاق لكل مستشفى
+          </h3>
+          <p class="text-sm text-gray-500 mb-4" data-i18n-key="chart-mistreatment-time-subtitle">
+            مقارنة بين عدد بلاغات سوء التعامل ومتوسط زمن إغلاقها بالساعات
+          </p>
+
+          <div class="relative" style="height:380px;" dir="ltr">
+            <canvas id="chartMistreatmentTime"></canvas>
           </div>
-          <h3 class="text-2xl font-bold" style="color:#002B5B" data-i18n-key="alerts-title">الإشعارات والإجراءات المطلوبة</h3>
         </div>
-        <div id="misbehavior-alerts" class="space-y-3"></div>
       </div>
     </section>
 
     <!-- قسم الرسم البياني للموظفين -->
     <section class="container mx-auto px-4 my-10">
       <div class="bg-white rounded-2xl p-8 shadow-xl border">
-        <div class="flex items-center mb-6">
-          <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center ml-4">
-            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6M13 19V5m4 14v-8"/>
-            </svg>
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center ml-4">
+              <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6M13 19V5m4 14v-8"/>
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold" style="color:#002B5B" data-i18n-key="chart-title">عدد بلاغات الموظفين</h3>
           </div>
-          <h3 class="text-2xl font-bold" style="color:#002B5B" data-i18n-key="chart-title">عدد بلاغات الموظفين</h3>
+          <!-- فلتر المستشفى -->
+          <div id="chart-hospital-filter-container" class="hidden">
+            <select id="chartHospitalFilter" class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+              <option value="">جميع المستشفيات</option>
+            </select>
+          </div>
         </div>
         <div class="mt-6" style="height: 400px;">
           <canvas id="employeesChart"></canvas>
@@ -199,7 +210,6 @@
                 <th class="p-3 border border-gray-200" data-i18n-key="emp-table-id">الرقم الوظيفي</th>
                 <th class="p-3 border border-gray-200" data-i18n-key="emp-table-dept">القسم</th>
                 <th class="p-3 border border-gray-200" data-i18n-key="emp-table-repeat">عدد مرات التكرار</th>
-                <th class="p-3 border border-gray-200" data-i18n-key="emp-table-category">الفئة</th>
                 <th class="p-3 border border-gray-200" data-i18n-key="emp-table-improvement">جلسة تحسين؟</th>
                 <th class="p-3 border border-gray-200" data-i18n-key="emp-table-manager">توجيه من المدير؟</th>
                 <th class="p-3 border border-gray-200" data-i18n-key="emp-table-legal">إحالة قانونية؟</th>
@@ -352,6 +362,8 @@
           'priority-normal': 'عادية',
           'priority-unknown': 'غير محددة',
           'alerts-title': 'الإشعارات والإجراءات المطلوبة',
+          'chart-mistreatment-time-title': 'بلاغات سوء التعامل ومتوسط زمن الإغلاق لكل مستشفى',
+          'chart-mistreatment-time-subtitle': 'مقارنة بين عدد بلاغات سوء التعامل ومتوسط زمن إغلاقها بالساعات',
           'chart-title': 'عدد بلاغات الموظفين',
           'employees-table-title': 'سجل الموظفين في بلاغات سوء المعاملة',
           'emp-table-hospital': 'اسم المنشأة',
@@ -367,7 +379,7 @@
           'emp-table-evaluation': 'ضمن التقييم السنوي؟',
           'emp-table-status': 'حالة البلاغ',
           'emp-table-action': 'إجراء مطلوب',
-          'alert-b-immediate': '⚠️ يحتاج إفادة فورية (فئة B)',
+          'alert-b-immediate': '⚠️ يحتاج إفادة فورية',
           'alert-a-8': '⚠️ تجاوز 8 بلاغات – إفادة مطلوبة',
           'alert-a-3': '⚠️ تنبيه متوسط (3+ بلاغات فئة A)',
           'alert-repeated': '🔴 مكرر جدًا (5+ بلاغات)',
@@ -381,7 +393,11 @@
           'filter-all': 'الكل',
           'filter-category-a': 'A',
           'filter-category-b': 'B',
-          'show-all-btn': 'عرض الكل'
+          'show-all-btn': 'عرض الكل',
+          'modal-complaints-title': 'بلاغات سوء التعامل',
+          'loading-complaints': 'جاري تحميل البلاغات...',
+          'no-complaints-hospital': 'لا توجد بلاغات لهذا المستشفى',
+          'close': 'إغلاق'
         },
         en: {
           'nav-home': 'Home',
@@ -451,6 +467,8 @@
           'priority-normal': 'Normal',
           'priority-unknown': 'Not specified',
           'alerts-title': 'Alerts & Required Actions',
+          'chart-mistreatment-time-title': 'Misbehavior Reports and Average Closure Time per Hospital',
+          'chart-mistreatment-time-subtitle': 'Comparison between the number of misbehavior reports and their average closure time in hours',
           'chart-title': 'Employee Reports Count',
           'employees-table-title': 'Employee Misbehavior Records',
           'emp-table-hospital': 'Facility Name',
@@ -480,7 +498,11 @@
           'filter-all': 'All',
           'filter-category-a': 'A',
           'filter-category-b': 'B',
-          'show-all-btn': 'Show All'
+          'show-all-btn': 'Show All',
+          'modal-complaints-title': 'Misbehavior Reports',
+          'loading-complaints': 'Loading reports...',
+          'no-complaints-hospital': 'No reports for this hospital',
+          'close': 'Close'
         }
       };
 
@@ -571,6 +593,51 @@
       };
     })();
   </script>
+
+  <!-- Modal لعرض قائمة البلاغات -->
+  <div id="complaintsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <!-- Overlay -->
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeComplaintsModal()"></div>
+
+      <!-- Modal panel -->
+      <div class="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" dir="rtl">
+        <div class="bg-white px-6 pt-6 pb-4">
+          <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
+            <h3 class="text-2xl font-bold" id="modal-title" style="color:#002B5B">
+              <span data-i18n-key="modal-complaints-title">بلاغات سوء التعامل</span> - <span id="modal-hospital-name" class="text-gray-700"></span>
+            </h3>
+            <button onclick="closeComplaintsModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+              <span class="sr-only" data-i18n-key="close">إغلاق</span>
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Loading state -->
+          <div id="complaintsModalLoading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600"></div>
+            <p class="mt-4 text-gray-600" data-i18n-key="loading-complaints">جاري تحميل البلاغات...</p>
+          </div>
+
+          <!-- Empty state -->
+          <div id="complaintsModalEmpty" class="hidden text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="mt-4 text-gray-600" data-i18n-key="no-complaints-hospital">لا توجد بلاغات لهذا المستشفى</p>
+          </div>
+
+          <!-- Complaints list -->
+          <div id="complaintsModalContent" class="hidden max-h-96 overflow-y-auto pr-2">
+            <div class="space-y-3" id="complaints-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="misbehavior.js"></script>
 </body>
 </html>
