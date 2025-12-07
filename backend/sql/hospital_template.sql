@@ -1251,6 +1251,9 @@ CREATE TABLE pressganey_data (
 ALTER TABLE pressganey_data
 ADD COLUMN HospitalID INT NULL AFTER id;
 
+ALTER TABLE pressganey_data
+ADD COLUMN TripName VARCHAR(100) NULL AFTER HospitalID;
+
   
 INSERT INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('PRESSGANEY_VIEW',   'عرض لوحة برسجيني',        'pressganey'),
