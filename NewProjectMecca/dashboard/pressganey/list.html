@@ -157,6 +157,26 @@
       </div>
     </section>
 
+    <!-- 🔹 رسم بياني مقارنة الرحلات بين جميع المستشفيات -->
+    <section id="all-hospitals-trip-comparison" class="mb-8 hidden">
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800">مقارنة الرحلات بين جميع المستشفيات</h2>
+        
+        <!-- اختيار الرحلة -->
+        <div class="mb-6 flex items-center justify-center gap-4">
+          <label for="trip-comparison-select" class="text-sm font-medium text-gray-700 whitespace-nowrap">اختر الرحلة:</label>
+          <select id="trip-comparison-select" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[300px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            <option value="">اختر الرحلة</option>
+          </select>
+        </div>
+        
+        <!-- الرسم البياني -->
+        <div class="mt-6" style="height: 500px;">
+          <canvas id="trip-comparison-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
     <!-- 🔹 بطاقات الرحلات -->
     <div id="departments-cards-container" class="grid md:grid-cols-3 gap-6 mb-8">
       <!-- سيتم ملء هذا المكان تلقائياً بالرحلات -->
@@ -167,32 +187,96 @@
       <h2 class="text-xl font-bold mb-2 text-center text-gray-800">مقارنة إحصائيات مؤشر الرضا بين أرباع السنة</h2>
       <p class="text-sm text-gray-600 mb-4 text-center">يُظهر الجدول الفروقات بين نتائج الأرباع لكل رحلة، مع إبراز الرحلات التي تحتاج إلى خطة تحسينية.</p>
       
-      <!-- تصفية حسب الرحلة -->
-      <div class="mb-4 flex items-center justify-end gap-3">
-        <label for="trip-filter-select" class="text-sm font-medium text-gray-700">تصفية حسب الرحلة:</label>
-        <select id="trip-filter-select" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-          <option value="">الكل</option>
-        </select>
+      <!-- تصفية حسب الرحلة وأزرار التحكم -->
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button id="expand-all-trips" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors">
+            <i class="fas fa-expand-alt mr-1"></i> فتح الكل
+          </button>
+          <button id="collapse-all-trips" class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors">
+            <i class="fas fa-compress-alt mr-1"></i> طي الكل
+          </button>
+        </div>
+        <div class="flex items-center gap-3">
+          <label for="trip-filter-select" class="text-sm font-medium text-gray-700">تصفية حسب الرحلة:</label>
+          <select id="trip-filter-select" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+            <option value="">الكل</option>
+          </select>
+        </div>
       </div>
       
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
         <table class="min-w-full border text-sm text-center" id="pressganeyTable">
-          <thead class="bg-gray-100">
+          <thead class="bg-gray-100 sticky top-0 z-10">
             <tr>
-              <th class="border p-2 font-semibold">الرحلة</th>
-              <th class="border p-2 font-semibold">السؤال</th>
-              <th class="border p-2 font-semibold">الربع الأول</th>
-              <th class="border p-2 font-semibold">الربع الثاني</th>
-              <th class="border p-2 font-semibold">الربع الثالث</th>
-              <th class="border p-2 font-semibold">الربع الرابع</th>
-              <th class="border p-2 font-semibold">نسبة التغير في آخر ربع</th>
-              <th class="border p-2 font-semibold">المطلوب</th>
+              <th class="border p-2 font-semibold bg-gray-100">الرحلة</th>
+              <th class="border p-2 font-semibold bg-gray-100">السؤال</th>
+              <th class="border p-2 font-semibold bg-gray-100">الربع الأول</th>
+              <th class="border p-2 font-semibold bg-gray-100">الربع الثاني</th>
+              <th class="border p-2 font-semibold bg-gray-100">الربع الثالث</th>
+              <th class="border p-2 font-semibold bg-gray-100">الربع الرابع</th>
+              <th class="border p-2 font-semibold bg-gray-100">نسبة التغير</th>
+              <th class="border p-2 font-semibold bg-gray-100">المطلوب</th>
             </tr>
           </thead>
           <tbody>
             <tr><td colspan="8" class="p-3">لا توجد بيانات بعد</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- 🔹 جداول مقارنة الأرباع لكل مستشفى -->
+    <section id="hospital-quarters-comparison-section" class="mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">مقارنة الأرباع لكل مستشفى</h2>
+      
+      <!-- الجداول -->
+      <div id="hospital-comparison-tables" class="hidden">
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- جدول الرحلات الأكثر انخفاضاً -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4 text-center text-red-600">الرحلات الأكثر انخفاضاً</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full border text-sm text-center" id="decreasing-trips-table">
+                <thead class="bg-red-50">
+                  <tr>
+                    <th class="border p-2 font-semibold">الرحلة</th>
+                    <th class="border p-2 font-semibold">الربع الأول</th>
+                    <th class="border p-2 font-semibold">الربع الثاني</th>
+                    <th class="border p-2 font-semibold">الربع الثالث</th>
+                    <th class="border p-2 font-semibold">الربع الرابع</th>
+                    <th class="border p-2 font-semibold">نسبة التغيير</th>
+                  </tr>
+                </thead>
+                <tbody id="decreasing-trips-tbody">
+                  <tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- جدول الرحلات الأكثر ارتفاعاً -->
+          <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4 text-center text-green-600">الرحلات الأكثر ارتفاعاً</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full border text-sm text-center" id="increasing-trips-table">
+                <thead class="bg-green-50">
+                  <tr>
+                    <th class="border p-2 font-semibold">الرحلة</th>
+                    <th class="border p-2 font-semibold">الربع الأول</th>
+                    <th class="border p-2 font-semibold">الربع الثاني</th>
+                    <th class="border p-2 font-semibold">الربع الثالث</th>
+                    <th class="border p-2 font-semibold">الربع الرابع</th>
+                    <th class="border p-2 font-semibold">نسبة التغيير</th>
+                  </tr>
+                </thead>
+                <tbody id="increasing-trips-tbody">
+                  <tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>

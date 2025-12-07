@@ -74,6 +74,7 @@ let pressganeyData = [];
 let chartInstance = null;
 let lastImportedQuarter = null;
 let lastImportedYear = null;
+let tripComparisonChart = null; // الرسم البياني لمقارنة الرحلات بين المستشفيات
 
 // قائمة جميع الرحلات الرسمية
 const ALL_TRIPS = [
@@ -777,15 +778,26 @@ async function loadData() {
       const tripsContainer = document.getElementById('departments-cards-container');
       const summaryCards = document.getElementById('summary-cards');
       const quartersComparisonSection = document.getElementById('quarters-comparison-section');
+      const hospitalQuartersSection = document.getElementById('hospital-quarters-comparison-section');
+      const hospitalComparisonTables = document.getElementById('hospital-comparison-tables');
+      const tripComparisonSection = document.getElementById('all-hospitals-trip-comparison');
       
       if (singleGaugeSection) singleGaugeSection.classList.add('hidden');
       if (tripsContainer) tripsContainer.classList.add('hidden');
       if (summaryCards) summaryCards.classList.add('hidden');
       if (quartersComparisonSection) quartersComparisonSection.classList.add('hidden');
+      if (hospitalQuartersSection) hospitalQuartersSection.classList.add('hidden');
+      if (hospitalComparisonTables) hospitalComparisonTables.classList.add('hidden');
       
       if (allHospitalsSection) {
         allHospitalsSection.classList.remove('hidden');
         renderHospitalsGauges();
+      }
+      
+      // إظهار قسم مقارنة الرحلات بين المستشفيات
+      if (tripComparisonSection) {
+        tripComparisonSection.classList.remove('hidden');
+        setupTripComparisonChart();
       }
     } else {
       // إظهار المؤشر الفردي وبطاقات الرحلات وبطاقات الملخص وجدول مقارنة الأرباع وإخفاء بطاقات المستشفيات
@@ -794,15 +806,34 @@ async function loadData() {
       const tripsContainer = document.getElementById('departments-cards-container');
       const summaryCards = document.getElementById('summary-cards');
       const quartersComparisonSection = document.getElementById('quarters-comparison-section');
+      const hospitalQuartersSection = document.getElementById('hospital-quarters-comparison-section');
+      const tripComparisonSection = document.getElementById('all-hospitals-trip-comparison');
       
       if (singleGaugeSection) singleGaugeSection.classList.remove('hidden');
       if (tripsContainer) tripsContainer.classList.remove('hidden');
       if (summaryCards) summaryCards.classList.remove('hidden');
       if (quartersComparisonSection) quartersComparisonSection.classList.remove('hidden');
+      if (hospitalQuartersSection) hospitalQuartersSection.classList.remove('hidden');
       if (allHospitalsSection) allHospitalsSection.classList.add('hidden');
+      
+      // إخفاء قسم مقارنة الرحلات بين المستشفيات
+      if (tripComparisonSection) {
+        tripComparisonSection.classList.add('hidden');
+      }
       
       updateMeanGauge();
       renderTripsCharts();
+      
+      // تحميل بيانات مقارنة الأرباع للمستشفى المختار
+      const hospitalSelect = document.getElementById('pressganey-hospital-select');
+      if (hospitalSelect && hospitalSelect.value && hospitalSelect.value !== 'ALL') {
+        const hospitalId = hospitalSelect.value;
+        await loadHospitalQuartersComparison(hospitalId);
+        const hospitalComparisonTables = document.getElementById('hospital-comparison-tables');
+        if (hospitalComparisonTables) {
+          hospitalComparisonTables.classList.remove('hidden');
+        }
+      }
     }
     
     updateTable();
@@ -1279,23 +1310,60 @@ function updateTable() {
       }
     }
     
+    // إنشاء معرف فريد للرحلة
+    const deptId = dept.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const totalRowId = `trip-total-${deptId}`;
+    const detailsRowId = `trip-details-${deptId}`;
+    
     const totalRow = document.createElement('tr');
+    totalRow.id = totalRowId;
+    totalRow.className = `trip-total-row cursor-pointer hover:bg-blue-50 transition-colors ${needsAction ? 'bg-red-50' : 'bg-blue-50'}`;
+    totalRow.setAttribute('data-trip-id', deptId);
+    totalRow.setAttribute('data-expanded', 'false');
     totalRow.innerHTML = `
-      <td class="border p-2 font-semibold">${dept}</td>
-      <td class="border p-2 font-semibold">إجمالي</td>
-      <td class="border p-2">${avgQ1 !== null ? avgQ1.toFixed(2) : '-'}</td>
-      <td class="border p-2">${avgQ2 !== null ? avgQ2.toFixed(2) : '-'}</td>
-      <td class="border p-2">${avgQ3 !== null ? avgQ3.toFixed(2) : '-'}</td>
-      <td class="border p-2">${avgQ4 !== null ? avgQ4.toFixed(2) : '-'}</td>
-      <td class="border p-2 ${changeClass}">${changePercent}</td>
+      <td class="border p-2 font-semibold">
+        <div class="flex items-center justify-center gap-2">
+          <span class="toggle-icon text-blue-600 font-bold">▶</span>
+          <span class="text-gray-800">${dept}</span>
+        </div>
+      </td>
+      <td class="border p-2 font-semibold text-gray-700">إجمالي</td>
+      <td class="border p-2 font-medium">${avgQ1 !== null ? avgQ1.toFixed(2) : '-'}</td>
+      <td class="border p-2 font-medium">${avgQ2 !== null ? avgQ2.toFixed(2) : '-'}</td>
+      <td class="border p-2 font-medium">${avgQ3 !== null ? avgQ3.toFixed(2) : '-'}</td>
+      <td class="border p-2 font-medium">${avgQ4 !== null ? avgQ4.toFixed(2) : '-'}</td>
+      <td class="border p-2 ${changeClass} font-semibold">${changePercent}</td>
       <td class="border p-2">
         ${needsAction 
-          ? '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">إضافة مشروع تحسيني</button>'
-          : '<span class="text-gray-500">لا يتطلب إجراء</span>'
+          ? '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors">إضافة مشروع تحسيني</button>'
+          : '<span class="text-gray-500 text-xs">لا يتطلب إجراء</span>'
         }
       </td>
     `;
     tbody.appendChild(totalRow);
+    
+    // إضافة event listener للطي/الفتح
+    totalRow.addEventListener('click', function() {
+      const isExpanded = this.getAttribute('data-expanded') === 'true';
+      const detailsRows = document.querySelectorAll(`[data-parent-trip="${deptId}"]`);
+      const toggleIcon = this.querySelector('.toggle-icon');
+      
+      if (isExpanded) {
+        // طي الصفوف
+        detailsRows.forEach(row => {
+          row.style.display = 'none';
+        });
+        this.setAttribute('data-expanded', 'false');
+        if (toggleIcon) toggleIcon.textContent = '▶';
+      } else {
+        // فتح الصفوف
+        detailsRows.forEach(row => {
+          row.style.display = '';
+        });
+        this.setAttribute('data-expanded', 'true');
+        if (toggleIcon) toggleIcon.textContent = '▼';
+      }
+    });
     
     // صفوف الأسئلة - حساب نسبة التغير بين آخر ربع وربع قبله
     items.forEach(item => {
@@ -1330,18 +1398,24 @@ function updateTable() {
       }
       
       const row = document.createElement('tr');
+      row.setAttribute('data-parent-trip', deptId);
+      row.style.display = 'none'; // مخفي افتراضياً
+      row.className = `trip-detail-row ${qNeedsAction ? 'bg-red-50' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`;
       row.innerHTML = `
-        <td class="border p-2">${item.department}</td>
-        <td class="border p-2 text-right">${item.question}</td>
-        <td class="border p-2">${item.Q1 !== null ? item.Q1.toFixed(2) : '-'}</td>
-        <td class="border p-2">${item.Q2 !== null ? item.Q2.toFixed(2) : '-'}</td>
-        <td class="border p-2">${item.Q3 !== null ? item.Q3.toFixed(2) : '-'}</td>
-        <td class="border p-2">${item.Q4 !== null ? item.Q4.toFixed(2) : '-'}</td>
-        <td class="border p-2 ${qChangeClass}">${qChange}</td>
+        <td class="border p-2 pl-8 text-gray-600 text-sm">
+          <span class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
+          ${item.department}
+        </td>
+        <td class="border p-2 text-right text-sm text-gray-700">${item.question}</td>
+        <td class="border p-2 text-sm">${item.Q1 !== null ? item.Q1.toFixed(2) : '-'}</td>
+        <td class="border p-2 text-sm">${item.Q2 !== null ? item.Q2.toFixed(2) : '-'}</td>
+        <td class="border p-2 text-sm">${item.Q3 !== null ? item.Q3.toFixed(2) : '-'}</td>
+        <td class="border p-2 text-sm">${item.Q4 !== null ? item.Q4.toFixed(2) : '-'}</td>
+        <td class="border p-2 ${qChangeClass} text-sm">${qChange}</td>
         <td class="border p-2">
           ${qNeedsAction 
-            ? '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">إضافة مشروع تحسيني</button>'
-            : '<span class="text-gray-500">لا يتطلب إجراء</span>'
+            ? '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors">إضافة مشروع تحسيني</button>'
+            : '<span class="text-gray-500 text-xs">لا يتطلب إجراء</span>'
           }
         </td>
       `;
@@ -1367,14 +1441,68 @@ async function handleExcelFile(file) {
           return reject(new Error('Empty file'));
         }
 
-        // 🔍 التحقق من التنسيق الجديد (Facility, n-Size, Facility Mean)
+        // 🔍 التحقق من التنسيقات المختلفة
         const firstRow = rawRows[0] || [];
         const secondRow = rawRows[1] || [];
         const thirdRow = rawRows[2] || [];
         
-        // البحث في الصف الثاني والثالث عن أعمدة Facility
-        // ⚠️ تحسين: يجب أن يكون هناك "Facility" أو "Hospital" أو "مستشفى" لتأكيد التنسيق
-        // أو وجود "Facility Mean" بشكل صريح. وجود "n-size" وحده غير كافٍ.
+        // التحقق من التنسيق الجديد: صف أول يحتوي على Service, Overall Mean, Overall N-Size, Period
+        // الصف الأول قد يحتوي على: Service (A1), Overall Mean (B1), Overall N-Size (C1), Period (D1)
+        // أو قد تكون القيم الفعلية: "Hospitals-Outpatient", 81.14, 1990, "Quarter 4, 2025"
+        const firstRowTextForCheck = firstRow.map(c => String(c || '')).join(' ').toLowerCase();
+        const secondRowTextForCheck = secondRow.map(c => String(c || '')).join(' ').toLowerCase();
+        
+        // التحقق من وجود Service في الصف الأول (عمود A)
+        const hasServiceInFirstRow = firstRow[0] && (
+          firstRow[0].toString().toLowerCase().includes('service') || 
+          firstRow[0].toString().toLowerCase().includes('hospitals') ||
+          firstRow[0].toString().toLowerCase().includes('outpatient') ||
+          firstRow[0].toString().toLowerCase().includes('inpatient') ||
+          firstRow[0].toString().toLowerCase().includes('emergency') ||
+          firstRow[0].toString().toLowerCase().includes('radiology')
+        );
+        
+        // التحقق من وجود Overall Mean في الصف الأول (عمود B) - قد يكون نص أو رقم
+        const hasOverallMeanInFirstRow = firstRow[1] && (
+          firstRow[1].toString().toLowerCase().includes('overall mean') || 
+          firstRow[1].toString().toLowerCase().includes('mean') ||
+          !isNaN(parseFloat(firstRow[1]))
+        );
+        
+        // التحقق من وجود Overall N-Size في الصف الأول (عمود C) - قد يكون نص أو رقم
+        const hasOverallNSizeInFirstRow = firstRow[2] && (
+          firstRow[2].toString().toLowerCase().includes('overall n-size') || 
+          firstRow[2].toString().toLowerCase().includes('n-size') ||
+          firstRow[2].toString().toLowerCase().includes('size') ||
+          !isNaN(parseInt(firstRow[2]))
+        );
+        
+        // التحقق من وجود Period في الصف الأول (عمود D)
+        const hasPeriodInFirstRow = firstRow[3] && (
+          firstRow[3].toString().toLowerCase().includes('period') || 
+          firstRow[3].toString().toLowerCase().includes('quarter') ||
+          firstRow[3].toString().toLowerCase().includes('q1') ||
+          firstRow[3].toString().toLowerCase().includes('q2') ||
+          firstRow[3].toString().toLowerCase().includes('q3') ||
+          firstRow[3].toString().toLowerCase().includes('q4')
+        );
+        
+        // التحقق من وجود Facility في الصف الثاني (عمود A)
+        const hasFacilityInSecondRow = secondRow[0] && (
+          secondRow[0].toString().toLowerCase().includes('facility') ||
+          secondRow[0].toString().toLowerCase().includes('hospital') ||
+          secondRow[0].toString().toLowerCase().includes('مستشفى')
+        );
+        
+        const hasServiceOverallFormat = 
+          Array.isArray(firstRow) && firstRow.length >= 4 &&
+          hasServiceInFirstRow &&
+          hasOverallMeanInFirstRow &&
+          hasOverallNSizeInFirstRow &&
+          hasPeriodInFirstRow &&
+          hasFacilityInSecondRow;
+        
+        // التحقق من التنسيق Facility-based (الصف الثاني يحتوي على Facility)
         const hasFacilityFormat = 
           (Array.isArray(secondRow) && secondRow.some(cell => 
             typeof cell === 'string' && (
@@ -1394,14 +1522,21 @@ async function handleExcelFile(file) {
           ));
 
         console.log('🔍 [Excel] فحص التنسيق:', {
+          hasServiceOverallFormat,
           hasFacilityFormat,
           firstRow: firstRow.slice(0, 5),
           secondRow: secondRow.slice(0, 5),
           thirdRow: thirdRow.slice(0, 5)
         });
 
+        // معالجة التنسيق الجديد: Service + Overall Mean + متعدد المستشفيات
+        if (hasServiceOverallFormat && hasFacilityFormat) {
+          console.log('📋 [Excel] استخدام تنسيق Service + Multi-Facility');
+          return handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject);
+        }
+        
+        // معالجة التنسيق Facility-based القديم
         if (hasFacilityFormat) {
-          // معالجة التنسيق الجديد (Facility-based)
           console.log('📋 [Excel] استخدام تنسيق Facility-based');
           return handleFacilityFormatExcel(rawRows, resolve, reject);
         }
@@ -1725,6 +1860,247 @@ async function handleExcelFile(file) {
   });
 }
 
+// دالة معالجة التنسيق الجديد: Service + Overall Mean + متعدد المستشفيات
+function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
+  try {
+    // الصف الأول: Service, Overall Mean, Overall N-Size, Period
+    const firstRow = rawRows[0] || [];
+    
+    // استخراج Service من العمود الأول
+    let service = (firstRow[0] || '').toString().trim();
+    
+    // استخراج Overall Mean من العمود الثاني
+    // قد يكون نص "Overall Mean" أو رقم (القيمة الفعلية)
+    let overallMean = 0;
+    if (firstRow[1] !== undefined && firstRow[1] !== null && firstRow[1] !== '') {
+      const meanValue = firstRow[1];
+      if (typeof meanValue === 'number') {
+        overallMean = meanValue;
+      } else {
+        const meanStr = meanValue.toString().trim();
+        const meanNum = parseFloat(meanStr);
+        if (!isNaN(meanNum)) {
+          overallMean = meanNum;
+        } else if (meanStr.toLowerCase().includes('overall mean')) {
+          // إذا كان نص "Overall Mean"، نستخدم 0 (القيمة الإجمالية)
+          overallMean = 0;
+        }
+      }
+    }
+    
+    // استخراج Overall N-Size من العمود الثالث
+    // قد يكون نص "Overall N-Size" أو رقم (القيمة الفعلية)
+    let overallNSize = 0;
+    if (firstRow[2] !== undefined && firstRow[2] !== null && firstRow[2] !== '') {
+      const sizeValue = firstRow[2];
+      if (typeof sizeValue === 'number') {
+        overallNSize = sizeValue;
+      } else {
+        const sizeStr = sizeValue.toString().trim();
+        // محاولة استخراج الرقم من النص (مثل "1,990" أو "1990")
+        const sizeNum = parseInt(sizeStr.replace(/,/g, ''));
+        if (!isNaN(sizeNum)) {
+          overallNSize = sizeNum;
+        } else if (sizeStr.toLowerCase().includes('n-size')) {
+          overallNSize = 0;
+        }
+      }
+    }
+    
+    // استخراج Period من العمود الرابع
+    const periodText = (firstRow[3] || '').toString().trim();
+    
+    console.log('📋 [Excel] Service Format - First Row:', { 
+      service, 
+      overallMean, 
+      overallNSize, 
+      periodText, 
+      firstRow: firstRow.slice(0, 5) 
+    });
+    
+    // استخراج الربع والسنة من Period
+    let quarter = 'Q1';
+    let year = new Date().getFullYear();
+    const quarterMatch = periodText.match(/quarter\s*(\d+)/i);
+    const yearMatch = periodText.match(/(\d{4})/);
+    if (quarterMatch) {
+      quarter = 'Q' + quarterMatch[1];
+    }
+    if (yearMatch) {
+      year = parseInt(yearMatch[1]);
+    }
+    
+    // الصف الثاني: أسماء الأعمدة (Facility, n-Size, Facility Mean, Region, Region's Mean)
+    const headerRow = rawRows[1] || [];
+    const headers = headerRow.map(h => String(h || '').trim());
+    
+    console.log('📋 [Excel] Headers:', headers);
+    
+    // البحث عن فهارس الأعمدة
+    const facilityIndex = headers.findIndex(h => {
+      const hLower = h.toLowerCase();
+      return hLower.includes('facility') && !hLower.includes('mean') && !hLower.includes('region');
+    });
+    
+    const nsizeIndex = headers.findIndex(h => {
+      const hLower = h.toLowerCase();
+      return hLower.includes('n-size') || 
+             hLower.includes('nsize') || 
+             hLower.includes('n size') ||
+             (hLower.includes('size') && !hLower.includes('overall'));
+    });
+    
+    const facilityMeanIndex = headers.findIndex(h => {
+      const hLower = h.toLowerCase();
+      return hLower.includes('facility mean') || 
+             (hLower.includes('mean') && !hLower.includes('overall') && !hLower.includes('region'));
+    });
+    
+    const regionIndex = headers.findIndex(h => {
+      const hLower = h.toLowerCase();
+      return hLower.includes('region') && !hLower.includes('mean');
+    });
+    
+    const regionMeanIndex = headers.findIndex(h => {
+      const hLower = h.toLowerCase();
+      return hLower.includes('region') && hLower.includes('mean');
+    });
+    
+    console.log('🔍 [Excel] فهارس الأعمدة:', { 
+      facilityIndex, 
+      nsizeIndex, 
+      facilityMeanIndex, 
+      regionIndex, 
+      regionMeanIndex 
+    });
+    
+    // التحقق من وجود الأعمدة المطلوبة
+    if (facilityMeanIndex === -1) {
+      console.error('❌ [Excel] لم يتم العثور على عمود Facility Mean');
+      toast('تعذر العثور على عمود Facility Mean. الأعمدة الموجودة: ' + headers.join(', '), 'error');
+      return reject(new Error('Facility Mean column not found'));
+    }
+    
+    // هذا التنسيق خاص بمتوسط السكور العام لكل مستشفى وليس رحلة محددة
+    // لذلك نضع TripName كـ "متوسط السكور العام" بدلاً من استخراجه من Service
+    let tripName = "متوسط السكور العام";
+    
+    console.log('📊 [Excel] Service Format - Overall Mean لكل مستشفى');
+    console.log('📊 [Excel] Service:', service, '→ TripName: "متوسط السكور العام"');
+    
+    // البيانات تبدأ من الصف الثالث
+    const dataRows = rawRows.slice(2);
+    const processed = [];
+    
+    for (const row of dataRows) {
+      const facilityName = facilityIndex !== -1 ? (row[facilityIndex] || '').toString().trim() : '';
+      
+      // استخراج n-Size (قد يكون رقم أو نص يحتوي على فاصلات)
+      let nsize = 0;
+      if (nsizeIndex !== -1 && row[nsizeIndex] !== undefined && row[nsizeIndex] !== null && row[nsizeIndex] !== '') {
+        const sizeValue = row[nsizeIndex];
+        if (typeof sizeValue === 'number') {
+          nsize = sizeValue;
+        } else {
+          const sizeStr = sizeValue.toString().trim().replace(/,/g, '');
+          const sizeNum = parseInt(sizeStr);
+          if (!isNaN(sizeNum)) {
+            nsize = sizeNum;
+          }
+        }
+      }
+      
+      // استخراج Facility Mean
+      let facilityMean = 0;
+      if (facilityMeanIndex !== -1 && row[facilityMeanIndex] !== undefined && row[facilityMeanIndex] !== null && row[facilityMeanIndex] !== '') {
+        const meanValue = row[facilityMeanIndex];
+        if (typeof meanValue === 'number') {
+          facilityMean = meanValue;
+        } else {
+          const meanNum = parseFloat(meanValue.toString().trim());
+          if (!isNaN(meanNum)) {
+            facilityMean = meanNum;
+          }
+        }
+      }
+      
+      const region = regionIndex !== -1 ? (row[regionIndex] || '').toString().trim() : '';
+      
+      // استخراج Region Mean
+      let regionMean = null;
+      if (regionMeanIndex !== -1 && row[regionMeanIndex] !== undefined && row[regionMeanIndex] !== null && row[regionMeanIndex] !== '') {
+        const regMeanValue = row[regionMeanIndex];
+        if (typeof regMeanValue === 'number') {
+          regionMean = regMeanValue;
+        } else {
+          const regMeanNum = parseFloat(regMeanValue.toString().trim());
+          if (!isNaN(regMeanNum)) {
+            regionMean = regMeanNum;
+          }
+        }
+      }
+      
+      // تخطي الصفوف الفارغة
+      if (!facilityName && facilityMean === 0) continue;
+      
+      // تخطي الصفوف التي لا تحتوي على Mean صالح
+      if (facilityMean === 0 || isNaN(facilityMean)) {
+        continue;
+      }
+      
+      // استخراج HospitalID من اسم المستشفى (إذا كان موجوداً في قاعدة البيانات)
+      // سنستخدم FacilityName كمعرف مؤقت
+      const finalFacilityName = facilityName || 'غير محدد';
+      
+      processed.push({
+        TripName: tripName,
+        department_key: 'Overall',
+        department_name_ar: 'إجمالي',
+        department_name_en: 'Overall',
+        domain: 'Overall',
+        domain_ar: 'إجمالي',
+        question_code: 'overall_mean',
+        question_text_en: 'Overall Mean Score',
+        question_text_ar: 'متوسط السكور العام',
+        satisfied_count: nsize || 0,
+        not_satisfied_count: 0,
+        mean_score: facilityMean,
+        diff: 0,
+        quarter: quarter,
+        year: year,
+        FacilityName: finalFacilityName,
+        Region: region,
+        RegionMean: regionMean,
+        OverallMean: overallMean || null,
+        OverallNSize: overallNSize || null
+      });
+    }
+    
+    if (processed.length === 0) {
+      toast('لا توجد بيانات صالحة في الملف', 'warn');
+      return reject(new Error('No valid data'));
+    }
+    
+    pressganeyData = [...pressganeyData, ...processed];
+    
+    console.log(`📊 تم استيراد ${processed.length} سجل من ${processed.length} مستشفى (Overall Mean - بدون رحلة محددة) (${quarter} ${year})`);
+    console.log('📊 المستشفيات:', [...new Set(processed.map(p => p.FacilityName))]);
+    
+    updateSummary();
+    updateChart();
+    updateMeanGauge();
+    renderTripsCharts();
+    updateTable();
+    
+    toast(`تم استيراد ${processed.length} سجل من ${processed.length} مستشفى بنجاح (متوسط السكور العام - بدون رحلة محددة)`, 'success');
+    resolve(processed);
+  } catch (err) {
+    console.error('Error processing Multi-Facility Service format Excel:', err);
+    toast('فشل استيراد الملف: ' + err.message, 'error');
+    reject(err);
+  }
+}
+
 // دالة معالجة التنسيق الجديد (Facility-based Excel)
 function handleFacilityFormatExcel(rawRows, resolve, reject) {
   try {
@@ -1986,6 +2362,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // إعداد أزرار فتح/طي الكل
+  const expandAllBtn = document.getElementById('expand-all-trips');
+  const collapseAllBtn = document.getElementById('collapse-all-trips');
+  
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', () => {
+      const totalRows = document.querySelectorAll('.trip-total-row');
+      totalRows.forEach(row => {
+        const deptId = row.getAttribute('data-trip-id');
+        const detailsRows = document.querySelectorAll(`[data-parent-trip="${deptId}"]`);
+        const toggleIcon = row.querySelector('.toggle-icon');
+        
+        detailsRows.forEach(detailRow => {
+          detailRow.style.display = '';
+        });
+        row.setAttribute('data-expanded', 'true');
+        if (toggleIcon) toggleIcon.textContent = '▼';
+      });
+    });
+  }
+  
+  if (collapseAllBtn) {
+    collapseAllBtn.addEventListener('click', () => {
+      const totalRows = document.querySelectorAll('.trip-total-row');
+      totalRows.forEach(row => {
+        const deptId = row.getAttribute('data-trip-id');
+        const detailsRows = document.querySelectorAll(`[data-parent-trip="${deptId}"]`);
+        const toggleIcon = row.querySelector('.toggle-icon');
+        
+        detailsRows.forEach(detailRow => {
+          detailRow.style.display = 'none';
+        });
+        row.setAttribute('data-expanded', 'false');
+        if (toggleIcon) toggleIcon.textContent = '▶';
+      });
+    });
+  }
+  
   // ربط زر استيراد إكسل
   document.getElementById('importExcelBtn')?.addEventListener('click', () => {
     excelInput.click();
@@ -2055,5 +2469,290 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // تحميل البيانات
   loadData();
+  
+  // إعداد جداول مقارنة الأرباع لكل مستشفى
+  setupHospitalQuartersComparison();
 });
+
+// دالة إعداد جداول مقارنة الأرباع لكل مستشفى
+async function setupHospitalQuartersComparison() {
+  // استخدام قائمة المستشفى الموجودة في الأعلى
+  const hospitalSelect = document.getElementById('pressganey-hospital-select');
+  const comparisonSection = document.getElementById('hospital-comparison-tables');
+  
+  if (!hospitalSelect || !comparisonSection) return;
+  
+  // إضافة event listener على قائمة المستشفى الموجودة
+  hospitalSelect.addEventListener('change', async () => {
+    const hospitalId = hospitalSelect.value;
+    const mode = localStorage.getItem('pressganey-mode');
+    
+    // إذا كان "جميع المستشفيات"، لا نعرض الجداول
+    if (mode === 'ALL' || !hospitalId || hospitalId === 'ALL') {
+      comparisonSection.classList.add('hidden');
+      return;
+    }
+    
+    // تحميل البيانات للمستشفى المختار
+    await loadHospitalQuartersComparison(hospitalId);
+    comparisonSection.classList.remove('hidden');
+  });
+  
+  // تحميل البيانات للمستشفى المختار حالياً (إذا كان موجوداً)
+  const currentHospitalId = hospitalSelect.value;
+  const mode = localStorage.getItem('pressganey-mode');
+  if (currentHospitalId && currentHospitalId !== 'ALL' && mode !== 'ALL') {
+    await loadHospitalQuartersComparison(currentHospitalId);
+    comparisonSection.classList.remove('hidden');
+  }
+}
+
+// دالة تحميل بيانات مقارنة الأرباع لمستشفى محدد
+async function loadHospitalQuartersComparison(hospitalId) {
+  const decreasingTbody = document.getElementById('decreasing-trips-tbody');
+  const increasingTbody = document.getElementById('increasing-trips-tbody');
+  
+  if (!decreasingTbody || !increasingTbody) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/pressganey/quarters-comparison/${hospitalId}`, {
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    
+    const result = await res.json();
+    if (!result.ok || !result.data) {
+      throw new Error('لا توجد بيانات');
+    }
+    
+    const { increasing, decreasing } = result.data;
+    
+    // عرض الرحلات الأكثر انخفاضاً
+    if (decreasing.length === 0) {
+      decreasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>';
+    } else {
+      decreasingTbody.innerHTML = decreasing.map(trip => {
+        const changeClass = trip.changePercent < 0 ? 'text-red-600 font-semibold' : '';
+        const changeText = trip.changePercent !== null 
+          ? `${trip.changePercent < 0 ? '' : '+'}${trip.changePercent.toFixed(2)}%`
+          : '-';
+        
+        return `
+          <tr class="hover:bg-red-50">
+            <td class="border p-2 text-right font-medium">${trip.tripName}</td>
+            <td class="border p-2">${trip.Q1 !== null ? trip.Q1.toFixed(2) : '-'}</td>
+            <td class="border p-2">${trip.Q2 !== null ? trip.Q2.toFixed(2) : '-'}</td>
+            <td class="border p-2">${trip.Q3 !== null ? trip.Q3.toFixed(2) : '-'}</td>
+            <td class="border p-2">${trip.Q4 !== null ? trip.Q4.toFixed(2) : '-'}</td>
+            <td class="border p-2 ${changeClass}">${changeText}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // عرض الرحلات الأكثر ارتفاعاً
+    if (increasing.length === 0) {
+      increasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>';
+    } else {
+      increasingTbody.innerHTML = increasing.map(trip => {
+        const changeClass = trip.changePercent > 0 ? 'text-green-600 font-semibold' : '';
+        const changeText = trip.changePercent !== null 
+          ? `${trip.changePercent > 0 ? '+' : ''}${trip.changePercent.toFixed(2)}%`
+          : '-';
+        
+        return `
+          <tr class="hover:bg-green-50">
+            <td class="border p-2 text-right font-medium">${trip.tripName}</td>
+            <td class="border p-2">${trip.Q1 !== null ? trip.Q1.toFixed(2) : '-'}</td>
+            <td class="border p-2">${trip.Q2 !== null ? trip.Q2.toFixed(2) : '-'}</td>
+            <td class="border p-2">${trip.Q3 !== null ? trip.Q3.toFixed(2) : '-'}</td>
+            <td class="border p-2">${trip.Q4 !== null ? trip.Q4.toFixed(2) : '-'}</td>
+            <td class="border p-2 ${changeClass}">${changeText}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('خطأ في تحميل بيانات مقارنة الأرباع:', err);
+    decreasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-red-500">خطأ في تحميل البيانات</td></tr>';
+    increasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-red-500">خطأ في تحميل البيانات</td></tr>';
+  }
+}
+
+// دالة إعداد رسم بياني مقارنة الرحلات بين جميع المستشفيات
+async function setupTripComparisonChart() {
+  const tripSelect = document.getElementById('trip-comparison-select');
+  const chartCanvas = document.getElementById('trip-comparison-chart');
+  
+  if (!tripSelect || !chartCanvas) return;
+  
+  try {
+    // جلب قائمة الرحلات من البيانات
+    const tripsRes = await fetch(`${API_BASE}/api/pressganey/trips`, {
+      headers: authHeaders()
+    });
+    
+    let trips = [];
+    if (tripsRes.ok) {
+      const tripsData = await tripsRes.json();
+      trips = tripsData.data || tripsData || [];
+    } else {
+      // استخدام قائمة الرحلات الثابتة كبديل
+      trips = ALL_TRIPS.map(trip => ({ TripName: trip }));
+    }
+    
+    // ملء قائمة الرحلات
+    tripSelect.innerHTML = '<option value="">اختر الرحلة</option>';
+    trips.forEach(trip => {
+      const tripName = trip.TripName || trip;
+      if (tripName && tripName !== 'غير محددة' && tripName !== 'متوسط السكور العام') {
+        const option = document.createElement('option');
+        option.value = tripName;
+        option.textContent = tripName;
+        tripSelect.appendChild(option);
+      }
+    });
+    
+    // إضافة event listener
+    tripSelect.addEventListener('change', async () => {
+      const tripName = tripSelect.value;
+      if (tripName) {
+        await loadTripComparisonData(tripName);
+      } else {
+        // إخفاء الرسم البياني
+        if (tripComparisonChart) {
+          tripComparisonChart.destroy();
+          tripComparisonChart = null;
+        }
+      }
+    });
+  } catch (err) {
+    console.error('خطأ في إعداد رسم بياني مقارنة الرحلات:', err);
+  }
+}
+
+// دالة تحميل بيانات مقارنة رحلة محددة بين جميع المستشفيات
+async function loadTripComparisonData(tripName) {
+  const chartCanvas = document.getElementById('trip-comparison-chart');
+  
+  if (!chartCanvas) return;
+  
+  try {
+    // جلب البيانات من API
+    const res = await fetch(`${API_BASE}/api/pressganey/trip-comparison-all-hospitals?tripName=${encodeURIComponent(tripName)}`, {
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    
+    const result = await res.json();
+    if (!result.ok || !result.data || result.data.length === 0) {
+      // إخفاء الرسم البياني
+      if (tripComparisonChart) {
+        tripComparisonChart.destroy();
+        tripComparisonChart = null;
+      }
+      chartCanvas.parentElement.innerHTML = '<p class="text-center text-gray-500 py-8">لا توجد بيانات لهذه الرحلة</p>';
+      return;
+    }
+    
+    const hospitals = result.data;
+    
+    // إعداد بيانات الرسم البياني
+    const labels = hospitals.map(h => h.hospitalName);
+    const scores = hospitals.map(h => h.avgScore);
+    
+    // تحديد الألوان (الأعلى 5 أزرق، الباقي أحمر)
+    const colors = hospitals.map((h, index) => {
+      return index < 5 ? '#3B82F6' : '#EF4444';
+    });
+    
+    // تدمير الرسم البياني القديم
+    if (tripComparisonChart) {
+      tripComparisonChart.destroy();
+    }
+    
+    // إنشاء الرسم البياني (عمودي)
+    tripComparisonChart = new Chart(chartCanvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: `متوسط السكور - ${tripName}`,
+          data: scores,
+          backgroundColor: colors,
+          borderColor: colors.map(c => c === '#3B82F6' ? '#2563EB' : '#DC2626'),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `متوسط السكور: ${context.parsed.y.toFixed(2)}`;
+              }
+            }
+          },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            formatter: (value) => value.toFixed(2),
+            font: {
+              weight: 'bold',
+              size: 11
+            },
+            color: '#374151'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              font: {
+                family: 'Tajawal'
+              }
+            },
+            title: {
+              display: true,
+              text: 'متوسط السكور',
+              font: {
+                family: 'Tajawal',
+                size: 14,
+                weight: 'bold'
+              }
+            }
+          },
+          x: {
+            ticks: {
+              font: {
+                family: 'Tajawal'
+              },
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        }
+      }
+    });
+  } catch (err) {
+    console.error('خطأ في تحميل بيانات مقارنة الرحلات:', err);
+    if (tripComparisonChart) {
+      tripComparisonChart.destroy();
+      tripComparisonChart = null;
+    }
+    chartCanvas.parentElement.innerHTML = '<p class="text-center text-red-500 py-8">خطأ في تحميل البيانات</p>';
+  }
+}
 

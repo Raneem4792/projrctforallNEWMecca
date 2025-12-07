@@ -233,7 +233,7 @@ router.post(
                   updated_at = NOW()
               `, [
                 hospitalIdFromRequest,
-                item.TripName || null,
+                item.TripName ?? null,
                 item.department_key || item.departmentKey || 'غير محدد',
                 item.department_name_ar || item.departmentNameAr || null,
                 item.department_name_en || item.departmentNameEn || null,
@@ -329,7 +329,7 @@ router.post(
                 updated_at = NOW()
             `, [
               hid,
-              item.TripName || null,
+              item.TripName ?? null,
               item.department_key || item.departmentKey || 'غير محدد',
               item.department_name_ar || item.departmentNameAr || null,
               item.department_name_en || item.departmentNameEn || null,
@@ -503,7 +503,7 @@ async function saveByFacilityName(req, res, data, defaultQuarter, defaultYear) {
                   updated_at = NOW()
               `, [
                 hospital.HospitalID,
-                item.TripName || null,
+                item.TripName ?? null,
                 item.department_key || item.departmentKey || 'Overall',
                 item.department_name_ar || item.departmentNameAr || 'إجمالي',
                 item.department_name_en || item.departmentNameEn || 'Overall',
@@ -565,6 +565,259 @@ async function saveByFacilityName(req, res, data, defaultQuarter, defaultYear) {
     throw err;
   }
 }
+
+/**
+ * GET /api/pressganey/quarters-comparison/:hospitalId
+ * جلب بيانات مقارنة الأرباع لكل مستشفى
+ */
+router.get(
+  '/quarters-comparison/:hospitalId',
+  requireAuth,
+  requirePermission('PRESSGANEY_VIEW'),
+  async (req, res, next) => {
+    try {
+      const hospitalId = parseInt(req.params.hospitalId);
+      const { getHospitalPool } = await import('../config/db.js');
+      const pool = await getHospitalPool(hospitalId);
+      
+      if (!pool) {
+        return res.status(404).json({ ok: false, error: 'المستشفى غير موجود' });
+      }
+      
+      // جلب البيانات لكل رحلة مع الأرباع الأربعة
+      const [rows] = await pool.query(`
+        SELECT 
+          TripName,
+          quarter,
+          year,
+          AVG(mean_score) as avg_score,
+          SUM(satisfied_count) as total_nsize
+        FROM pressganey_data
+        WHERE HospitalID = ?
+          AND TripName IS NOT NULL
+          AND TripName != ''
+          AND quarter IN ('Q1', 'Q2', 'Q3', 'Q4')
+        GROUP BY TripName, quarter, year
+        ORDER BY TripName, year, quarter
+      `, [hospitalId]);
+      
+      // تجميع البيانات حسب الرحلة
+      const tripsData = {};
+      rows.forEach(row => {
+        const tripName = row.TripName;
+        if (!tripsData[tripName]) {
+          tripsData[tripName] = {
+            tripName: tripName,
+            Q1: null,
+            Q2: null,
+            Q3: null,
+            Q4: null,
+            year: row.year
+          };
+        }
+        tripsData[tripName][row.quarter] = parseFloat(row.avg_score) || 0;
+        tripsData[tripName].year = row.year;
+      });
+      
+      // حساب نسبة التغيير وترتيب الرحلات
+      const tripsArray = Object.values(tripsData).map(trip => {
+        // حساب نسبة التغيير من Q4 إلى Q3 (أو آخر ربع متوفر)
+        let lastQuarter = null;
+        let prevQuarter = null;
+        let changePercent = null;
+        
+        if (trip.Q4 !== null) {
+          lastQuarter = trip.Q4;
+          prevQuarter = trip.Q3 !== null ? trip.Q3 : (trip.Q2 !== null ? trip.Q2 : trip.Q1);
+        } else if (trip.Q3 !== null) {
+          lastQuarter = trip.Q3;
+          prevQuarter = trip.Q2 !== null ? trip.Q2 : trip.Q1;
+        } else if (trip.Q2 !== null) {
+          lastQuarter = trip.Q2;
+          prevQuarter = trip.Q1;
+        }
+        
+        if (lastQuarter !== null && prevQuarter !== null && prevQuarter > 0) {
+          changePercent = ((lastQuarter - prevQuarter) / prevQuarter) * 100;
+        }
+        
+        return {
+          ...trip,
+          changePercent: changePercent !== null ? parseFloat(changePercent.toFixed(2)) : null
+        };
+      });
+      
+      // فصل الرحلات حسب التغيير (ارتفاع/انخفاض)
+      const increasing = tripsArray
+        .filter(t => t.changePercent !== null && t.changePercent > 0)
+        .sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0));
+      
+      const decreasing = tripsArray
+        .filter(t => t.changePercent !== null && t.changePercent < 0)
+        .sort((a, b) => (a.changePercent || 0) - (b.changePercent || 0));
+      
+      res.json({
+        ok: true,
+        data: {
+          increasing: increasing.slice(0, 15), // أعلى 15 رحلة
+          decreasing: decreasing.slice(0, 15)  // أقل 15 رحلة
+        }
+      });
+    } catch (err) {
+      console.error('GET /api/pressganey/quarters-comparison/:hospitalId error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/pressganey/trips
+ * جلب قائمة جميع الرحلات المتاحة
+ */
+router.get(
+  '/trips',
+  requireAuth,
+  requirePermission('PRESSGANEY_VIEW'),
+  async (req, res, next) => {
+    try {
+      const { pool } = await import('../config/db.js');
+      const { getHospitalPool } = await import('../config/db.js');
+      
+      // جلب جميع المستشفيات النشطة
+      const [hospitals] = await pool.query(`
+        SELECT HospitalID FROM hospitals WHERE IsActive = 1
+      `);
+      
+      const allTrips = new Set();
+      
+      // جمع جميع الرحلات من جميع المستشفيات
+      for (const hospital of hospitals) {
+        try {
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          if (!hospitalPool) continue;
+          
+          const [rows] = await hospitalPool.query(`
+            SELECT DISTINCT TripName 
+            FROM pressganey_data 
+            WHERE TripName IS NOT NULL 
+              AND TripName != '' 
+              AND TripName != 'غير محددة'
+            ORDER BY TripName
+          `);
+          
+          rows.forEach(row => {
+            if (row.TripName) {
+              allTrips.add(row.TripName);
+            }
+          });
+        } catch (err) {
+          console.error(`Error fetching trips for hospital ${hospital.HospitalID}:`, err);
+        }
+      }
+      
+      const tripsArray = Array.from(allTrips).sort();
+      
+      res.json({
+        ok: true,
+        data: tripsArray.map(trip => ({ TripName: trip }))
+      });
+    } catch (err) {
+      console.error('GET /api/pressganey/trips error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/pressganey/trip-comparison-all-hospitals
+ * مقارنة رحلة محددة بين جميع المستشفيات
+ */
+router.get(
+  '/trip-comparison-all-hospitals',
+  requireAuth,
+  requirePermission('PRESSGANEY_VIEW'),
+  async (req, res, next) => {
+    try {
+      const { tripName, quarter, year } = req.query;
+      
+      if (!tripName) {
+        return res.status(400).json({ ok: false, error: 'يجب تحديد اسم الرحلة' });
+      }
+      
+      // جلب جميع المستشفيات النشطة
+      const { pool } = await import('../config/db.js');
+      const [hospitals] = await pool.query(`
+        SELECT HospitalID, NameAr, NameEn, Code
+        FROM hospitals 
+        WHERE IsActive = 1
+        ORDER BY SortOrder IS NULL, SortOrder ASC, NameAr ASC
+      `);
+      
+      const { getHospitalPool } = await import('../config/db.js');
+      const results = [];
+      
+      for (const hospital of hospitals) {
+        try {
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          
+          if (!hospitalPool) continue;
+          
+          // بناء الاستعلام
+          let query = `
+            SELECT 
+              AVG(mean_score) as avg_score,
+              SUM(satisfied_count) as total_nsize,
+              COUNT(*) as record_count
+            FROM pressganey_data
+            WHERE HospitalID = ? AND TripName = ?
+          `;
+          
+          const params = [hospital.HospitalID, tripName];
+          
+          if (quarter) {
+            query += ` AND quarter = ?`;
+            params.push(quarter);
+          }
+          
+          if (year) {
+            query += ` AND year = ?`;
+            params.push(parseInt(year));
+          }
+          
+          const [rows] = await hospitalPool.query(query, params);
+          
+          if (rows.length > 0 && rows[0].avg_score !== null) {
+            results.push({
+              hospitalId: hospital.HospitalID,
+              hospitalName: hospital.NameAr || hospital.NameEn || 'بدون اسم',
+              hospitalCode: hospital.Code || '',
+              avgScore: parseFloat(rows[0].avg_score) || 0,
+              totalNsize: parseInt(rows[0].total_nsize) || 0,
+              recordCount: parseInt(rows[0].record_count) || 0
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching data for hospital ${hospital.HospitalID}:`, err);
+          // نستمر مع المستشفيات الأخرى
+        }
+      }
+      
+      // ترتيب النتائج حسب متوسط السكور (من الأعلى للأقل)
+      results.sort((a, b) => b.avgScore - a.avgScore);
+      
+      res.json({
+        ok: true,
+        data: results,
+        tripName: tripName,
+        quarter: quarter || 'الكل',
+        year: year || 'الكل'
+      });
+    } catch (err) {
+      console.error('GET /api/pressganey/trip-comparison-all-hospitals error:', err);
+      next(err);
+    }
+  }
+);
 
 export default router;
 
