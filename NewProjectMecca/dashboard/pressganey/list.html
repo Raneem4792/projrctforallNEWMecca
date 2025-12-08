@@ -408,9 +408,8 @@
           yearSelect.appendChild(option);
         }
         
-        // تعيين السنة الحالية كافتراضي
-        const savedYear = localStorage.getItem('pressganey-selectedYear') || currentYear;
-        yearSelect.value = savedYear;
+        // تعيين "الكل" كافتراضي (قيمة فارغة)
+        yearSelect.value = '';
         
         // إضافة event listener لتحديث البيانات عند تغيير السنة
         yearSelect.addEventListener('change', () => {
@@ -423,9 +422,8 @@
       
       // إعداد الربع
       if (quarterSelect) {
-        // تعيين الربع المحفوظ أو الحالي كافتراضي
-        const currentQuarter = localStorage.getItem('pressganey-selectedQuarter') || '';
-        quarterSelect.value = currentQuarter;
+        // تعيين "الكل" كافتراضي (قيمة فارغة)
+        quarterSelect.value = '';
         
         // إضافة event listener لتحديث البيانات عند تغيير الربع
         quarterSelect.addEventListener('change', () => {

@@ -1866,49 +1866,65 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
     // الصف الأول: Service, Overall Mean, Overall N-Size, Period
     const firstRow = rawRows[0] || [];
     
-    // استخراج Service من العمود الأول
-    let service = (firstRow[0] || '').toString().trim();
+    // دالة مساعدة آمنة لتحويل القيمة إلى نص
+    const safeString = (value) => {
+      if (value === undefined || value === null) return '';
+      return String(value).trim();
+    };
     
-    // استخراج Overall Mean من العمود الثاني
-    // قد يكون نص "Overall Mean" أو رقم (القيمة الفعلية)
+    // استخراج Service من العمود الأول (يدعم "Service: Hospitals-Outpatient")
+    let service = safeString(firstRow[0]);
+    // إزالة "Service:" إذا كان موجوداً في البداية
+    if (service) {
+      service = service.replace(/^Service:\s*/i, '').trim();
+    }
+    
+    // استخراج Overall Mean من العمود الثاني (يدعم "Mean: 81.14")
     let overallMean = 0;
     if (firstRow[1] !== undefined && firstRow[1] !== null && firstRow[1] !== '') {
       const meanValue = firstRow[1];
       if (typeof meanValue === 'number') {
         overallMean = meanValue;
       } else {
-        const meanStr = meanValue.toString().trim();
-        const meanNum = parseFloat(meanStr);
+        let meanStr = safeString(meanValue);
+        // إزالة "Mean:" إذا كان موجوداً في البداية
+        meanStr = meanStr.replace(/^Mean:\s*/i, '').trim();
+        const meanNum = parseFloat(meanStr.replace(/,/g, ''));
         if (!isNaN(meanNum)) {
           overallMean = meanNum;
-        } else if (meanStr.toLowerCase().includes('overall mean')) {
-          // إذا كان نص "Overall Mean"، نستخدم 0 (القيمة الإجمالية)
+        } else if (meanStr.toLowerCase().includes('overall mean') || meanStr.toLowerCase().includes('mean')) {
+          // إذا كان نص "Overall Mean" أو "Mean" فقط، نستخدم 0
           overallMean = 0;
         }
       }
     }
     
-    // استخراج Overall N-Size من العمود الثالث
-    // قد يكون نص "Overall N-Size" أو رقم (القيمة الفعلية)
+    // استخراج Overall N-Size من العمود الثالث (يدعم "N-Size: 1,990")
     let overallNSize = 0;
     if (firstRow[2] !== undefined && firstRow[2] !== null && firstRow[2] !== '') {
       const sizeValue = firstRow[2];
       if (typeof sizeValue === 'number') {
         overallNSize = sizeValue;
       } else {
-        const sizeStr = sizeValue.toString().trim();
+        let sizeStr = safeString(sizeValue);
+        // إزالة "N-Size:" أو "N Size:" إذا كان موجوداً في البداية
+        sizeStr = sizeStr.replace(/^N[- ]?Size:\s*/i, '').trim();
         // محاولة استخراج الرقم من النص (مثل "1,990" أو "1990")
         const sizeNum = parseInt(sizeStr.replace(/,/g, ''));
         if (!isNaN(sizeNum)) {
           overallNSize = sizeNum;
-        } else if (sizeStr.toLowerCase().includes('n-size')) {
+        } else if (sizeStr.toLowerCase().includes('n-size') || sizeStr.toLowerCase().includes('size')) {
           overallNSize = 0;
         }
       }
     }
     
-    // استخراج Period من العمود الرابع
-    const periodText = (firstRow[3] || '').toString().trim();
+    // استخراج Period من العمود الرابع (يدعم "Period: Quarter 4, 2025")
+    let periodText = safeString(firstRow[3]);
+    // إزالة "Period:" إذا كان موجوداً في البداية
+    if (periodText) {
+      periodText = periodText.replace(/^Period:\s*/i, '').trim();
+    }
     
     console.log('📋 [Excel] Service Format - First Row:', { 
       service, 
@@ -1981,19 +1997,40 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
       return reject(new Error('Facility Mean column not found'));
     }
     
-    // هذا التنسيق خاص بمتوسط السكور العام لكل مستشفى وليس رحلة محددة
-    // لذلك نضع TripName كـ "متوسط السكور العام" بدلاً من استخراجه من Service
-    let tripName = "متوسط السكور العام";
+    // استخراج اسم الرحلة من Service (مثل "Hospitals-Outpatient" → "العيادات")
+    let tripName = "غير محددة";
+    if (service) {
+      // إزالة "Hospitals-" من البداية إذا كان موجوداً
+      let serviceName = service.replace(/^Hospitals-\s*/i, '').trim();
+      
+      // استخدام normalizeTripName لتحويله إلى الاسم العربي الرسمي
+      tripName = normalizeTripName(serviceName);
+      
+      console.log('📊 [Excel] استخراج اسم الرحلة من Service:', {
+        original: service,
+        cleaned: serviceName,
+        normalized: tripName
+      });
+    }
     
-    console.log('📊 [Excel] Service Format - Overall Mean لكل مستشفى');
-    console.log('📊 [Excel] Service:', service, '→ TripName: "متوسط السكور العام"');
+    // إذا لم نتمكن من استخراج اسم رحلة صحيح، نستخدم "متوسط السكور العام"
+    if (!tripName || tripName === "غير محددة") {
+      tripName = "متوسط السكور العام";
+      console.warn('⚠️ [Excel] لم يتم العثور على اسم رحلة صحيح، استخدام "متوسط السكور العام"');
+    }
+    
+    console.log('📊 [Excel] Service Format - اسم الرحلة المستخدم:', tripName);
     
     // البيانات تبدأ من الصف الثالث
     const dataRows = rawRows.slice(2);
     const processed = [];
     
     for (const row of dataRows) {
-      const facilityName = facilityIndex !== -1 ? (row[facilityIndex] || '').toString().trim() : '';
+      // استخراج اسم المستشفى بشكل آمن
+      let facilityName = '';
+      if (facilityIndex !== -1 && row[facilityIndex] !== undefined && row[facilityIndex] !== null) {
+        facilityName = safeString(row[facilityIndex]);
+      }
       
       // استخراج n-Size (قد يكون رقم أو نص يحتوي على فاصلات)
       let nsize = 0;
@@ -2002,7 +2039,7 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
         if (typeof sizeValue === 'number') {
           nsize = sizeValue;
         } else {
-          const sizeStr = sizeValue.toString().trim().replace(/,/g, '');
+          const sizeStr = safeString(sizeValue).replace(/,/g, '');
           const sizeNum = parseInt(sizeStr);
           if (!isNaN(sizeNum)) {
             nsize = sizeNum;
@@ -2017,14 +2054,19 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
         if (typeof meanValue === 'number') {
           facilityMean = meanValue;
         } else {
-          const meanNum = parseFloat(meanValue.toString().trim());
+          const meanStr = safeString(meanValue);
+          const meanNum = parseFloat(meanStr.replace(/,/g, ''));
           if (!isNaN(meanNum)) {
             facilityMean = meanNum;
           }
         }
       }
       
-      const region = regionIndex !== -1 ? (row[regionIndex] || '').toString().trim() : '';
+      // استخراج Region بشكل آمن
+      let region = '';
+      if (regionIndex !== -1 && row[regionIndex] !== undefined && row[regionIndex] !== null) {
+        region = safeString(row[regionIndex]);
+      }
       
       // استخراج Region Mean
       let regionMean = null;
@@ -2033,7 +2075,8 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
         if (typeof regMeanValue === 'number') {
           regionMean = regMeanValue;
         } else {
-          const regMeanNum = parseFloat(regMeanValue.toString().trim());
+          const regMeanStr = safeString(regMeanValue);
+          const regMeanNum = parseFloat(regMeanStr.replace(/,/g, ''));
           if (!isNaN(regMeanNum)) {
             regionMean = regMeanNum;
           }
@@ -2083,7 +2126,7 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
     
     pressganeyData = [...pressganeyData, ...processed];
     
-    console.log(`📊 تم استيراد ${processed.length} سجل من ${processed.length} مستشفى (Overall Mean - بدون رحلة محددة) (${quarter} ${year})`);
+    console.log(`📊 تم استيراد ${processed.length} سجل من ${processed.length} مستشفى (${tripName}) (${quarter} ${year})`);
     console.log('📊 المستشفيات:', [...new Set(processed.map(p => p.FacilityName))]);
     
     updateSummary();
@@ -2092,7 +2135,7 @@ function handleMultiFacilityServiceFormatExcel(rawRows, resolve, reject) {
     renderTripsCharts();
     updateTable();
     
-    toast(`تم استيراد ${processed.length} سجل من ${processed.length} مستشفى بنجاح (متوسط السكور العام - بدون رحلة محددة)`, 'success');
+    toast(`تم استيراد ${processed.length} سجل من ${processed.length} مستشفى بنجاح (${tripName})`, 'success');
     resolve(processed);
   } catch (err) {
     console.error('Error processing Multi-Facility Service format Excel:', err);
