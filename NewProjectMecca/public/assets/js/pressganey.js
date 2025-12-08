@@ -837,6 +837,9 @@ async function loadData() {
     }
     
     updateTable();
+    
+    // تحميل جداول أولوية التحسين
+    await loadImprovementPriorities();
   } catch (err) {
     console.error('❌ [PressGaney] خطأ في تحميل البيانات:', err);
     toast('تعذّر تحميل البيانات: ' + (err.message || 'خطأ غير معروف'), 'error');
@@ -847,6 +850,12 @@ async function loadData() {
     updateMeanGauge();
     renderTripsCharts();
     updateTable();
+    
+    // إخفاء قسم أولوية التحسين في حالة الخطأ
+    const section = document.getElementById('improvement-priorities-section');
+    if (section) {
+      section.classList.add('hidden');
+    }
   }
 }
 
@@ -1147,6 +1156,176 @@ function renderTripsCharts() {
       drawMoHGauge(tripId, parseFloat(avg));
     }, 50);
   });
+}
+
+// دالة جلب قائمة الرحلات وملء Dropdown
+async function loadImprovementTrips() {
+  try {
+    const hid = effectiveHospitalId();
+    if (!hid) {
+      console.warn('⚠️ [loadImprovementTrips] لا يوجد hospitalId');
+      return;
+    }
+    
+    const section = document.getElementById('improvement-priorities-section');
+    const tripSelect = document.getElementById('improvement-trip-select');
+    
+    if (!section || !tripSelect) {
+      console.warn('⚠️ [loadImprovementTrips] لم يتم العثور على العناصر المطلوبة');
+      return;
+    }
+    
+    // التحقق من وضع "جميع المستشفيات"
+    const mode = localStorage.getItem('pressganey-mode');
+    const isAllHospitals = mode === 'ALL';
+    
+    if (isAllHospitals) {
+      section.classList.add('hidden');
+      return;
+    }
+    
+    // جلب قائمة الرحلات من البيانات المحملة
+    const trips = groupByTrip();
+    const tripNames = Object.keys(trips).sort();
+    
+    if (tripNames.length === 0) {
+      console.warn('⚠️ [loadImprovementTrips] لا توجد رحلات متاحة');
+      section.classList.add('hidden');
+      return;
+    }
+    
+    // مسح القائمة الحالية وإضافة الرحلات
+    tripSelect.innerHTML = '<option value="">اختر الرحلة</option>';
+    tripNames.forEach(tripName => {
+      const option = document.createElement('option');
+      option.value = tripName;
+      option.textContent = tripName;
+      tripSelect.appendChild(option);
+    });
+    
+    // إضافة event listener عند اختيار الرحلة
+    tripSelect.removeEventListener('change', handleTripChange);
+    tripSelect.addEventListener('change', handleTripChange);
+    
+    // إظهار القسم
+    section.classList.remove('hidden');
+    
+    console.log('✅ [loadImprovementTrips] تم تحميل الرحلات:', tripNames.length);
+  } catch (err) {
+    console.error('❌ خطأ في loadImprovementTrips:', err);
+  }
+}
+
+// معالج تغيير الرحلة
+async function handleTripChange() {
+  const tripSelect = document.getElementById('improvement-trip-select');
+  if (tripSelect && tripSelect.value) {
+    await loadSingleImprovementTable(tripSelect.value);
+  } else {
+    // إخفاء الجدول إذا لم يتم اختيار رحلة
+    const tableContainer = document.getElementById('single-improvement-table');
+    if (tableContainer) {
+      tableContainer.classList.add('hidden');
+    }
+  }
+}
+
+// دالة جلب وعرض جدول أولوية التحسين لرحلة واحدة
+async function loadSingleImprovementTable(tripName) {
+  try {
+    console.log('🔍 [loadSingleImprovementTable] جلب بيانات للرحلة:', tripName);
+    
+    const hid = effectiveHospitalId();
+    if (!hid) {
+      console.warn('⚠️ [loadSingleImprovementTable] لا يوجد hospitalId');
+      return;
+    }
+    
+    // الحصول على قيم التصفية
+    const yearSelect = document.getElementById('pressganey-year-select');
+    const quarterSelect = document.getElementById('pressganey-quarter-select');
+    const selectedYear = yearSelect ? yearSelect.value : '';
+    const selectedQuarter = quarterSelect ? quarterSelect.value : '';
+    
+    // إذا لم يتم اختيار السنة أو الربع، نستخدم "ALL" لعرض جميع البيانات
+    const yearParam = selectedYear || 'ALL';
+    const quarterParam = selectedQuarter || 'ALL';
+    
+    // جلب البيانات من API
+    const encodedTrip = encodeURIComponent(tripName);
+    const url = `${API_BASE}/api/pressganey/improvement/${hid}/${yearParam}/${quarterParam}/${encodedTrip}`;
+    
+    console.log('🔍 [loadSingleImprovementTable] URL:', url);
+    
+    const res = await fetch(url, {
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.warn(`⚠️ فشل جلب بيانات أولوية التحسين للرحلة: ${tripName}`, res.status, errorText);
+      const tableContainer = document.getElementById('single-improvement-table');
+      if (tableContainer) {
+        tableContainer.classList.add('hidden');
+      }
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('🔍 [loadSingleImprovementTable] استجابة API:', data);
+    
+    const rows = data.data || [];
+    
+    console.log(`✅ [loadSingleImprovementTable] تم جلب ${rows.length} سجل للرحلة ${tripName}`);
+    console.log('🔍 [loadSingleImprovementTable] البيانات المستلمة:', rows);
+    
+    // عرض الجدول
+    const tableContainer = document.getElementById('single-improvement-table');
+    const tbody = document.getElementById('single-improvement-body');
+    
+    if (!tableContainer || !tbody) {
+      console.warn('⚠️ [loadSingleImprovementTable] لم يتم العثور على عناصر الجدول', {
+        tableContainer: !!tableContainer,
+        tbody: !!tbody
+      });
+      return;
+    }
+    
+    // مسح الجدول وإضافة البيانات
+    tbody.innerHTML = '';
+    
+    if (rows.length === 0) {
+      console.warn('⚠️ [loadSingleImprovementTable] لا توجد بيانات للعرض');
+      tbody.innerHTML = '<tr><td colspan="2" class="text-center text-gray-500 p-4">لا توجد بيانات متاحة</td></tr>';
+    } else {
+      rows.forEach((row, index) => {
+        console.log(`🔍 [loadSingleImprovementTable] صف ${index}:`, row);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.scope_name || row.department_name_ar || '-'}</td>
+          <td>${row.priority_improvement || row.question_text_ar || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    
+    // إظهار الجدول
+    tableContainer.classList.remove('hidden');
+    
+    console.log('✅ [loadSingleImprovementTable] تم عرض الجدول بنجاح');
+  } catch (err) {
+    console.error('❌ خطأ في loadSingleImprovementTable:', err);
+    const tableContainer = document.getElementById('single-improvement-table');
+    if (tableContainer) {
+      tableContainer.classList.add('hidden');
+    }
+  }
+}
+
+// دالة جلب وعرض جداول أولوية التحسين (القديمة - محفوظة للتوافق)
+async function loadImprovementPriorities() {
+  // استدعاء دالة تحميل الرحلات بدلاً من الجداول المتعددة
+  await loadImprovementTrips();
 }
 
 // تحديث الجدول

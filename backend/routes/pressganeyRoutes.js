@@ -819,5 +819,204 @@ router.get(
   }
 );
 
+/**
+ * GET /api/pressganey/improvement/:hospitalId/:year/:quarter/:trip
+ * جلب بيانات أولوية التحسين لكل نطاق في رحلة محددة
+ * يعيد أقل سؤال (حسب mean_score) لكل نطاق (department_name_ar)
+ */
+router.get(
+  '/improvement/:hospitalId/:year/:quarter/:trip',
+  requireAuth,
+  requirePermission('PRESSGANEY_VIEW'),
+  async (req, res, next) => {
+    try {
+      const hospitalId = parseInt(req.params.hospitalId);
+      const yearParam = req.params.year;
+      const quarterParam = req.params.quarter;
+      const trip = decodeURIComponent(req.params.trip);
+      
+      // السماح بـ "ALL" أو قيم فارغة لعرض جميع البيانات
+      const year = yearParam && yearParam !== 'ALL' && yearParam !== '' ? parseInt(yearParam) : null;
+      const quarter = quarterParam && quarterParam !== 'ALL' && quarterParam !== '' ? quarterParam : null;
+      
+      console.log(`🔍 [PressGaney Improvement] طلب بيانات أولوية التحسين:`, {
+        hospitalId,
+        year: year || 'ALL',
+        quarter: quarter || 'ALL',
+        trip
+      });
+      
+      const { getTenantPoolByHospitalId } = await import('../db/tenantManager.js');
+      const pool = await getTenantPoolByHospitalId(hospitalId);
+      
+      if (!pool) {
+        console.error(`❌ [PressGaney Improvement] المستشفى ${hospitalId} غير موجود`);
+        return res.status(404).json({ ok: false, error: 'المستشفى غير موجود' });
+      }
+      
+      // البحث عن رحلة مشابهة أولاً (قبل بناء الاستعلام)
+      let finalTrip = trip;
+      
+      // جلب جميع الرحلات المتاحة للبحث عن مطابقة
+      const [availableTrips] = await pool.query(
+        `
+        SELECT DISTINCT TripName
+        FROM pressganey_data
+        WHERE HospitalID = ?
+          ${year !== null ? 'AND year = ?' : ''}
+          ${quarter !== null ? 'AND quarter = ?' : ''}
+          AND TripName IS NOT NULL
+          AND TripName != ''
+        ORDER BY TripName
+        `,
+        [hospitalId, ...(year !== null ? [year] : []), ...(quarter !== null ? [quarter] : [])]
+      );
+      
+      // محاولة مطابقة جزئية (مطابقة تامة بعد trim)
+      let matchingTrip = availableTrips.find(t => 
+        t.TripName.trim() === trip.trim()
+      );
+      
+      // إذا لم نجد مطابقة تامة، نبحث عن مطابقة جزئية
+      if (!matchingTrip) {
+        matchingTrip = availableTrips.find(t => 
+          t.TripName.includes(trip.trim()) || trip.trim().includes(t.TripName.trim())
+        );
+      }
+      
+      if (matchingTrip && matchingTrip.TripName !== trip) {
+        console.log(`✅ [PressGaney Improvement] تم العثور على رحلة مشابهة: "${matchingTrip.TripName}" بدلاً من "${trip}"`);
+        finalTrip = matchingTrip.TripName;
+      }
+      
+      // بناء شروط WHERE ديناميكية
+      let whereConditions = ['HospitalID = ?', 'TripName = ?', 'department_name_ar IS NOT NULL', 'question_text_ar IS NOT NULL'];
+      let queryParams = [hospitalId, finalTrip];
+      
+      if (year !== null) {
+        whereConditions.push('year = ?');
+        queryParams.push(year);
+      }
+      
+      if (quarter !== null) {
+        whereConditions.push('quarter = ?');
+        queryParams.push(quarter);
+      }
+      
+      const whereClause = whereConditions.join(' AND ');
+      
+      console.log(`🔍 [PressGaney Improvement] شروط الاستعلام:`, {
+        whereClause,
+        queryParams,
+        year: year || 'ALL',
+        quarter: quarter || 'ALL',
+        trip: finalTrip
+      });
+      
+      // أولاً: التحقق من وجود بيانات للرحلة
+      const [checkRows] = await pool.query(
+        `
+        SELECT COUNT(*) as total, 
+               COUNT(DISTINCT department_name_ar) as departments
+        FROM pressganey_data
+        WHERE ${whereClause}
+        `,
+        queryParams
+      );
+      
+      console.log(`🔍 [PressGaney Improvement] فحص البيانات:`, {
+        hospitalId,
+        year: year || 'ALL',
+        quarter: quarter || 'ALL',
+        trip: finalTrip,
+        total: checkRows[0]?.total || 0,
+        departments: checkRows[0]?.departments || 0,
+        availableTrips: availableTrips.map(t => t.TripName)
+      });
+      
+      // الاستعلام: أقل سؤال لكل نطاق من جدول pressganey_data
+      try {
+        // إذا كانت السنة والربع محددين، نستخدمهما في PARTITION
+        // إذا لم تكونا محددين، نجمع البيانات من جميع الأرباع ونأخذ أقل mean_score
+        let partitionClause = 'PARTITION BY department_name_ar';
+        if (year !== null && quarter !== null) {
+          // إذا كانت السنة والربع محددين، نأخذ أقل mean_score لكل نطاق في هذا الربع المحدد
+          partitionClause = 'PARTITION BY department_name_ar';
+        } else if (year !== null) {
+          // إذا كانت السنة فقط محددة، نأخذ أقل mean_score لكل نطاق في هذه السنة
+          partitionClause = 'PARTITION BY department_name_ar';
+        } else {
+          // إذا لم تكن محددة، نأخذ أقل mean_score لكل نطاق من جميع البيانات
+          partitionClause = 'PARTITION BY department_name_ar';
+        }
+        
+        const [rows] = await pool.query(
+          `
+          SELECT 
+              x.TripName,
+              x.department_name_ar AS scope_name,
+              x.question_text_ar AS priority_improvement,
+              x.mean_score
+          FROM (
+              SELECT 
+                  TripName,
+                  department_name_ar,
+                  question_text_ar,
+                  COALESCE(mean_score, 0) AS mean_score,
+                  ROW_NUMBER() OVER (
+                      ${partitionClause}
+                      ORDER BY COALESCE(mean_score, 999) ASC
+                  ) AS rn
+              FROM pressganey_data
+              WHERE ${whereClause}
+                AND department_name_ar != ''
+                AND question_text_ar != ''
+          ) x
+          WHERE x.rn = 1
+          ORDER BY x.department_name_ar;
+          `,
+          queryParams
+        );
+        
+        console.log(`✅ [PressGaney Improvement] تم جلب ${rows.length} سجل للرحلة "${finalTrip}"`);
+        if (rows.length > 0) {
+          console.log(`🔍 [PressGaney Improvement] عينة من البيانات:`, rows.slice(0, 3));
+        }
+        
+        res.json({ 
+          ok: true, 
+          data: rows,
+          tripName: finalTrip,
+          year: year,
+          quarter: quarter,
+          originalTrip: finalTrip !== trip ? trip : undefined
+        });
+      } catch (queryErr) {
+        console.error(`❌ [PressGaney Improvement] خطأ في الاستعلام:`, queryErr);
+        // إذا كان الخطأ بسبب عدم وجود الجدول، نرجع قائمة فارغة بدلاً من خطأ
+        if (queryErr.code === 'ER_NO_SUCH_TABLE' || queryErr.message.includes('doesn\'t exist')) {
+          console.warn(`⚠️ [PressGaney Improvement] الجدول pressganey_data غير موجود`);
+          return res.json({ 
+            ok: true, 
+            data: [],
+            tripName: trip,
+            year: year,
+            quarter: quarter,
+            message: 'الجدول غير موجود في قاعدة البيانات'
+          });
+        }
+        throw queryErr;
+      }
+    } catch (err) {
+      console.error('❌ [PressGaney Improvement] خطأ عام:', err);
+      res.status(500).json({ 
+        ok: false, 
+        error: 'خطأ في جلب بيانات أولوية التحسين',
+        details: err.message 
+      });
+    }
+  }
+);
+
 export default router;
 
