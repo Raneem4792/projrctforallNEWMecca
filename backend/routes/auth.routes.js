@@ -626,7 +626,9 @@ router.get('/me-permissions', async (req, res) => {
           clusterStatus: true,
           // صلاحيات الأرشيف - مدير التجمع له الكل
           archiveView: true,
-          archiveUpload: true
+          archiveUpload: true,
+          // ===== صلاحيات التنبيهات =====
+          criticalAlertPopup: true
         };
         
         console.log('🔍 Debug - Central admin permissions set:', permissions);
@@ -731,7 +733,9 @@ router.get('/me-permissions', async (req, res) => {
           clusterStatus: hasPermission('CLUSTER_REPORT_STATUS'),
           // صلاحيات الأرشيف
           archiveView: hasPermission('ARCHIVE_VIEW'),
-          archiveUpload: hasPermission('ARCHIVE_UPLOAD')
+          archiveUpload: hasPermission('ARCHIVE_UPLOAD'),
+          // ===== صلاحيات التنبيهات =====
+          criticalAlertPopup: hasPermission('CRITICAL_ALERT_POPUP')
         };
       }
     }
@@ -814,6 +818,8 @@ router.get('/me-permissions', async (req, res) => {
       // صلاحيات الأرشيف
       archiveView: permissions.archiveView || false,
       archiveUpload: permissions.archiveUpload || false,
+      // ===== صلاحيات التنبيهات =====
+      criticalAlertPopup: permissions.criticalAlertPopup || false,
       // صلاحيات منصة برسجيني
       pressganey: {
         module: permissions.pressganey?.module || false,

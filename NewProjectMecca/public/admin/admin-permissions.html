@@ -273,6 +273,20 @@
                 </div>
               </section>
 
+              <!-- تنبيهات -->
+              <section class="space-y-4">
+                <h4 class="text-sm font-semibold text-[#002B5B] flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-red-500"></span> تنبيهات
+                </h4>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                  <label class="flex items-center gap-3">
+                    <input type="checkbox" id="p_critical_alert_popup" class="w-4 h-4">
+                    <span>عرض تنبيه البلاغات الحرجة</span>
+                  </label>
+                </div>
+              </section>
+
               <!-- إرفاق الإكسل -->
               <section class="space-y-4">
                 <h4 class="text-sm font-semibold text-[#002B5B] flex items-center gap-2">
@@ -1030,6 +1044,8 @@ async function loadUserPerms(hid, userId){
     // صلاحيات الأرشيف
     $('#p_archive_view').checked   = !!p.archiveView;
     $('#p_archive_upload').checked = !!p.archiveUpload;
+    // صلاحيات التنبيهات
+    $('#p_critical_alert_popup').checked = !!p.criticalAlertPopup;
     $('#p_scope').value     = p.historyScope || '';
     
     // تعطيل/تفعيل نطاق السجل حسب حالة متابعة/عرض
@@ -1180,7 +1196,9 @@ document.addEventListener("DOMContentLoaded", () => {
       clusterStatus:  $('#p_cluster_status').checked,
       // صلاحيات الأرشيف
       archiveView:   $('#p_archive_view').checked,
-      archiveUpload: $('#p_archive_upload').checked
+      archiveUpload: $('#p_archive_upload').checked,
+      // صلاحيات التنبيهات
+      criticalAlertPopup: $('#p_critical_alert_popup').checked
     };
 
     console.log('📤 Payload being sent:', {

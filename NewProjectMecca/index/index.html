@@ -1237,25 +1237,53 @@
   <script>
     // نظام التنبيهات الفورية للبلاغات الحرجة
     (function() {
-      const isCentralAdmin = (() => {
-        try {
-          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-          if (!userData || typeof userData !== 'object') return false;
-          if (userData.RoleID === 1) return true;
-          if (userData.IsClusterManager === true) return true;
-          if (userData.HospitalID == null) return true;
-        } catch (err) {
-          console.warn('Failed to parse userData for urgent alerts:', err);
+      // دالة الحصول على API Base
+      function getApiBase() {
+        if (window.API_BASE) {
+          return window.API_BASE;
         }
-        return false;
-      })();
-
-      if (!isCentralAdmin) {
-        console.log('🚫 إخفاء تنبيه البلاغات الحرجة للمستخدم غير المركزي');
-        return;
+        const host = window.location.hostname;
+        return (host === 'localhost' || host === '127.0.0.1') ? 'http://localhost:3001' : '';
       }
 
-      const API_BASE = window.API_BASE || 'http://localhost:3001';
+      // دالة التحقق من صلاحية عرض نافذة البلاغات الحرجة
+      async function canShowCriticalPopup() {
+        try {
+          const apiBase = getApiBase();
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+          if (!token) {
+            console.log('🚫 لا يوجد token - لا يمكن التحقق من الصلاحية');
+            return false;
+          }
+
+          const res = await fetch(`${apiBase}/api/auth/me-permissions`, {
+            headers: { 
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            },
+            credentials: 'include'
+          });
+
+          if (!res.ok) {
+            console.log(`🚫 فشل التحقق من الصلاحية: HTTP ${res.status}`);
+            return false;
+          }
+
+          const json = await res.json();
+          // الـ response من /api/auth/me-permissions لا يحتوي على data wrapper
+          const hasPermission = !!json?.criticalAlertPopup;
+          console.log('🔍 حالة صلاحية البلاغات الحرجة:', hasPermission, 'Response:', json);
+          return hasPermission;
+        } catch (error) {
+          console.error('❌ خطأ في التحقق من صلاحية عرض نافذة البلاغات الحرجة:', error);
+          return false;
+        }
+      }
+
+      // متغير لحفظ حالة الصلاحية
+      let hasPermission = false;
+
+      const API_BASE = getApiBase();
       let lastCheckedTime = null;
       let currentPopup = null;
       let checkInterval = null;
@@ -1405,10 +1433,86 @@
       // جعل الدالة متاحة عالمياً فقط عند وجود النافذة
       window.openComplaintDetails = openComplaintDetails;
 
+      // دالة للحصول على hospitalId من معلومات المستخدم
+      function getUserHospitalId() {
+        try {
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+          
+          // محاولة فك تشفير التوكن للحصول على hospitalId
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              if (payload.hospitalId || payload.HospitalID) {
+                return payload.hospitalId || payload.HospitalID;
+              }
+            } catch (e) {
+              // إذا فشل فك التشفير، نستخدم userData
+            }
+          }
+          
+          // استخدام userData كبديل
+          if (userData && userData.HospitalID) {
+            return userData.HospitalID;
+          }
+          
+          return null;
+        } catch (err) {
+          console.warn('⚠️ فشل الحصول على hospitalId:', err);
+          return null;
+        }
+      }
+
+      // دالة للتحقق إذا كان المستخدم مدير تجمع
+      function isClusterManager() {
+        try {
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+          
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              if (payload.RoleID === 1 || payload.roleId === 1 || payload.scope === 'central') {
+                return true;
+              }
+            } catch (e) {
+              // إذا فشل فك التشفير، نستخدم userData
+            }
+          }
+          
+          if (userData && (userData.RoleID === 1 || userData.IsClusterManager === true || userData.HospitalID == null)) {
+            return true;
+          }
+          
+          return false;
+        } catch (err) {
+          return false;
+        }
+      }
+
       // ✅ جلب كل البلاغات الحرجة من جميع المستشفيات
       async function checkUrgentAll() {
+        // التحقق من الصلاحية أولاً
+        if (!hasPermission) {
+          hasPermission = await canShowCriticalPopup();
+          if (!hasPermission) return;
+        }
+
         try {
-          const response = await fetch(`${API_BASE}/api/public/complaints/urgent-all`, {
+          // تحديد hospitalId بناءً على نوع المستخدم
+          const userHospitalId = getUserHospitalId();
+          const isCluster = isClusterManager();
+          
+          // بناء URL مع hospitalId إذا كان المستخدم موظف عادي
+          let url = `${API_BASE}/api/public/complaints/urgent-all`;
+          if (!isCluster && userHospitalId) {
+            url += `?hospitalId=${userHospitalId}`;
+            console.log('🏥 جلب البلاغات الحرجة للمستشفى:', userHospitalId);
+          } else {
+            console.log('🏥 جلب البلاغات الحرجة من جميع المستشفيات (مدير تجمع)');
+          }
+
+          const response = await fetch(url, {
             method: 'GET',
             headers: {
               'Accept': 'application/json'
@@ -1452,8 +1556,24 @@
 
       // دالة فحص البلاغات الحرجة الجديدة
       async function checkUrgentNew() {
+        // التحقق من الصلاحية أولاً
+        if (!hasPermission) {
+          hasPermission = await canShowCriticalPopup();
+          if (!hasPermission) return;
+        }
+
         try {
-          const response = await fetch(`${API_BASE}/api/public/complaints/urgent-all`, {
+          // تحديد hospitalId بناءً على نوع المستخدم
+          const userHospitalId = getUserHospitalId();
+          const isCluster = isClusterManager();
+          
+          // بناء URL مع hospitalId إذا كان المستخدم موظف عادي
+          let url = `${API_BASE}/api/public/complaints/urgent-all`;
+          if (!isCluster && userHospitalId) {
+            url += `?hospitalId=${userHospitalId}`;
+          }
+
+          const response = await fetch(url, {
             method: 'GET',
             headers: {
               'Accept': 'application/json'
@@ -1508,13 +1628,22 @@
       }
 
       // تهيئة النظام عند تحميل الصفحة
-      document.addEventListener('DOMContentLoaded', function() {
-        // إخفاء زر الإشعارات للمستخدمين غير المركزيين
+      document.addEventListener('DOMContentLoaded', async function() {
+        // ✅ التحقق من الصلاحية أولاً (مهم جداً)
+        hasPermission = await canShowCriticalPopup();
+        
+        console.log('🔍 [Critical Popup] حالة الصلاحية بعد التحقق:', hasPermission);
+        
+        // إخفاء زر الإشعارات إذا لم تكن هناك صلاحية
         const notifBtn = document.getElementById('notificationsButton');
-        if (notifBtn && !isCentralAdmin) {
+        if (notifBtn && !hasPermission) {
           notifBtn.style.display = 'none';
+          console.log('🚫 تم إخفاء زر الإشعارات - لا توجد صلاحية');
+          return; // إيقاف التنفيذ إذا لم تكن هناك صلاحية
         }
 
+        console.log('✅ الصلاحية موجودة - بدء تحميل البلاغات الحرجة');
+        
         // جلب كل البلاغات الحرجة عند تحميل الصفحة
         checkUrgentAll();
 
@@ -1526,10 +1655,27 @@
         // ✅ ربط زر الإشعارات بفتح نافذة البلاغات الحرجة
         const notifBadge = document.getElementById('notificationsBadge');
         
-        if (notifBtn && isCentralAdmin) {
+        if (notifBtn && hasPermission) {
           notifBtn.addEventListener('click', async () => {
+            // التحقق من الصلاحية مرة أخرى عند النقر
+            const stillHasPermission = await canShowCriticalPopup();
+            if (!stillHasPermission) {
+              alert('ليس لديك صلاحية لعرض البلاغات الحرجة');
+              return;
+            }
+
             try {
-              const response = await fetch(`${API_BASE}/api/public/complaints/urgent-all`, {
+              // تحديد hospitalId بناءً على نوع المستخدم
+              const userHospitalId = getUserHospitalId();
+              const isCluster = isClusterManager();
+              
+              // بناء URL مع hospitalId إذا كان المستخدم موظف عادي
+              let url = `${API_BASE}/api/public/complaints/urgent-all`;
+              if (!isCluster && userHospitalId) {
+                url += `?hospitalId=${userHospitalId}`;
+              }
+
+              const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                   'Accept': 'application/json'

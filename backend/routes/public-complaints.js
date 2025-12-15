@@ -96,19 +96,32 @@ router.get('/complaints/timeline', async (req, res) => {
 
 /**
  * GET /api/public/complaints/urgent-all
- * 🔍 جلب جميع البلاغات الحرجة من جميع المستشفيات
+ * 🔍 جلب البلاغات الحرجة
+ * - إذا كان hospitalId موجود: يجلب فقط من هذا المستشفى
+ * - إذا لم يكن موجود: يجلب من جميع المستشفيات (لمدير التجمع)
  * لا يتطلب تسجيل دخول - يعمل للجميع
  */
 router.get('/complaints/urgent-all', async (req, res) => {
   try {
     const centralPool = await getCentralPool();
+    const hospitalId = req.query.hospitalId ? Number(req.query.hospitalId) : null;
 
-    // جلب جميع المستشفيات النشطة
-    const [hospitals] = await centralPool.query(`
+    // بناء استعلام المستشفيات
+    let hospitalsQuery = `
       SELECT HospitalID, NameAr, NameEn, DbHost, DbUser, DbPass, DbName
       FROM hospitals
       WHERE COALESCE(IsActive, Active, 1) = 1 AND DbName IS NOT NULL
-    `);
+    `;
+    const hospitalsParams = [];
+
+    // إذا كان hospitalId موجود، نفلتر حسبه
+    if (hospitalId) {
+      hospitalsQuery += ` AND HospitalID = ?`;
+      hospitalsParams.push(hospitalId);
+    }
+
+    // جلب المستشفيات (مفلترة أو كلها)
+    const [hospitals] = await centralPool.query(hospitalsQuery, hospitalsParams);
 
     if (!hospitals || hospitals.length === 0) {
       return res.json({ 

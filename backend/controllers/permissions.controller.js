@@ -188,7 +188,9 @@ export async function getUserPermissions(req, res) {
         // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
         complaintSubtypeCreate: has('COMPLAINT_SUBTYPE_CREATE'),
         complaintSubtypeEdit: has('COMPLAINT_SUBTYPE_EDIT'),
-        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE')
+        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE'),
+        // ===== صلاحيات التنبيهات =====
+        criticalAlertPopup: has('CRITICAL_ALERT_POPUP')
       }
     });
   } catch (e) {
@@ -232,7 +234,9 @@ export async function saveUserPermissions(req, res) {
       // صلاحيات إدارة تصنيفات البلاغات الفرعية
       complaintSubtypeCreate,
       complaintSubtypeEdit,
-      complaintSubtypeDelete
+      complaintSubtypeDelete,
+      // صلاحيات التنبيهات
+      criticalAlertPopup
     } = req.body;
     
     console.log('📥 Received archive permissions:', {
@@ -276,6 +280,7 @@ export async function saveUserPermissions(req, res) {
     await ensurePermission('IMPROVEMENT_937', 'مشروع 937', 'improvement');
     await ensurePermission('IMPROVEMENT_PG', 'مشروع PressGaney', 'improvement');
     await ensurePermission('IMPROVEMENT_OPEN', 'مشروع مفتوح / أخرى', 'improvement');
+    await ensurePermission('CRITICAL_ALERT_POPUP', 'عرض تنبيه البلاغات الحرجة', 'alerts');
 
     // بدء المعاملة بعد التأكد من وجود الصلاحيات
     await conn.beginTransaction();
@@ -415,6 +420,9 @@ export async function saveUserPermissions(req, res) {
     complaintSubtypeCreate ? await upsert('COMPLAINT_SUBTYPE_CREATE') : await drop('COMPLAINT_SUBTYPE_CREATE');
     complaintSubtypeEdit ? await upsert('COMPLAINT_SUBTYPE_EDIT') : await drop('COMPLAINT_SUBTYPE_EDIT');
     complaintSubtypeDelete ? await upsert('COMPLAINT_SUBTYPE_DELETE') : await drop('COMPLAINT_SUBTYPE_DELETE');
+    
+    // صلاحيات التنبيهات
+    criticalAlertPopup ? await upsert('CRITICAL_ALERT_POPUP') : await drop('CRITICAL_ALERT_POPUP');
 
     // نطاق السجل
     if (historyScope) {
@@ -547,7 +555,9 @@ export async function getMyPermissions(req, res) {
             // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
             complaintSubtypeCreate: true,
             complaintSubtypeEdit: true,
-            complaintSubtypeDelete: true
+            complaintSubtypeDelete: true,
+            // ===== صلاحيات التنبيهات =====
+            criticalAlertPopup: true
           }
         });
         return;
@@ -660,7 +670,9 @@ export async function getMyPermissions(req, res) {
         // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
         complaintSubtypeCreate: has('COMPLAINT_SUBTYPE_CREATE'),
         complaintSubtypeEdit: has('COMPLAINT_SUBTYPE_EDIT'),
-        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE')
+        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE'),
+        // ===== صلاحيات التنبيهات =====
+        criticalAlertPopup: has('CRITICAL_ALERT_POPUP')
       };
 
       // لوج للتشخيص - قبل إرسال الرد
@@ -789,7 +801,9 @@ export async function getMyPermissions(req, res) {
         // ===== صلاحيات إدارة تصنيفات البلاغات الفرعية =====
         complaintSubtypeCreate: has('COMPLAINT_SUBTYPE_CREATE'),
         complaintSubtypeEdit: has('COMPLAINT_SUBTYPE_EDIT'),
-        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE')
+        complaintSubtypeDelete: has('COMPLAINT_SUBTYPE_DELETE'),
+        // ===== صلاحيات التنبيهات =====
+        criticalAlertPopup: has('CRITICAL_ALERT_POPUP')
       };
 
       // لوج للتشخيص - قبل إرسال الرد

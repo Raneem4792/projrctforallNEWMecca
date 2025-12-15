@@ -1258,7 +1258,8 @@ ADD COLUMN TripName VARCHAR(100) NULL AFTER HospitalID;
 INSERT INTO permissions (PermissionKey, NameAr, Category) VALUES
 ('PRESSGANEY_VIEW',   'عرض لوحة برسجيني',        'pressganey'),
 ('PRESSGANEY_MODULE', 'الدخول لمنصة برسجيني',     'pressganey'),
-('PRESSGANEY_IMPORT', 'استيراد ملفات Excel برسجيني', 'pressganey');
+('PRESSGANEY_IMPORT', 'استيراد ملفات Excel برسجيني', 'pressganey'),
+('CRITICAL_ALERT_POPUP', 'عرض تنبيه البلاغات الحرجة', 'alerts');
 
 
 
