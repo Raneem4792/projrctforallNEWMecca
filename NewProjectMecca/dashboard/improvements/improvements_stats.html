@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>إحصائيات المشاريع التحسينية</title>
+
+  <!-- Tailwind via CDN -->
+  <script src="../../public/assets/js/theme.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme:{ extend:{ colors:{ primary:'#002B5B' } } } }
+  </script>
+
+  <!-- Tajawal -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}</style>
+
+  <link rel="stylesheet" href="../../public/assets/css/styles.css" />
+  <link rel="stylesheet" href="../hospital/hospital.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Header -->
+  <header id="navbar" class="fixed w-full top-0 z-50 navbar-scroll" style="background-color: #002B5B;">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <img src="../../public/assets/img/logo3.png" alt="شعار تجمع مكة المكرمة الصحي" class="h-16 w-auto">
+        </div>
+        <nav class="hidden md:flex items-center space-x-reverse space-x-8">
+          <a href="../../index/index.html" class="text-white hover:text-blue-200 transition-colors">الرئيسية</a>
+          <a href="../dashboard.html" class="text-white hover:text-blue-200 transition-colors">لوحة التحكم</a>
+          <a href="./list.html" class="text-white hover:text-blue-200 transition-colors">المشاريع التحسينية</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="pt-20 max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
+    <!-- العنوان -->
+    <div class="flex items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-primary">📊 إحصائيات المشاريع التحسينية</h1>
+        <p class="text-gray-500 mt-1">نظرة شاملة على جميع المشاريع في كل المستشفيات</p>
+      </div>
+      <a href="./list.html" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
+        ← العودة للقائمة
+      </a>
+    </div>
+
+    <!-- كروت الإجماليات -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm mb-1">إجمالي المشاريع</div>
+        <div id="totalProjects" class="text-3xl font-bold text-primary">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm mb-1">✅ المعتمدة</div>
+        <div id="totalApproved" class="text-3xl font-bold text-blue-600">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm mb-1">🟢 المكتملة</div>
+        <div id="totalCompleted" class="text-3xl font-bold text-green-600">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm mb-1">⏳ قيد التنفيذ</div>
+        <div id="totalInProgress" class="text-3xl font-bold text-orange-600">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm mb-1">📝 المقترحة</div>
+        <div id="totalPending" class="text-3xl font-bold text-amber-600">0</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow p-4">
+        <div class="text-gray-500 text-sm mb-1">❌ الملغية</div>
+        <div id="totalCancelled" class="text-3xl font-bold text-red-600">0</div>
+      </div>
+    </div>
+
+    <!-- جدول المستشفيات -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900">إحصائيات حسب المستشفى</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-4 py-3 text-right font-semibold">المستشفى</th>
+              <th class="px-4 py-3 text-center font-semibold">الإجمالي</th>
+              <th class="px-4 py-3 text-center font-semibold">✅ معتمد</th>
+              <th class="px-4 py-3 text-center font-semibold">🟢 مكتمل</th>
+              <th class="px-4 py-3 text-center font-semibold">⏳ قيد التنفيذ</th>
+              <th class="px-4 py-3 text-center font-semibold">📝 مقترح</th>
+              <th class="px-4 py-3 text-center font-semibold">❌ ملغي</th>
+            </tr>
+          </thead>
+          <tbody id="statsTableBody">
+            <tr>
+              <td colspan="7" class="text-center py-8 text-gray-400">جاري تحميل الإحصائيات...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+    <div id="toastInner" class="rounded-xl shadow-lg px-4 py-3 text-sm"></div>
+  </div>
+
+  <script>
+    const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
+    const token = localStorage.getItem('token') || '';
+
+    function authHeaders() {
+      const h = token ? { 'Authorization': 'Bearer ' + token } : {};
+      return h;
+    }
+
+    const toast = (msg, type='info')=>{
+      const el = document.getElementById('toast'), box = document.getElementById('toastInner');
+      const cls = {
+        success:'bg-green-600 text-white',
+        error:'bg-red-600 text-white',
+        info:'bg-gray-800 text-white',
+        warn:'bg-amber-500 text-white'
+      }[type] || 'bg-gray-800 text-white';
+      box.className = 'rounded-xl shadow-lg px-4 py-3 text-sm ' + cls;
+      box.textContent = msg; el.classList.remove('hidden');
+      setTimeout(()=>el.classList.add('hidden'), 2500);
+    };
+
+    // ✅ جلب الإحصائيات
+    async function loadStats() {
+      const tbody = document.getElementById('statsTableBody');
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">جاري تحميل الإحصائيات...</td></tr>';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/improvements/stats`, {
+          headers: authHeaders()
+        });
+
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+
+        const json = await res.json();
+        
+        if (!json.success || !json.data) {
+          throw new Error('بيانات غير صحيحة');
+        }
+
+        // ✅ عرض الإجماليات
+        const totals = json.totals || {};
+        document.getElementById('totalProjects').textContent = totals.total || 0;
+        document.getElementById('totalApproved').textContent = totals.approved || 0;
+        document.getElementById('totalCompleted').textContent = totals.completed || 0;
+        document.getElementById('totalInProgress').textContent = totals.inProgress || 0;
+        document.getElementById('totalPending').textContent = totals.pending || 0;
+        document.getElementById('totalCancelled').textContent = totals.cancelled || 0;
+
+        // ✅ عرض الجدول
+        renderTable(json.data || []);
+      } catch (err) {
+        console.error('Error loading stats:', err);
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-red-400">فشل تحميل الإحصائيات</td></tr>';
+        toast('فشل تحميل الإحصائيات: ' + err.message, 'error');
+      }
+    }
+
+    // ✅ عرض الجدول
+    function renderTable(data) {
+      const tbody = document.getElementById('statsTableBody');
+      
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">لا توجد بيانات</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(row => {
+        const hospitalId = row.HospitalID;
+        const hospitalName = row.HospitalName || `مستشفى ${hospitalId}`;
+        const total = Number(row.TotalProjects) || 0;
+        const approved = Number(row.ApprovedCount) || 0;
+        const completed = Number(row.CompletedCount) || 0;
+        const inProgress = Number(row.InProgressCount) || 0;
+        const pending = Number(row.PendingCount) || 0;
+        const cancelled = Number(row.CancelledCount) || 0;
+
+        // ✅ جعل الصف قابل للنقر للفلترة
+        return `
+          <tr class="border-b hover:bg-gray-50 cursor-pointer transition-colors" 
+              onclick="filterByHospital(${hospitalId})"
+              title="انقر للفلترة حسب هذا المستشفى">
+            <td class="px-4 py-3 font-semibold text-gray-900">${escapeHtml(hospitalName)}</td>
+            <td class="px-4 py-3 text-center font-bold text-primary">${total}</td>
+            <td class="px-4 py-3 text-center text-blue-600">${approved}</td>
+            <td class="px-4 py-3 text-center text-green-600">${completed}</td>
+            <td class="px-4 py-3 text-center text-orange-600">${inProgress}</td>
+            <td class="px-4 py-3 text-center text-amber-600">${pending}</td>
+            <td class="px-4 py-3 text-center text-red-600">${cancelled}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ✅ دالة للفلترة حسب المستشفى
+    function filterByHospital(hospitalId) {
+      window.location.href = `list.html?hospitalId=${hospitalId}`;
+    }
+
+    // ✅ دالة لتنظيف HTML
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ✅ تحميل البيانات عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+    });
+  </script>
+</body>
+</html>
+

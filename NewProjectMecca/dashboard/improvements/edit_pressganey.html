@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>مشروع تحسيني - PressGaney</title>
+  <title>تعديل مشروع PressGaney</title>
 
   <!-- Tailwind via CDN -->
   <!-- Theme controller -->
@@ -47,13 +47,13 @@
       <!-- العنوان مع Badge -->
       <div class="mb-8">
         <div class="flex items-center gap-3 mb-3">
-          <span class="px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold">مشروع PressGaney</span>
+          <span class="px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold">تعديل مشروع PressGaney</span>
         </div>
         <h1 class="text-3xl md:text-4xl font-extrabold text-primary mb-2">
-          مشروع تحسيني - PressGaney (برسجيني)
+          تعديل مشروع PressGaney
         </h1>
         <p class="text-gray-600">
-          املأ البيانات التالية لإضافة مشروع تحسيني مبني على نتائج استبيان PressGaney
+          عدّل البيانات التالية لتحديث مشروع PressGaney
         </p>
       </div>
 
@@ -70,16 +70,6 @@
           </h2>
 
           <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                المستشفى <span class="text-red-500">*</span>
-              </label>
-              <select id="hospitalSelect" required
-                      class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                <option value="">اختر المستشفى</option>
-              </select>
-            </div>
-
             <!-- نوع المشروع -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -249,12 +239,27 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  مسؤول المشروع
+                  الحالة <span class="text-red-500">*</span>
                 </label>
-                <input type="text" id="projectOwner"
-                       class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                       placeholder="اسم المسؤول عن المشروع">
+                <select id="status" required
+                        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option value="DRAFT">مسودة</option>
+                  <option value="PROPOSED">مقترح</option>
+                  <option value="APPROVED">معتمد</option>
+                  <option value="IN_PROGRESS">قيد التنفيذ</option>
+                  <option value="COMPLETED">مكتمل</option>
+                  <option value="REJECTED">مرفوض</option>
+                </select>
               </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                مسؤول المشروع
+              </label>
+              <input type="text" id="projectOwner"
+                     class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                     placeholder="اسم المسؤول عن المشروع">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -339,13 +344,9 @@
         <div class="flex gap-3 pt-4">
           <button type="submit"
                   class="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 font-semibold transition-colors">
-            حفظ المشروع
+            حفظ التعديلات
           </button>
-          <button type="button" id="draftBtn"
-                  class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors">
-            حفظ كمسودة
-          </button>
-          <a href="./select-type.html"
+          <a href="./view.html" id="cancelBtn"
              class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors text-center">
             إلغاء
           </a>
@@ -365,13 +366,19 @@
     const API_BASE = localStorage.getItem('apiBase') || 'http://localhost:3001';
     const token = localStorage.getItem('token') || '';
 
-    function isClusterManager() {
-      try {
-        const u = JSON.parse(localStorage.getItem('userData') || '{}');
-        return u.RoleID === 1 || u.IsClusterManager === true;
-      } catch {
-        return false;
-      }
+    // الحصول على projectId و hospitalId من URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('id');
+    const hospitalId = urlParams.get('hospitalId') || effectiveHospitalId();
+
+    function effectiveHospitalId() {
+      const u = JSON.parse(localStorage.getItem('userData') || '{}');
+      const q = new URLSearchParams(location.search);
+      const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
+      const fromLS1 = Number(localStorage.getItem('selectedHospitalId') || 0);
+      const fromLS2 = Number(localStorage.getItem('hospitalId') || 0);
+      const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
+      return fromUrl || fromLS1 || fromLS2 || fromUser || null;
     }
 
     // Helper functions
@@ -390,106 +397,25 @@
       setTimeout(() => el.classList.add('hidden'), 3000);
     };
 
-    function effectiveHospitalId() {
-      const u = JSON.parse(localStorage.getItem('userData') || '{}');
-      const q = new URLSearchParams(location.search);
-      const fromUrl = Number(q.get('hospitalId') || q.get('hid') || 0);
-      const fromLS1 = Number(localStorage.getItem('selectedHospitalId') || 0);
-      const fromLS2 = Number(localStorage.getItem('hospitalId') || 0);
-      const fromUser = Number(u.HospitalID || u.hospitalId || u.hid || 0);
-      return fromUrl || fromLS1 || fromLS2 || fromUser || null;
-    }
-
     const authHeaders = (includeJson = false) => {
       const h = token ? { 'Authorization': 'Bearer ' + token } : {};
       if (includeJson) h['Content-Type'] = 'application/json';
-      const selectedHospital = document.getElementById('hospitalSelect')?.value;
-      const hid = selectedHospital || effectiveHospitalId();
+      const hid = hospitalId || effectiveHospitalId();
       if (hid) {
-        const hidStr = String(hid);
-        h['x-hospital-id'] = hidStr;
-        h['X-Hospital-Id'] = hidStr;
+        h['x-hospital-id'] = String(hid);
+        h['X-Hospital-Id'] = String(hid);
       }
       return h;
     };
 
-    async function loadHospitals() {
-      const select = document.getElementById('hospitalSelect');
-      if (!select) return;
-
-      select.innerHTML = '<option value="">اختر المستشفى</option>';
-      const currentHospitalId = effectiveHospitalId();
-      const central = isClusterManager();
-
-      try {
-        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
-        const res = await fetch(`${API_BASE}/api/hospitals?active=1`, { headers });
-
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-
-        const hospitals = await res.json();
-        
-        // نفس النمط المستخدم في list.html و new.html
-        // API يعيد array مباشرة أو { data: [...] }
-        const list = Array.isArray(hospitals) ? hospitals : (hospitals?.data || []);
-
-        // تسجيل للتحقق (يمكن حذفه لاحقاً)
-        if (list.length > 0) {
-          console.log('🏥 Sample hospital:', list[0]);
-        }
-
-        list.forEach(h => {
-          const opt = document.createElement('option');
-          opt.value = h.HospitalID || h.id || '';
-          // نفس النمط المستخدم في list.html و new.html
-          opt.textContent = h.NameAr || h.NameEn || `مستشفى ${h.Code || h.HospitalID || ''}`;
-          select.appendChild(opt);
-        });
-      } catch (e) {
-        console.error('Error loading hospitals:', e);
-        toast('تعذر تحميل قائمة المستشفيات', 'error');
-      }
-
-      let targetHospitalId = currentHospitalId;
-      if (!targetHospitalId) {
-        const firstHospitalOption = Array.from(select.options).find(opt => opt.value);
-        if (firstHospitalOption) {
-          targetHospitalId = firstHospitalOption.value;
-        }
-      }
-
-      if (targetHospitalId) {
-        const targetHospitalIdStr = String(targetHospitalId);
-        const optionExists = Array.from(select.options).some(opt => opt.value === targetHospitalIdStr);
-        if (!optionExists) {
-          const opt = document.createElement('option');
-          opt.value = targetHospitalIdStr;
-          opt.textContent = 'المستشفى الحالي';
-          select.appendChild(opt);
-        }
-        select.value = targetHospitalIdStr;
-        localStorage.setItem('selectedHospitalId', targetHospitalIdStr);
-      }
-
-      if (!central && select.value) {
-        select.disabled = true;
-        select.classList.add('bg-gray-100', 'cursor-not-allowed');
-      } else {
-        select.disabled = false;
-        select.classList.remove('bg-gray-100', 'cursor-not-allowed');
-      }
-    }
-
     // تحميل النطاقات والرحلات العلاجية
     async function loadZonesAndTrips() {
       try {
-        const selectedHospital = document.getElementById('hospitalSelect')?.value;
-        const hid = selectedHospital || effectiveHospitalId();
+        const hid = hospitalId || effectiveHospitalId();
         if (!hid) return toast('لم يتم تحديد المستشفى', 'warn');
 
         const headers = authHeaders();
         const hidSegment = encodeURIComponent(hid);
-        localStorage.setItem('selectedHospitalId', String(hid));
 
         const [zonesRes, tripsRes] = await Promise.all([
           fetch(`${API_BASE}/api/hospital/${hidSegment}/zones`, { headers }),
@@ -526,44 +452,61 @@
       }
     }
 
+    // تحميل المشروع الحالي
+    async function loadProject() {
+      if (!projectId) {
+        toast('معرف المشروع غير صحيح', 'error');
+        setTimeout(() => window.location.href = './list.html', 1500);
+        return;
+      }
+
+      try {
+        const hid = hospitalId || effectiveHospitalId();
+        if (!hid) {
+          toast('لم يتم تحديد المستشفى', 'warn');
+          return;
+        }
+
+        const url = `${API_BASE}/api/improvements/pressganey/${projectId}${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+
+        const result = await res.json();
+        if (!result.success) {
+          throw new Error(result.message || 'فشل في تحميل المشروع');
+        }
+
+        const project = result.data;
+
+        // تعبئة الحقول
+        fillFormWithProject(project);
+
+      } catch (err) {
+        console.error('loadProject error:', err);
+        toast('تعذر تحميل بيانات المشروع', 'error');
+        setTimeout(() => window.location.href = './list.html', 2000);
+      }
+    }
+
+    // تعبئة النموذج بالبيانات
     function fillFormWithProject(project) {
       if (!project) return;
-      const select = document.getElementById('hospitalSelect');
-      if (select && project.HospitalID) {
-        select.value = String(project.HospitalID);
-      }
-      document.getElementById('zone').value = project.ZoneID || '';
-      document.getElementById('trip').value = project.TripID || '';
-      document.getElementById('surveyQuestion').value = project.SurveyQuestion || '';
-      document.getElementById('q1Percentage').value = project.Q1_Percentage ?? '';
-      document.getElementById('q2Percentage').value = project.Q2_Percentage ?? '';
-      document.getElementById('q3Percentage').value = project.Q3_Percentage ?? '';
-      document.getElementById('q4Percentage').value = project.Q4_Percentage ?? '';
-      document.getElementById('measurementPeriod').value = project.MeasurementPeriod || '';
-      document.getElementById('projectTitle').value = project.ProjectTitle || '';
-      document.getElementById('currentAnalysis').value = project.ProblemStatement || '';
-      document.getElementById('aimStatement').value = project.AimStatement || '';
-      document.getElementById('proposedActions').value = project.ProposedSolution || '';
-      document.getElementById('projectOwner').value = project.ProjectOwner || '';
-      document.getElementById('priority').value = project.Priority || 'MEDIUM';
-      document.getElementById('startDate').value = project.StartDate ? project.StartDate.split('T')[0] : '';
-      document.getElementById('dueDate').value = project.DueDate ? project.DueDate.split('T')[0] : '';
-      
-      // تحميل نوع المشروع
+
+      // نوع المشروع
       const projectCategorySelect = document.getElementById('projectCategory');
       const projectCategoryOtherInput = document.getElementById('projectCategoryOther');
       const projectCategoryOtherContainer = document.getElementById('projectCategoryOtherContainer');
-      
+
       if (projectCategorySelect) {
-        // إذا كان ProjectCategoryOriginal موجود، استخدمه
-        // وإلا استخدم ProjectCategory
         const categoryValue = project.ProjectCategoryOriginal || project.ProjectCategory || '';
         projectCategorySelect.value = categoryValue;
-        
-        // إذا كانت القيمة "أخرى" أو ProjectCategory مختلف عن القيم المعروفة، أظهر حقل "أخرى"
+
         const knownValues = ['وزاري', 'القابضة', '20/80', '20/25'];
         const isOther = categoryValue === 'أخرى' || (project.ProjectCategory && !knownValues.includes(project.ProjectCategory));
-        
+
         if (isOther) {
           projectCategorySelect.value = 'أخرى';
           if (projectCategoryOtherContainer) projectCategoryOtherContainer.classList.remove('hidden');
@@ -576,7 +519,30 @@
         }
       }
 
-      // تحميل معايير SMART
+      // النطاق والرحلة
+      document.getElementById('zone').value = project.ZoneID || '';
+      document.getElementById('trip').value = project.TripID || '';
+
+      // بيانات الاستبيان
+      document.getElementById('surveyQuestion').value = project.SurveyQuestion || '';
+      document.getElementById('q1Percentage').value = project.Q1_Percentage ?? '';
+      document.getElementById('q2Percentage').value = project.Q2_Percentage ?? '';
+      document.getElementById('q3Percentage').value = project.Q3_Percentage ?? '';
+      document.getElementById('q4Percentage').value = project.Q4_Percentage ?? '';
+      document.getElementById('measurementPeriod').value = project.MeasurementPeriod || '';
+
+      // بيانات المشروع
+      document.getElementById('projectTitle').value = project.ProjectTitle || '';
+      document.getElementById('currentAnalysis').value = project.ProblemStatement || '';
+      document.getElementById('aimStatement').value = project.AimStatement || '';
+      document.getElementById('proposedActions').value = project.ProposedSolution || '';
+      document.getElementById('projectOwner').value = project.ProjectOwner || '';
+      document.getElementById('priority').value = project.Priority || 'MEDIUM';
+      document.getElementById('status').value = project.Status || 'PROPOSED';
+      document.getElementById('startDate').value = project.StartDate ? project.StartDate.split('T')[0] : '';
+      document.getElementById('dueDate').value = project.DueDate ? project.DueDate.split('T')[0] : '';
+
+      // SMART checklist
       if (project.smartChecklist) {
         const smart = project.smartChecklist;
         const smartSpecificEl = document.getElementById('smartSpecific');
@@ -591,50 +557,53 @@
         if (smartRealisticEl) smartRealisticEl.checked = smart.realistic || false;
         if (smartTimeBoundEl) smartTimeBoundEl.checked = smart.timeBound || false;
       }
-    }
 
-    async function loadExistingProject() {
-      if (!existingProjectId) return null;
-      try {
-        let url = `${API_BASE}/api/improvements/pressganey/${existingProjectId}`;
-        const qs = new URLSearchParams();
-        const hid = presetHospitalId || effectiveHospitalId();
-        if (hid) qs.set('hospitalId', hid);
-        if (qs.toString()) url += `?${qs.toString()}`;
-        const res = await fetch(url, { headers: authHeaders() });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const payload = await res.json();
-        if (!payload.success) throw new Error(payload.message || 'فشل في تحميل المشروع');
-        return payload.data;
-      } catch (err) {
-        console.error('loadExistingProject error:', err);
-        toast('تعذر تحميل بيانات المشروع', 'error');
-        return null;
+      // تحديث رابط الإلغاء
+      const cancelBtn = document.getElementById('cancelBtn');
+      if (cancelBtn) {
+        cancelBtn.href = `./view.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
       }
     }
+
+    // إظهار حقل "أخرى" عند الحاجة
+    (function initProjectCategoryOtherField() {
+      const select = document.getElementById('projectCategory');
+      const container = document.getElementById('projectCategoryOtherContainer');
+      const input = document.getElementById('projectCategoryOther');
+
+      if (!select || !container) return;
+
+      const toggleOtherField = () => {
+        if (select.value === 'أخرى') {
+          container.classList.remove('hidden');
+          setTimeout(() => input?.focus(), 100);
+        } else {
+          container.classList.add('hidden');
+          if (input) input.value = '';
+        }
+      };
+
+      select.addEventListener('change', toggleOtherField);
+      toggleOtherField();
+    })();
 
     // معالجة النموذج
     document.getElementById('projectForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await submitProject('PROPOSED');
+      await submitProject();
     });
 
-    document.getElementById('draftBtn').addEventListener('click', async () => {
-      await submitProject('DRAFT');
-    });
-
-    async function submitProject(status) {
+    async function submitProject() {
       try {
-        const selectedHospital = document.getElementById('hospitalSelect')?.value;
-        let hid = selectedHospital || effectiveHospitalId();
+        const hid = hospitalId || effectiveHospitalId();
         if (!hid || hid === '0' || hid === 0) {
           toast('يجب تحديد المستشفى', 'warn');
           return;
         }
-        const hidStr = String(hid);
-        localStorage.setItem('selectedHospitalId', hidStr);
-        localStorage.setItem('hospitalId', hidStr);
-        hid = hidStr;
+        if (!projectId) {
+          toast('معرف المشروع غير صحيح', 'error');
+          return;
+        }
 
         // معالجة نوع المشروع
         const projectCategorySelect = document.getElementById('projectCategory');
@@ -671,7 +640,7 @@
           proposedSolution: document.getElementById('proposedActions').value,
           projectOwner: document.getElementById('projectOwner').value || null,
           priority: document.getElementById('priority').value || 'MEDIUM',
-          status: status,
+          status: document.getElementById('status')?.value || 'PROPOSED',
           startDate: document.getElementById('startDate').value || null,
           dueDate: document.getElementById('dueDate').value || null,
           projectCategory: isOtherCategory ? otherCategoryValue : projectCategoryValue,
@@ -686,24 +655,12 @@
         };
 
         const headers = authHeaders(true);
-        headers['x-hospital-id'] = hid;
-        headers['X-Hospital-Id'] = hid;
-        let url = `${API_BASE}/api/improvements/pressganey`;
-        let method = 'POST';
-        if (existingProjectId) {
-          method = 'PUT';
-          url += `/${existingProjectId}`;
-          const qs = new URLSearchParams();
-          qs.set('hospitalId', hid);
-          if (qs.toString()) url += `?${qs.toString()}`;
-        } else {
-          const qs = new URLSearchParams();
-          qs.set('hospitalId', hid);
-          url += `?${qs.toString()}`;
-        }
+        headers['x-hospital-id'] = String(hid);
+        headers['X-Hospital-Id'] = String(hid);
+        const url = `${API_BASE}/api/improvements/pressganey/${projectId}${hid ? '?hospitalId=' + hid : ''}`;
 
         const res = await fetch(url, {
-          method,
+          method: 'PUT',
           headers,
           body: JSON.stringify(payload)
         });
@@ -711,8 +668,10 @@
         const result = await res.json().catch(() => ({ success: false }));
 
         if (res.ok && result.success) {
-          toast(status === 'DRAFT' ? 'تم حفظ المسودة بنجاح' : (existingProjectId ? 'تم تحديث المشروع بنجاح' : 'تم إضافة المشروع بنجاح'), 'success');
-          setTimeout(() => window.location.href = './list.html', 1500);
+          toast('تم تحديث المشروع بنجاح', 'success');
+          setTimeout(() => {
+            window.location.href = `./view.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
+          }, 1500);
         } else {
           toast(result.message || 'حدث خطأ أثناء الحفظ', 'error');
         }
@@ -722,59 +681,10 @@
       }
     }
 
-    document.getElementById('hospitalSelect')?.addEventListener('change', async () => {
-      await loadZonesAndTrips();
-    });
-
     // التحميل الأولي
-    const urlParams = new URLSearchParams(location.search);
-    const existingProjectId = urlParams.get('id');
-    const presetHospitalId = urlParams.get('hospitalId');
-    if (presetHospitalId) {
-      localStorage.setItem('selectedHospitalId', presetHospitalId);
-    }
-
-    // إظهار حقل "أخرى" عند الحاجة
-    (function initProjectCategoryOtherField() {
-      const select = document.getElementById('projectCategory');
-      const container = document.getElementById('projectCategoryOtherContainer');
-      const input = document.getElementById('projectCategoryOther');
-
-      if (!select || !container) return;
-
-      const toggleOtherField = () => {
-        if (select.value === 'أخرى') {
-          container.classList.remove('hidden');
-          setTimeout(() => input?.focus(), 100);
-        } else {
-          container.classList.add('hidden');
-          if (input) input.value = '';
-        }
-      };
-
-      select.addEventListener('change', toggleOtherField);
-      toggleOtherField();
-    })();
-
     (async function init() {
-      let existingData = null;
-      if (existingProjectId) {
-        existingData = await loadExistingProject();
-        if (existingData?.HospitalID) {
-          localStorage.setItem('selectedHospitalId', existingData.HospitalID);
-        }
-      }
-      await loadHospitals();
-      if (existingData?.HospitalID) {
-        const select = document.getElementById('hospitalSelect');
-        if (select) select.value = String(existingData.HospitalID);
-      }
       await loadZonesAndTrips();
-      if (existingData) {
-        fillFormWithProject(existingData);
-        const heading = document.querySelector('h1');
-        if (heading) heading.textContent = 'تعديل مشروع PressGaney';
-      }
+      await loadProject();
     })();
   </script>
 

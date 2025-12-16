@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>تفاصيل المشروع التحسيني</title>
+  <title>تفاصيل المشروع التحسيني - 937</title>
 
   <!-- Tailwind via CDN -->
   <!-- Theme controller -->
@@ -509,9 +509,9 @@
     }
 
     /**
-     * دالة Router: تكتشف نوع المشروع وتحوّل للصفحة المناسبة
+     * دالة تحميل مشروع 937 مباشرة
      */
-    async function detectAndRedirect(projectId, hospitalId) {
+    async function loadProject() {
       if (!projectId) {
         showError('معرف المشروع غير صحيح');
         return;
@@ -521,68 +521,24 @@
       errorEl.classList.add('hidden');
       detailsEl.classList.add('hidden');
 
-      const headers = authHeaders();
-
       try {
-        // 1️⃣ جرّبي PressGaney
-        try {
-          const pg = await fetch(
-            `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}${hospitalId ? '?hospitalId=' + hospitalId : ''}`,
-            { headers }
-          );
-          if (pg.ok) {
-            const pgResult = await pg.json();
-            if (pgResult.success && pgResult.data && pgResult.data.SurveyQuestion !== undefined) {
-              window.location.href = `view_pressganey.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
-              return;
-            }
-          }
-        } catch (pgErr) {
-          // تجاهل الخطأ ونستمر
+        const hid = effectiveHospitalId();
+        const url = `${API_BASE}/api/improvements/937/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
         }
-
-        // 2️⃣ جرّبي 937
-        try {
-          const p937 = await fetch(
-            `${API_BASE}/api/improvements/937/${encodeURIComponent(projectId)}${hospitalId ? '?hospitalId=' + hospitalId : ''}`,
-            { headers }
-          );
-          if (p937.ok) {
-            const p937Result = await p937.json();
-            if (p937Result.success || p937Result.ProjectID) {
-              window.location.href = `view_937.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
-              return;
-            }
-          }
-        } catch (p937Err) {
-          // تجاهل الخطأ ونستمر
-        }
-
-        // 3️⃣ جرّبي OTHER
-        try {
-          const other = await fetch(
-            `${API_BASE}/api/improvements/other/${encodeURIComponent(projectId)}${hospitalId ? '?hospitalId=' + hospitalId : ''}`,
-            { headers }
-          );
-          if (other.ok) {
-            const otherResult = await other.json();
-            if (otherResult.success && otherResult.data) {
-              window.location.href = `view_other.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
-              return;
-            }
-          }
-        } catch (otherErr) {
-          // تجاهل الخطأ ونستمر
-        }
-
-        // إذا لم نجد المشروع في أي نوع
-        showError('لم يتم العثور على المشروع');
-      } catch (err) {
-        console.error('Error detecting project type:', err);
-        showError('حدث خطأ في تحديد نوع المشروع');
+        
+        const result = await res.json();
+        const project = result.project || result.data || result;
+        await renderProject(project);
+        
+      } catch (e) {
+        console.error('Error loading project:', e);
+        showError('فشل في تحميل تفاصيل المشروع');
       }
     }
-
 
     function showError(message) {
       loadingEl.classList.add('hidden');
@@ -593,18 +549,22 @@
 
     async function renderProject(project) {
       // Basic info
-      $('#projectTitle').textContent = project.ProjectTitle || project.Title || 'بدون عنوان';
+      $('#projectTitle').textContent = project.Title || project.ProjectTitle || 'بدون عنوان';
       $('#projectAim').textContent = project.AimStatement || 'لا يوجد وصف';
-      $('#projectDepartment').textContent = 'PressGaney';
+      $('#projectDepartment').textContent = project.DepartmentName || 'غير محدد';
 
       // Status and Priority
+      // ✅ لمشاريع 937: استخدام StatusCode و PriorityCode
+      const projectStatus = project.StatusCode || project.Status;
+      const projectPriority = project.PriorityCode || project.Priority;
+      
       const statusEl = $('#projectStatus');
-      const statusInfo = badgeStatus(project.Status);
+      const statusInfo = badgeStatus(projectStatus);
       statusEl.textContent = statusInfo.text;
       statusEl.className = `px-3 py-1 rounded-full text-xs ${statusInfo.class}`;
 
       const priorityEl = $('#projectPriority');
-      const priorityInfo = badgePriority(project.Priority);
+      const priorityInfo = badgePriority(projectPriority);
       priorityEl.textContent = priorityInfo.text;
       priorityEl.className = `px-3 py-1 rounded-full text-xs ${priorityInfo.class}`;
 
@@ -620,8 +580,9 @@
       // عرض معايير SMART
       renderSmartCriteria(project);
 
-      // عرض سير المشروع
-      renderProjectProgressDiagram(project.Status);
+      // عرض سير المشروع مع التقدم المضافة
+      // ✅ استخدام projectStatus المحدد أعلاه
+      renderProjectProgressDiagram(projectStatus, project);
 
       // عرض التفاصيل الإضافية (نوع المشروع، النطاق، الرحلة)
       await renderProjectExtraDetails(project);
@@ -631,7 +592,8 @@
 
       // تحميل سجل التعديلات
       const hid = effectiveHospitalId();
-      const projectIdForHistory = project.ProjectID || projectId;
+      // ✅ استخدام Project937ID لمشاريع 937
+      const projectIdForHistory = project.Project937ID || projectId;
       loadProjectHistory(projectIdForHistory, hid);
 
       // Show details
@@ -639,30 +601,36 @@
       detailsEl.classList.remove('hidden');
     }
 
-    // دالة لعرض معايير SMART
+    // دالة لعرض معايير SMART (لـ 937 - من الحقول مباشرة)
     function renderSmartCriteria(project) {
-      const sc = project.smartChecklist || {};
-
       const map = [
-        { key: 'specific', el: 'smartSpecific' },
-        { key: 'measurable', el: 'smartMeasurable' },
-        { key: 'achievable', el: 'smartAchievable' },
-        { key: 'realistic', el: 'smartRealistic' },
-        { key: 'timeBound', el: 'smartTimebound' }
+        { field: 'SmartSpecific', el: 'smartSpecific' },
+        { field: 'SmartMeasurable', el: 'smartMeasurable' },
+        { field: 'SmartAchievable', el: 'smartAchievable' },
+        { field: 'SmartRealistic', el: 'smartRealistic' },
+        { field: 'SmartTimebound', el: 'smartTimebound' }
       ];
 
-      map.forEach(({ key, el }) => {
+      map.forEach(({ field, el }) => {
         const node = document.getElementById(el);
         if (!node) return;
 
-        const value = sc[key] === true || sc[key] === 1;
+        const value = project[field] === true || project[field] === 1 || project[field] === '1';
         node.classList.remove('active', 'inactive');
         node.classList.add(value ? 'active' : 'inactive');
       });
     }
 
+    // دالة لتنظيف HTML
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     // دالة لعرض مخطط سير المشروع
-    function renderProjectProgressDiagram(status) {
+    function renderProjectProgressDiagram(status, project = null) {
       const container = document.getElementById('projectProgressDiagram');
       if (!container) return;
 
@@ -692,6 +660,18 @@
       // نعرف أي مرحلة حالية
       const currentIndex = stages.findIndex(s => s.key === status);
       const activeIndex = currentIndex >= 0 ? currentIndex : 0;
+
+      // ✅ التحقق من وجود تقدم مضافة (ImplementationResponse)
+      const hasProgress = project && project.ImplementationResponse && project.ImplementationResponse.trim();
+      const progressDate = project && project.ImplementationDate 
+        ? new Date(project.ImplementationDate).toLocaleDateString('ar-SA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : null;
 
       // نولّد الرسم
       container.innerHTML = `
@@ -732,15 +712,30 @@
             `;
           }).join('')}
         </div>
+        ${hasProgress ? `
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold">
+                  ✓
+                </div>
+                <div class="flex-1">
+                  <div class="font-semibold text-emerald-900 mb-1">تم إضافة تقدم</div>
+                  ${progressDate ? `<div class="text-xs text-emerald-700 mb-2">📅 ${progressDate}</div>` : ''}
+                  <div class="text-sm text-emerald-800 whitespace-pre-wrap">${escapeHtml(project.ImplementationResponse)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
       `;
     }
 
-    // دالة لعرض التفاصيل الإضافية (نوع المشروع، النطاق، الرحلة)
+    // دالة لعرض التفاصيل الإضافية (نوع المشروع فقط لـ 937)
     async function renderProjectExtraDetails(project) {
       const container = document.getElementById('projectExtraDetails');
       if (!container) return;
 
-      const type = detectProjectType(project);
       let hasAny = false;
 
       // نوع المشروع (مشترك لجميع الأنواع)
@@ -752,35 +747,6 @@
           // استخدام ProjectCategory إذا كان موجوداً، وإلا ProjectCategoryOriginal
           categoryEl.textContent = project.ProjectCategory || project.ProjectCategoryOriginal || 'غير محدد';
           hasAny = true;
-        }
-      }
-
-      // PressGaney فقط: النطاق والرحلة
-      if (type === 'PRESSGANEY') {
-        const hid = effectiveHospitalId();
-
-        // جلب اسم النطاق
-        if (project.ZoneID) {
-          const zoneName = await resolveZoneName(hid, project.ZoneID);
-          const zoneEl = document.querySelector('#detailZone div');
-          const zoneContainer = document.getElementById('detailZone');
-          if (zoneEl && zoneContainer) {
-            zoneContainer.classList.remove('hidden');
-            zoneEl.textContent = zoneName;
-            hasAny = true;
-          }
-        }
-
-        // جلب اسم الرحلة
-        if (project.TripID) {
-          const tripName = await resolveTripName(hid, project.TripID);
-          const tripEl = document.querySelector('#detailTrip div');
-          const tripContainer = document.getElementById('detailTrip');
-          if (tripEl && tripContainer) {
-            tripContainer.classList.remove('hidden');
-            tripEl.textContent = tripName;
-            hasAny = true;
-          }
         }
       }
 
@@ -830,9 +796,37 @@
       }
 
       if (progEl) {
-        progEl.textContent = project.ProgressNotes && project.ProgressNotes.trim()
+        // ✅ لمشاريع 937: عرض ImplementationResponse أولاً، ثم ProgressNotes
+        const implementationResponse = project.ImplementationResponse && project.ImplementationResponse.trim()
+          ? project.ImplementationResponse
+          : null;
+        const progressNotes = project.ProgressNotes && project.ProgressNotes.trim()
           ? project.ProgressNotes
-          : 'لا توجد ملاحظات مسجلة حتى الآن.';
+          : null;
+        
+        if (implementationResponse || progressNotes) {
+          let combinedText = '';
+          if (implementationResponse) {
+            combinedText += `📝 **رد التنفيذ:**\n${implementationResponse}`;
+            if (project.ImplementationDate) {
+              const implDate = new Date(project.ImplementationDate).toLocaleDateString('ar-SA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+              combinedText += `\n\n📅 **تاريخ الإضافة:** ${implDate}`;
+            }
+          }
+          if (progressNotes) {
+            if (combinedText) combinedText += '\n\n---\n\n';
+            combinedText += `📋 **ملاحظات إضافية:**\n${progressNotes}`;
+          }
+          progEl.textContent = combinedText;
+        } else {
+          progEl.textContent = 'لا توجد ملاحظات مسجلة حتى الآن.';
+        }
       }
 
       // عرض نسبة التقدم
@@ -994,7 +988,8 @@
 
     // Event listeners
     $('#btnEdit').addEventListener('click', ()=>{
-      window.location.href = `./edit.html?id=${projectId}`;
+      const hid = effectiveHospitalId();
+      window.location.href = `./edit.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
     });
 
     $('#btnReport').addEventListener('click', ()=>{
@@ -1004,8 +999,7 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
       await checkViewPermissions();
-      const hid = effectiveHospitalId();
-      await detectAndRedirect(projectId, hid);
+      await loadProject();
     });
   </script>
 
@@ -1186,32 +1180,14 @@
           return;
         }
 
+        // ✅ الكود الصحيح لمشاريع 937
         const body = {
-          note,
-          progressPercent: percent ? Number(percent) : null,
-          newStatus: status || null
+          responseText: note,
+          filesCount: 0
         };
 
-        // تحديد نوع المشروع أولاً لاستخدام endpoint الصحيح
-        let progressUrl;
-        try {
-          // محاولة PressGaney أولاً
-          const pressganeyCheckUrl = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
-          const pressganeyCheckRes = await fetch(pressganeyCheckUrl, { headers: authHeaders() });
-          if (pressganeyCheckRes.ok) {
-            const pressganeyCheckResult = await pressganeyCheckRes.json();
-            if (pressganeyCheckResult.success && pressganeyCheckResult.data?.SurveyQuestion !== undefined) {
-              progressUrl = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}/progress${hid ? '?hospitalId=' + hid : ''}`;
-            }
-          }
-        } catch (e) {
-          // إذا فشل، نستخدم endpoint العام
-        }
-        
-        // إذا لم يكن PressGaney، نستخدم endpoint العام
-        if (!progressUrl) {
-          progressUrl = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}/progress${hid ? '?hospitalId=' + hid : ''}`;
-        }
+        // ✅ المسار الصحيح لمشروع 937
+        const progressUrl = `${API_BASE}/api/improvements/937/${encodeURIComponent(projectId)}/implementation${hid ? '?hospitalId=' + hid : ''}`;
 
         const res = await fetch(progressUrl, {
           method: 'POST',

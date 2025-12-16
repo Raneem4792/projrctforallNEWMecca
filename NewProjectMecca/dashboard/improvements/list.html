@@ -64,11 +64,17 @@
         <h1 class="text-3xl md:text-4xl font-extrabold text-primary" data-i18n="page-title">المشاريع التحسينية</h1>
         <p class="text-gray-500 mt-1" data-i18n="page-subtitle">استعرض، صفِّ، وعدِّل مشاريع التحسين لكل مستشفى.</p>
       </div>
-      <button id="btnAdd"
-              class="rounded-full bg-blue-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-blue-700 shadow-sm"
-              data-i18n="btn-add">
-        + مشروع تحسيني
-      </button>
+      <div class="flex gap-2">
+        <a href="./improvements_stats.html"
+           class="rounded-full bg-emerald-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2">
+          📊 إحصائيات المشاريع
+        </a>
+        <button id="btnAdd"
+                class="rounded-full bg-blue-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-blue-700 shadow-sm"
+                data-i18n="btn-add">
+          + مشروع تحسيني
+        </button>
+      </div>
     </div>
 
     <!-- فلاتر -->
@@ -831,18 +837,22 @@
         tr.className = 'border-b last:border-b-0 hover:bg-gray-50';
         
         // بناء أزرار الإجراءات حسب الصلاحيات
+        const source = item._source || 'OTHER'; // OTHER, PRESSGANEY, 937
         let actionButtons = '';
         if (userPermissions.improvementView) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('view')}</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="view" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}" data-source="${source}">${getActionLabel('view')}</button>`;
         }
         if (userPermissions.improvementEdit) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('edit')}</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-xs" data-act="edit" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}" data-source="${source}">${getActionLabel('edit')}</button>`;
         }
         if (userPermissions.improvementReportView) {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('report')}</button>`;
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-[#00366f] text-xs" data-act="report" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}" data-source="${source}">${getActionLabel('report')}</button>`;
         }
-        if (userPermissions.improvementApprove && item.Status === 'PROPOSED') {
-          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs" data-act="approve" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}">${getActionLabel('approve')}</button>`;
+        // زر الاعتماد: يظهر للمشاريع المقترحة (PROPOSED) أو قيد الاعتماد (UNDER_APPROVAL لمشاريع 937)
+        const canApprove = userPermissions.improvementApprove && 
+          (item.Status === 'PROPOSED' || item.Status === 'UNDER_APPROVAL');
+        if (canApprove) {
+          actionButtons += `<button type="button" class="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs" data-act="approve" data-id="${item.ProjectID}" data-hospital="${item._hospitalId || item.HospitalID || ''}" data-source="${source}">${getActionLabel('approve')}</button>`;
         }
         
         // عمود المستشفى (للمدير فقط عند عرض جميع المستشفيات)
@@ -1141,46 +1151,96 @@
       const id = btn.getAttribute('data-id');
       const act = btn.getAttribute('data-act');
       const hospitalId = btn.getAttribute('data-hospital');
+      const source = btn.getAttribute('data-source') || 'OTHER';
       
       // بناء URL مع hospitalId إذا كان مدير واختار مستشفى
       let url = '';
+      const hidParam = hospitalId ? `&hospitalId=${hospitalId}` : '';
+      
       if (act === 'view'){
-        url = `./view.html?id=${id}`;
+        // تحديد صفحة العرض حسب نوع المشروع
+        if (source === 'OTHER') {
+          url = `./view_other.html?id=${id}${hidParam}`;
+        } else if (source === 'PRESSGANEY') {
+          url = `./view_pressganey.html?id=${id}${hidParam}`;
+        } else if (source === '937') {
+          url = `./view_937.html?id=${id}${hidParam}`;
+        } else {
+          // fallback إلى router
+          url = `./view.html?id=${id}${hidParam}`;
+        }
       } else if (act === 'edit'){
-        url = `./edit.html?id=${id}`;
+        // تحديد صفحة التعديل حسب نوع المشروع
+        if (source === 'OTHER') {
+          url = `./edit_other.html?id=${id}${hidParam}`;
+        } else if (source === 'PRESSGANEY') {
+          url = `./edit_pressganey.html?id=${id}${hidParam}`;
+        } else if (source === '937') {
+          url = `./edit_937.html?id=${id}${hidParam}`;
+        } else {
+          // fallback إلى صفحة التعديل العامة
+          url = `./edit.html?id=${id}${hidParam}`;
+        }
       } else if (act === 'report'){
-        url = `./report.html?id=${id}`;
+        url = `./report.html?id=${id}${hidParam}`;
       } else if (act === 'approve') {
         if (!confirm("هل تريد اعتماد هذا المشروع؟")) return;
 
         const selectedHospital = hospitalId || (isCentralAdmin ? (fltHospital?.value || effectiveHospitalId()) : effectiveHospitalId());
-        let requestUrl = `${API_BASE}/api/improvements/approve/${id}`;
+        
+        // ✅ إرسال نوع المشروع مع الطلب
+        const projectType = source || 'OTHER'; // OTHER, PRESSGANEY, 937
+        let requestUrl = `${API_BASE}/api/improvements/approve/${id}?type=${projectType}`;
 
         if (isCentralAdmin && selectedHospital) {
-          requestUrl += `?hospitalId=${selectedHospital}`;
+          requestUrl += `&hospitalId=${selectedHospital}`;
+        } else if (selectedHospital) {
+          requestUrl += `&hospitalId=${selectedHospital}`;
         }
 
         const headers = { ...authHeaders() };
-        if (isCentralAdmin && selectedHospital) {
+        if (selectedHospital) {
           headers['x-hospital-id'] = String(selectedHospital);
         }
+        
+        console.log('✅ Approving project:', { id, type: projectType, url: requestUrl });
 
+        // حفظ الزر الأصلي لإخفائه بعد الاعتماد
+        const approveBtn = btn;
+        const row = btn.closest('tr');
+        
         fetch(requestUrl, {
           method: 'PUT',
           headers
         })
         .then(res => res.json().catch(() => ({ success: false, message: 'استجابة غير صالحة' })))
-        .then(data => {
-          if (data.success) {
+        .then(async data => {
+          if (data.success || data.ok) {
             toast('✅ ' + (data.message || 'تم اعتماد المشروع بنجاح'), 'success');
-            loadProjects();
+            
+            // تحديث فوري للصف في القائمة
+            if (row) {
+              // تحديث الحالة في الصف مباشرة
+              const statusCell = row.querySelector('td:nth-last-child(4)'); // عمود الحالة (قبل آخر 3 أعمدة: آخر تحديث، إجراءات)
+              if (statusCell) {
+                statusCell.innerHTML = badgeStatus('APPROVED');
+              }
+              
+              // إخفاء زر الاعتماد
+              approveBtn.remove();
+            }
+            
+            // إعادة تحميل القائمة بالكامل للتأكد من التحديث
+            await loadProjects();
+            // إعادة تحميل KPIs أيضاً
+            await loadKPIs();
           } else {
             toast('⚠️ ' + (data.message || 'المشروع لم يتم اعتماده'), 'warn');
           }
         })
         .catch(err => {
-          console.error(err);
-          toast('❌ خطأ أثناء الاعتماد', 'error');
+          console.error('Error approving project:', err);
+          toast('❌ خطأ أثناء الاعتماد: ' + (err.message || 'خطأ غير معروف'), 'error');
         });
         return;
       }

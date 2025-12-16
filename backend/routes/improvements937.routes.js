@@ -253,5 +253,153 @@ router.post(
   }
 );
 
+/**
+ * تحديث مشروع 937
+ * PUT /api/improvements/937/:id
+ */
+router.put(
+  '/:id',
+  requireAuth,
+  requirePermission('IMPROVEMENT_EDIT'),
+  resolveHospitalId,
+  attachHospitalPool,
+  async (req, res, next) => {
+    try {
+      const pool = req.hospitalPool;
+      const hid = req.hospitalId;
+      const projectId = Number(req.params.id);
+      const userId = req.user?.UserID || null;
+
+      const project = await fetchProject(pool, hid, projectId);
+      if (!project) {
+        return res.status(404).json({ ok: false, message: 'المشروع غير موجود' });
+      }
+
+      const {
+        ProjectName,
+        ProjectCategory,
+        ProjectCategoryOriginal,
+        DepartmentID,
+        MainTypeID,
+        SubTypeID,
+        ImpactReason,
+        ProjectDescription,
+        AimStatement,
+        PriorityCode,
+        StatusCode,
+        StartDate,
+        DueDate,
+        SmartSpecific,
+        SmartMeasurable,
+        SmartAchievable,
+        SmartRealistic,
+        SmartTimeBound
+      } = req.body || {};
+
+      // بناء استعلام UPDATE ديناميكي
+      const updates = [];
+      const values = [];
+
+      if (ProjectName !== undefined) {
+        updates.push('ProjectName = ?');
+        values.push(ProjectName);
+      }
+      if (ProjectCategory !== undefined) {
+        updates.push('ProjectCategory = ?');
+        values.push(ProjectCategory);
+      }
+      if (DepartmentID !== undefined) {
+        updates.push('DepartmentID = ?');
+        values.push(DepartmentID ? Number(DepartmentID) : null);
+      }
+      if (MainTypeID !== undefined) {
+        updates.push('MainTypeID = ?');
+        values.push(MainTypeID ? Number(MainTypeID) : null);
+      }
+      if (SubTypeID !== undefined) {
+        updates.push('SubTypeID = ?');
+        values.push(SubTypeID ? Number(SubTypeID) : null);
+      }
+      if (ImpactReason !== undefined) {
+        updates.push('ImpactReason = ?');
+        values.push(ImpactReason || null);
+      }
+      if (ProjectDescription !== undefined) {
+        updates.push('ProjectDescription = ?');
+        values.push(ProjectDescription || null);
+      }
+      if (AimStatement !== undefined) {
+        updates.push('AimStatement = ?');
+        values.push(AimStatement || null);
+      }
+      if (PriorityCode !== undefined) {
+        updates.push('PriorityCode = ?');
+        values.push(String(PriorityCode || 'MEDIUM').toUpperCase());
+      }
+      if (StatusCode !== undefined && StatusCode !== null && StatusCode !== '') {
+        updates.push('StatusCode = ?');
+        const statusUpper = String(StatusCode).toUpperCase();
+        console.log('🔄 Updating StatusCode to:', statusUpper);
+        values.push(statusUpper);
+      } else if (StatusCode === '') {
+        console.warn('⚠️ StatusCode is empty string, skipping update');
+      }
+      if (StartDate !== undefined) {
+        updates.push('StartDate = ?');
+        values.push(StartDate || null);
+      }
+      if (DueDate !== undefined) {
+        updates.push('DueDate = ?');
+        values.push(DueDate || null);
+      }
+      if (SmartSpecific !== undefined) {
+        updates.push('Smart_Specific = ?');
+        values.push(SmartSpecific ? 1 : 0);
+      }
+      if (SmartMeasurable !== undefined) {
+        updates.push('Smart_Measurable = ?');
+        values.push(SmartMeasurable ? 1 : 0);
+      }
+      if (SmartAchievable !== undefined) {
+        updates.push('Smart_Achievable = ?');
+        values.push(SmartAchievable ? 1 : 0);
+      }
+      if (SmartRealistic !== undefined) {
+        updates.push('Smart_Realistic = ?');
+        values.push(SmartRealistic ? 1 : 0);
+      }
+      if (SmartTimeBound !== undefined) {
+        updates.push('Smart_TimeBound = ?');
+        values.push(SmartTimeBound ? 1 : 0);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ ok: false, message: 'لم يتم إرسال أي بيانات للتحديث' });
+      }
+
+      values.push(projectId, hid);
+
+      console.log('📝 UPDATE query:', `UPDATE improvement_projects_937 SET ${updates.join(', ')} WHERE Project937ID = ? AND HospitalID = ?`);
+      console.log('📦 Values:', values);
+
+      const [result] = await pool.query(
+        `
+          UPDATE improvement_projects_937
+          SET ${updates.join(', ')}
+          WHERE Project937ID = ? AND HospitalID = ? AND IFNULL(IsDeleted,0) = 0
+        `,
+        values
+      );
+
+      console.log('✅ Update result:', result.affectedRows, 'rows affected');
+
+      res.json({ ok: true, message: 'تم تحديث المشروع بنجاح' });
+    } catch (err) {
+      console.error('PUT /api/improvements/937/:id error:', err);
+      next(err);
+    }
+  }
+);
+
 export default router;
 

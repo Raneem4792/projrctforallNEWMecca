@@ -235,27 +235,34 @@
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="كيف سيتم قياس نجاح المشروع..."></textarea>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">فريق العمل والمهام</label>
-              
-              <!-- قائمة الفريق -->
-              <div id="teamEditList" class="space-y-3 mb-3"></div>
-              
-              <!-- أزرار الإضافة -->
-              <button type="button" id="btnAddMember"
-                      class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium">
-                ➕ إضافة عضو جديد
-              </button>
-              
-              <p class="text-xs text-gray-500 mt-2">يمكنك إدخال أسماء أعضاء الفريق، مهامهم، وتحديد ما إذا تم تنفيذ المهمة أم لا.</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">ملاحظات التقدم</label>
-              <textarea id="progressNotes" name="progressNotes" rows="3"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholder="ملاحظات حول تقدم المشروع..."></textarea>
-            </div>
           </div>
+        </div>
+
+        <!-- فريق العمل والمهام -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">فريق العمل والمهام</h3>
+          
+          <!-- قائمة الفريق -->
+          <div id="teamEditList" class="space-y-3 mb-4"></div>
+          
+          <!-- زر الإضافة -->
+          <button type="button" id="btnAddMember"
+                  class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            إضافة عضو جديد
+          </button>
+          
+          <p class="text-xs text-gray-500 mt-3">يمكنك إدخال أسماء أعضاء الفريق، مهامهم، وتحديد ما إذا تم تنفيذ المهمة أم لا.</p>
+        </div>
+
+        <!-- ملاحظات التقدم -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">ملاحظات التقدم</h3>
+          <textarea id="progressNotes" name="progressNotes" rows="4"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    placeholder="ملاحظات حول تقدم المشروع...."></textarea>
         </div>
 
         <!-- Actions -->
@@ -369,6 +376,20 @@
       }
     }
 
+    // دالة لتحديد نوع المشروع
+    function detectProjectType(project) {
+      // PressGaney: يحتوي على SurveyQuestion
+      if (project.SurveyQuestion !== undefined && project.SurveyQuestion !== null) {
+        return 'PRESSGANEY';
+      }
+      // 937: يحتوي على Project937ID أو ComplaintID أو Source
+      if (project.Project937ID || project.ComplaintID || project.Source === '937' || project.projectType === '937') {
+        return 'PROJECT_937';
+      }
+      // OTHER: النوع الافتراضي
+      return 'OTHER';
+    }
+
     async function loadProject(){
       if (!projectId) {
         showError('معرف المشروع غير صحيح');
@@ -386,7 +407,62 @@
           return;
         }
         
-        const url = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        // ✅ محاولة تحميل المشروع من PressGaney أولاً
+        try {
+          const pressganeyUrl = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+          const pressganeyRes = await fetch(pressganeyUrl, { headers: authHeaders() });
+          
+          if (pressganeyRes.ok) {
+            const pressganeyResult = await pressganeyRes.json();
+            if (pressganeyResult.success && pressganeyResult.data) {
+              const project = pressganeyResult.data;
+              // التحقق من أن المشروع هو PressGaney فعلاً
+              if (project.SurveyQuestion !== undefined && project.SurveyQuestion !== null) {
+                // إعادة التوجيه إلى صفحة تعديل PressGaney
+                const redirectUrl = `./edit_pressganey.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
+                console.log('✅ PressGaney project detected, redirecting to:', redirectUrl);
+                window.location.href = redirectUrl;
+                return;
+              }
+            }
+          } else if (pressganeyRes.status !== 404 && pressganeyRes.status !== 500) {
+            // إذا كان الخطأ ليس 404 أو 500، قد يكون خطأ حقيقي
+            console.warn('⚠️ PressGaney API returned:', pressganeyRes.status);
+          }
+        } catch (pressganeyErr) {
+          // إذا فشل تحميل PressGaney، نستمر في المحاولة مع 937
+          console.log('ℹ️ Not a PressGaney project, trying 937...');
+        }
+        
+        // ✅ محاولة تحميل المشروع من 937
+        try {
+          const nineUrl = `${API_BASE}/api/improvements/937/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+          const nineRes = await fetch(nineUrl, { headers: authHeaders() });
+          
+          if (nineRes.ok) {
+            const nineResult = await nineRes.json();
+            if (nineResult.ok && nineResult.project) {
+              const project = nineResult.project;
+              // التحقق من أن المشروع هو 937 فعلاً
+              if (project.Project937ID || project.ComplaintID || project.Source === '937') {
+                // إعادة التوجيه إلى صفحة تعديل 937
+                const redirectUrl = `./edit_937.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
+                console.log('✅ 937 project detected, redirecting to:', redirectUrl);
+                window.location.href = redirectUrl;
+                return;
+              }
+            }
+          } else if (nineRes.status !== 404 && nineRes.status !== 500) {
+            // إذا كان الخطأ ليس 404 أو 500، قد يكون خطأ حقيقي
+            console.warn('⚠️ 937 API returned:', nineRes.status);
+          }
+        } catch (nineErr) {
+          // إذا فشل تحميل 937، نستمر في المحاولة مع endpoint العام
+          console.log('ℹ️ Not a 937 project, trying general endpoint...');
+        }
+        
+        // ✅ إذا لم يكن PressGaney أو 937، نستخدم endpoint العام (OTHER)
+        const url = `${API_BASE}/api/improvements/other/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
         console.log('Loading project:', { projectId, hospitalId: hid, url });
         
         const res = await fetch(url, { headers: authHeaders() });
@@ -402,11 +478,28 @@
           throw new Error(errorData.error || 'HTTP ' + res.status);
         }
         
-        const project = await res.json();
+        const result = await res.json();
+        const project = result.data || result;
         console.log('Project loaded:', project);
         
         if (!project || !project.ProjectID) {
           showError('بيانات المشروع غير صحيحة');
+          return;
+        }
+
+        // التحقق مرة أخرى من نوع المشروع بعد التحميل
+        const projectType = detectProjectType(project);
+        if (projectType === 'PRESSGANEY') {
+          // إعادة التوجيه إلى صفحة تعديل PressGaney
+          const redirectUrl = `./edit_pressganey.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
+          console.log('✅ PressGaney project detected, redirecting to:', redirectUrl);
+          window.location.href = redirectUrl;
+          return;
+        } else if (projectType === 'PROJECT_937') {
+          // إعادة التوجيه إلى صفحة تعديل 937
+          const redirectUrl = `./edit_937.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
+          console.log('✅ 937 project detected, redirecting to:', redirectUrl);
+          window.location.href = redirectUrl;
           return;
         }
         
@@ -612,25 +705,25 @@
       if (!teamEditList) return;
       
       const div = document.createElement('div');
-      div.className = "border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-3 relative shadow-sm transition-all hover:shadow-md";
+      div.className = "border border-gray-200 rounded-xl p-4 bg-white relative transition-all hover:shadow-md";
 
       const escapedName = (member.name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const escapedTask = (member.task || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       div.innerHTML = `
-        <button type="button" class="absolute top-2 left-2 text-red-500 hover:text-red-700 text-lg font-bold remove-member w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors" title="حذف العضو">✕</button>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-start pt-1">
+        <button type="button" class="absolute top-3 left-3 text-red-500 hover:text-red-700 hover:bg-red-50 text-xl font-bold remove-member w-7 h-7 flex items-center justify-center rounded-full transition-colors" title="حذف العضو">×</button>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pr-8">
           <div>
-            <label class="text-sm font-medium text-gray-700 mb-1 block">اسم العضو</label>
-            <input type="text" class="member-name w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value="${escapedName}" placeholder="مثلاً: د. سارة العتيبي">
+            <label class="block text-sm font-medium text-gray-700 mb-2">اسم العضو</label>
+            <input type="text" class="member-name w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all" value="${escapedName}" placeholder="مثلاً: د. سارة العتيبي">
           </div>
           <div>
-            <label class="text-sm font-medium text-gray-700 mb-1 block">المهمة</label>
-            <input type="text" class="member-task w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" value="${escapedTask}" placeholder="مثلاً: متابعة التحليل...">
+            <label class="block text-sm font-medium text-gray-700 mb-2">المهمة</label>
+            <input type="text" class="member-task w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all" value="${escapedTask}" placeholder="مثلاً: متابعة التحليل...">
           </div>
-          <div class="flex items-center gap-2 mt-6">
-            <input type="checkbox" class="member-done w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" ${member.done ? 'checked' : ''}>
-            <label class="text-sm text-gray-700 font-medium cursor-pointer">تم التنفيذ</label>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" class="member-done w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer" ${member.done ? 'checked' : ''}>
+            <label class="text-sm text-gray-700 font-medium cursor-pointer select-none">تم التنفيذ</label>
           </div>
         </div>
       `;

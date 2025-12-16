@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>تفاصيل المشروع التحسيني</title>
+  <title>تفاصيل المشروع التحسيني - PressGaney</title>
 
   <!-- Tailwind via CDN -->
   <!-- Theme controller -->
@@ -509,9 +509,9 @@
     }
 
     /**
-     * دالة Router: تكتشف نوع المشروع وتحوّل للصفحة المناسبة
+     * دالة تحميل مشروع PressGaney مباشرة
      */
-    async function detectAndRedirect(projectId, hospitalId) {
+    async function loadProject() {
       if (!projectId) {
         showError('معرف المشروع غير صحيح');
         return;
@@ -521,68 +521,24 @@
       errorEl.classList.add('hidden');
       detailsEl.classList.add('hidden');
 
-      const headers = authHeaders();
-
       try {
-        // 1️⃣ جرّبي PressGaney
-        try {
-          const pg = await fetch(
-            `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}${hospitalId ? '?hospitalId=' + hospitalId : ''}`,
-            { headers }
-          );
-          if (pg.ok) {
-            const pgResult = await pg.json();
-            if (pgResult.success && pgResult.data && pgResult.data.SurveyQuestion !== undefined) {
-              window.location.href = `view_pressganey.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
-              return;
-            }
-          }
-        } catch (pgErr) {
-          // تجاهل الخطأ ونستمر
+        const hid = effectiveHospitalId();
+        const url = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
+        const res = await fetch(url, { headers: authHeaders() });
+        
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
         }
-
-        // 2️⃣ جرّبي 937
-        try {
-          const p937 = await fetch(
-            `${API_BASE}/api/improvements/937/${encodeURIComponent(projectId)}${hospitalId ? '?hospitalId=' + hospitalId : ''}`,
-            { headers }
-          );
-          if (p937.ok) {
-            const p937Result = await p937.json();
-            if (p937Result.success || p937Result.ProjectID) {
-              window.location.href = `view_937.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
-              return;
-            }
-          }
-        } catch (p937Err) {
-          // تجاهل الخطأ ونستمر
-        }
-
-        // 3️⃣ جرّبي OTHER
-        try {
-          const other = await fetch(
-            `${API_BASE}/api/improvements/other/${encodeURIComponent(projectId)}${hospitalId ? '?hospitalId=' + hospitalId : ''}`,
-            { headers }
-          );
-          if (other.ok) {
-            const otherResult = await other.json();
-            if (otherResult.success && otherResult.data) {
-              window.location.href = `view_other.html?id=${projectId}${hospitalId ? '&hospitalId=' + hospitalId : ''}`;
-              return;
-            }
-          }
-        } catch (otherErr) {
-          // تجاهل الخطأ ونستمر
-        }
-
-        // إذا لم نجد المشروع في أي نوع
-        showError('لم يتم العثور على المشروع');
-      } catch (err) {
-        console.error('Error detecting project type:', err);
-        showError('حدث خطأ في تحديد نوع المشروع');
+        
+        const result = await res.json();
+        const project = result.data || result;
+        await renderProject(project);
+        
+      } catch (e) {
+        console.error('Error loading project:', e);
+        showError('فشل في تحميل تفاصيل المشروع');
       }
     }
-
 
     function showError(message) {
       loadingEl.classList.add('hidden');
@@ -994,7 +950,8 @@
 
     // Event listeners
     $('#btnEdit').addEventListener('click', ()=>{
-      window.location.href = `./edit.html?id=${projectId}`;
+      const hid = effectiveHospitalId();
+      window.location.href = `./edit_pressganey.html?id=${projectId}${hid ? '&hospitalId=' + hid : ''}`;
     });
 
     $('#btnReport').addEventListener('click', ()=>{
@@ -1004,8 +961,7 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
       await checkViewPermissions();
-      const hid = effectiveHospitalId();
-      await detectAndRedirect(projectId, hid);
+      await loadProject();
     });
   </script>
 
@@ -1192,26 +1148,8 @@
           newStatus: status || null
         };
 
-        // تحديد نوع المشروع أولاً لاستخدام endpoint الصحيح
-        let progressUrl;
-        try {
-          // محاولة PressGaney أولاً
-          const pressganeyCheckUrl = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}${hid ? '?hospitalId=' + hid : ''}`;
-          const pressganeyCheckRes = await fetch(pressganeyCheckUrl, { headers: authHeaders() });
-          if (pressganeyCheckRes.ok) {
-            const pressganeyCheckResult = await pressganeyCheckRes.json();
-            if (pressganeyCheckResult.success && pressganeyCheckResult.data?.SurveyQuestion !== undefined) {
-              progressUrl = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}/progress${hid ? '?hospitalId=' + hid : ''}`;
-            }
-          }
-        } catch (e) {
-          // إذا فشل، نستخدم endpoint العام
-        }
-        
-        // إذا لم يكن PressGaney، نستخدم endpoint العام
-        if (!progressUrl) {
-          progressUrl = `${API_BASE}/api/improvements/${encodeURIComponent(projectId)}/progress${hid ? '?hospitalId=' + hid : ''}`;
-        }
+        // استخدام endpoint PressGaney مباشرة
+        const progressUrl = `${API_BASE}/api/improvements/pressganey/${encodeURIComponent(projectId)}/progress${hid ? '?hospitalId=' + hid : ''}`;
 
         const res = await fetch(progressUrl, {
           method: 'POST',

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/permissionGuard.js';
 import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
-import { attachHospitalPool } from '../middleware/hospitalPool.js';
+import { attachHospitalPool, getCentralPool } from '../middleware/hospitalPool.js';
 
 const router = express.Router();
 
@@ -158,6 +158,155 @@ router.get(
 );
 
 /**
+ * جلب مشروع OTHER واحد
+ * GET /api/improvements/other/:id
+ */
+router.get(
+  '/other/:id',
+  requireAuth,
+  requirePermission('IMPROVEMENT_VIEW'),
+  resolveHospitalId,
+  attachHospitalPool,
+  async (req, res, next) => {
+    try {
+      const pool = req.hospitalPool;
+      const hid = req.hospitalId;
+      const projectId = Number(req.params.id);
+
+      if (!hid) {
+        return res.status(400).json({ success: false, message: 'Hospital ID missing' });
+      }
+
+      const [rows] = await pool.query(`
+        SELECT 
+          p.*,
+          d.NameAr AS DepartmentName
+        FROM improvement_projects_other p
+        LEFT JOIN departments d
+          ON d.DepartmentID = p.DepartmentID
+         AND d.HospitalID = p.HospitalID
+        WHERE p.ProjectID = ? AND p.HospitalID = ?
+        LIMIT 1
+      `, [projectId, hid]);
+
+      if (!rows.length) {
+        return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+      }
+
+      res.json({ success: true, data: rows[0] });
+    } catch (err) {
+      console.error('GET /api/improvements/other/:id error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
+ * تحديث مشروع OTHER
+ * PUT /api/improvements/other/:id
+ */
+router.put(
+  '/other/:id',
+  requireAuth,
+  requirePermission('IMPROVEMENT_EDIT'),
+  resolveHospitalId,
+  attachHospitalPool,
+  async (req, res, next) => {
+    try {
+      const pool = req.hospitalPool;
+      const hid = req.hospitalId;
+      const projectId = Number(req.params.id);
+
+      if (!hid) {
+        return res.status(400).json({ success: false, message: 'Hospital ID missing' });
+      }
+
+      const {
+        Title,
+        DepartmentID,
+        ImprovementArea,
+        ProjectCategory,
+        ProblemStatement,
+        AimStatement,
+        CurrentState,
+        ProposedSolution,
+        KPIs,
+        RequiredResources,
+        Priority,
+        ProjectOwner,
+        StartDate,
+        DueDate,
+        DurationMonths,
+        TeamMembers,
+        Notes,
+        Status
+      } = req.body || {};
+
+      // التحقق من وجود المشروع
+      const [checkRows] = await pool.query(
+        `SELECT ProjectID FROM improvement_projects_other WHERE ProjectID = ? AND HospitalID = ?`,
+        [projectId, hid]
+      );
+
+      if (!checkRows.length) {
+        return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+      }
+
+      await pool.query(`
+        UPDATE improvement_projects_other
+        SET
+          Title = ?,
+          DepartmentID = ?,
+          ImprovementArea = ?,
+          ProjectCategory = ?,
+          ProblemStatement = ?,
+          AimStatement = ?,
+          CurrentState = ?,
+          ProposedSolution = ?,
+          KPIs = ?,
+          RequiredResources = ?,
+          Priority = ?,
+          ProjectOwner = ?,
+          StartDate = ?,
+          DueDate = ?,
+          DurationMonths = ?,
+          TeamMembers = ?,
+          Notes = ?,
+          Status = ?,
+          UpdatedAt = CURRENT_TIMESTAMP
+        WHERE ProjectID = ? AND HospitalID = ?
+      `, [
+        Title,
+        DepartmentID ? Number(DepartmentID) : null,
+        ImprovementArea,
+        ProjectCategory || null,
+        ProblemStatement,
+        AimStatement,
+        CurrentState || null,
+        ProposedSolution,
+        KPIs || null,
+        RequiredResources || null,
+        Priority ? String(Priority).toUpperCase() : 'MEDIUM',
+        ProjectOwner || null,
+        StartDate || null,
+        DueDate || null,
+        DurationMonths ? Number(DurationMonths) : null,
+        TeamMembers || null,
+        Notes || null,
+        Status ? String(Status).toUpperCase() : 'DRAFT',
+        projectId,
+        hid
+      ]);
+
+      res.json({ success: true, message: 'تم تحديث المشروع بنجاح' });
+    } catch (err) {
+      console.error('PUT /api/improvements/other/:id error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
  * استرجاع قائمة المشاريع التحسينية مع الفلاتر
  * Query params: hospitalId, status, dept, q (search)
  */
@@ -207,6 +356,146 @@ router.get(
       res.json(rows);
     } catch (err) {
       console.error('GET /api/improvements error:', err);
+      next(err);
+    }
+  }
+);
+
+/**
+ * ✅ إحصائيات المشاريع التحسينية (جميع الأنواع)
+ * GET /api/improvements/stats
+ * يجمع البيانات من قواعد المستشفيات المختلفة
+ * ⚠️ يجب أن يكون قبل route /:id
+ */
+router.get(
+  '/stats',
+  requireAuth,
+  requirePermission('IMPROVEMENT_VIEW'),
+  async (req, res, next) => {
+    try {
+      const centralPool = await getCentralPool();
+      const { getHospitalPool } = await import('../middleware/hospitalPool.js');
+      
+      // ✅ جلب قائمة المستشفيات النشطة
+      const [hospitals] = await centralPool.query(`
+        SELECT HospitalID, NameAr, Code
+        FROM hospitals
+        WHERE IsActive = 1
+        ORDER BY NameAr
+      `);
+
+      // ✅ دالة لجلب إحصائيات مستشفى واحد
+      async function getHospitalStats(hospital) {
+        try {
+          const hospitalPool = await getHospitalPool(hospital.HospitalID);
+          
+          // ✅ جلب الإحصائيات من الجداول الثلاثة
+          const [stats937] = await hospitalPool.query(`
+            SELECT 
+              StatusCode AS Status,
+              COUNT(*) AS Count
+            FROM improvement_projects_937
+            WHERE IFNULL(IsDeleted, 0) = 0
+            GROUP BY StatusCode
+          `).catch(() => [[{ Status: null, Count: 0 }]]);
+
+          const [statsPG] = await hospitalPool.query(`
+            SELECT 
+              Status,
+              COUNT(*) AS Count
+            FROM improvement_pressganey_projects
+            GROUP BY Status
+          `).catch(() => [[{ Status: null, Count: 0 }]]);
+
+          const [statsOther] = await hospitalPool.query(`
+            SELECT 
+              Status,
+              COUNT(*) AS Count
+            FROM improvement_projects_other
+            GROUP BY Status
+          `).catch(() => [[{ Status: null, Count: 0 }]]);
+
+          // ✅ دمج الإحصائيات
+          const allStats = [...stats937, ...statsPG, ...statsOther];
+          
+          const result = {
+            HospitalID: hospital.HospitalID,
+            HospitalName: hospital.NameAr || hospital.Code || `مستشفى ${hospital.HospitalID}`,
+            ApprovedCount: 0,
+            CancelledCount: 0,
+            CompletedCount: 0,
+            InProgressCount: 0,
+            PendingCount: 0,
+            TotalProjects: 0
+          };
+
+          allStats.forEach(stat => {
+            const status = String(stat.Status || '').toUpperCase();
+            const count = Number(stat.Count) || 0;
+            
+            result.TotalProjects += count;
+            
+            if (status === 'APPROVED') {
+              result.ApprovedCount += count;
+            } else if (status === 'COMPLETED') {
+              result.CompletedCount += count;
+            } else if (status === 'IN_PROGRESS') {
+              result.InProgressCount += count;
+            } else if (status === 'CANCELLED' || status === 'REJECTED') {
+              result.CancelledCount += count;
+            } else if (status === 'PROPOSED' || status === 'UNDER_APPROVAL' || status === 'DRAFT') {
+              result.PendingCount += count;
+            }
+          });
+
+          return result;
+        } catch (err) {
+          console.warn(`⚠️ Error getting stats for hospital ${hospital.HospitalID}:`, err.message);
+          return {
+            HospitalID: hospital.HospitalID,
+            HospitalName: hospital.NameAr || hospital.Code || `مستشفى ${hospital.HospitalID}`,
+            ApprovedCount: 0,
+            CancelledCount: 0,
+            CompletedCount: 0,
+            InProgressCount: 0,
+            PendingCount: 0,
+            TotalProjects: 0
+          };
+        }
+      }
+
+      // ✅ جلب إحصائيات جميع المستشفيات (بالتوازي)
+      const statsPromises = hospitals.map(h => getHospitalStats(h));
+      const statsResults = await Promise.all(statsPromises);
+      
+      // ✅ فلترة المستشفيات التي لديها مشاريع
+      const rows = statsResults.filter(row => row.TotalProjects > 0);
+
+      // ✅ حساب الإجماليات العامة
+      const totals = rows.reduce((acc, row) => {
+        acc.total += Number(row.TotalProjects) || 0;
+        acc.approved += Number(row.ApprovedCount) || 0;
+        acc.cancelled += Number(row.CancelledCount) || 0;
+        acc.completed += Number(row.CompletedCount) || 0;
+        acc.inProgress += Number(row.InProgressCount) || 0;
+        acc.pending += Number(row.PendingCount) || 0;
+        return acc;
+      }, {
+        total: 0,
+        approved: 0,
+        cancelled: 0,
+        completed: 0,
+        inProgress: 0,
+        pending: 0
+      });
+
+      res.json({
+        success: true,
+        data: rows,
+        totals
+      });
+    } catch (err) {
+      console.error('GET /api/improvements/stats error:', err);
       next(err);
     }
   }
@@ -779,6 +1068,7 @@ router.post('/:id/progress', requireAuth, requirePermission('IMPROVEMENT_EDIT'),
 });
 
 // ✅ اعتماد المشروع عبر تغيير الحالة إلى "APPROVED"
+// يدعم جميع أنواع المشاريع: 937, PressGaney, OTHER
 router.put(
   '/approve/:id',
   requireAuth,
@@ -789,36 +1079,144 @@ router.put(
     try {
       const pool = req.hospitalPool;
       const hid = req.hospitalId;
-      const projectId = req.params.id;
+      const projectId = Number(req.params.id);
       const approverId = req.user?.UserID || null;
+      const { type } = req.query; // ✅ نوع المشروع: OTHER, PRESSGANEY, 937
 
-      const [rows] = await pool.query(`
-        SELECT Status
-        FROM improvement_projects
-        WHERE ProjectID = ? AND HospitalID = ? AND IsDeleted = 0
-      `, [projectId, hid]);
-
-      if (!rows.length) {
-        return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+      if (!hid) {
+        return res.status(400).json({ success: false, message: 'Hospital ID missing' });
       }
 
-      if (rows[0].Status === 'APPROVED') {
-        return res.json({ success: false, message: 'المشروع معتمد مسبقًا' });
+      if (!type) {
+        return res.status(400).json({ success: false, message: 'نوع المشروع مطلوب (type=OTHER|PRESSGANEY|937)' });
       }
 
-      await pool.query(`
-        UPDATE improvement_projects
-        SET Status = 'APPROVED',
-            ApprovedBy = ?,
-            ApprovedAt = NOW(),
-            UpdatedAt = CURRENT_TIMESTAMP
-        WHERE ProjectID = ? AND HospitalID = ? AND IsDeleted = 0
-      `, [approverId, projectId, hid]);
+      const projectType = String(type).toUpperCase();
+      console.log('🔄 Approving project:', { projectId, type: projectType, hospitalId: hid });
+
+      let sql = '';
+      let params = [];
+      let currentStatus = null;
+      let statusField = 'Status';
+
+      // ✅ تحديد الجدول والعمود حسب نوع المشروع
+      switch (projectType) {
+        case 'OTHER':
+          // التحقق من وجود المشروع والحالة الحالية
+          const [rowsOther] = await pool.query(`
+            SELECT Status
+            FROM improvement_projects_other
+            WHERE ProjectID = ? AND HospitalID = ?
+            LIMIT 1
+          `, [projectId, hid]);
+          
+          if (rowsOther.length === 0) {
+            return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+          }
+          
+          currentStatus = rowsOther[0].Status;
+          
+          // التحقق من الحالة
+          if (currentStatus === 'APPROVED') {
+            return res.json({ success: false, message: 'المشروع معتمد مسبقًا' });
+          }
+          
+          // تحديث الحالة
+          sql = `
+            UPDATE improvement_projects_other
+            SET Status = 'APPROVED',
+                UpdatedAt = CURRENT_TIMESTAMP
+            WHERE ProjectID = ? AND HospitalID = ?
+          `;
+          params = [projectId, hid];
+          break;
+
+        case 'PRESSGANEY':
+          // التحقق من وجود المشروع والحالة الحالية
+          const [rowsPG] = await pool.query(`
+            SELECT Status
+            FROM improvement_pressganey_projects
+            WHERE ProjectID = ? AND HospitalID = ?
+            LIMIT 1
+          `, [projectId, hid]);
+          
+          if (rowsPG.length === 0) {
+            return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+          }
+          
+          currentStatus = rowsPG[0].Status;
+          
+          // التحقق من الحالة
+          if (currentStatus === 'APPROVED') {
+            return res.json({ success: false, message: 'المشروع معتمد مسبقًا' });
+          }
+          
+          // تحديث الحالة
+          sql = `
+            UPDATE improvement_pressganey_projects
+            SET Status = 'APPROVED',
+                UpdatedAt = CURRENT_TIMESTAMP
+            WHERE ProjectID = ? AND HospitalID = ?
+          `;
+          params = [projectId, hid];
+          break;
+
+        case '937':
+          // التحقق من وجود المشروع والحالة الحالية
+          const [rows937] = await pool.query(`
+            SELECT StatusCode
+            FROM improvement_projects_937
+            WHERE Project937ID = ? AND HospitalID = ? AND IFNULL(IsDeleted,0) = 0
+            LIMIT 1
+          `, [projectId, hid]);
+          
+          if (rows937.length === 0) {
+            return res.status(404).json({ success: false, message: 'المشروع غير موجود' });
+          }
+          
+          currentStatus = rows937[0].StatusCode;
+          statusField = 'StatusCode';
+          
+          // التحقق من الحالة
+          if (currentStatus === 'APPROVED') {
+            return res.json({ success: false, message: 'المشروع معتمد مسبقًا' });
+          }
+          
+          // لمشاريع 937: يجب أن تكون الحالة UNDER_APPROVAL
+          if (currentStatus !== 'UNDER_APPROVAL') {
+            return res.status(400).json({ 
+              success: false, 
+              message: 'لا يمكن اعتماد المشروع في حالته الحالية. يجب أن تكون الحالة "قيد الاعتماد"' 
+            });
+          }
+          
+          // تحديث الحالة
+          sql = `
+            UPDATE improvement_projects_937
+            SET StatusCode = 'APPROVED',
+                ApprovedByUserID = ?,
+                ApprovedAt = NOW()
+            WHERE Project937ID = ? AND HospitalID = ? AND IFNULL(IsDeleted,0) = 0
+          `;
+          params = [approverId, projectId, hid];
+          break;
+
+        default:
+          return res.status(400).json({ success: false, message: 'نوع مشروع غير مدعوم. يجب أن يكون: OTHER, PRESSGANEY, أو 937' });
+      }
+
+      // تنفيذ التحديث
+      const [result] = await pool.query(sql, params);
+      console.log('✅ Update result:', result.affectedRows, 'rows affected');
+
+      if (result.affectedRows === 0) {
+        return res.status(500).json({ success: false, message: 'فشل تحديث حالة المشروع' });
+      }
 
       return res.json({ success: true, message: '✅ تم اعتماد المشروع وتغيير حالته إلى "معتمد"' });
     } catch (err) {
       console.error('PUT /api/improvements/approve/:id error:', err);
-      return res.status(500).json({ success: false, message: 'خطأ في عملية الاعتماد' });
+      return res.status(500).json({ success: false, message: 'خطأ في عملية الاعتماد: ' + err.message });
     }
   }
 );
