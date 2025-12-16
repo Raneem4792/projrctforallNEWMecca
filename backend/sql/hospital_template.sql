@@ -1972,3 +1972,29 @@ ALTER TABLE complaint_targets DROP FOREIGN KEY fk_ct_c;
 
 ALTER TABLE complaint_targets 
 MODIFY COLUMN ComplaintID bigint NULL;
+
+
+
+ALTER TABLE improvement_pressganey_projects
+ADD COLUMN  ProjectCategory VARCHAR(100) NULL COMMENT 'نوع المشروع (القيمة الفعلية)',
+ADD COLUMN  ProjectCategoryOriginal VARCHAR(50) NULL COMMENT 'نوع المشروع الأصلي من القائمة' AFTER ProjectCategory;
+
+-- 2. إنشاء جدول SMART checklist لـ PressGaney
+CREATE TABLE IF NOT EXISTS improvement_pressganey_smart (
+  SmartID BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ProjectID BIGINT NOT NULL,
+ `Specific` TINYINT(1) DEFAULT 0 COMMENT 'محدد',
+  Measurable TINYINT(1) DEFAULT 0 COMMENT 'قابل للقياس',
+  Achievable TINYINT(1) DEFAULT 0 COMMENT 'قابل للتحقق',
+  Realistic TINYINT(1) DEFAULT 0 COMMENT 'واقعي',
+  TimeBound TINYINT(1) DEFAULT 0 COMMENT 'بزمن محدد',
+  CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_pg_smart_project (ProjectID),
+  
+  CONSTRAINT fk_pg_smart_project
+    FOREIGN KEY (ProjectID)
+    REFERENCES improvement_pressganey_projects(ProjectID)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='جدول معايير SMART لمشاريع PressGaney';
