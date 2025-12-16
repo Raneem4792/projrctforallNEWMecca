@@ -207,12 +207,66 @@
       <div class="bg-white shadow rounded-lg p-6">
         <h2 class="text-xl font-bold mb-4 text-center text-gray-800">مقارنة الرحلات بين جميع المستشفيات</h2>
         
-        <!-- اختيار الرحلة -->
-        <div class="mb-6 flex items-center justify-center gap-4">
-          <label for="trip-comparison-select" class="text-sm font-medium text-gray-700 whitespace-nowrap">اختر الرحلة:</label>
-          <select id="trip-comparison-select" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[300px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-            <option value="">اختر الرحلة</option>
-          </select>
+        <!-- اختيار الرحلة والفلاتر -->
+        <div class="mb-6">
+          <!-- الصف الأول: الرحلة وزر المؤشر -->
+          <div class="flex items-center justify-center gap-4 mb-4">
+            <label for="trip-comparison-select" class="text-sm font-medium text-gray-700 whitespace-nowrap">اختر الرحلة:</label>
+            <select id="trip-comparison-select" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[300px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              <option value="">اختر الرحلة</option>
+            </select>
+            
+            <!-- زر فتح نافذة المؤشر الوزاري -->
+            <button id="open-moh-modal" 
+              class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+              <i class="fas fa-chart-line"></i>
+              <span>تعديل المؤشر الوزاري</span>
+            </button>
+          </div>
+          
+          <!-- الصف الثاني: فلاتر السنة والربع -->
+          <div class="flex items-center justify-center gap-4 bg-gray-50 rounded-lg p-3">
+            <label for="trip-comparison-year" class="text-sm font-medium text-gray-700 whitespace-nowrap">السنة:</label>
+            <select id="trip-comparison-year" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              <option value="">الكل</option>
+            </select>
+            
+            <label for="trip-comparison-quarter" class="text-sm font-medium text-gray-700 whitespace-nowrap">الربع:</label>
+            <select id="trip-comparison-quarter" class="border border-gray-300 rounded-lg px-4 py-2 text-sm min-w-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              <option value="">الكل</option>
+              <option value="Q1">Q1 - الربع الأول</option>
+              <option value="Q2">Q2 - الربع الثاني</option>
+              <option value="Q3">Q3 - الربع الثالث</option>
+              <option value="Q4">Q4 - الربع الرابع</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- 🔹 كارد عرض المؤشر الوزاري -->
+        <div id="moh-target-display-section" class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 mb-6 hidden">
+          <h3 id="moh-title" class="font-bold text-xl mb-4 text-center text-blue-900"></h3>
+          
+          <div class="grid md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg p-4 shadow-sm text-center">
+              <p class="text-sm text-gray-600 mb-2">المؤشر الوزاري</p>
+              <p id="moh-target-score" class="font-bold text-2xl text-blue-600">—</p>
+            </div>
+            
+            <div class="bg-white rounded-lg p-4 shadow-sm text-center">
+              <p class="text-sm text-gray-600 mb-2">نتيجة المستشفى</p>
+              <p id="hospital-score" class="font-bold text-2xl text-gray-800">—</p>
+            </div>
+            
+            <div class="bg-white rounded-lg p-4 shadow-sm text-center">
+              <p class="text-sm text-gray-600 mb-2">الفرق عن المؤشر</p>
+              <p id="moh-diff" class="font-bold text-2xl">—</p>
+            </div>
+            
+            <div class="bg-white rounded-lg p-4 shadow-sm text-center">
+              <p class="text-sm text-gray-600 mb-2">التغير عن الربع السابق</p>
+              <p id="qoq-diff" class="font-bold text-2xl">—</p>
+            </div>
+          </div>
         </div>
         
         <!-- الرسم البياني -->
@@ -221,6 +275,67 @@
         </div>
       </div>
     </section>
+
+    <!-- 🔹 نافذة Modal لإدخال المؤشر الوزاري -->
+    <div id="moh-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50" style="display: none;">
+      <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold text-blue-900">إدخال / تعديل المؤشر الوزاري الموحد</h3>
+          <button id="close-moh-modal" class="text-gray-500 hover:text-gray-700 text-xl">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">الرحلة</label>
+            <select id="moh-trip" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+              <option value="">اختر الرحلة</option>
+            </select>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">السنة</label>
+              <select id="moh-year" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                <option value="">السنة</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">الربع</label>
+              <select id="moh-quarter" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                <option value="">الربع</option>
+                <option value="Q1">Q1 - الربع الأول</option>
+                <option value="Q2">Q2 - الربع الثاني</option>
+                <option value="Q3">Q3 - الربع الثالث</option>
+                <option value="Q4">Q4 - الربع الرابع</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">المؤشر الوزاري (0-100)</label>
+            <input id="moh-score" type="number" step="0.01" min="0" max="100"
+              placeholder="أدخل المؤشر الوزاري" 
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          
+          <div id="moh-save-message" class="text-sm hidden"></div>
+        </div>
+        
+        <div class="flex justify-end gap-3 mt-6">
+          <button id="close-moh-modal-btn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+            إلغاء
+          </button>
+          <button id="save-moh-target" 
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+            <i class="fas fa-save"></i>
+            <span>حفظ</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- 🔹 بطاقات الرحلات -->
     <div id="departments-cards-container" class="grid md:grid-cols-3 gap-6 mb-8">

@@ -7,6 +7,7 @@ import { requirePermission } from '../middleware/permissionGuard.js';
 import { resolveHospitalId } from '../middleware/resolveHospitalId.js';
 import { attachHospitalPool } from '../middleware/hospitalPool.js';
 import * as hospitalPoolModule from '../middleware/hospitalPool.js';
+import { getCentralPool } from '../db/centralPool.js';
 
 const router = express.Router();
 
@@ -1013,6 +1014,164 @@ router.get(
         ok: false, 
         error: 'خطأ في جلب بيانات أولوية التحسين',
         details: err.message 
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/pressganey/moh-target
+ * حفظ / تعديل المؤشر الوزاري الموحد
+ * يتم حفظه في القاعدة المركزية
+ */
+router.post(
+  '/moh-target',
+  requireAuth,
+  requirePermission('PRESSGANEY_VIEW'),
+  async (req, res, next) => {
+    try {
+      const { tripName, year, quarter, targetScore } = req.body;
+      const userId = req.user?.UserID || req.user?.UserID || null;
+
+      // التحقق من البيانات المطلوبة
+      if (!tripName || !year || !quarter || targetScore === undefined || targetScore === null) {
+        return res.status(400).json({
+          ok: false,
+          error: 'بيانات ناقصة',
+          required: ['tripName', 'year', 'quarter', 'targetScore']
+        });
+      }
+
+      // التحقق من صحة الربع
+      if (!['Q1', 'Q2', 'Q3', 'Q4'].includes(quarter)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'الربع غير صحيح. يجب أن يكون Q1, Q2, Q3, أو Q4'
+        });
+      }
+
+      // التحقق من صحة المؤشر (بين 0 و 100)
+      const score = parseFloat(targetScore);
+      if (isNaN(score) || score < 0 || score > 100) {
+        return res.status(400).json({
+          ok: false,
+          error: 'المؤشر يجب أن يكون رقماً بين 0 و 100'
+        });
+      }
+
+      const centralDb = await getCentralPool();
+
+      // استخدام UPSERT (INSERT ... ON DUPLICATE KEY UPDATE)
+      const [result] = await centralDb.execute(
+        `
+        INSERT INTO pressganey_moh_targets
+          (TripName, Year, Quarter, TargetScore, CreatedBy)
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          TargetScore = VALUES(TargetScore),
+          UpdatedAt = CURRENT_TIMESTAMP
+        `,
+        [tripName, parseInt(year), quarter, score, userId]
+      );
+
+      console.log(`✅ [PressGaney MOH Target] تم حفظ/تحديث المؤشر:`, {
+        tripName,
+        year,
+        quarter,
+        targetScore: score,
+        userId
+      });
+
+      res.json({
+        ok: true,
+        message: 'تم حفظ المؤشر الوزاري بنجاح',
+        data: {
+          tripName,
+          year: parseInt(year),
+          quarter,
+          targetScore: score
+        }
+      });
+    } catch (err) {
+      console.error('❌ [PressGaney MOH Target] خطأ في حفظ المؤشر:', err);
+      res.status(500).json({
+        ok: false,
+        error: 'خطأ في حفظ المؤشر الوزاري',
+        details: err.message
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/pressganey/moh-target
+ * جلب المؤشر الوزاري الموحد
+ * Query Parameters: tripName, year, quarter
+ */
+router.get(
+  '/moh-target',
+  requireAuth,
+  requirePermission('PRESSGANEY_VIEW'),
+  async (req, res, next) => {
+    try {
+      const { tripName, year, quarter } = req.query;
+
+      // التحقق من البيانات المطلوبة
+      if (!tripName || !year || !quarter) {
+        return res.status(400).json({
+          ok: false,
+          error: 'بيانات ناقصة',
+          required: ['tripName', 'year', 'quarter']
+        });
+      }
+
+      const centralDb = await getCentralPool();
+
+      const [rows] = await centralDb.query(
+        `
+        SELECT 
+          TargetID,
+          TripName,
+          Year,
+          Quarter,
+          TargetScore,
+          CreatedBy,
+          CreatedAt,
+          UpdatedAt
+        FROM pressganey_moh_targets
+        WHERE TripName = ? AND Year = ? AND Quarter = ?
+        LIMIT 1
+        `,
+        [tripName, parseInt(year), quarter]
+      );
+
+      if (rows.length === 0) {
+        return res.json({
+          ok: true,
+          data: null,
+          message: 'لا يوجد مؤشر وزاري محفوظ لهذه الرحلة والسنة والربع'
+        });
+      }
+
+      res.json({
+        ok: true,
+        data: {
+          targetID: rows[0].TargetID,
+          tripName: rows[0].TripName,
+          year: rows[0].Year,
+          quarter: rows[0].Quarter,
+          targetScore: parseFloat(rows[0].TargetScore),
+          createdBy: rows[0].CreatedBy,
+          createdAt: rows[0].CreatedAt,
+          updatedAt: rows[0].UpdatedAt
+        }
+      });
+    } catch (err) {
+      console.error('❌ [PressGaney MOH Target] خطأ في جلب المؤشر:', err);
+      res.status(500).json({
+        ok: false,
+        error: 'خطأ في جلب المؤشر الوزاري',
+        details: err.message
       });
     }
   }

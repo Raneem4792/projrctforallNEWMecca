@@ -71,6 +71,9 @@ const toast = (msg, type = 'info') => {
 
 // متغيرات عامة
 let pressganeyData = [];
+let currentMohTarget = null; // المؤشر الوزاري الحالي
+let currentSelectedYear = null; // السنة المختارة
+let currentSelectedQuarter = null; // الربع المختار
 let chartInstance = null;
 let lastImportedQuarter = null;
 let lastImportedYear = null;
@@ -798,6 +801,7 @@ async function loadData() {
       if (tripComparisonSection) {
         tripComparisonSection.classList.remove('hidden');
         setupTripComparisonChart();
+        setupMohTargetInput();
       }
     } else {
       // إظهار المؤشر الفردي وبطاقات الرحلات وبطاقات الملخص وجدول مقارنة الأرباع وإخفاء بطاقات المستشفيات
@@ -1161,12 +1165,6 @@ function renderTripsCharts() {
 // دالة جلب قائمة الرحلات وملء Dropdown
 async function loadImprovementTrips() {
   try {
-    const hid = effectiveHospitalId();
-    if (!hid) {
-      console.warn('⚠️ [loadImprovementTrips] لا يوجد hospitalId');
-      return;
-    }
-    
     const section = document.getElementById('improvement-priorities-section');
     const tripSelect = document.getElementById('improvement-trip-select');
     
@@ -1179,19 +1177,16 @@ async function loadImprovementTrips() {
     const mode = localStorage.getItem('pressganey-mode');
     const isAllHospitals = mode === 'ALL';
     
-    if (isAllHospitals) {
-      section.classList.add('hidden');
-      return;
-    }
+    // إظهار القسم دائماً (حتى عند اختيار جميع المستشفيات)
+    section.classList.remove('hidden');
     
     // جلب قائمة الرحلات من البيانات المحملة
     const trips = groupByTrip();
-    const tripNames = Object.keys(trips).sort();
+    const tripNames = Object.keys(trips).filter(trip => trips[trip].length > 0).sort();
     
     if (tripNames.length === 0) {
       console.warn('⚠️ [loadImprovementTrips] لا توجد رحلات متاحة');
       // إظهار القسم مع رسالة توضيحية
-      section.classList.remove('hidden');
       const hint = document.getElementById('improvement-hint');
       if (hint) {
         hint.innerHTML = `
@@ -1216,9 +1211,6 @@ async function loadImprovementTrips() {
     tripSelect.removeEventListener('change', handleTripChange);
     tripSelect.addEventListener('change', handleTripChange);
     
-    // إظهار القسم دائماً (القسم ظاهر افتراضياً في HTML)
-    section.classList.remove('hidden');
-    
     // التأكد من إظهار الرسالة الإرشادية في البداية
     const hint = document.getElementById('improvement-hint');
     const tableContainer = document.getElementById('single-improvement-table');
@@ -1229,7 +1221,7 @@ async function loadImprovementTrips() {
       tableContainer.classList.add('hidden');
     }
     
-    console.log('✅ [loadImprovementTrips] تم تحميل الرحلات:', tripNames.length);
+    console.log('✅ [loadImprovementTrips] تم تحميل الرحلات:', tripNames.length, isAllHospitals ? '(جميع المستشفيات)' : '');
   } catch (err) {
     console.error('❌ خطأ في loadImprovementTrips:', err);
   }
@@ -1258,11 +1250,9 @@ async function loadSingleImprovementTable(tripName) {
   try {
     console.log('🔍 [loadSingleImprovementTable] جلب بيانات للرحلة:', tripName);
     
-    const hid = effectiveHospitalId();
-    if (!hid) {
-      console.warn('⚠️ [loadSingleImprovementTable] لا يوجد hospitalId');
-      return;
-    }
+    // التحقق من وضع "جميع المستشفيات"
+    const mode = localStorage.getItem('pressganey-mode');
+    const isAllHospitals = mode === 'ALL';
     
     // الحصول على قيم التصفية
     const yearSelect = document.getElementById('pressganey-year-select');
@@ -1270,45 +1260,103 @@ async function loadSingleImprovementTable(tripName) {
     const selectedYear = yearSelect ? yearSelect.value : '';
     const selectedQuarter = quarterSelect ? quarterSelect.value : '';
     
-    // إذا لم يتم اختيار السنة أو الربع، نستخدم "ALL" لعرض جميع البيانات
-    const yearParam = selectedYear || 'ALL';
-    const quarterParam = selectedQuarter || 'ALL';
+    let rows = [];
     
-    // جلب البيانات من API
-    const encodedTrip = encodeURIComponent(tripName);
-    const url = `${API_BASE}/api/pressganey/improvement/${hid}/${yearParam}/${quarterParam}/${encodedTrip}`;
-    
-    console.log('🔍 [loadSingleImprovementTable] URL:', url);
-    
-    const res = await fetch(url, {
-      headers: authHeaders()
-    });
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.warn(`⚠️ فشل جلب بيانات أولوية التحسين للرحلة: ${tripName}`, res.status, errorText);
-      const tableContainer = document.getElementById('single-improvement-table');
-      const hint = document.getElementById('improvement-hint');
-      if (tableContainer) {
-        tableContainer.classList.add('hidden');
+    if (isAllHospitals) {
+      // حساب أولويات التحسين من البيانات المحملة لجميع المستشفيات
+      console.log('🔍 [loadSingleImprovementTable] وضع جميع المستشفيات - حساب من البيانات المحملة');
+      
+      // تصفية البيانات حسب الرحلة والسنة والربع
+      let filteredData = pressganeyData.filter(d => {
+        const normalizedTrip = normalizeTripName(d.TripName || '');
+        const matchesTrip = normalizedTrip === normalizeTripName(tripName);
+        const matchesYear = !selectedYear || d.year == selectedYear;
+        const matchesQuarter = !selectedQuarter || d.quarter === selectedQuarter;
+        const hasDepartment = d.department_name_ar && d.department_name_ar.trim() !== '';
+        const hasQuestion = d.question_text_ar && d.question_text_ar.trim() !== '';
+        
+        return matchesTrip && matchesYear && matchesQuarter && hasDepartment && hasQuestion;
+      });
+      
+      console.log(`🔍 [loadSingleImprovementTable] عدد السجلات المفلترة: ${filteredData.length}`);
+      
+      // تجميع البيانات حسب النطاق (department_name_ar) وأخذ أقل mean_score لكل نطاق
+      const departmentMap = new Map();
+      
+      filteredData.forEach(d => {
+        const deptName = d.department_name_ar.trim();
+        const meanScore = parseFloat(d.mean_score) || 999;
+        const questionText = d.question_text_ar.trim();
+        
+        if (!departmentMap.has(deptName)) {
+          departmentMap.set(deptName, {
+            scope_name: deptName,
+            priority_improvement: questionText,
+            mean_score: meanScore
+          });
+        } else {
+          const existing = departmentMap.get(deptName);
+          if (meanScore < existing.mean_score) {
+            existing.priority_improvement = questionText;
+            existing.mean_score = meanScore;
+          }
+        }
+      });
+      
+      // تحويل Map إلى مصفوفة وترتيبها
+      rows = Array.from(departmentMap.values())
+        .sort((a, b) => (a.scope_name || '').localeCompare(b.scope_name || '', 'ar'));
+      
+      console.log(`✅ [loadSingleImprovementTable] تم حساب ${rows.length} نطاق للرحلة ${tripName} (جميع المستشفيات)`);
+    } else {
+      // منطق عادي: جلب البيانات من API لمستشفى واحد
+      const hid = effectiveHospitalId();
+      if (!hid) {
+        console.warn('⚠️ [loadSingleImprovementTable] لا يوجد hospitalId');
+        return;
       }
-      // إظهار الرسالة الإرشادية مع رسالة خطأ
-      if (hint) {
-        hint.classList.remove('hidden');
-        hint.innerHTML = `
-          <p class="text-red-800 font-semibold mb-1">⚠️ خطأ في تحميل البيانات</p>
-          <p class="text-sm text-red-700">فشل تحميل بيانات أولوية التحسين للرحلة المختارة. يرجى المحاولة مرة أخرى.</p>
-        `;
+      
+      // إذا لم يتم اختيار السنة أو الربع، نستخدم "ALL" لعرض جميع البيانات
+      const yearParam = selectedYear || 'ALL';
+      const quarterParam = selectedQuarter || 'ALL';
+      
+      // جلب البيانات من API
+      const encodedTrip = encodeURIComponent(tripName);
+      const url = `${API_BASE}/api/pressganey/improvement/${hid}/${yearParam}/${quarterParam}/${encodedTrip}`;
+      
+      console.log('🔍 [loadSingleImprovementTable] URL:', url);
+      
+      const res = await fetch(url, {
+        headers: authHeaders()
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.warn(`⚠️ فشل جلب بيانات أولوية التحسين للرحلة: ${tripName}`, res.status, errorText);
+        const tableContainer = document.getElementById('single-improvement-table');
+        const hint = document.getElementById('improvement-hint');
+        if (tableContainer) {
+          tableContainer.classList.add('hidden');
+        }
+        // إظهار الرسالة الإرشادية مع رسالة خطأ
+        if (hint) {
+          hint.classList.remove('hidden');
+          hint.innerHTML = `
+            <p class="text-red-800 font-semibold mb-1">⚠️ خطأ في تحميل البيانات</p>
+            <p class="text-sm text-red-700">فشل تحميل بيانات أولوية التحسين للرحلة المختارة. يرجى المحاولة مرة أخرى.</p>
+          `;
+        }
+        return;
       }
-      return;
+      
+      const data = await res.json();
+      console.log('🔍 [loadSingleImprovementTable] استجابة API:', data);
+      
+      rows = data.data || [];
+      
+      console.log(`✅ [loadSingleImprovementTable] تم جلب ${rows.length} سجل للرحلة ${tripName}`);
     }
     
-    const data = await res.json();
-    console.log('🔍 [loadSingleImprovementTable] استجابة API:', data);
-    
-    const rows = data.data || [];
-    
-    console.log(`✅ [loadSingleImprovementTable] تم جلب ${rows.length} سجل للرحلة ${tripName}`);
     console.log('🔍 [loadSingleImprovementTable] البيانات المستلمة:', rows);
     
     // عرض الجدول
@@ -2905,11 +2953,25 @@ async function loadHospitalQuartersComparison(hospitalId) {
 // دالة إعداد رسم بياني مقارنة الرحلات بين جميع المستشفيات
 async function setupTripComparisonChart() {
   const tripSelect = document.getElementById('trip-comparison-select');
+  const yearSelect = document.getElementById('trip-comparison-year');
+  const quarterSelect = document.getElementById('trip-comparison-quarter');
   const chartCanvas = document.getElementById('trip-comparison-chart');
   
   if (!tripSelect || !chartCanvas) return;
   
   try {
+    // ملء قائمة السنوات
+    if (yearSelect) {
+      const currentYear = new Date().getFullYear();
+      yearSelect.innerHTML = '<option value="">الكل</option>';
+      for (let year = currentYear + 1; year >= 2020; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+      }
+    }
+    
     // جلب قائمة الرحلات من البيانات
     const tripsRes = await fetch(`${API_BASE}/api/pressganey/trips`, {
       headers: authHeaders()
@@ -2936,8 +2998,8 @@ async function setupTripComparisonChart() {
       }
     });
     
-    // إضافة event listener
-    tripSelect.addEventListener('change', async () => {
+    // دالة تحديث الرسم عند تغيير أي فلتر
+    const updateChart = async () => {
       const tripName = tripSelect.value;
       if (tripName) {
         await loadTripComparisonData(tripName);
@@ -2948,7 +3010,16 @@ async function setupTripComparisonChart() {
           tripComparisonChart = null;
         }
       }
-    });
+    };
+    
+    // إضافة event listeners
+    tripSelect.addEventListener('change', updateChart);
+    if (yearSelect) {
+      yearSelect.addEventListener('change', updateChart);
+    }
+    if (quarterSelect) {
+      quarterSelect.addEventListener('change', updateChart);
+    }
   } catch (err) {
     console.error('خطأ في إعداد رسم بياني مقارنة الرحلات:', err);
   }
@@ -2961,8 +3032,33 @@ async function loadTripComparisonData(tripName) {
   if (!chartCanvas) return;
   
   try {
-    // جلب البيانات من API
-    const res = await fetch(`${API_BASE}/api/pressganey/trip-comparison-all-hospitals?tripName=${encodeURIComponent(tripName)}`, {
+    // 1️⃣ جلب السنة والربع من الفلاتر المخصصة (أولوية) أو الفلاتر العامة
+    const yearSelect = document.getElementById('trip-comparison-year') || document.getElementById('pressganey-year-select');
+    const quarterSelect = document.getElementById('trip-comparison-quarter') || document.getElementById('pressganey-quarter-select');
+    const selectedYear = yearSelect ? yearSelect.value : '';
+    const selectedQuarter = quarterSelect ? quarterSelect.value : '';
+    
+    // حفظ السنة والربع في المتغيرات العامة
+    currentSelectedYear = selectedYear || null;
+    currentSelectedQuarter = selectedQuarter || null;
+    
+    // 2️⃣ جلب المؤشر الوزاري أولاً (قبل جلب بيانات المستشفيات)
+    currentMohTarget = null;
+    if (selectedYear && selectedQuarter) {
+      await loadMohTarget(tripName, selectedYear, selectedQuarter);
+      console.log('🔍 [loadTripComparisonData] المؤشر بعد الجلب:', currentMohTarget);
+    }
+    
+    // 3️⃣ جلب بيانات المستشفيات مع الفلاتر
+    let apiUrl = `${API_BASE}/api/pressganey/trip-comparison-all-hospitals?tripName=${encodeURIComponent(tripName)}`;
+    if (selectedYear) {
+      apiUrl += `&year=${selectedYear}`;
+    }
+    if (selectedQuarter) {
+      apiUrl += `&quarter=${selectedQuarter}`;
+    }
+    
+    const res = await fetch(apiUrl, {
       headers: authHeaders()
     });
     
@@ -2983,43 +3079,121 @@ async function loadTripComparisonData(tripName) {
     
     const hospitals = result.data;
     
-    // إعداد بيانات الرسم البياني
-    const labels = hospitals.map(h => h.hospitalName);
-    const scores = hospitals.map(h => h.avgScore);
+    // 4️⃣ رسم الرسم البياني مع خط المؤشر
+    await drawTripComparisonChart(hospitals, tripName, selectedYear, selectedQuarter);
     
-    // تحديد الألوان (الأعلى 5 أزرق، الباقي أحمر)
-    const colors = hospitals.map((h, index) => {
-      return index < 5 ? '#3B82F6' : '#EF4444';
-    });
-    
-    // تدمير الرسم البياني القديم
+  } catch (err) {
+    console.error('خطأ في تحميل بيانات مقارنة الرحلات:', err);
     if (tripComparisonChart) {
       tripComparisonChart.destroy();
+      tripComparisonChart = null;
     }
+    chartCanvas.parentElement.innerHTML = '<p class="text-center text-red-500 py-8">خطأ في تحميل البيانات</p>';
+  }
+}
+
+/**
+ * رسم الرسم البياني لمقارنة الرحلات مع خط المؤشر الوزاري
+ */
+async function drawTripComparisonChart(hospitals, tripName, year, quarter) {
+  const chartCanvas = document.getElementById('trip-comparison-chart');
+  if (!chartCanvas) return;
+  
+  // إعداد بيانات الرسم البياني
+  const labels = hospitals.map(h => h.hospitalName);
+  const scores = hospitals.map(h => h.avgScore);
+  
+  // تحديد الألوان (الأعلى 5 أزرق، الباقي أحمر)
+  const colors = hospitals.map((h, index) => {
+    return index < 5 ? '#3B82F6' : '#EF4444';
+  });
+  
+  // تدمير الرسم البياني القديم
+  if (tripComparisonChart) {
+    tripComparisonChart.destroy();
+  }
+  
+  // إعداد datasets
+  const datasets = [{
+    label: `متوسط السكور - ${tripName}`,
+    data: scores,
+    backgroundColor: colors,
+    borderColor: colors.map(c => c === '#3B82F6' ? '#2563EB' : '#DC2626'),
+    borderWidth: 1
+  }];
+  
+  // ✅ إضافة خط المؤشر الوزاري إذا كان موجوداً
+  console.log('🔍 [drawTripComparisonChart] currentMohTarget:', currentMohTarget);
+  if (currentMohTarget !== null && currentMohTarget !== undefined && !isNaN(currentMohTarget)) {
+    datasets.push({
+      label: 'المؤشر الوزاري',
+      data: labels.map(() => currentMohTarget),
+      type: 'line',
+      borderColor: '#DC2626',
+      borderWidth: 3,
+      borderDash: [6, 6],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0
+    });
+    console.log('✅ [drawTripComparisonChart] تم إضافة خط المؤشر:', currentMohTarget);
     
-    // إنشاء الرسم البياني (عمودي)
+    // تحديث واجهة المؤشر
+    await updateMohDisplay(tripName, year, quarter, currentMohTarget, hospitals);
+  } else {
+    console.log('⚠️ [drawTripComparisonChart] لا يوجد مؤشر للعرض');
+    // إخفاء كارد المؤشر إذا لم يكن موجوداً
+    const displaySection = document.getElementById('moh-target-display-section');
+    if (displaySection) {
+      displaySection.classList.add('hidden');
+    }
+  }
+    
     tripComparisonChart = new Chart(chartCanvas, {
       type: 'bar',
       data: {
         labels: labels,
-        datasets: [{
-          label: `متوسط السكور - ${tripName}`,
-          data: scores,
-          backgroundColor: colors,
-          borderColor: colors.map(c => c === '#3B82F6' ? '#2563EB' : '#DC2626'),
-          borderWidth: 1
-        }]
+        datasets: datasets
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
+          title: {
+            display: true,
+            text: [
+              `مقارنة رحلة: ${tripName}`,
+              `السنة: ${currentSelectedYear || 'الكل'} | الربع: ${currentSelectedQuarter || 'الكل'}`
+            ],
+            font: {
+              family: 'Tajawal',
+              size: 16,
+              weight: 'bold'
+            },
+            padding: {
+              top: 10,
+              bottom: 20
+            }
+          },
           legend: {
-            display: false
+            display: currentMohTarget !== null && currentMohTarget !== undefined && !isNaN(currentMohTarget),
+            position: 'top',
+            labels: {
+              font: {
+                family: 'Tajawal',
+                size: 12
+              },
+              usePointStyle: true,
+              padding: 15
+            }
           },
           tooltip: {
             callbacks: {
               label: function(context) {
+                if (context.dataset.type === 'line') {
+                  return `المؤشر الوزاري: ${context.parsed.y.toFixed(2)}`;
+                }
                 return `متوسط السكور: ${context.parsed.y.toFixed(2)}`;
               }
             }
@@ -3066,13 +3240,337 @@ async function loadTripComparisonData(tripName) {
         }
       }
     });
-  } catch (err) {
-    console.error('خطأ في تحميل بيانات مقارنة الرحلات:', err);
-    if (tripComparisonChart) {
-      tripComparisonChart.destroy();
-      tripComparisonChart = null;
-    }
-    chartCanvas.parentElement.innerHTML = '<p class="text-center text-red-500 py-8">خطأ في تحميل البيانات</p>';
+}
+
+// ============================================
+// 🔹 دوال المؤشر الوزاري الموحد
+// ============================================
+
+/**
+ * جلب المؤشر الوزاري من API
+ */
+async function loadMohTarget(tripName, year, quarter) {
+  if (!tripName || !year || !quarter) {
+    currentMohTarget = null;
+    return null;
   }
+  
+  try {
+    const url = `${API_BASE}/api/pressganey/moh-target?tripName=${encodeURIComponent(tripName)}&year=${year}&quarter=${quarter}`;
+    const res = await fetch(url, {
+      headers: authHeaders()
+    });
+    
+    if (!res.ok) {
+      console.warn(`⚠️ [MOH Target] فشل جلب المؤشر: ${res.status}`);
+      currentMohTarget = null;
+      return null;
+    }
+    
+    const data = await res.json();
+    if (data.ok && data.data) {
+      currentMohTarget = Number(data.data.targetScore);
+      console.log('✅ [MOH Target] تم جلب المؤشر:', currentMohTarget);
+      return currentMohTarget;
+    }
+    
+    currentMohTarget = null;
+    return null;
+  } catch (err) {
+    console.error('❌ [MOH Target] خطأ في جلب المؤشر:', err);
+    currentMohTarget = null;
+    return null;
+  }
+}
+
+/**
+ * حفظ المؤشر الوزاري
+ */
+async function saveMohTarget(tripName, year, quarter, targetScore) {
+  try {
+    const res = await fetch(`${API_BASE}/api/pressganey/moh-target`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tripName,
+        year: parseInt(year),
+        quarter,
+        targetScore: parseFloat(targetScore)
+      })
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || 'فشل حفظ المؤشر');
+    }
+    
+    const data = await res.json();
+    return data.ok;
+  } catch (err) {
+    console.error('❌ [MOH Target] خطأ في حفظ المؤشر:', err);
+    throw err;
+  }
+}
+
+/**
+ * تحديث واجهة عرض المؤشر الوزاري
+ */
+async function updateMohDisplay(tripName, year, quarter, mohTarget, hospitals) {
+  const displaySection = document.getElementById('moh-target-display-section');
+  if (!displaySection) return;
+  
+  // إظهار القسم
+  displaySection.classList.remove('hidden');
+  
+  // تحديث العنوان
+  const titleEl = document.getElementById('moh-title');
+  if (titleEl) {
+    titleEl.textContent = `المؤشر الوزاري - ${tripName} (${year} - ${quarter})`;
+  }
+  
+  // حساب متوسط نتائج المستشفيات
+  const avgHospitalScore = hospitals.length > 0
+    ? hospitals.reduce((sum, h) => sum + (parseFloat(h.avgScore) || 0), 0) / hospitals.length
+    : 0;
+  
+  // تحديث المؤشر الوزاري
+  const mohTargetEl = document.getElementById('moh-target-score');
+  if (mohTargetEl) {
+    mohTargetEl.textContent = mohTarget.toFixed(2);
+  }
+  
+  // تحديث نتيجة المستشفى (المتوسط)
+  const hospitalScoreEl = document.getElementById('hospital-score');
+  if (hospitalScoreEl) {
+    hospitalScoreEl.textContent = avgHospitalScore.toFixed(2);
+  }
+  
+  // حساب الفرق عن المؤشر
+  const diff = avgHospitalScore - mohTarget;
+  const diffEl = document.getElementById('moh-diff');
+  if (diffEl) {
+    if (diff > 0) {
+      diffEl.textContent = `▲ +${diff.toFixed(2)}`;
+      diffEl.className = 'font-bold text-2xl text-green-600';
+    } else if (diff < 0) {
+      diffEl.textContent = `▼ ${diff.toFixed(2)}`;
+      diffEl.className = 'font-bold text-2xl text-red-600';
+    } else {
+      diffEl.textContent = '0.00';
+      diffEl.className = 'font-bold text-2xl text-gray-600';
+    }
+  }
+  
+  // حساب التغير عن الربع السابق
+  const previousQuarter = getPreviousQuarter(quarter);
+  if (previousQuarter) {
+    const previousYear = previousQuarter === 'Q4' ? parseInt(year) - 1 : parseInt(year);
+    const previousTarget = await loadMohTarget(tripName, previousYear, previousQuarter);
+    
+    if (previousTarget !== null) {
+      const qoqChange = ((mohTarget - previousTarget) / previousTarget) * 100;
+      const qoqEl = document.getElementById('qoq-diff');
+      if (qoqEl) {
+        if (qoqChange > 0) {
+          qoqEl.textContent = `▲ +${qoqChange.toFixed(2)}%`;
+          qoqEl.className = 'font-bold text-2xl text-green-600';
+        } else if (qoqChange < 0) {
+          qoqEl.textContent = `▼ ${qoqChange.toFixed(2)}%`;
+          qoqEl.className = 'font-bold text-2xl text-red-600';
+        } else {
+          qoqEl.textContent = '0.00%';
+          qoqEl.className = 'font-bold text-2xl text-gray-600';
+        }
+      }
+    } else {
+      const qoqEl = document.getElementById('qoq-diff');
+      if (qoqEl) {
+        qoqEl.textContent = '—';
+        qoqEl.className = 'font-bold text-2xl text-gray-500';
+      }
+    }
+  } else {
+    const qoqEl = document.getElementById('qoq-diff');
+    if (qoqEl) {
+      qoqEl.textContent = '—';
+      qoqEl.className = 'font-bold text-2xl text-gray-500';
+    }
+  }
+}
+
+/**
+ * الحصول على الربع السابق
+ */
+function getPreviousQuarter(quarter) {
+  const map = {
+    'Q1': 'Q4',
+    'Q2': 'Q1',
+    'Q3': 'Q2',
+    'Q4': 'Q3'
+  };
+  return map[quarter] || null;
+}
+
+/**
+ * فتح نافذة المؤشر الوزاري
+ */
+function openMohModal() {
+  const modal = document.getElementById('moh-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+  }
+}
+
+/**
+ * إغلاق نافذة المؤشر الوزاري
+ */
+function closeMohModal() {
+  const modal = document.getElementById('moh-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+  }
+}
+
+/**
+ * إعداد واجهة إدخال المؤشر الوزاري
+ */
+function setupMohTargetInput() {
+  const saveBtn = document.getElementById('save-moh-target');
+  const mohTrip = document.getElementById('moh-trip');
+  const mohYear = document.getElementById('moh-year');
+  const mohQuarter = document.getElementById('moh-quarter');
+  const mohScore = document.getElementById('moh-score');
+  const messageEl = document.getElementById('moh-save-message');
+  const openBtn = document.getElementById('open-moh-modal');
+  const closeBtn = document.getElementById('close-moh-modal');
+  const closeBtn2 = document.getElementById('close-moh-modal-btn');
+  
+  if (!saveBtn || !mohTrip || !mohYear || !mohQuarter || !mohScore) return;
+  
+  // ربط أحداث فتح وإغلاق النافذة
+  if (openBtn) {
+    openBtn.addEventListener('click', openMohModal);
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeMohModal);
+  }
+  if (closeBtn2) {
+    closeBtn2.addEventListener('click', closeMohModal);
+  }
+  
+  // إغلاق النافذة عند الضغط على الخلفية
+  const modal = document.getElementById('moh-modal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeMohModal();
+      }
+    });
+  }
+  
+  // ملء قائمة الرحلات
+  const trips = groupByTrip();
+  const tripNames = Object.keys(trips).filter(trip => trips[trip].length > 0).sort();
+  mohTrip.innerHTML = '<option value="">اختر الرحلة</option>';
+  tripNames.forEach(tripName => {
+    const option = document.createElement('option');
+    option.value = tripName;
+    option.textContent = tripName;
+    mohTrip.appendChild(option);
+  });
+  
+  // ملء قائمة السنوات
+  const currentYear = new Date().getFullYear();
+  mohYear.innerHTML = '<option value="">السنة</option>';
+  for (let year = currentYear + 1; year >= 2020; year--) {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    mohYear.appendChild(option);
+  }
+  
+  // ربط حدث الحفظ
+  saveBtn.addEventListener('click', async () => {
+    const tripName = mohTrip.value;
+    const year = mohYear.value;
+    const quarter = mohQuarter.value;
+    const targetScore = mohScore.value;
+    
+    if (!tripName || !year || !quarter || !targetScore) {
+      if (messageEl) {
+        messageEl.className = 'mt-3 text-sm text-red-600';
+        messageEl.textContent = '⚠️ يرجى ملء جميع الحقول';
+        messageEl.classList.remove('hidden');
+      }
+      return;
+    }
+    
+    const score = parseFloat(targetScore);
+    if (isNaN(score) || score < 0 || score > 100) {
+      if (messageEl) {
+        messageEl.className = 'mt-3 text-sm text-red-600';
+        messageEl.textContent = '⚠️ المؤشر يجب أن يكون رقماً بين 0 و 100';
+        messageEl.classList.remove('hidden');
+      }
+      return;
+    }
+    
+    try {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+      
+      const success = await saveMohTarget(tripName, year, quarter, score);
+      
+      if (success) {
+        if (messageEl) {
+          messageEl.className = 'mt-3 text-sm text-green-600';
+          messageEl.textContent = '✅ تم حفظ المؤشر الوزاري بنجاح';
+          messageEl.classList.remove('hidden');
+        }
+        
+        // إعادة تحميل المؤشر إذا كانت نفس الرحلة معروضة
+        const tripComparisonSelect = document.getElementById('trip-comparison-select');
+        if (tripComparisonSelect && tripComparisonSelect.value === tripName) {
+          await loadTripComparisonData(tripName);
+        }
+        
+        // إغلاق النافذة بعد 1.5 ثانية
+        setTimeout(() => {
+          closeMohModal();
+          if (messageEl) {
+            messageEl.classList.add('hidden');
+          }
+          // مسح الحقول
+          mohTrip.value = '';
+          mohYear.value = '';
+          mohQuarter.value = '';
+          mohScore.value = '';
+        }, 1500);
+      }
+    } catch (err) {
+      if (messageEl) {
+        messageEl.className = 'mt-3 text-sm text-red-600';
+        messageEl.textContent = `❌ خطأ: ${err.message}`;
+        messageEl.classList.remove('hidden');
+      }
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save"></i> <span>حفظ</span>';
+    }
+  });
+}
+
+// تهيئة واجهة المؤشر الوزاري عند تحميل الصفحة
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      setupMohTargetInput();
+    }, 1000);
+  });
 }
 
