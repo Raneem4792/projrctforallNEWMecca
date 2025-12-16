@@ -77,6 +77,16 @@
       </div>
     </div>
 
+    <!-- الرسومات -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow p-6 mb-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">
+        📊 حالات المشاريع حسب المستشفى
+      </h2>
+      <div class="relative" style="height: 400px;">
+        <canvas id="projectsByHospitalChart"></canvas>
+      </div>
+    </div>
+
     <!-- جدول المستشفيات -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow">
       <div class="p-6 border-b border-gray-200">
@@ -163,6 +173,9 @@
 
         // ✅ عرض الجدول
         renderTable(json.data || []);
+        
+        // ✅ عرض الرسومات
+        renderHospitalChart(json.data || []);
       } catch (err) {
         console.error('Error loading stats:', err);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-red-400">فشل تحميل الإحصائيات</td></tr>';
@@ -206,6 +219,123 @@
       }).join('');
     }
 
+    // ✅ متغير للرسم البياني
+    let hospitalChart = null;
+
+    // ✅ دالة لعرض الرسم البياني
+    function renderHospitalChart(data) {
+      if (!data || data.length === 0) {
+        return;
+      }
+
+      const canvas = document.getElementById('projectsByHospitalChart');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+
+      // ✅ تدمير الرسم السابق إن وجد
+      if (hospitalChart) {
+        hospitalChart.destroy();
+      }
+
+      // ✅ تحضير البيانات
+      const labels = data.map(r => r.HospitalName || `مستشفى ${r.HospitalID}`);
+      const approved = data.map(r => Number(r.ApprovedCount) || 0);
+      const completed = data.map(r => Number(r.CompletedCount) || 0);
+      const inProgress = data.map(r => Number(r.InProgressCount) || 0);
+      const pending = data.map(r => Number(r.PendingCount) || 0);
+      const cancelled = data.map(r => Number(r.CancelledCount) || 0);
+
+      // ✅ إنشاء الرسم
+      hospitalChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '✅ معتمد',
+              data: approved,
+              backgroundColor: '#2563eb' // blue-600
+            },
+            {
+              label: '🟢 مكتمل',
+              data: completed,
+              backgroundColor: '#16a34a' // green-600
+            },
+            {
+              label: '⏳ قيد التنفيذ',
+              data: inProgress,
+              backgroundColor: '#f97316' // orange-500
+            },
+            {
+              label: '📝 مقترح',
+              data: pending,
+              backgroundColor: '#f59e0b' // amber-500
+            },
+            {
+              label: '❌ ملغي',
+              data: cancelled,
+              backgroundColor: '#dc2626' // red-600
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 15,
+                font: {
+                  size: 12,
+                  family: 'Tajawal, sans-serif'
+                }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += context.parsed.y || 0;
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: {
+                font: {
+                  size: 11,
+                  family: 'Tajawal, sans-serif'
+                },
+                maxRotation: 45,
+                minRotation: 45
+              }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: {
+                font: {
+                  size: 11,
+                  family: 'Tajawal, sans-serif'
+                },
+                stepSize: 1
+              }
+            }
+          }
+        }
+      });
+    }
+
     // ✅ دالة للفلترة حسب المستشفى
     function filterByHospital(hospitalId) {
       window.location.href = `list.html?hospitalId=${hospitalId}`;
@@ -224,6 +354,9 @@
       loadStats();
     });
   </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </body>
 </html>
 
