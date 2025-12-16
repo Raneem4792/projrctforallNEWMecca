@@ -1190,7 +1190,16 @@ async function loadImprovementTrips() {
     
     if (tripNames.length === 0) {
       console.warn('⚠️ [loadImprovementTrips] لا توجد رحلات متاحة');
-      section.classList.add('hidden');
+      // إظهار القسم مع رسالة توضيحية
+      section.classList.remove('hidden');
+      const hint = document.getElementById('improvement-hint');
+      if (hint) {
+        hint.innerHTML = `
+          <p class="text-blue-800 font-semibold mb-1">ℹ️ قسم أولوية التحسين</p>
+          <p class="text-sm text-blue-700">لا توجد رحلات متاحة حالياً لعرض أولويات التحسين.</p>
+        `;
+        hint.classList.remove('hidden');
+      }
       return;
     }
     
@@ -1207,8 +1216,18 @@ async function loadImprovementTrips() {
     tripSelect.removeEventListener('change', handleTripChange);
     tripSelect.addEventListener('change', handleTripChange);
     
-    // إظهار القسم
+    // إظهار القسم دائماً (القسم ظاهر افتراضياً في HTML)
     section.classList.remove('hidden');
+    
+    // التأكد من إظهار الرسالة الإرشادية في البداية
+    const hint = document.getElementById('improvement-hint');
+    const tableContainer = document.getElementById('single-improvement-table');
+    if (hint && !tripSelect.value) {
+      hint.classList.remove('hidden');
+    }
+    if (tableContainer) {
+      tableContainer.classList.add('hidden');
+    }
     
     console.log('✅ [loadImprovementTrips] تم تحميل الرحلات:', tripNames.length);
   } catch (err) {
@@ -1219,14 +1238,18 @@ async function loadImprovementTrips() {
 // معالج تغيير الرحلة
 async function handleTripChange() {
   const tripSelect = document.getElementById('improvement-trip-select');
+  const tableContainer = document.getElementById('single-improvement-table');
+  const hint = document.getElementById('improvement-hint');
+  
   if (tripSelect && tripSelect.value) {
+    // إخفاء الرسالة الإرشادية وإظهار الجدول
+    if (hint) hint.classList.add('hidden');
+    if (tableContainer) tableContainer.classList.remove('hidden');
     await loadSingleImprovementTable(tripSelect.value);
   } else {
-    // إخفاء الجدول إذا لم يتم اختيار رحلة
-    const tableContainer = document.getElementById('single-improvement-table');
-    if (tableContainer) {
-      tableContainer.classList.add('hidden');
-    }
+    // إظهار الرسالة الإرشادية وإخفاء الجدول
+    if (hint) hint.classList.remove('hidden');
+    if (tableContainer) tableContainer.classList.add('hidden');
   }
 }
 
@@ -1265,8 +1288,17 @@ async function loadSingleImprovementTable(tripName) {
       const errorText = await res.text();
       console.warn(`⚠️ فشل جلب بيانات أولوية التحسين للرحلة: ${tripName}`, res.status, errorText);
       const tableContainer = document.getElementById('single-improvement-table');
+      const hint = document.getElementById('improvement-hint');
       if (tableContainer) {
         tableContainer.classList.add('hidden');
+      }
+      // إظهار الرسالة الإرشادية مع رسالة خطأ
+      if (hint) {
+        hint.classList.remove('hidden');
+        hint.innerHTML = `
+          <p class="text-red-800 font-semibold mb-1">⚠️ خطأ في تحميل البيانات</p>
+          <p class="text-sm text-red-700">فشل تحميل بيانات أولوية التحسين للرحلة المختارة. يرجى المحاولة مرة أخرى.</p>
+        `;
       }
       return;
     }
@@ -1309,15 +1341,26 @@ async function loadSingleImprovementTable(tripName) {
       });
     }
     
-    // إظهار الجدول
+    // إظهار الجدول وإخفاء الرسالة الإرشادية
     tableContainer.classList.remove('hidden');
+    const hint = document.getElementById('improvement-hint');
+    if (hint) hint.classList.add('hidden');
     
     console.log('✅ [loadSingleImprovementTable] تم عرض الجدول بنجاح');
   } catch (err) {
     console.error('❌ خطأ في loadSingleImprovementTable:', err);
     const tableContainer = document.getElementById('single-improvement-table');
+    const hint = document.getElementById('improvement-hint');
     if (tableContainer) {
       tableContainer.classList.add('hidden');
+    }
+    // إظهار الرسالة الإرشادية مع رسالة خطأ
+    if (hint) {
+      hint.classList.remove('hidden');
+      hint.innerHTML = `
+        <p class="text-red-800 font-semibold mb-1">⚠️ خطأ في تحميل البيانات</p>
+        <p class="text-sm text-red-700">حدث خطأ أثناء تحميل بيانات أولوية التحسين. يرجى المحاولة مرة أخرى.</p>
+      `;
     }
   }
 }
@@ -1328,6 +1371,24 @@ async function loadImprovementPriorities() {
   await loadImprovementTrips();
 }
 
+// ✅ دالة موحدة لحساب نسبة التغير بين ربعين
+function calcChange(prev, curr) {
+  if (prev === null || curr === null || prev === 0) {
+    return {
+      value: null,
+      text: '-',
+      class: ''
+    };
+  }
+  
+  const diff = ((curr - prev) / prev) * 100;
+  return {
+    value: diff,
+    text: diff > 0 ? `+${diff.toFixed(2)}%` : `${diff.toFixed(2)}%`,
+    class: diff > 0 ? 'text-green-600' : 'text-red-600'
+  };
+}
+
 // تحديث الجدول
 function updateTable() {
   const tbody = document.querySelector('#pressganeyTable tbody');
@@ -1335,7 +1396,7 @@ function updateTable() {
   if (!tbody) return;
   
   if (!pressganeyData.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="p-3">لا توجد بيانات بعد</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="p-3">لا توجد بيانات بعد</td></tr>';
     // إعادة تعيين قائمة التصفية
     if (tripFilterSelect) {
       tripFilterSelect.innerHTML = '<option value="">الكل</option>';
@@ -1364,7 +1425,7 @@ function updateTable() {
   }
   
   if (!filteredData.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="p-3">لا توجد بيانات للمستشفى المختار</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="p-3">لا توجد بيانات للمستشفى المختار</td></tr>';
     if (tripFilterSelect) {
       tripFilterSelect.innerHTML = '<option value="">الكل</option>';
     }
@@ -1458,36 +1519,15 @@ function updateTable() {
     const avgQ3 = totals.Q3.length > 0 ? (totals.Q3.reduce((a, b) => a + b, 0) / totals.Q3.length) : null;
     const avgQ4 = totals.Q4.length > 0 ? (totals.Q4.reduce((a, b) => a + b, 0) / totals.Q4.length) : null;
     
-    // صف الإجمالي - حساب نسبة التغير بين آخر ربع وربع قبله
-    let lastQuarter = null;
-    let prevQuarter = null;
+    // صف الإجمالي - حساب 3 مقارنات متتالية
+    const c12 = calcChange(avgQ1, avgQ2);
+    const c23 = calcChange(avgQ2, avgQ3);
+    const c34 = calcChange(avgQ3, avgQ4);
     
-    if (avgQ4 !== null) {
-      lastQuarter = avgQ4;
-      prevQuarter = avgQ3 !== null ? avgQ3 : (avgQ2 !== null ? avgQ2 : avgQ1);
-    } else if (avgQ3 !== null) {
-      lastQuarter = avgQ3;
-      prevQuarter = avgQ2 !== null ? avgQ2 : avgQ1;
-    } else if (avgQ2 !== null) {
-      lastQuarter = avgQ2;
-      prevQuarter = avgQ1;
-    }
-    
-    let changePercent = '-';
-    let changeClass = '';
-    let needsAction = false;
-    
-    if (lastQuarter !== null && prevQuarter !== null && prevQuarter > 0) {
-      const change = ((lastQuarter - prevQuarter) / prevQuarter) * 100;
-      if (change < 0) {
-        changePercent = Math.abs(change).toFixed(2) + '-';
-        changeClass = 'bg-red-100 text-red-700';
-        needsAction = true;
-      } else {
-        changePercent = change.toFixed(2) + '%';
-        changeClass = 'text-green-600';
-      }
-    }
+    // منطق أولوية التحسين: مطلوب إذا كان أي انتقال سلبي
+    const needsAction = (c12.value !== null && c12.value < 0) || 
+                        (c23.value !== null && c23.value < 0) || 
+                        (c34.value !== null && c34.value < 0);
     
     // إنشاء معرف فريد للرحلة
     const deptId = dept.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
@@ -1511,7 +1551,9 @@ function updateTable() {
       <td class="border p-2 font-medium">${avgQ2 !== null ? avgQ2.toFixed(2) : '-'}</td>
       <td class="border p-2 font-medium">${avgQ3 !== null ? avgQ3.toFixed(2) : '-'}</td>
       <td class="border p-2 font-medium">${avgQ4 !== null ? avgQ4.toFixed(2) : '-'}</td>
-      <td class="border p-2 ${changeClass} font-semibold">${changePercent}</td>
+      <td class="border p-2 ${c12.class || ''} font-semibold">${c12.text || '-'}</td>
+      <td class="border p-2 ${c23.class || ''} font-semibold">${c23.text || '-'}</td>
+      <td class="border p-2 ${c34.class || ''} font-semibold">${c34.text || '-'}</td>
       <td class="border p-2">
         ${needsAction 
           ? '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors">إضافة مشروع تحسيني</button>'
@@ -1544,37 +1586,16 @@ function updateTable() {
       }
     });
     
-    // صفوف الأسئلة - حساب نسبة التغير بين آخر ربع وربع قبله
+    // صفوف الأسئلة - حساب 3 مقارنات متتالية
     items.forEach(item => {
-      let lastQ = null;
-      let prevQ = null;
+      const q12 = calcChange(item.Q1, item.Q2);
+      const q23 = calcChange(item.Q2, item.Q3);
+      const q34 = calcChange(item.Q3, item.Q4);
       
-      if (item.Q4 !== null) {
-        lastQ = item.Q4;
-        prevQ = item.Q3 !== null ? item.Q3 : (item.Q2 !== null ? item.Q2 : item.Q1);
-      } else if (item.Q3 !== null) {
-        lastQ = item.Q3;
-        prevQ = item.Q2 !== null ? item.Q2 : item.Q1;
-      } else if (item.Q2 !== null) {
-        lastQ = item.Q2;
-        prevQ = item.Q1;
-      }
-      
-      let qChange = '-';
-      let qChangeClass = '';
-      let qNeedsAction = false;
-      
-      if (lastQ !== null && prevQ !== null && prevQ > 0) {
-        const change = ((lastQ - prevQ) / prevQ) * 100;
-        if (change < 0) {
-          qChange = Math.abs(change).toFixed(2) + '-';
-          qChangeClass = 'bg-red-100 text-red-700';
-          qNeedsAction = true;
-        } else {
-          qChange = change.toFixed(2) + '%';
-          qChangeClass = 'text-green-600';
-        }
-      }
+      // منطق أولوية التحسين: مطلوب إذا كان أي انتقال سلبي
+      const qNeedsAction = (q12.value !== null && q12.value < 0) || 
+                           (q23.value !== null && q23.value < 0) || 
+                           (q34.value !== null && q34.value < 0);
       
       const row = document.createElement('tr');
       row.setAttribute('data-parent-trip', deptId);
@@ -1590,7 +1611,9 @@ function updateTable() {
         <td class="border p-2 text-sm">${item.Q2 !== null ? item.Q2.toFixed(2) : '-'}</td>
         <td class="border p-2 text-sm">${item.Q3 !== null ? item.Q3.toFixed(2) : '-'}</td>
         <td class="border p-2 text-sm">${item.Q4 !== null ? item.Q4.toFixed(2) : '-'}</td>
-        <td class="border p-2 ${qChangeClass} text-sm">${qChange}</td>
+        <td class="border p-2 ${q12.class || ''} text-sm">${q12.text || '-'}</td>
+        <td class="border p-2 ${q23.class || ''} text-sm">${q23.text || '-'}</td>
+        <td class="border p-2 ${q34.class || ''} text-sm">${q34.text || '-'}</td>
         <td class="border p-2">
           ${qNeedsAction 
             ? '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors">إضافة مشروع تحسيني</button>'
@@ -2729,13 +2752,107 @@ async function setupHospitalQuartersComparison() {
   }
 }
 
+// ✅ دالة استخراج الرحلة ذات أكبر فرق مطلق
+function getMostSignificantChange(trips, fromKey, toKey) {
+  const diffs = trips
+    .map(t => {
+      const tripName = t.tripName || t.TripName || 'غير محدد';
+      const from = t[fromKey] !== null && t[fromKey] !== undefined ? parseFloat(t[fromKey]) : null;
+      const to = t[toKey] !== null && t[toKey] !== undefined ? parseFloat(t[toKey]) : null;
+      
+      const change = calcChange(from, to);
+      if (change.value === null) return null;
+      
+      return {
+        tripName: tripName,
+        from: from,
+        to: to,
+        diff: change.value
+      };
+    })
+    .filter(item => item !== null);
+  
+  if (!diffs.length) return null;
+  
+  // ترتيب حسب أكبر فرق مطلق (سواء موجب أو سالب)
+  diffs.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+  
+  return diffs[0]; // الرحلة ذات أكبر فرق مطلق
+}
+
+// ✅ دالة عرض KPI لكل مقارنة
+function displayQuarterKPIs(q1q2, q2q3, q3q4, isError = false) {
+  if (isError) {
+    // عرض رسالة خطأ
+    const errorMsg = 'خطأ في تحميل البيانات';
+    document.getElementById('q1q2-trip').textContent = errorMsg;
+    document.getElementById('q1q2-q1').textContent = '-';
+    document.getElementById('q1q2-q2').textContent = '-';
+    document.getElementById('q1q2-diff').textContent = '-';
+    
+    document.getElementById('q2q3-trip').textContent = errorMsg;
+    document.getElementById('q2q3-q2').textContent = '-';
+    document.getElementById('q2q3-q3').textContent = '-';
+    document.getElementById('q2q3-diff').textContent = '-';
+    
+    document.getElementById('q3q4-trip').textContent = errorMsg;
+    document.getElementById('q3q4-q3').textContent = '-';
+    document.getElementById('q3q4-q4').textContent = '-';
+    document.getElementById('q3q4-diff').textContent = '-';
+    return;
+  }
+  
+  // Q1 → Q2
+  if (q1q2) {
+    document.getElementById('q1q2-trip').textContent = q1q2.tripName;
+    document.getElementById('q1q2-q1').textContent = q1q2.from.toFixed(2) + '%';
+    document.getElementById('q1q2-q2').textContent = q1q2.to.toFixed(2) + '%';
+    
+    const diffEl = document.getElementById('q1q2-diff');
+    diffEl.textContent = `${q1q2.diff > 0 ? '▲ +' : '▼ '}${q1q2.diff.toFixed(2)}%`;
+    diffEl.className = 'border p-2 font-bold ' + (q1q2.diff > 0 ? 'text-green-600' : 'text-red-600');
+  } else {
+    document.getElementById('q1q2-trip').textContent = 'لا توجد بيانات';
+    document.getElementById('q1q2-q1').textContent = '-';
+    document.getElementById('q1q2-q2').textContent = '-';
+    document.getElementById('q1q2-diff').textContent = '-';
+  }
+  
+  // Q2 → Q3
+  if (q2q3) {
+    document.getElementById('q2q3-trip').textContent = q2q3.tripName;
+    document.getElementById('q2q3-q2').textContent = q2q3.from.toFixed(2) + '%';
+    document.getElementById('q2q3-q3').textContent = q2q3.to.toFixed(2) + '%';
+    
+    const diffEl = document.getElementById('q2q3-diff');
+    diffEl.textContent = `${q2q3.diff > 0 ? '▲ +' : '▼ '}${q2q3.diff.toFixed(2)}%`;
+    diffEl.className = 'border p-2 font-bold ' + (q2q3.diff > 0 ? 'text-green-600' : 'text-red-600');
+  } else {
+    document.getElementById('q2q3-trip').textContent = 'لا توجد بيانات';
+    document.getElementById('q2q3-q2').textContent = '-';
+    document.getElementById('q2q3-q3').textContent = '-';
+    document.getElementById('q2q3-diff').textContent = '-';
+  }
+  
+  // Q3 → Q4
+  if (q3q4) {
+    document.getElementById('q3q4-trip').textContent = q3q4.tripName;
+    document.getElementById('q3q4-q3').textContent = q3q4.from.toFixed(2) + '%';
+    document.getElementById('q3q4-q4').textContent = q3q4.to.toFixed(2) + '%';
+    
+    const diffEl = document.getElementById('q3q4-diff');
+    diffEl.textContent = `${q3q4.diff > 0 ? '▲ +' : '▼ '}${q3q4.diff.toFixed(2)}%`;
+    diffEl.className = 'border p-2 font-bold ' + (q3q4.diff > 0 ? 'text-green-600' : 'text-red-600');
+  } else {
+    document.getElementById('q3q4-trip').textContent = 'لا توجد بيانات';
+    document.getElementById('q3q4-q3').textContent = '-';
+    document.getElementById('q3q4-q4').textContent = '-';
+    document.getElementById('q3q4-diff').textContent = '-';
+  }
+}
+
 // دالة تحميل بيانات مقارنة الأرباع لمستشفى محدد
 async function loadHospitalQuartersComparison(hospitalId) {
-  const decreasingTbody = document.getElementById('decreasing-trips-tbody');
-  const increasingTbody = document.getElementById('increasing-trips-tbody');
-  
-  if (!decreasingTbody || !increasingTbody) return;
-  
   try {
     const res = await fetch(`${API_BASE}/api/pressganey/quarters-comparison/${hospitalId}`, {
       headers: authHeaders()
@@ -2750,59 +2867,40 @@ async function loadHospitalQuartersComparison(hospitalId) {
       throw new Error('لا توجد بيانات');
     }
     
-    const { increasing, decreasing } = result.data;
-    
-    // عرض الرحلات الأكثر انخفاضاً
-    if (decreasing.length === 0) {
-      decreasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>';
-    } else {
-      decreasingTbody.innerHTML = decreasing.map(trip => {
-        const changeClass = trip.changePercent < 0 ? 'text-red-600 font-semibold' : '';
-        const changeText = trip.changePercent !== null 
-          ? `${trip.changePercent < 0 ? '' : '+'}${trip.changePercent.toFixed(2)}%`
-          : '-';
-        
-        return `
-          <tr class="hover:bg-red-50">
-            <td class="border p-2 text-right font-medium">${trip.tripName}</td>
-            <td class="border p-2">${trip.Q1 !== null ? trip.Q1.toFixed(2) : '-'}</td>
-            <td class="border p-2">${trip.Q2 !== null ? trip.Q2.toFixed(2) : '-'}</td>
-            <td class="border p-2">${trip.Q3 !== null ? trip.Q3.toFixed(2) : '-'}</td>
-            <td class="border p-2">${trip.Q4 !== null ? trip.Q4.toFixed(2) : '-'}</td>
-            <td class="border p-2 ${changeClass}">${changeText}</td>
-          </tr>
-        `;
-      }).join('');
+    // دمج جميع الرحلات من increasing و decreasing
+    const allTrips = [];
+    if (result.data.increasing && Array.isArray(result.data.increasing)) {
+      allTrips.push(...result.data.increasing);
+    }
+    if (result.data.decreasing && Array.isArray(result.data.decreasing)) {
+      allTrips.push(...result.data.decreasing);
     }
     
-    // عرض الرحلات الأكثر ارتفاعاً
-    if (increasing.length === 0) {
-      increasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>';
-    } else {
-      increasingTbody.innerHTML = increasing.map(trip => {
-        const changeClass = trip.changePercent > 0 ? 'text-green-600 font-semibold' : '';
-        const changeText = trip.changePercent !== null 
-          ? `${trip.changePercent > 0 ? '+' : ''}${trip.changePercent.toFixed(2)}%`
-          : '-';
-        
-        return `
-          <tr class="hover:bg-green-50">
-            <td class="border p-2 text-right font-medium">${trip.tripName}</td>
-            <td class="border p-2">${trip.Q1 !== null ? trip.Q1.toFixed(2) : '-'}</td>
-            <td class="border p-2">${trip.Q2 !== null ? trip.Q2.toFixed(2) : '-'}</td>
-            <td class="border p-2">${trip.Q3 !== null ? trip.Q3.toFixed(2) : '-'}</td>
-            <td class="border p-2">${trip.Q4 !== null ? trip.Q4.toFixed(2) : '-'}</td>
-            <td class="border p-2 ${changeClass}">${changeText}</td>
-          </tr>
-        `;
-      }).join('');
-    }
+    // إزالة التكرارات (إذا كانت هناك)
+    const uniqueTrips = {};
+    allTrips.forEach(trip => {
+      const key = trip.tripName || trip.TripName || '';
+      if (key && !uniqueTrips[key]) {
+        uniqueTrips[key] = trip;
+      }
+    });
+    const trips = Object.values(uniqueTrips);
+    
+    // استخراج الرحلة ذات أكبر فرق مطلق لكل مقارنة
+    const q1q2 = getMostSignificantChange(trips, 'Q1', 'Q2');
+    const q2q3 = getMostSignificantChange(trips, 'Q2', 'Q3');
+    const q3q4 = getMostSignificantChange(trips, 'Q3', 'Q4');
+    
+    // عرض النتائج
+    displayQuarterKPIs(q1q2, q2q3, q3q4);
+    
   } catch (err) {
     console.error('خطأ في تحميل بيانات مقارنة الأرباع:', err);
-    decreasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-red-500">خطأ في تحميل البيانات</td></tr>';
-    increasingTbody.innerHTML = '<tr><td colspan="6" class="p-3 text-red-500">خطأ في تحميل البيانات</td></tr>';
+    // عرض رسالة خطأ في جميع الكاردات
+    displayQuarterKPIs(null, null, null, true);
   }
 }
+
 
 // دالة إعداد رسم بياني مقارنة الرحلات بين جميع المستشفيات
 async function setupTripComparisonChart() {

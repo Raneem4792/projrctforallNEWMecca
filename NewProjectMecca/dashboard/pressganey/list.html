@@ -228,8 +228,18 @@
     </div>
 
     <!-- 🔹 جدول أولوية التحسين -->
-    <section id="improvement-priorities-section" class="mb-8 hidden">
-      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">أولوية التحسين</h2>
+    <section id="improvement-priorities-section" class="mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">أولوية التحسين حسب الرحلة المختارة</h2>
+      
+      <!-- رسالة إرشادية -->
+      <div id="improvement-hint" class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+        <p class="text-blue-800 font-semibold mb-1">
+          ℹ️ قسم أولوية التحسين
+        </p>
+        <p class="text-sm text-blue-700">
+          لاختيار أولويات التحسين، يرجى تحديد الرحلة من القائمة أدناه لعرض النتائج.
+        </p>
+      </div>
       
       <!-- Dropdown اختيار الرحلة -->
       <div class="bg-white shadow p-4 mb-6 rounded-lg">
@@ -288,63 +298,96 @@
               <th class="border p-2 font-semibold bg-gray-100">الربع الثاني</th>
               <th class="border p-2 font-semibold bg-gray-100">الربع الثالث</th>
               <th class="border p-2 font-semibold bg-gray-100">الربع الرابع</th>
-              <th class="border p-2 font-semibold bg-gray-100">نسبة التغير</th>
+              <th class="border p-2 font-semibold bg-gray-100">Q1 → Q2</th>
+              <th class="border p-2 font-semibold bg-gray-100">Q2 → Q3</th>
+              <th class="border p-2 font-semibold bg-gray-100">Q3 → Q4</th>
               <th class="border p-2 font-semibold bg-gray-100">المطلوب</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="8" class="p-3">لا توجد بيانات بعد</td></tr>
+            <tr><td colspan="10" class="p-3">لا توجد بيانات بعد</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- 🔹 جداول مقارنة الأرباع لكل مستشفى -->
+    <!-- 🔹 ملخص مقارنة الأرباع لكل مستشفى (KPI) -->
     <section id="hospital-quarters-comparison-section" class="mb-8">
-      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">مقارنة الأرباع لكل مستشفى</h2>
+      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">ملخص مقارنة الأرباع لكل مستشفى</h2>
       
-      <!-- الجداول -->
+      <!-- كاردات KPI -->
       <div id="hospital-comparison-tables" class="hidden">
-        <div class="grid md:grid-cols-2 gap-6">
-          <!-- جدول الرحلات الأكثر انخفاضاً -->
-          <div class="bg-white shadow rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4 text-center text-red-600">الرحلات الأكثر انخفاضاً</h3>
+        <div class="grid md:grid-cols-3 gap-6">
+          <!-- كارد Q1 → Q2 -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <h3 class="text-lg font-bold mb-3 text-center text-blue-600">الربع الأول → الربع الثاني</h3>
             <div class="overflow-x-auto">
-              <table class="min-w-full border text-sm text-center" id="decreasing-trips-table">
-                <thead class="bg-red-50">
+              <table class="w-full border text-sm text-center rounded-lg overflow-hidden">
+                <thead class="bg-blue-50">
                   <tr>
                     <th class="border p-2 font-semibold">الرحلة</th>
                     <th class="border p-2 font-semibold">الربع الأول</th>
                     <th class="border p-2 font-semibold">الربع الثاني</th>
-                    <th class="border p-2 font-semibold">الربع الثالث</th>
-                    <th class="border p-2 font-semibold">الربع الرابع</th>
-                    <th class="border p-2 font-semibold">نسبة التغيير</th>
+                    <th class="border p-2 font-semibold">الفرق</th>
                   </tr>
                 </thead>
-                <tbody id="decreasing-trips-tbody">
-                  <tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>
+                <tbody>
+                  <tr>
+                    <td class="border p-2 font-semibold" id="q1q2-trip">-</td>
+                    <td class="border p-2" id="q1q2-q1">-</td>
+                    <td class="border p-2" id="q1q2-q2">-</td>
+                    <td class="border p-2 font-bold" id="q1q2-diff">-</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- جدول الرحلات الأكثر ارتفاعاً -->
-          <div class="bg-white shadow rounded-lg p-6">
-            <h3 class="text-xl font-bold mb-4 text-center text-green-600">الرحلات الأكثر ارتفاعاً</h3>
+          <!-- كارد Q2 → Q3 -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <h3 class="text-lg font-bold mb-3 text-center text-yellow-600">الربع الثاني → الربع الثالث</h3>
             <div class="overflow-x-auto">
-              <table class="min-w-full border text-sm text-center" id="increasing-trips-table">
+              <table class="w-full border text-sm text-center rounded-lg overflow-hidden">
+                <thead class="bg-yellow-50">
+                  <tr>
+                    <th class="border p-2 font-semibold">الرحلة</th>
+                    <th class="border p-2 font-semibold">الربع الثاني</th>
+                    <th class="border p-2 font-semibold">الربع الثالث</th>
+                    <th class="border p-2 font-semibold">الفرق</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="border p-2 font-semibold" id="q2q3-trip">-</td>
+                    <td class="border p-2" id="q2q3-q2">-</td>
+                    <td class="border p-2" id="q2q3-q3">-</td>
+                    <td class="border p-2 font-bold" id="q2q3-diff">-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- كارد Q3 → Q4 -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <h3 class="text-lg font-bold mb-3 text-center text-green-600">الربع الثالث → الربع الرابع</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full border text-sm text-center rounded-lg overflow-hidden">
                 <thead class="bg-green-50">
                   <tr>
                     <th class="border p-2 font-semibold">الرحلة</th>
-                    <th class="border p-2 font-semibold">الربع الأول</th>
-                    <th class="border p-2 font-semibold">الربع الثاني</th>
                     <th class="border p-2 font-semibold">الربع الثالث</th>
                     <th class="border p-2 font-semibold">الربع الرابع</th>
-                    <th class="border p-2 font-semibold">نسبة التغيير</th>
+                    <th class="border p-2 font-semibold">الفرق</th>
                   </tr>
                 </thead>
-                <tbody id="increasing-trips-tbody">
-                  <tr><td colspan="6" class="p-3 text-gray-500">لا توجد بيانات</td></tr>
+                <tbody>
+                  <tr>
+                    <td class="border p-2 font-semibold" id="q3q4-trip">-</td>
+                    <td class="border p-2" id="q3q4-q3">-</td>
+                    <td class="border p-2" id="q3q4-q4">-</td>
+                    <td class="border p-2 font-bold" id="q3q4-diff">-</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
